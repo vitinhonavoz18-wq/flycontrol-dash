@@ -10,33 +10,57 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
+import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPublicCreatePizzeriaRoute = ApiPublicCreatePizzeriaRouteImport.update({
+  id: '/api/public/create-pizzeria',
+  path: '/api/public/create-pizzeria',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCreateOrderRoute = ApiPublicCreateOrderRouteImport.update({
+  id: '/api/public/create-order',
+  path: '/api/public/create-order',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/api/public/create-order': typeof ApiPublicCreateOrderRoute
+  '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/api/public/create-order': typeof ApiPublicCreateOrderRoute
+  '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/api/public/create-order': typeof ApiPublicCreateOrderRoute
+  '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths: '/' | '/api/public/create-order' | '/api/public/create-pizzeria'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to: '/' | '/api/public/create-order' | '/api/public/create-pizzeria'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/public/create-order'
+    | '/api/public/create-pizzeria'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ApiPublicCreateOrderRoute: typeof ApiPublicCreateOrderRoute
+  ApiPublicCreatePizzeriaRoute: typeof ApiPublicCreatePizzeriaRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -48,12 +72,38 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/create-pizzeria': {
+      id: '/api/public/create-pizzeria'
+      path: '/api/public/create-pizzeria'
+      fullPath: '/api/public/create-pizzeria'
+      preLoaderRoute: typeof ApiPublicCreatePizzeriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/create-order': {
+      id: '/api/public/create-order'
+      path: '/api/public/create-order'
+      fullPath: '/api/public/create-order'
+      preLoaderRoute: typeof ApiPublicCreateOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ApiPublicCreateOrderRoute: ApiPublicCreateOrderRoute,
+  ApiPublicCreatePizzeriaRoute: ApiPublicCreatePizzeriaRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
