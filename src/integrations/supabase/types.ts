@@ -14,16 +14,186 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      orders: {
+        Row: {
+          change_for: number | null
+          created_at: string
+          customer_address: string | null
+          customer_name: string
+          customer_phone: string
+          delivery_fee: number
+          external_order_id: string | null
+          id: string
+          items: Json
+          neighborhood: string | null
+          notes: string | null
+          order_number: number
+          payment_method: string | null
+          status: string
+          tenant_id: string
+          total: number
+          updated_at: string
+        }
+        Insert: {
+          change_for?: number | null
+          created_at?: string
+          customer_address?: string | null
+          customer_name: string
+          customer_phone: string
+          delivery_fee?: number
+          external_order_id?: string | null
+          id?: string
+          items?: Json
+          neighborhood?: string | null
+          notes?: string | null
+          order_number?: number
+          payment_method?: string | null
+          status?: string
+          tenant_id: string
+          total?: number
+          updated_at?: string
+        }
+        Update: {
+          change_for?: number | null
+          created_at?: string
+          customer_address?: string | null
+          customer_name?: string
+          customer_phone?: string
+          delivery_fee?: number
+          external_order_id?: string | null
+          id?: string
+          items?: Json
+          neighborhood?: string | null
+          notes?: string | null
+          order_number?: number
+          payment_method?: string | null
+          status?: string
+          tenant_id?: string
+          total?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pizzerias: {
+        Row: {
+          address: string | null
+          api_key: string
+          created_at: string
+          id: string
+          logo_url: string | null
+          name: string
+          owner_id: string | null
+          phone: string | null
+          primary_color: string | null
+          print_auto: boolean
+          slug: string
+          sound_enabled: boolean
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          api_key: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name: string
+          owner_id?: string | null
+          phone?: string | null
+          primary_color?: string | null
+          print_auto?: boolean
+          slug: string
+          sound_enabled?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          api_key?: string
+          created_at?: string
+          id?: string
+          logo_url?: string | null
+          name?: string
+          owner_id?: string | null
+          phone?: string | null
+          primary_color?: string | null
+          print_auto?: boolean
+          slug?: string
+          sound_enabled?: boolean
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      user_roles: {
+        Row: {
+          id: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Insert: {
+          id?: string
+          role: Database["public"]["Enums"]["app_role"]
+          user_id: string
+        }
+        Update: {
+          id?: string
+          role?: Database["public"]["Enums"]["app_role"]
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      has_role: {
+        Args: {
+          _role: Database["public"]["Enums"]["app_role"]
+          _user_id: string
+        }
+        Returns: boolean
+      }
+      owns_pizzeria: {
+        Args: { _tenant_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "super_admin" | "owner"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +320,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["super_admin", "owner"],
+    },
   },
 } as const
