@@ -1,0 +1,266 @@
+import { createFileRoute } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
+import { Bell, BellOff, Printer, Phone, MapPin, Clock, Plus, Copy, Check } from "lucide-react";
+
+export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
+
+type Pizzeria = {
+  id: string; name: string; slug: string; api_key: string; status: string;
+  sound_enabled: boolean; print_auto: boolean;
+};
+type Order = {
+  id: string; order_number: number; tenant_id: string; customer_name: string;
+  customer_phone: string; customer_address: string | null; neighborhood: string | null;
+  items: any; total: number; delivery_fee: number; payment_method: string | null;
+  change_for: number | null; notes: string | null; status: string; created_at: string;
+};
+
+const STATUSES = [
+  { value: "novo", label: "Novo", color: "bg-primary text-primary-foreground" },
+  { value: "preparando", label: "Preparando", color: "bg-warning/20 text-warning border-warning/40" },
+  { value: "saiu", label: "Saiu para entrega", color: "bg-chart-5/20 text-chart-5 border-chart-5/40" },
+  { value: "entregue", label: "Entregue", color: "bg-success/20 text-success border-success/40" },
+  { value: "cancelado", label: "Cancelado", color: "bg-destructive/20 text-destructive border-destructive/40" },
+];
+
+function playBeep() {
+  try {
+    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    const ctx = new AC();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine"; o.frequency.value = 880;
+    g.gain.setValueAtTime(0.001, ctx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
+    o.start(); o.stop(ctx.currentTime + 0.65);
+  } catch {}
+}
+
+function Dashboard() {
+  const { user } = useAuth();
+  const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [filter, setFilter] = useState<string>("ativos");
+  const [soundOn, setSoundOn] = useState(true);
+  const [showNew, setShowNew] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const initialLoad = useRef(true);
+
+  useEffect(() => { if (user) loadPizzerias(); }, [user]);
+
+  async function loadPizzerias() {
+    const { data, error } = await supabase.from("pizzerias").select("*").order("created_at");
+    if (error) { toast.error(error.message); return; }
+    setPizzerias(data ?? []);
+    if (data && data.length && !activeId) setActiveId(data[0].id);
+  }
+
+  useEffect(() => {
+    if (!activeId) return;
+    initialLoad.current = true;
+    (async () => {
+      const { data } = await supabase.from("orders").select("*").eq("tenant_id", activeId)
+        .order("created_at", { ascending: false }).limit(200);
+      setOrders((data ?? []) as Order[]);
+      initialLoad.current = false;
+    })();
+    const ch = supabase.channel(`orders-${activeId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `tenant_id=eq.${activeId}` }, (p) => {
+        const o = p.new as Order;
+        setOrders((prev) => [o, ...prev]);
+        if (soundOn) playBeep();
+        toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
+      })
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `tenant_id=eq.${activeId}` }, (p) => {
+        const o = p.new as Order;
+        setOrders((prev) => prev.map((x) => x.id === o.id ? o : x));
+      })
+      .subscribe();
+    return () => { supabase.removeChannel(ch); };
+  }, [activeId, soundOn]);
+
+  const active = pizzerias.find((p) => p.id === activeId);
+  const filtered = useMemo(() => {
+    if (filter === "ativos") return orders.filter((o) => !["entregue", "cancelado"].includes(o.status));
+    if (filter === "todos") return orders;
+    return orders.filter((o) => o.status === filter);
+  }, [orders, filter]);
+
+  async function changeStatus(o: Order, status: string) {
+    const { error } = await supabase.from("orders").update({ status }).eq("id", o.id);
+    if (error) toast.error(error.message);
+  }
+
+  async function createPizzeria(form: { name: string; slug: string; phone: string; address: string }) {
+    const apiKey = "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
+      .map((b) => b.toString(16).padStart(2, "0")).join("");
+    const { data, error } = await supabase.from("pizzerias").insert({
+      name: form.name, slug: form.slug.toLowerCase(), phone: form.phone, address: form.address,
+      api_key: apiKey, owner_id: user!.id,
+    }).select("*").single();
+    if (error) { toast.error(error.message); return; }
+    toast.success("Pizzaria criada!");
+    setPizzerias((p) => [...p, data as Pizzeria]);
+    setActiveId(data!.id);
+    setShowNew(false);
+  }
+
+  if (!pizzerias.length) {
+    return (
+      <div className="p-8">
+        <Header title="Bem-vindo ao FlyControl" subtitle="Cadastre sua primeira pizzaria para começar." />
+        <NewPizzeriaCard onCreate={createPizzeria} />
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 md:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <select className="rounded-md border border-input bg-card px-3 py-2 text-sm"
+            value={activeId ?? ""} onChange={(e) => setActiveId(e.target.value)}>
+            {pizzerias.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+          </select>
+          <Button variant="outline" size="sm" onClick={() => setShowNew((v) => !v)}>
+            <Plus className="h-4 w-4" /> Nova pizzaria
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button variant={soundOn ? "default" : "outline"} size="sm" onClick={() => setSoundOn((v) => !v)}>
+            {soundOn ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
+            Som {soundOn ? "ligado" : "desligado"}
+          </Button>
+        </div>
+      </div>
+
+      {showNew && <NewPizzeriaCard onCreate={createPizzeria} />}
+
+      {active && (
+        <div className="mb-6 rounded-xl border border-border bg-card p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs text-muted-foreground">API Key (use no SiteCreatorFly)</div>
+              <code className="mt-1 inline-block rounded bg-muted px-2 py-1 text-xs">{active.api_key}</code>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => {
+              navigator.clipboard.writeText(active.api_key);
+              setCopied(true); setTimeout(() => setCopied(false), 1500);
+            }}>
+              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} Copiar
+            </Button>
+          </div>
+          <div className="mt-2 text-xs text-muted-foreground">
+            Endpoint: <code>{typeof window !== "undefined" ? window.location.origin : ""}/api/public/create-order</code>
+          </div>
+        </div>
+      )}
+
+      <div className="mb-4 flex flex-wrap gap-2">
+        {[{ v: "ativos", l: "Em andamento" }, { v: "todos", l: "Todos" }, ...STATUSES.map(s => ({ v: s.value, l: s.label }))].map((f) => (
+          <button key={f.v}
+            onClick={() => setFilter(f.v)}
+            className={`rounded-full border px-3 py-1.5 text-xs transition ${
+              filter === f.v ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-muted"
+            }`}>
+            {f.l}
+          </button>
+        ))}
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {filtered.map((o) => (
+          <OrderCard key={o.id} o={o} onChange={changeStatus} />
+        ))}
+        {!filtered.length && (
+          <div className="col-span-full grid place-items-center rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
+            Nenhum pedido aqui. Aguardando…
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function Header({ title, subtitle }: { title: string; subtitle?: string }) {
+  return (
+    <div className="mb-6">
+      <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
+      {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+    </div>
+  );
+}
+
+function OrderCard({ o, onChange }: { o: Order; onChange: (o: Order, s: string) => void }) {
+  const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
+  const items = Array.isArray(o.items) ? o.items : [];
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 transition hover:border-primary/30">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="text-xs text-muted-foreground">Pedido</div>
+          <div className="text-lg font-bold">#{o.order_number}</div>
+        </div>
+        <Badge className={status.color} variant="outline">{status.label}</Badge>
+      </div>
+      <div className="mt-3 space-y-1 text-sm">
+        <div className="font-medium">{o.customer_name}</div>
+        <div className="flex items-center gap-1 text-xs text-muted-foreground"><Phone className="h-3 w-3" /> {o.customer_phone}</div>
+        {o.customer_address && (
+          <div className="flex items-start gap-1 text-xs text-muted-foreground">
+            <MapPin className="h-3 w-3 mt-0.5" /> {o.customer_address}{o.neighborhood ? ` — ${o.neighborhood}` : ""}
+          </div>
+        )}
+        <div className="flex items-center gap-1 text-xs text-muted-foreground">
+          <Clock className="h-3 w-3" /> {new Date(o.created_at).toLocaleTimeString("pt-BR")}
+        </div>
+      </div>
+      <ul className="mt-3 space-y-1 border-t border-border pt-3 text-sm">
+        {items.slice(0, 4).map((it: any, i: number) => (
+          <li key={i} className="flex justify-between gap-2">
+            <span className="truncate">{it.qty ?? it.quantity ?? 1}× {it.name ?? it.title ?? "Item"}</span>
+            {typeof it.price === "number" && <span className="text-muted-foreground">R$ {Number(it.price).toFixed(2)}</span>}
+          </li>
+        ))}
+        {items.length > 4 && <li className="text-xs text-muted-foreground">+{items.length - 4} itens</li>}
+      </ul>
+      <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
+        <span className="text-muted-foreground">Total</span>
+        <span className="text-lg font-bold text-primary">R$ {Number(o.total).toFixed(2)}</span>
+      </div>
+      <div className="mt-3 flex flex-wrap gap-2">
+        <select className="rounded-md border border-input bg-background px-2 py-1.5 text-xs"
+          value={o.status} onChange={(e) => onChange(o, e.target.value)}>
+          {STATUSES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
+        </select>
+        <a href={`/print/${o.id}`} target="_blank" rel="noreferrer">
+          <Button size="sm" variant="outline"><Printer className="h-4 w-4" /> Imprimir</Button>
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function NewPizzeriaCard({ onCreate }: { onCreate: (f: any) => void }) {
+  const [f, setF] = useState({ name: "", slug: "", phone: "", address: "" });
+  return (
+    <form
+      onSubmit={(e) => { e.preventDefault(); onCreate(f); }}
+      className="mb-6 grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-2"
+    >
+      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Nome da pizzaria" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
+      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Slug (ex: minha-pizza)" required value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value })} />
+      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Telefone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Endereço" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
+      <div className="md:col-span-2"><Button type="submit">Criar pizzaria</Button></div>
+    </form>
+  );
+}
