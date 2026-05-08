@@ -175,7 +175,7 @@ function Settings() {
             <div className="mt-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-medium">API Key</span>
-                <Button variant="ghost" size="xs" className="h-6 text-[10px]" onClick={async () => {
+                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={async () => {
                   const apiKey = "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
                     .map((b) => b.toString(16).padStart(2, "0")).join("");
                   await update(p.id, { api_key: apiKey });
