@@ -14,11 +14,13 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
+import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
 import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
+import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin.users'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin.analytics'
 
@@ -46,6 +48,11 @@ const PrintOrderIdRoute = PrintOrderIdRouteImport.update({
   path: '/print/$orderId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiOrdersRoute = ApiOrdersRouteImport.update({
+  id: '/api/orders',
+  path: '/api/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
@@ -71,6 +78,11 @@ const ApiPublicCreateOrderRoute = ApiPublicCreateOrderRouteImport.update({
   path: '/api/public/create-order',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPizzeriasCreateRoute = ApiPizzeriasCreateRouteImport.update({
+  id: '/api/pizzerias/create',
+  path: '/api/pizzerias/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -89,9 +101,11 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AppAdminRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/settings': typeof AppSettingsRoute
+  '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
 }
@@ -102,9 +116,11 @@ export interface FileRoutesByTo {
   '/admin': typeof AppAdminRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/settings': typeof AppSettingsRoute
+  '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
 }
@@ -117,9 +133,11 @@ export interface FileRoutesById {
   '/_app/admin': typeof AppAdminRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
+  '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
 }
@@ -132,9 +150,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/settings'
+    | '/api/orders'
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/users'
+    | '/api/pizzerias/create'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
   fileRoutesByTo: FileRoutesByTo
@@ -145,9 +165,11 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/settings'
+    | '/api/orders'
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/users'
+    | '/api/pizzerias/create'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
   id:
@@ -159,9 +181,11 @@ export interface FileRouteTypes {
     | '/_app/admin'
     | '/_app/dashboard'
     | '/_app/settings'
+    | '/api/orders'
     | '/print/$orderId'
     | '/_app/admin/analytics'
     | '/_app/admin/users'
+    | '/api/pizzerias/create'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
   fileRoutesById: FileRoutesById
@@ -171,7 +195,9 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  ApiOrdersRoute: typeof ApiOrdersRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
+  ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPublicCreateOrderRoute: typeof ApiPublicCreateOrderRoute
   ApiPublicCreatePizzeriaRoute: typeof ApiPublicCreatePizzeriaRoute
 }
@@ -213,6 +239,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PrintOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/orders': {
+      id: '/api/orders'
+      path: '/api/orders'
+      fullPath: '/api/orders'
+      preLoaderRoute: typeof ApiOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
@@ -246,6 +279,13 @@ declare module '@tanstack/react-router' {
       path: '/api/public/create-order'
       fullPath: '/api/public/create-order'
       preLoaderRoute: typeof ApiPublicCreateOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pizzerias/create': {
+      id: '/api/pizzerias/create'
+      path: '/api/pizzerias/create'
+      fullPath: '/api/pizzerias/create'
+      preLoaderRoute: typeof ApiPizzeriasCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app/admin/users': {
@@ -298,7 +338,9 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  ApiOrdersRoute: ApiOrdersRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
+  ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPublicCreateOrderRoute: ApiPublicCreateOrderRoute,
   ApiPublicCreatePizzeriaRoute: ApiPublicCreatePizzeriaRoute,
 }
