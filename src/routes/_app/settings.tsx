@@ -4,7 +4,10 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Copy, Check, Plug } from "lucide-react";
+import { Copy, Check, Plug, Plus } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
 
@@ -32,19 +35,83 @@ function CopyField({ label, value }: { label: string; value: string }) {
   );
 }
 
+function AddPizzeriaDialog({ onSuccess }: { onSuccess: () => void }) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const { user } = useAuth();
+
+  const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setLoading(true);
+    const fd = new FormData(e.currentTarget);
+    const name = fd.get("name") as string;
+    const apiKey = fd.get("apiKey") as string;
+    const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
+
+    const { error } = await supabase.from("pizzerias").insert({
+      name,
+      api_key: apiKey,
+      slug,
+      owner_id: user?.id,
+      status: "active"
+    });
+
+    setLoading(false);
+    if (error) {
+      toast.error("Erro ao adicionar: " + error.message);
+    } else {
+      toast.success("Pizzaria adicionada com sucesso!");
+      setOpen(false);
+      onSuccess();
+    }
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button className="gap-2">
+          <Plus className="h-4 w-4" /> Adicionar Pizzaria Existente
+        </Button>
+      </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Vincular Pizzaria do SiteCreatorFly</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-4">
+          <div className="space-y-2">
+            <Label htmlFor="name">Nome da Pizzaria</Label>
+            <Input id="name" name="name" placeholder="Ex: Pizzaria do João" required />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="apiKey">API Key (do SiteCreatorFly)</Label>
+            <Input id="apiKey" name="apiKey" placeholder="Cole a chave aqui" required />
+          </div>
+          <Button type="submit" className="w-full" disabled={loading}>
+            {loading ? "Salvando..." : "Vincular Pizzaria"}
+          </Button>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function Settings() {
   const { user } = useAuth();
   const [pz, setPz] = useState<any[]>([]);
   const [origin, setOrigin] = useState("");
 
+  const loadPizzerias = async () => {
+    const { data } = await supabase.from("pizzerias").select("*").order("created_at");
+    setPz(data ?? []);
+  };
+
   useEffect(() => {
     setOrigin(typeof window !== "undefined" ? window.location.origin : "");
   }, []);
 
-  useEffect(() => { (async () => {
-    const { data } = await supabase.from("pizzerias").select("*").order("created_at");
-    setPz(data ?? []);
-  })(); }, [user]);
+  useEffect(() => {
+    if (user) loadPizzerias();
+  }, [user]);
 
   async function update(id: string, patch: any) {
     const { error } = await supabase.from("pizzerias").update(patch).eq("id", id);
@@ -52,12 +119,14 @@ function Settings() {
   }
 
   const baseUrl = origin;
-  const pizzeriasCreate = `${origin}/api/pizzerias/create`;
   const ordersEndpoint = `${origin}/api/orders`;
 
   return (
     <div className="p-6 md:p-8">
-      <h1 className="mb-6 text-3xl font-bold">Configurações</h1>
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Configurações</h1>
+        <AddPizzeriaDialog onSuccess={loadPizzerias} />
+      </div>
 
       {/* Painel de integração com SiteCreatorFly */}
       <div className="mb-8 rounded-xl border border-primary/30 bg-card p-5">
@@ -66,20 +135,16 @@ function Settings() {
           <h2 className="text-lg font-semibold">Integração com SiteCreatorFly</h2>
         </div>
         <p className="mb-4 text-sm text-muted-foreground">
-          Cole estes valores nos campos correspondentes do painel do SiteCreatorFly para conectar
-          os sites de delivery a este FlyControl.
+          Cole a URL abaixo no campo <strong>"URL base do FLYCONTROL"</strong> dentro do painel do SiteCreatorFly.
         </p>
         <div className="grid gap-4 md:grid-cols-2">
-          <CopyField label="URL base do FLYCONTROL" value={baseUrl} />
-          <CopyField label="URL final de envio de pedidos (opcional)" value={ordersEndpoint} />
-          <CopyField label="Endpoint de registro (derivado)" value={pizzeriasCreate} />
+          <CopyField label="URL base do FLYCONTROL (Destinatário)" value={baseUrl} />
           <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
-            <div className="mb-1 font-medium text-foreground">Como usar</div>
-            1. No SiteCreatorFly, ative <em>“Ativar envio para FLYCONTROL”</em>.<br />
-            2. Cole a <strong>URL base</strong> acima no campo correspondente.<br />
-            3. Clique em <em>“Registrar pizzaria no FLYCONTROL”</em> — a API Key será gerada e
-            preenchida automaticamente.<br />
-            4. (Opcional) Sobrescreva a URL final de envio com o valor acima.
+            <div className="mb-1 font-medium text-foreground">Como conectar uma pizzaria existente</div>
+            1. No SiteCreatorFly, copie a <strong>API Key</strong> da pizzaria.<br />
+            2. Aqui no FlyControl, clique no botão <strong>"Adicionar Pizzaria Existente"</strong> acima.<br />
+            3. Cole a API Key e dê um nome para identificá-la.<br />
+            4. No SiteCreatorFly, certifique-se de que a <strong>URL base</strong> aponta para o endereço acima.
           </div>
         </div>
       </div>
@@ -88,7 +153,10 @@ function Settings() {
       <div className="space-y-4">
         {pz.map((p) => (
           <div key={p.id} className="rounded-xl border border-border bg-card p-4">
-            <div className="font-semibold">{p.name}</div>
+            <div className="flex items-center justify-between">
+              <div className="font-semibold">{p.name}</div>
+              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">ID: {p.id.slice(0, 8)}</div>
+            </div>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-background p-3 text-sm">
                 <span>Som ao receber pedido</span>
@@ -104,17 +172,29 @@ function Settings() {
                 </select>
               </label>
             </div>
-            <div className="mt-4 grid gap-3 md:grid-cols-2">
-              <CopyField label="API Key desta pizzaria" value={p.api_key} />
-              <CopyField label="Slug" value={p.slug} />
-            </div>
-            <div className="mt-3">
-              <Button variant="outline" size="sm" onClick={async () => {
-                const apiKey = "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
-                  .map((b) => b.toString(16).padStart(2, "0")).join("");
-                await update(p.id, { api_key: apiKey });
-                setPz((prev) => prev.map((x) => x.id === p.id ? { ...x, api_key: apiKey } : x));
-              }}>Gerar nova API key</Button>
+            <div className="mt-4">
+              <div className="mb-2 flex items-center justify-between">
+                <span className="text-sm font-medium">API Key</span>
+                <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={async () => {
+                  const apiKey = "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                    .map((b) => b.toString(16).padStart(2, "0")).join("");
+                  await update(p.id, { api_key: apiKey });
+                  setPz((prev) => prev.map((x) => x.id === p.id ? { ...x, api_key: apiKey } : x));
+                }}>Redefinir</Button>
+              </div>
+              <div className="flex items-center gap-2">
+                <Input value={p.api_key} readOnly className="h-9 bg-muted text-xs" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    navigator.clipboard.writeText(p.api_key);
+                    toast.success("Chave copiada");
+                  }}
+                >
+                  <Copy className="h-3.5 w-3.5" />
+                </Button>
+              </div>
             </div>
           </div>
         ))}
