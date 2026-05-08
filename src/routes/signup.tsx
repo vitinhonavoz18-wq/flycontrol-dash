@@ -21,10 +21,14 @@ function Signup() {
     e.preventDefault();
     setLoading(true);
     const { error } = await signUp(email, password, fullName);
-    setLoading(false);
-    if (error) { toast.error(error); return; }
-    toast.success("Conta criada! Faça login.");
-    nav({ to: "/login" });
+    if (error) {
+      setLoading(false);
+      toast.error(error);
+      return;
+    }
+    toast.success("Conta criada com sucesso!");
+    nav({ to: "/dashboard" });
+
   }
 
   return (
