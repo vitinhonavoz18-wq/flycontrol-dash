@@ -119,6 +119,7 @@ function Settings() {
   }
 
   const baseUrl = origin;
+  const createEndpoint = `${origin}/api/pizzerias/create`;
   const ordersEndpoint = `${origin}/api/orders`;
 
   return (
@@ -134,11 +135,15 @@ function Settings() {
           <Plug className="h-5 w-5 text-primary" />
           <h2 className="text-lg font-semibold">Integração com SiteCreatorFly</h2>
         </div>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Cole a URL abaixo no campo <strong>"URL base do FLYCONTROL"</strong> dentro do painel do SiteCreatorFly.
-        </p>
-        <div className="grid gap-4 md:grid-cols-2">
-          <CopyField label="URL base do FLYCONTROL (Destinatário)" value={baseUrl} />
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Utilize os campos abaixo para configurar a integração no painel do SiteCreatorFly:
+            </p>
+            <CopyField label="URL base do FLYCONTROL" value={baseUrl} />
+            <CopyField label="Endpoint de Criação Automática" value={createEndpoint} />
+            <CopyField label="Endpoint de Envio de Pedidos" value={ordersEndpoint} />
+          </div>
           <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
             <div className="mb-1 font-medium text-foreground">Como conectar uma pizzaria existente</div>
             1. No SiteCreatorFly, copie a <strong>API Key</strong> da pizzaria.<br />
