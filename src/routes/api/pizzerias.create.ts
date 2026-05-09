@@ -45,11 +45,19 @@ export const Route = createFileRoute("/api/pizzerias/create")({
             order_endpoint: new URL("/api/orders", request.url).toString(),
           }), { status: 200, headers: cors });
         }
-        const api_key = genKey();
+        const api_key = String(body?.api_key || "").trim() || genKey();
         const { data, error } = await supabaseAdmin
           .from("pizzerias")
-          .insert({ name, slug, phone, address, api_key, status: "active" })
-          .select("id, api_key").single();
+          .insert({
+            name,
+            slug,
+            phone,
+            address,
+            api_key,
+            status: "active",
+          })
+          .select("id, api_key")
+          .single();
         if (error || !data) {
           return new Response(JSON.stringify({ error: error?.message ?? "Falha ao criar" }), { status: 500, headers: cors });
         }
