@@ -33,11 +33,15 @@ export const Route = createFileRoute("/api/pizzerias/create")({
         if (!slug && name) slug = slugify(name);
         const phone = String(body?.phone ?? "").trim();
         const address = String(body?.address ?? "").trim();
+        const owner_id = String(body?.owner_id || "").trim();
+
         if (!name || !slug) {
           return new Response(JSON.stringify({ error: "name e slug obrigatórios" }), { status: 400, headers: cors });
         }
+
         const { data: existing } = await supabaseAdmin
           .from("pizzerias").select("id, api_key").eq("slug", slug).maybeSingle();
+
         if (existing) {
           return new Response(JSON.stringify({
             tenant_id: existing.id,
@@ -45,22 +49,30 @@ export const Route = createFileRoute("/api/pizzerias/create")({
             order_endpoint: new URL("/api/orders", request.url).toString(),
           }), { status: 200, headers: cors });
         }
+
         const api_key = String(body?.api_key || "").trim() || genKey();
+        
+        const insertData: any = {
+          name,
+          slug,
+          phone: phone || null,
+          address: address || null,
+          api_key,
+          status: "active",
+        };
+
+        if (owner_id) insertData.owner_id = owner_id;
+
         const { data, error } = await supabaseAdmin
           .from("pizzerias")
-          .insert({
-            name,
-            slug,
-            phone,
-            address,
-            api_key,
-            status: "active",
-          })
+          .insert(insertData)
           .select("id, api_key")
           .single();
+
         if (error || !data) {
           return new Response(JSON.stringify({ error: error?.message ?? "Falha ao criar" }), { status: 500, headers: cors });
         }
+
         return new Response(JSON.stringify({
           tenant_id: data.id,
           api_key: data.api_key,
