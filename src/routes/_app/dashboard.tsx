@@ -99,8 +99,8 @@ function Dashboard() {
     if (error) toast.error(error.message);
   }
 
-  async function createPizzeria(form: { name: string; slug: string; phone: string; address: string }) {
-    const apiKey = "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
+  async function createPizzeria(form: { name: string; slug: string; phone: string; address: string; api_key?: string }) {
+    const apiKey = form.api_key?.trim() || "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
       .map((b) => b.toString(16).padStart(2, "0")).join("");
     const { data, error } = await supabase.from("pizzerias").insert({
       name: form.name, slug: form.slug.toLowerCase(), phone: form.phone, address: form.address,
@@ -250,7 +250,7 @@ function OrderCard({ o, onChange }: { o: Order; onChange: (o: Order, s: string) 
 }
 
 function NewPizzeriaCard({ onCreate }: { onCreate: (f: any) => void }) {
-  const [f, setF] = useState({ name: "", slug: "", phone: "", address: "" });
+  const [f, setF] = useState({ name: "", slug: "", phone: "", address: "", api_key: "" });
   return (
     <form
       onSubmit={(e) => { e.preventDefault(); onCreate(f); }}
@@ -260,6 +260,12 @@ function NewPizzeriaCard({ onCreate }: { onCreate: (f: any) => void }) {
       <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Slug (ex: minha-pizza)" required value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value })} />
       <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Telefone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
       <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Endereço" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
+      <input 
+        className="rounded-md border border-input bg-background px-3 py-2 text-sm md:col-span-2" 
+        placeholder="API Key do SiteCreatorFly (Opcional)" 
+        value={f.api_key || ""} 
+        onChange={(e) => setF({ ...f, api_key: e.target.value })} 
+      />
       <div className="md:col-span-2"><Button type="submit">Criar pizzaria</Button></div>
     </form>
   );
