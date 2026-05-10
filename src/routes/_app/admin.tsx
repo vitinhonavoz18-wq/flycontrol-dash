@@ -35,18 +35,20 @@ function Admin() {
       return;
     }
 
-    // 2. Coletamos todos os owner_ids únicos
-    const ownerIds = [...new Set((pizzeriasData || [])
+    // 2. Coletamos todos os owner_ids únicos e válidos
+    const ownerIds = (pizzeriasData || [])
       .map(p => p.owner_id)
-      .filter(id => !!id))];
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    
+    const uniqueOwnerIds = Array.from(new Set(ownerIds));
 
     // 3. Buscamos os perfis separadamente para evitar erro de relacionamento no cache
-    let profilesMap: Record<string, any> = {};
-    if (ownerIds.length > 0) {
+    const profilesMap: Record<string, any> = {};
+    if (uniqueOwnerIds.length > 0) {
       const { data: profilesData } = await supabase
         .from("profiles")
         .select("id, full_name")
-        .in("id", ownerIds);
+        .in("id", uniqueOwnerIds);
       
       if (profilesData) {
         profilesData.forEach(profile => {
@@ -58,7 +60,7 @@ function Admin() {
     // 4. Juntamos os dados no frontend
     const joinedData = (pizzeriasData || []).map(pz => ({
       ...pz,
-      owner: profilesMap[pz.owner_id] || null
+      owner: pz.owner_id ? (profilesMap[pz.owner_id] || null) : null
     }));
 
     setPz(joinedData);
