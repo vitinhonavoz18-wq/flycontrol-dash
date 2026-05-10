@@ -2,7 +2,8 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Store, BarChart3, Users, LogOut, Zap, Settings, BookOpen } from "lucide-react";
+import { LayoutDashboard, Store, BarChart3, Users, LogOut, Settings, BookOpen } from "lucide-react";
+import logo from "@/assets/flycontrol-logo.png";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
