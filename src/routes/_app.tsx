@@ -2,7 +2,8 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Store, BarChart3, Users, LogOut, Zap, Settings, BookOpen } from "lucide-react";
+import { LayoutDashboard, Store, BarChart3, Users, LogOut, Settings, BookOpen } from "lucide-react";
+import logo from "@/assets/flycontrol-logo.png";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
@@ -33,11 +34,9 @@ function AppLayout() {
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
-        <Link to="/dashboard" className="flex h-16 items-center gap-2 border-b border-border px-6">
-          <div className="grid h-8 w-8 place-items-center rounded-md" style={{ background: "var(--gradient-primary)" }}>
-            <Zap className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="font-bold">FlyControl</span>
+        <Link to="/dashboard" className="flex h-16 items-center gap-2 border-b border-sidebar-border px-5">
+          <img src={logo} alt="FlyControl" className="h-9 w-9 object-contain drop-shadow-[0_0_10px_rgba(255,122,0,0.55)]" />
+          <span className="text-lg font-bold tracking-tight text-gradient-fire">FlyControl</span>
         </Link>
         <nav className="flex-1 space-y-1 p-3">
           {items.map((it) => (
