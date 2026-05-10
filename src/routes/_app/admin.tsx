@@ -19,7 +19,7 @@ function Admin() {
 
   useEffect(() => { if (isSuperAdmin) load(); }, [isSuperAdmin]);
   async function load() {
-    const { data } = await supabase.from("pizzerias").select("*").order("created_at", { ascending: false });
+    const { data } = await supabase.from("pizzerias").select("*, profiles!inner(full_name, email), orders(total, created_at)").order("created_at", { ascending: false });
     setPz(data ?? []);
   }
 
