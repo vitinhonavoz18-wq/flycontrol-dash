@@ -1,6 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Bell, Printer, BarChart3, Shield, Zap, ChefHat } from "lucide-react";
+import logo from "@/assets/flycontrol-logo.png";
 
 export const Route = createFileRoute("/")({
   component: Landing,
