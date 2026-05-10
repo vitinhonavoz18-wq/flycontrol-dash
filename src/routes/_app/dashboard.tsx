@@ -100,14 +100,32 @@ function Dashboard() {
   }
 
   async function createPizzeria(form: { name: string; slug: string; phone: string; address: string; api_key?: string }) {
+    const slug = form.slug?.trim().toLowerCase() || form.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    
+    if (!slug) {
+      toast.error("Nome ou slug inválido");
+      return;
+    }
+
     const apiKey = form.api_key?.trim() || "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
       .map((b) => b.toString(16).padStart(2, "0")).join("");
+
     const { data, error } = await supabase.from("pizzerias").insert({
-      name: form.name, slug: form.slug.toLowerCase(), phone: form.phone, address: form.address,
-      api_key: apiKey, owner_id: user!.id,
+      name: form.name, 
+      slug: slug, 
+      phone: form.phone, 
+      address: form.address,
+      api_key: apiKey, 
+      owner_id: user!.id,
+      status: "active"
     }).select("*").single();
-    if (error) { toast.error(error.message); return; }
-    toast.success("Pizzaria criada!");
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success(form.api_key ? "Pizzaria conectada!" : "Pizzaria criada!");
     setPizzerias((p) => [...p, data as Pizzeria]);
     setActiveId(data!.id);
     setShowNew(false);
