@@ -46,7 +46,7 @@ function playBeep() {
 function Dashboard() {
   const { user, isSuperAdmin } = useAuth();
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(new URLSearchParams(window.location.search).get("pizzeriaId"));
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<string>("ativos");
   const [soundOn, setSoundOn] = useState(true);
@@ -187,7 +187,7 @@ function Dashboard() {
         </div>
       )}
 
-      {active && (
+      {active && isSuperAdmin && (
         <div className="mb-6 rounded-xl border border-border bg-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
