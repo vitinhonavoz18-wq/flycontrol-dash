@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { Zap } from "lucide-react";
+import logo from "@/assets/flycontrol-logo.png";
 
 export const Route = createFileRoute("/signup")({ component: Signup });
 
@@ -34,12 +34,11 @@ function Signup() {
   return (
     <div className="grid min-h-screen place-items-center bg-background px-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-glow)]">
-        <Link to="/" className="mb-6 flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center rounded-md" style={{ background: "var(--gradient-primary)" }}>
-            <Zap className="h-4 w-4 text-primary-foreground" />
-          </div>
-          <span className="font-bold">FlyControl</span>
-        </Link>
+        <div className="mb-8 flex justify-center">
+          <Link to="/">
+            <img src={logo} alt="FlyControl" className="h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.65)]" />
+          </Link>
+        </div>
         <h1 className="text-2xl font-bold">Criar conta</h1>
         <p className="mt-1 text-sm text-muted-foreground">Comece a receber pedidos em minutos.</p>
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
