@@ -60,8 +60,8 @@ function Dashboard() {
     let query = supabase.from("pizzerias").select("*").order("created_at");
     
     // Se não for super admin, filtra apenas as pizzarias do dono
-    if (!isSuperAdmin) {
-      query = query.eq("owner_id", user?.id);
+    if (!isSuperAdmin && user?.id) {
+      query = query.eq("owner_id", user.id);
     }
     
     const { data, error } = await query;
