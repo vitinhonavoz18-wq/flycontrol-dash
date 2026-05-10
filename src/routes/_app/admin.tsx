@@ -26,7 +26,7 @@ function Admin() {
       .from("pizzerias")
       .select(`
         *,
-        owner:profiles(full_name, id),
+        owner:profiles!pizzerias_owner_id_fkey(full_name, id),
         orders(id, total, created_at)
       `)
       .order("created_at", { ascending: false });
