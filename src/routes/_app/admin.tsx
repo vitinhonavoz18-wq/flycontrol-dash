@@ -21,21 +21,49 @@ function Admin() {
   useEffect(() => { if (isSuperAdmin) load(); }, [isSuperAdmin]);
   
   async function load() {
-    // Buscando pizzarias com dados do dono e contagem de pedidos
-    const { data, error } = await supabase
+    // 1. Buscamos as pizzarias e seus pedidos (relacionamento que funciona)
+    const { data: pizzeriasData, error: pzError } = await supabase
       .from("pizzerias")
       .select(`
         *,
-        owner:profiles!pizzerias_owner_id_fkey(full_name, id),
         orders(id, total, created_at)
       `)
       .order("created_at", { ascending: false });
     
-    if (error) {
-      toast.error("Erro ao carregar pizzarias: " + error.message);
+    if (pzError) {
+      toast.error("Erro ao carregar pizzarias: " + pzError.message);
       return;
     }
-    setPz(data ?? []);
+
+    // 2. Coletamos todos os owner_ids únicos e válidos
+    const ownerIds = (pizzeriasData || [])
+      .map(p => p.owner_id)
+      .filter((id): id is string => typeof id === 'string' && id.length > 0);
+    
+    const uniqueOwnerIds = Array.from(new Set(ownerIds));
+
+    // 3. Buscamos os perfis separadamente para evitar erro de relacionamento no cache
+    const profilesMap: Record<string, any> = {};
+    if (uniqueOwnerIds.length > 0) {
+      const { data: profilesData } = await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", uniqueOwnerIds);
+      
+      if (profilesData) {
+        profilesData.forEach(profile => {
+          profilesMap[profile.id] = profile;
+        });
+      }
+    }
+
+    // 4. Juntamos os dados no frontend
+    const joinedData = (pizzeriasData || []).map(pz => ({
+      ...pz,
+      owner: pz.owner_id ? (profilesMap[pz.owner_id] || null) : null
+    }));
+
+    setPz(joinedData);
   }
 
   async function setStatus(id: string, status: string) {
