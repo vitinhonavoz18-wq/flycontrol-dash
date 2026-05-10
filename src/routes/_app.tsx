@@ -34,8 +34,8 @@ function AppLayout() {
   return (
     <div className="flex min-h-screen bg-background">
       <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex">
-        <Link to="/dashboard" className="flex h-20 items-center justify-center border-b border-sidebar-border px-5">
-          <img src={logo} alt="FlyControl" className="h-14 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.65)]" />
+        <Link to="/dashboard" className="flex h-48 items-center justify-center border-b border-sidebar-border px-5">
+          <img src={logo} alt="FlyControl" className="h-40 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,122,0,0.7)]" />
         </Link>
         <nav className="flex-1 space-y-1 p-3">
           {items.map((it) => (
