@@ -270,24 +270,49 @@ function OrderCard({ o, onChange }: { o: Order; onChange: (o: Order, s: string) 
   );
 }
 
-function NewPizzeriaCard({ onCreate }: { onCreate: (f: any) => void }) {
+function NewPizzeriaCard({ onCreate, mode = "new" }: { onCreate: (f: any) => void; mode?: "new" | "connect" }) {
   const [f, setF] = useState({ name: "", slug: "", phone: "", address: "", api_key: "" });
+  const isConnect = mode === "connect";
+
   return (
     <form
       onSubmit={(e) => { e.preventDefault(); onCreate(f); }}
-      className="mb-6 grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-2"
+      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
     >
-      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Nome da pizzaria" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Slug (ex: minha-pizza)" required value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value })} />
-      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Telefone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
-      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Endereço" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
       <input 
-        className="rounded-md border border-input bg-background px-3 py-2 text-sm md:col-span-2" 
-        placeholder="API Key do SiteCreatorFly (Opcional)" 
-        value={f.api_key || ""} 
-        onChange={(e) => setF({ ...f, api_key: e.target.value })} 
+        className="rounded-md border border-input bg-background px-3 py-2 text-sm" 
+        placeholder="Nome da pizzaria" 
+        required 
+        value={f.name} 
+        onChange={(e) => setF({ ...f, name: e.target.value })} 
       />
-      <div className="md:col-span-2"><Button type="submit">Criar pizzaria</Button></div>
+      
+      <input 
+        className="rounded-md border border-input bg-background px-3 py-2 text-sm" 
+        placeholder="Slug (ex: minha-pizza)" 
+        required={!isConnect}
+        value={f.slug} 
+        onChange={(e) => setF({ ...f, slug: e.target.value })} 
+      />
+
+      {isConnect ? (
+        <input 
+          className="rounded-md border border-input bg-primary/20 border-primary/50 bg-background px-3 py-2 text-sm font-mono" 
+          placeholder="Cole aqui a API Key Externa" 
+          required
+          value={f.api_key || ""} 
+          onChange={(e) => setF({ ...f, api_key: e.target.value })} 
+        />
+      ) : (
+        <>
+          <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Telefone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+          <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Endereço" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
+        </>
+      )}
+
+      <Button type="submit" variant={isConnect ? "secondary" : "default"}>
+        {isConnect ? "Conectar Pizzaria" : "Criar nova pizzaria"}
+      </Button>
     </form>
   );
 }
