@@ -57,7 +57,14 @@ function Dashboard() {
   useEffect(() => { if (user) loadPizzerias(); }, [user]);
 
   async function loadPizzerias() {
-    const { data, error } = await supabase.from("pizzerias").select("*").order("created_at");
+    let query = supabase.from("pizzerias").select("*").order("created_at");
+    
+    // Se não for super admin, filtra apenas as pizzarias do dono
+    if (!isSuperAdmin && user?.id) {
+      query = query.eq("owner_id", user.id);
+    }
+    
+    const { data, error } = await query;
     if (error) { toast.error(error.message); return; }
     setPizzerias(data ?? []);
     if (data && data.length && !activeId) setActiveId(data[0].id);
