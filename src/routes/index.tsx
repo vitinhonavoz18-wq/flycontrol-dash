@@ -14,10 +14,8 @@ function Landing() {
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <Link to="/" className="flex items-center gap-2">
-            <div className="grid h-8 w-8 place-items-center rounded-md" style={{ background: "var(--gradient-primary)" }}>
-              <Zap className="h-4 w-4 text-primary-foreground" />
-            </div>
-            <span className="text-lg font-bold tracking-tight">FlyControl</span>
+            <img src={logo} alt="FlyControl" className="h-9 w-9 object-contain drop-shadow-[0_0_12px_rgba(255,122,0,0.6)]" />
+            <span className="text-lg font-bold tracking-tight text-gradient-fire">FlyControl</span>
           </Link>
           <nav className="flex items-center gap-2">
             <Link to="/login"><Button variant="ghost">Entrar</Button></Link>
