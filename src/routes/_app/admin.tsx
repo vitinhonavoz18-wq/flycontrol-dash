@@ -1,10 +1,11 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { createFileRoute, useNavigate, Link } from "@tanstack/react-router";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, ExternalLink, Package, DollarSign, Calendar, TrendingUp } from "lucide-react";
 
 export const Route = createFileRoute("/_app/admin")({ component: Admin });
 
@@ -18,8 +19,22 @@ function Admin() {
   }, [loading, isSuperAdmin, nav]);
 
   useEffect(() => { if (isSuperAdmin) load(); }, [isSuperAdmin]);
+  
   async function load() {
-    const { data } = await supabase.from("pizzerias").select("*").order("created_at", { ascending: false });
+    // Buscando pizzarias com dados do dono e contagem de pedidos
+    const { data, error } = await supabase
+      .from("pizzerias")
+      .select(`
+        *,
+        owner:profiles(full_name, id),
+        orders(id, total, created_at)
+      `)
+      .order("created_at", { ascending: false });
+    
+    if (error) {
+      toast.error("Erro ao carregar pizzarias: " + error.message);
+      return;
+    }
     setPz(data ?? []);
   }
 
@@ -27,48 +42,96 @@ function Admin() {
     const { error } = await supabase.from("pizzerias").update({ status }).eq("id", id);
     if (error) toast.error(error.message); else load();
   }
-  async function remove(id: string) {
-    if (!confirm("Excluir esta pizzaria e todos os pedidos?")) return;
-    const { error } = await supabase.from("pizzerias").delete().eq("id", id);
-    if (error) toast.error(error.message); else load();
-  }
 
   if (!isSuperAdmin) return null;
 
   return (
     <div className="p-6 md:p-8">
-      <h1 className="mb-6 text-3xl font-bold">Pizzarias cadastradas</h1>
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
-        <table className="w-full text-sm">
-          <thead className="bg-muted/40 text-xs uppercase text-muted-foreground">
-            <tr>
-              <th className="p-3 text-left">Nome</th>
-              <th className="p-3 text-left">Slug</th>
-              <th className="p-3 text-left">Status</th>
-              <th className="p-3 text-left">Criada em</th>
-              <th className="p-3"></th>
-            </tr>
-          </thead>
-          <tbody>
-            {pz.map((p) => (
-              <tr key={p.id} className="border-t border-border">
-                <td className="p-3 font-medium">{p.name}</td>
-                <td className="p-3 text-muted-foreground">{p.slug}</td>
-                <td className="p-3">
-                  <select className="rounded bg-background px-2 py-1" value={p.status} onChange={(e) => setStatus(p.id, e.target.value)}>
-                    <option value="active">Ativo</option>
-                    <option value="paused">Pausado</option>
-                  </select>
-                </td>
-                <td className="p-3 text-muted-foreground">{new Date(p.created_at).toLocaleDateString("pt-BR")}</td>
-                <td className="p-3 text-right">
-                  <Button variant="outline" size="sm" onClick={() => remove(p.id)}>Excluir</Button>
-                </td>
-              </tr>
-            ))}
-            {!pz.length && <tr><td colSpan={5} className="p-8 text-center text-muted-foreground">Sem pizzarias</td></tr>}
-          </tbody>
-        </table>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">FLYPIZZARIAS</h1>
+        <p className="text-muted-foreground">Gerenciamento global de todas as pizzarias da plataforma.</p>
+      </div>
+
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+        {pz.map((p) => (
+          <PizzeriaCard key={p.id} p={p} onStatusChange={setStatus} />
+        ))}
+        {!pz.length && (
+          <div className="col-span-full flex h-40 items-center justify-center rounded-xl border border-dashed border-border text-muted-foreground">
+            Nenhuma pizzaria cadastrada até o momento.
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function PizzeriaCard({ p, onStatusChange }: { p: any, onStatusChange: (id: string, s: string) => void }) {
+  const orders = p.orders || [];
+  const today = new Date().toISOString().split('T')[0];
+  const todayOrders = orders.filter((o: any) => o.created_at.startsWith(today));
+  const totalRevenue = orders.reduce((acc: number, o: any) => acc + Number(o.total || 0), 0);
+  const todayRevenue = todayOrders.reduce((acc: number, o: any) => acc + Number(o.total || 0), 0);
+
+  return (
+    <div className="flex flex-col rounded-xl border border-border bg-card p-5 transition-all hover:border-primary/40 hover:shadow-lg">
+      <div className="mb-4 flex items-start justify-between">
+        <div>
+          <h3 className="text-lg font-bold text-foreground">{p.name}</h3>
+          <p className="text-xs text-muted-foreground">/{p.slug}</p>
+        </div>
+        <Badge variant={p.status === 'active' ? 'default' : 'outline'} className={p.status === 'active' ? 'bg-success/20 text-success border-success/40' : ''}>
+          {p.status === 'active' ? 'Ativa' : 'Pausada'}
+        </Badge>
+      </div>
+
+      <div className="mb-4 grid grid-cols-2 gap-4">
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase text-muted-foreground">Pedidos Hoje</p>
+          <div className="flex items-center gap-2">
+            <Package className="h-3 w-3 text-primary" />
+            <span className="text-sm font-semibold">{todayOrders.length}</span>
+          </div>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase text-muted-foreground">Receita Hoje</p>
+          <div className="flex items-center gap-2">
+            <DollarSign className="h-3 w-3 text-success" />
+            <span className="text-sm font-semibold">R$ {todayRevenue.toFixed(2)}</span>
+          </div>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase text-muted-foreground">Total Pedidos</p>
+          <span className="text-sm font-semibold">{orders.length}</span>
+        </div>
+        <div className="space-y-1">
+          <p className="text-[10px] uppercase text-muted-foreground">Faturamento Total</p>
+          <span className="text-sm font-semibold text-primary">R$ {totalRevenue.toFixed(2)}</span>
+        </div>
+      </div>
+
+      <div className="mb-4 border-t border-border pt-4">
+        <p className="text-[10px] uppercase text-muted-foreground">Dono</p>
+        <p className="text-sm font-medium">{p.owner?.full_name || 'Não vinculado'}</p>
+      </div>
+
+      <div className="mt-auto flex items-center justify-between gap-2 border-t border-border pt-4">
+        <select 
+          className="rounded-md border border-input bg-background px-2 py-1.5 text-xs focus:ring-1 focus:ring-primary"
+          value={p.status} 
+          onChange={(e) => onStatusChange(p.id, e.target.value)}
+        >
+          <option value="active">Ativo</option>
+          <option value="paused">Pausado</option>
+        </select>
+        
+        <Link 
+          to="/dashboard" 
+          search={{ pizzeriaId: p.id }}
+          className="inline-flex h-8 items-center justify-center rounded-md bg-primary/10 px-3 text-xs font-medium text-primary transition-colors hover:bg-primary/20"
+        >
+          Acessar Painel <ExternalLink className="ml-1.5 h-3 w-3" />
+        </Link>
       </div>
     </div>
   );

@@ -44,9 +44,9 @@ function playBeep() {
 }
 
 function Dashboard() {
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(null);
+  const [activeId, setActiveId] = useState<string | null>(new URLSearchParams(window.location.search).get("pizzeriaId"));
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<string>("ativos");
   const [soundOn, setSoundOn] = useState(true);
@@ -154,13 +154,17 @@ function Dashboard() {
     <div className="p-6 md:p-8">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-3">
-          <select className="rounded-md border border-input bg-card px-3 py-2 text-sm"
-            value={activeId ?? ""} onChange={(e) => setActiveId(e.target.value)}>
-            {pizzerias.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
-          <Button variant="outline" size="sm" onClick={() => setShowNew((v) => !v)}>
-            <Plus className="h-4 w-4" /> Gerenciar Pizzarias
-          </Button>
+          {pizzerias.length > 1 && (
+            <select className="rounded-md border border-input bg-card px-3 py-2 text-sm"
+              value={activeId ?? ""} onChange={(e) => setActiveId(e.target.value)}>
+              {pizzerias.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          )}
+          {isSuperAdmin && (
+            <Button variant="outline" size="sm" onClick={() => setShowNew((v) => !v)}>
+              <Plus className="h-4 w-4" /> Gerenciar Pizzarias
+            </Button>
+          )}
         </div>
         <div className="flex items-center gap-2">
           <Button variant={soundOn ? "default" : "outline"} size="sm" onClick={() => setSoundOn((v) => !v)}>
@@ -183,7 +187,7 @@ function Dashboard() {
         </div>
       )}
 
-      {active && (
+      {active && isSuperAdmin && (
         <div className="mb-6 rounded-xl border border-border bg-card p-4">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>

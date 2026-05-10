@@ -21,13 +21,13 @@ function AppLayout() {
   }
 
   const items = [
-    { to: "/dashboard", label: "Pedidos", icon: LayoutDashboard },
+    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/settings", label: "Configurações", icon: Settings },
     { to: "/docs", label: "Documentação", icon: BookOpen },
   ];
   const adminItems = [
-    { to: "/admin", label: "Pizzarias", icon: Store },
-    { to: "/admin/analytics", label: "Analytics", icon: BarChart3 },
+    { to: "/admin", label: "FlyPizzarias", icon: Store },
+    { to: "/admin/analytics", label: "Insights Globais", icon: BarChart3 },
     { to: "/admin/users", label: "Usuários", icon: Users },
   ];
 
