@@ -15,7 +15,9 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppDocsRouteImport } from './routes/_app/docs'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
@@ -53,9 +55,19 @@ const ApiOrdersRoute = ApiOrdersRouteImport.update({
   path: '/api/orders',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDocsRoute = AppDocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDashboardRoute = AppDashboardRouteImport.update({
@@ -100,7 +112,9 @@ export interface FileRoutesByFullPath {
   '/signup': typeof SignupRoute
   '/admin': typeof AppAdminRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/docs': typeof AppDocsRoute
   '/settings': typeof AppSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
@@ -115,7 +129,9 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/admin': typeof AppAdminRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
+  '/docs': typeof AppDocsRoute
   '/settings': typeof AppSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
@@ -132,7 +148,9 @@ export interface FileRoutesById {
   '/signup': typeof SignupRoute
   '/_app/admin': typeof AppAdminRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
+  '/_app/docs': typeof AppDocsRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
@@ -149,7 +167,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/dashboard'
+    | '/docs'
     | '/settings'
+    | '/api/health'
     | '/api/orders'
     | '/print/$orderId'
     | '/admin/analytics'
@@ -164,7 +184,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/admin'
     | '/dashboard'
+    | '/docs'
     | '/settings'
+    | '/api/health'
     | '/api/orders'
     | '/print/$orderId'
     | '/admin/analytics'
@@ -180,7 +202,9 @@ export interface FileRouteTypes {
     | '/signup'
     | '/_app/admin'
     | '/_app/dashboard'
+    | '/_app/docs'
     | '/_app/settings'
+    | '/api/health'
     | '/api/orders'
     | '/print/$orderId'
     | '/_app/admin/analytics'
@@ -195,6 +219,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
+  ApiHealthRoute: typeof ApiHealthRoute
   ApiOrdersRoute: typeof ApiOrdersRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
@@ -246,11 +271,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/settings': {
       id: '/_app/settings'
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/docs': {
+      id: '/_app/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof AppDocsRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/dashboard': {
@@ -322,12 +361,14 @@ const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
+  AppDocsRoute: typeof AppDocsRoute
   AppSettingsRoute: typeof AppSettingsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
+  AppDocsRoute: AppDocsRoute,
   AppSettingsRoute: AppSettingsRoute,
 }
 
@@ -338,6 +379,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
+  ApiHealthRoute: ApiHealthRoute,
   ApiOrdersRoute: ApiOrdersRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,

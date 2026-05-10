@@ -2,7 +2,7 @@ import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tan
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
-import { LayoutDashboard, Store, BarChart3, Users, LogOut, Zap, Settings } from "lucide-react";
+import { LayoutDashboard, Store, BarChart3, Users, LogOut, Zap, Settings, BookOpen } from "lucide-react";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
@@ -22,6 +22,7 @@ function AppLayout() {
   const items = [
     { to: "/dashboard", label: "Pedidos", icon: LayoutDashboard },
     { to: "/settings", label: "Configurações", icon: Settings },
+    { to: "/docs", label: "Documentação", icon: BookOpen },
   ];
   const adminItems = [
     { to: "/admin", label: "Pizzarias", icon: Store },

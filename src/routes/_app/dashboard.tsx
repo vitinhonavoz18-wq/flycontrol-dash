@@ -100,14 +100,32 @@ function Dashboard() {
   }
 
   async function createPizzeria(form: { name: string; slug: string; phone: string; address: string; api_key?: string }) {
+    const slug = form.slug?.trim().toLowerCase() || form.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+    
+    if (!slug) {
+      toast.error("Nome ou slug inválido");
+      return;
+    }
+
     const apiKey = form.api_key?.trim() || "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
       .map((b) => b.toString(16).padStart(2, "0")).join("");
+
     const { data, error } = await supabase.from("pizzerias").insert({
-      name: form.name, slug: form.slug.toLowerCase(), phone: form.phone, address: form.address,
-      api_key: apiKey, owner_id: user!.id,
+      name: form.name, 
+      slug: slug, 
+      phone: form.phone, 
+      address: form.address,
+      api_key: apiKey, 
+      owner_id: user!.id,
+      status: "active"
     }).select("*").single();
-    if (error) { toast.error(error.message); return; }
-    toast.success("Pizzaria criada!");
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success(form.api_key ? "Pizzaria conectada!" : "Pizzaria criada!");
     setPizzerias((p) => [...p, data as Pizzeria]);
     setActiveId(data!.id);
     setShowNew(false);
@@ -116,8 +134,18 @@ function Dashboard() {
   if (!pizzerias.length) {
     return (
       <div className="p-8">
-        <Header title="Bem-vindo ao FlyControl" subtitle="Cadastre sua primeira pizzaria para começar." />
-        <NewPizzeriaCard onCreate={createPizzeria} />
+        <Header title="Bem-vindo ao FlyControl" subtitle="Conecte ou cadastre sua primeira pizzaria para começar." />
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Nova Pizzaria</h2>
+            <NewPizzeriaCard onCreate={createPizzeria} mode="new" />
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Conectar Pizzaria Existente</h2>
+            <p className="text-sm text-muted-foreground">Vincule uma pizzaria que já possui uma API Key no SiteCreatorFly.</p>
+            <NewPizzeriaCard onCreate={createPizzeria} mode="connect" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -131,7 +159,7 @@ function Dashboard() {
             {pizzerias.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <Button variant="outline" size="sm" onClick={() => setShowNew((v) => !v)}>
-            <Plus className="h-4 w-4" /> Nova pizzaria
+            <Plus className="h-4 w-4" /> Gerenciar Pizzarias
           </Button>
         </div>
         <div className="flex items-center gap-2">
@@ -142,7 +170,18 @@ function Dashboard() {
         </div>
       </div>
 
-      {showNew && <NewPizzeriaCard onCreate={createPizzeria} />}
+      {showNew && (
+        <div className="mb-8 grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <h2 className="text-lg font-medium">Nova Pizzaria</h2>
+            <NewPizzeriaCard onCreate={createPizzeria} mode="new" />
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-lg font-medium">Conectar Existente</h2>
+            <NewPizzeriaCard onCreate={createPizzeria} mode="connect" />
+          </div>
+        </div>
+      )}
 
       {active && (
         <div className="mb-6 rounded-xl border border-border bg-card p-4">
@@ -249,24 +288,49 @@ function OrderCard({ o, onChange }: { o: Order; onChange: (o: Order, s: string) 
   );
 }
 
-function NewPizzeriaCard({ onCreate }: { onCreate: (f: any) => void }) {
+function NewPizzeriaCard({ onCreate, mode = "new" }: { onCreate: (f: any) => void; mode?: "new" | "connect" }) {
   const [f, setF] = useState({ name: "", slug: "", phone: "", address: "", api_key: "" });
+  const isConnect = mode === "connect";
+
   return (
     <form
       onSubmit={(e) => { e.preventDefault(); onCreate(f); }}
-      className="mb-6 grid gap-3 rounded-xl border border-border bg-card p-4 md:grid-cols-2"
+      className="flex flex-col gap-3 rounded-xl border border-border bg-card p-4"
     >
-      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Nome da pizzaria" required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} />
-      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Slug (ex: minha-pizza)" required value={f.slug} onChange={(e) => setF({ ...f, slug: e.target.value })} />
-      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Telefone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
-      <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Endereço" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
       <input 
-        className="rounded-md border border-input bg-background px-3 py-2 text-sm md:col-span-2" 
-        placeholder="API Key do SiteCreatorFly (Opcional)" 
-        value={f.api_key || ""} 
-        onChange={(e) => setF({ ...f, api_key: e.target.value })} 
+        className="rounded-md border border-input bg-background px-3 py-2 text-sm" 
+        placeholder="Nome da pizzaria" 
+        required 
+        value={f.name} 
+        onChange={(e) => setF({ ...f, name: e.target.value })} 
       />
-      <div className="md:col-span-2"><Button type="submit">Criar pizzaria</Button></div>
+      
+      <input 
+        className="rounded-md border border-input bg-background px-3 py-2 text-sm" 
+        placeholder="Slug (ex: minha-pizza)" 
+        required={!isConnect}
+        value={f.slug} 
+        onChange={(e) => setF({ ...f, slug: e.target.value })} 
+      />
+
+      {isConnect ? (
+        <input 
+          className="rounded-md border border-input bg-primary/20 border-primary/50 bg-background px-3 py-2 text-sm font-mono" 
+          placeholder="Cole aqui a API Key Externa" 
+          required
+          value={f.api_key || ""} 
+          onChange={(e) => setF({ ...f, api_key: e.target.value })} 
+        />
+      ) : (
+        <>
+          <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Telefone" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} />
+          <input className="rounded-md border border-input bg-background px-3 py-2 text-sm" placeholder="Endereço" value={f.address} onChange={(e) => setF({ ...f, address: e.target.value })} />
+        </>
+      )}
+
+      <Button type="submit" variant={isConnect ? "secondary" : "default"}>
+        {isConnect ? "Conectar Pizzaria" : "Criar nova pizzaria"}
+      </Button>
     </form>
   );
 }

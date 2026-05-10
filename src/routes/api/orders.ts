@@ -16,49 +16,69 @@ export const Route = createFileRoute("/api/orders")({
         const headerKey = request.headers.get("x-api-key") ?? "";
         const auth = request.headers.get("authorization") ?? "";
         const apiKey = (headerKey || auth.replace(/^Bearer\s+/i, "")).trim();
-        if (!apiKey) {
-          return new Response(JSON.stringify({ error: "API Key ausente" }), { status: 401, headers: cors });
-        }
-
-        const { data: pz, error: pErr } = await supabaseAdmin
-          .from("pizzerias").select("id").eq("api_key", apiKey).eq("status", "active").maybeSingle();
-        if (pErr || !pz) {
-          return new Response(JSON.stringify({ error: "API Key inválida" }), { status: 403, headers: cors });
-        }
-
+        
         let body: any;
         try { body = await request.json(); } catch {
           return new Response(JSON.stringify({ error: "JSON inválido" }), { status: 400, headers: cors });
         }
 
-        const customerName = body?.customer?.name ?? body?.customer_name ?? "";
-        const customerPhone = body?.customer?.phone ?? body?.customer_phone ?? "";
-        const addr = body?.address ?? {};
-        const customerAddress = typeof addr === "string"
-          ? addr
-          : [addr.street, addr.number].filter(Boolean).join(", ");
-        const neighborhood = (typeof addr === "object" ? addr.neighborhood : null) ?? body?.neighborhood ?? null;
+        // Final key check (either from header or body)
+        const finalKey = (apiKey || body?.api_key || "").trim();
+        if (!finalKey) {
+          return new Response(JSON.stringify({ error: "API Key ausente" }), { status: 401, headers: cors });
+        }
 
-        const { data, error } = await supabaseAdmin.from("orders").insert({
+        const { data: pz, error: pErr } = await supabaseAdmin
+          .from("pizzerias")
+          .select("id")
+          .eq("api_key", finalKey)
+          .eq("status", "active")
+          .maybeSingle();
+
+        if (pErr || !pz) {
+          return new Response(JSON.stringify({ error: "API Key inválida" }), { status: 401, headers: cors });
+        }
+
+        const customer = body.customer ?? {};
+        const customerName = customer.name ?? body.customer_name ?? "Cliente Externo";
+        const customerPhone = customer.phone ?? body.customer_phone ?? "";
+        const customerAddress = customer.address ?? body.customer_address ?? "";
+        
+        const items = body.items ?? [];
+        const total = Number(body.total ?? items.reduce((acc: number, item: any) => acc + (item.price * item.qty), 0));
+
+        // Insert Order
+        const { data: order, error: orderError } = await supabaseAdmin.from("orders").insert({
           tenant_id: pz.id,
-          external_order_id: body.order_id ?? null,
           customer_name: customerName,
           customer_phone: customerPhone,
           customer_address: customerAddress,
-          neighborhood,
-          items: body.items ?? [],
-          total: Number(body.total ?? 0),
-          delivery_fee: Number(body.delivery_fee ?? 0),
-          payment_method: body.payment_method ?? null,
-          change_for: body.change_for ?? null,
-          notes: body.notes ?? "",
+          total: total,
           status: "novo",
+          items: items, // Keep JSONB for compatibility
         }).select("id").single();
 
-        if (error) {
-          return new Response(JSON.stringify({ error: error.message }), { status: 500, headers: cors });
+        if (orderError) {
+          console.error("Order error:", orderError);
+          return new Response(JSON.stringify({ error: orderError.message }), { status: 500, headers: cors });
         }
-        return new Response(JSON.stringify({ success: true, id: data.id }), { status: 200, headers: cors });
+
+        // Insert Order Items if table exists and we have items
+        if (items.length > 0) {
+          const orderItems = items.map((item: any) => ({
+            order_id: order.id,
+            product_name: item.name ?? "Produto",
+            quantity: Number(item.qty ?? 1),
+            price: Number(item.price ?? 0),
+          }));
+
+          const { error: itemsError } = await supabaseAdmin.from("order_items").insert(orderItems);
+          if (itemsError) {
+            console.error("Items error:", itemsError);
+          }
+        }
+
+        return new Response(JSON.stringify({ success: true, order_id: order.id }), { status: 200, headers: cors });
       },
     },
   },
