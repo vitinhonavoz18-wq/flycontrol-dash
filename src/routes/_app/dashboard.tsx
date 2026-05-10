@@ -116,8 +116,18 @@ function Dashboard() {
   if (!pizzerias.length) {
     return (
       <div className="p-8">
-        <Header title="Bem-vindo ao FlyControl" subtitle="Cadastre sua primeira pizzaria para começar." />
-        <NewPizzeriaCard onCreate={createPizzeria} />
+        <Header title="Bem-vindo ao FlyControl" subtitle="Conecte ou cadastre sua primeira pizzaria para começar." />
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Nova Pizzaria</h2>
+            <NewPizzeriaCard onCreate={createPizzeria} mode="new" />
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-xl font-semibold">Conectar Pizzaria Existente</h2>
+            <p className="text-sm text-muted-foreground">Vincule uma pizzaria que já possui uma API Key no SiteCreatorFly.</p>
+            <NewPizzeriaCard onCreate={createPizzeria} mode="connect" />
+          </div>
+        </div>
       </div>
     );
   }
@@ -131,7 +141,7 @@ function Dashboard() {
             {pizzerias.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
           </select>
           <Button variant="outline" size="sm" onClick={() => setShowNew((v) => !v)}>
-            <Plus className="h-4 w-4" /> Nova pizzaria
+            <Plus className="h-4 w-4" /> Gerenciar Pizzarias
           </Button>
         </div>
         <div className="flex items-center gap-2">
@@ -142,7 +152,18 @@ function Dashboard() {
         </div>
       </div>
 
-      {showNew && <NewPizzeriaCard onCreate={createPizzeria} />}
+      {showNew && (
+        <div className="mb-8 grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            <h2 className="text-lg font-medium">Nova Pizzaria</h2>
+            <NewPizzeriaCard onCreate={createPizzeria} mode="new" />
+          </div>
+          <div className="space-y-4">
+            <h2 className="text-lg font-medium">Conectar Existente</h2>
+            <NewPizzeriaCard onCreate={createPizzeria} mode="connect" />
+          </div>
+        </div>
+      )}
 
       {active && (
         <div className="mb-6 rounded-xl border border-border bg-card p-4">
