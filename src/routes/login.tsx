@@ -29,9 +29,9 @@ function Login() {
   return (
     <div className="grid min-h-screen place-items-center bg-background px-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-glow)]">
-        <div className="mb-8 flex justify-center">
+        <div className="mb-12 flex justify-center">
           <Link to="/">
-            <img src={logo} alt="FlyControl" className="h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.65)]" />
+            <img src={logo} alt="FlyControl" className="h-48 w-auto object-contain drop-shadow-[0_0_30px_rgba(255,122,0,0.75)]" />
           </Link>
         </div>
         <h1 className="text-2xl font-bold">Entrar</h1>

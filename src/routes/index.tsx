@@ -12,9 +12,9 @@ function Landing() {
     <div className="min-h-screen bg-background">
       {/* Nav */}
       <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
+        <div className="mx-auto flex h-40 max-w-7xl items-center justify-between px-6">
           <Link to="/" className="flex items-center">
-            <img src={logo} alt="FlyControl" className="h-12 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.7)]" />
+            <img src={logo} alt="FlyControl" className="h-32 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,122,0,0.8)]" />
           </Link>
           <nav className="flex items-center gap-2">
             <Link to="/login"><Button variant="ghost">Entrar</Button></Link>
