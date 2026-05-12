@@ -83,7 +83,9 @@ export type Database = {
           customer_address: string | null
           customer_name: string
           customer_phone: string
+          customer_reference: string | null
           delivery_fee: number
+          delivery_type: string | null
           external_order_id: string | null
           id: string
           items: Json
@@ -91,10 +93,13 @@ export type Database = {
           notes: string | null
           order_number: number
           payment_method: string | null
+          source: string | null
           status: string
+          subtotal: number | null
           tenant_id: string
           total: number
           updated_at: string
+          whatsapp_message: string | null
         }
         Insert: {
           change_for?: number | null
@@ -102,7 +107,9 @@ export type Database = {
           customer_address?: string | null
           customer_name: string
           customer_phone: string
+          customer_reference?: string | null
           delivery_fee?: number
+          delivery_type?: string | null
           external_order_id?: string | null
           id?: string
           items?: Json
@@ -110,10 +117,13 @@ export type Database = {
           notes?: string | null
           order_number?: number
           payment_method?: string | null
+          source?: string | null
           status?: string
+          subtotal?: number | null
           tenant_id: string
           total?: number
           updated_at?: string
+          whatsapp_message?: string | null
         }
         Update: {
           change_for?: number | null
@@ -121,7 +131,9 @@ export type Database = {
           customer_address?: string | null
           customer_name?: string
           customer_phone?: string
+          customer_reference?: string | null
           delivery_fee?: number
+          delivery_type?: string | null
           external_order_id?: string | null
           id?: string
           items?: Json
@@ -129,10 +141,13 @@ export type Database = {
           notes?: string | null
           order_number?: number
           payment_method?: string | null
+          source?: string | null
           status?: string
+          subtotal?: number | null
           tenant_id?: string
           total?: number
           updated_at?: string
+          whatsapp_message?: string | null
         }
         Relationships: [
           {
