@@ -74,9 +74,26 @@ function Dashboard() {
     if (!activeId) return;
     initialLoad.current = true;
     (async () => {
-      const { data } = await supabase.from("orders").select("*").eq("tenant_id", activeId)
+      const { data, error } = await supabase.from("orders").select("*").eq("tenant_id", activeId)
         .order("created_at", { ascending: false }).limit(200);
-      setOrders((data ?? []) as Order[]);
+      
+      if (error?.message.includes("JWT expired")) {
+        console.log("Session expired, refreshing...");
+        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+        if (!refreshError && refreshData.session) {
+          // Retry once
+          const { data: retryData } = await supabase.from("orders").select("*").eq("tenant_id", activeId)
+            .order("created_at", { ascending: false }).limit(200);
+          setOrders((retryData ?? []) as Order[]);
+        } else {
+          toast.error("Sessão expirada. Faça login novamente.");
+          return;
+        }
+      } else if (error) {
+        toast.error(error.message);
+      } else {
+        setOrders((data ?? []) as Order[]);
+      }
       initialLoad.current = false;
     })();
     const ch = supabase.channel(`orders-${activeId}`)
