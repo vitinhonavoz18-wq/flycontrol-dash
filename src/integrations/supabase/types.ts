@@ -14,6 +14,33 @@ export type Database = {
   }
   public: {
     Tables: {
+      external_order_logs: {
+        Row: {
+          api_key_partial: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          payload: Json | null
+          status_code: number | null
+        }
+        Insert: {
+          api_key_partial?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          status_code?: number | null
+        }
+        Update: {
+          api_key_partial?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          payload?: Json | null
+          status_code?: number | null
+        }
+        Relationships: []
+      }
       order_items: {
         Row: {
           created_at: string | null
