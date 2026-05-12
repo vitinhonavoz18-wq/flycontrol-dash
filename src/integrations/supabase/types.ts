@@ -266,7 +266,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       owns_pizzeria: {
-        Args: { _tenant_id: string; _user_id: string }
+        Args: { _pizzeria_id: string; _user_id: string }
         Returns: boolean
       }
     }
