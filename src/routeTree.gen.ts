@@ -23,7 +23,6 @@ import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
 import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
-import { Route as ApiOrdersWebhookRouteImport } from './routes/api/orders.webhook'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin.users'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin.analytics'
 
@@ -96,11 +95,6 @@ const ApiPizzeriasCreateRoute = ApiPizzeriasCreateRouteImport.update({
   path: '/api/pizzerias/create',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiOrdersWebhookRoute = ApiOrdersWebhookRouteImport.update({
-  id: '/webhook',
-  path: '/webhook',
-  getParentRoute: () => ApiOrdersRoute,
-} as any)
 const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
@@ -121,11 +115,10 @@ export interface FileRoutesByFullPath {
   '/docs': typeof AppDocsRoute
   '/settings': typeof AppSettingsRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/orders': typeof ApiOrdersRouteWithChildren
+  '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/users': typeof AppAdminUsersRoute
-  '/api/orders/webhook': typeof ApiOrdersWebhookRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
@@ -139,11 +132,10 @@ export interface FileRoutesByTo {
   '/docs': typeof AppDocsRoute
   '/settings': typeof AppSettingsRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/orders': typeof ApiOrdersRouteWithChildren
+  '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/users': typeof AppAdminUsersRoute
-  '/api/orders/webhook': typeof ApiOrdersWebhookRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
@@ -159,11 +151,10 @@ export interface FileRoutesById {
   '/_app/docs': typeof AppDocsRoute
   '/_app/settings': typeof AppSettingsRoute
   '/api/health': typeof ApiHealthRoute
-  '/api/orders': typeof ApiOrdersRouteWithChildren
+  '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
-  '/api/orders/webhook': typeof ApiOrdersWebhookRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
@@ -183,7 +174,6 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/users'
-    | '/api/orders/webhook'
     | '/api/pizzerias/create'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
@@ -201,7 +191,6 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/users'
-    | '/api/orders/webhook'
     | '/api/pizzerias/create'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
@@ -220,7 +209,6 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/_app/admin/analytics'
     | '/_app/admin/users'
-    | '/api/orders/webhook'
     | '/api/pizzerias/create'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
@@ -232,7 +220,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   SignupRoute: typeof SignupRoute
   ApiHealthRoute: typeof ApiHealthRoute
-  ApiOrdersRoute: typeof ApiOrdersRouteWithChildren
+  ApiOrdersRoute: typeof ApiOrdersRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPublicCreateOrderRoute: typeof ApiPublicCreateOrderRoute
@@ -339,13 +327,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPizzeriasCreateRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/orders/webhook': {
-      id: '/api/orders/webhook'
-      path: '/webhook'
-      fullPath: '/api/orders/webhook'
-      preLoaderRoute: typeof ApiOrdersWebhookRouteImport
-      parentRoute: typeof ApiOrdersRoute
-    }
     '/_app/admin/users': {
       id: '/_app/admin/users'
       path: '/users'
@@ -393,25 +374,13 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
-interface ApiOrdersRouteChildren {
-  ApiOrdersWebhookRoute: typeof ApiOrdersWebhookRoute
-}
-
-const ApiOrdersRouteChildren: ApiOrdersRouteChildren = {
-  ApiOrdersWebhookRoute: ApiOrdersWebhookRoute,
-}
-
-const ApiOrdersRouteWithChildren = ApiOrdersRoute._addFileChildren(
-  ApiOrdersRouteChildren,
-)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   SignupRoute: SignupRoute,
   ApiHealthRoute: ApiHealthRoute,
-  ApiOrdersRoute: ApiOrdersRouteWithChildren,
+  ApiOrdersRoute: ApiOrdersRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPublicCreateOrderRoute: ApiPublicCreateOrderRoute,
@@ -420,3 +389,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
