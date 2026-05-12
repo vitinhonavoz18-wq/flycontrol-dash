@@ -24,7 +24,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [roles, setRoles] = useState<Role[]>([]);
 
   useEffect(() => {
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+    const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
+      console.log("Auth state change:", event);
       setSession(s);
       setUser(s?.user ?? null);
       if (s?.user) {
@@ -32,8 +33,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setRoles([]);
       }
+      
+      if (event === 'TOKEN_REFRESHED') {
+        console.log('Token refreshed successfully');
+      }
+      
+      if (event === 'SIGNED_OUT') {
+        setUser(null);
+        setSession(null);
+        setRoles([]);
+      }
     });
-    supabase.auth.getSession().then(({ data }) => {
+
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error("Error getting session:", error);
+      }
       setSession(data.session);
       setUser(data.session?.user ?? null);
       if (data.session?.user) loadRoles(data.session.user.id);
