@@ -209,7 +209,7 @@ function Dashboard() {
             </Button>
           </div>
           <div className="mt-2 text-xs text-muted-foreground">
-            Endpoint: <code>{typeof window !== "undefined" ? window.location.origin : ""}/api/public/create-order</code>
+            Endpoint: <code>{typeof window !== "undefined" ? window.location.origin : ""}/api/orders</code>
           </div>
         </div>
       )}
