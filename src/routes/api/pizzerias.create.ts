@@ -3,8 +3,9 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type, x-api-key, authorization",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Max-Age": "86400",
   "Content-Type": "application/json",
 };
 
@@ -22,7 +23,7 @@ function slugify(s: string) {
 export const Route = createFileRoute("/api/pizzerias/create")({
   server: {
     handlers: {
-      OPTIONS: async () => new Response(null, { headers: cors }),
+      OPTIONS: async () => new Response(JSON.stringify({ success: true, message: "CORS OK" }), { status: 200, headers: cors }),
       POST: async ({ request }) => {
         let body: any;
         try { body = await request.json(); } catch {
