@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Copy, Check, Plug, Plus } from "lucide-react";
+import { Copy, Check, Plug, Plus, Play, ExternalLink, Loader2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
@@ -96,13 +96,22 @@ function AddPizzeriaDialog({ onSuccess }: { onSuccess: () => void }) {
 }
 
 function Settings() {
-  const { user } = useAuth();
-  const [pz, setPz] = useState<any[]>([]);
+  const { user, isSuperAdmin } = useAuth();
+  const [pizzerias, setPizzerias] = useState<any[]>([]);
+  const [testing, setTesting] = useState<string | null>(null);
+  const [testResult, setTestResult] = useState<any>(null);
   const [origin, setOrigin] = useState("");
 
   const loadPizzerias = async () => {
-    const { data } = await supabase.from("pizzerias").select("*").order("created_at");
-    setPz(data ?? []);
+    let query = supabase.from("pizzerias").select("*").order("created_at");
+    
+    // Se não for super admin, filtra apenas as pizzarias do dono
+    if (!isSuperAdmin && user?.id) {
+      query = query.eq("owner_id", user.id);
+    }
+    
+    const { data } = await query;
+    setPizzerias(data ?? []);
   };
 
   useEffect(() => {
@@ -115,7 +124,69 @@ function Settings() {
 
   async function update(id: string, patch: any) {
     const { error } = await supabase.from("pizzerias").update(patch).eq("id", id);
-    if (error) toast.error(error.message); else toast.success("Salvo");
+    if (error) toast.error(error.message); else {
+      toast.success("Salvo");
+      loadPizzerias();
+    }
+  }
+
+  async function testOrder(p: any) {
+    setTesting(p.id);
+    setTestResult(null);
+    try {
+      const payload = {
+        event: "order.created",
+        pizzeria: { slug: p.slug },
+        customer: {
+          name: "Cliente Teste Lovable",
+          phone: "(11) 99999-9999",
+          address: "Rua do Teste, 123",
+          neighborhood: "Centro"
+        },
+        order: {
+          id: "test-" + Date.now(),
+          total: 89.90,
+          payment_method: "Pix",
+          items: [
+            { name: "Pizza Grande Teste", quantity: 1, price: 89.90 }
+          ],
+          notes: "Este é um pedido de teste enviado pelo painel."
+        },
+        source: "flycontrol-test"
+      };
+
+      const res = await fetch(`${origin}/api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": p.api_key
+        },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      setTestResult({
+        status: res.status,
+        ok: res.ok,
+        data
+      });
+
+      if (res.ok) {
+        toast.success("Pedido de teste enviado com sucesso!");
+      } else {
+        toast.error("Erro no teste: " + (data.error || "Erro desconhecido"));
+      }
+    } catch (err: any) {
+      console.error(err);
+      setTestResult({
+        status: "ERRO",
+        ok: false,
+        error: err.message
+      });
+      toast.error("Falha na conexão: " + err.message);
+    } finally {
+      setTesting(null);
+    }
   }
 
   const baseUrl = origin;
@@ -155,12 +226,17 @@ function Settings() {
       </div>
 
       <h2 className="mb-3 text-xl font-semibold">Suas pizzarias</h2>
-      <div className="space-y-4">
-        {pz.map((p) => (
-          <div key={p.id} className="rounded-xl border border-border bg-card p-4">
-            <div className="flex items-center justify-between">
-              <div className="font-semibold">{p.name}</div>
-              <div className="text-[10px] uppercase tracking-wider text-muted-foreground">ID: {p.id.slice(0, 8)}</div>
+      <div className="space-y-6">
+        {pizzerias.map((p) => (
+          <div key={p.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
+            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+              <div>
+                <div className="font-bold text-lg">{p.name}</div>
+                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">ID: {p.id}</div>
+              </div>
+              <Badge variant={p.status === "active" ? "default" : "secondary"}>
+                {p.status === "active" ? "Ativo" : "Pausado"}
+              </Badge>
             </div>
             <div className="mt-3 grid gap-2 md:grid-cols-2">
               <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-background p-3 text-sm">
@@ -184,7 +260,6 @@ function Settings() {
                   const apiKey = "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
                     .map((b) => b.toString(16).padStart(2, "0")).join("");
                   await update(p.id, { api_key: apiKey });
-                  setPz((prev) => prev.map((x) => x.id === p.id ? { ...x, api_key: apiKey } : x));
                 }}>Redefinir</Button>
               </div>
               <div className="flex items-center gap-2">
@@ -201,9 +276,40 @@ function Settings() {
                 </Button>
               </div>
             </div>
+
+            <div className="mt-6 border-t border-border pt-4">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="text-sm font-semibold flex items-center gap-2">
+                  <Play className="h-4 w-4 text-primary" />
+                  Teste de Recebimento
+                </h3>
+                <Button 
+                  size="sm" 
+                  variant="outline" 
+                  onClick={() => testOrder(p)}
+                  disabled={testing === p.id}
+                  className="gap-2"
+                >
+                  {testing === p.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Play className="h-3.5 w-3.5" />}
+                  Enviar Pedido Teste
+                </Button>
+              </div>
+
+              {testResult && testing === null && pizzerias.find(x => x.id === p.id) && (
+                <div className={`rounded-md p-3 text-xs font-mono overflow-auto max-h-40 ${testResult.ok ? 'bg-green-500/10 text-green-600 border border-green-500/20' : 'bg-red-500/10 text-red-600 border border-red-500/20'}`}>
+                  <div className="font-bold mb-1">Status: {testResult.status}</div>
+                  <pre>{JSON.stringify(testResult.data || testResult.error, null, 2)}</pre>
+                </div>
+              )}
+              
+              <div className="mt-3 text-[11px] text-muted-foreground flex items-center gap-1.5">
+                <ExternalLink className="h-3 w-3" />
+                O pedido teste aparecerá no Dashboard se for bem-sucedido.
+              </div>
+            </div>
           </div>
         ))}
-        {!pz.length && <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>}
+        {!pizzerias.length && <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>}
       </div>
     </div>
   );
