@@ -95,8 +95,7 @@ export const Route = createFileRoute("/api/orders")({
             items: orderData.items || [],
           };
 
-          const { data: order, error: orderError } = await supabaseAdmin
-            .from("orders")
+          const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
             .insert(orderToInsert)
             .select("id")
             .single();
