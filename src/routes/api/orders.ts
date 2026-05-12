@@ -118,7 +118,7 @@ export const Route = createFileRoute("/api/orders")({
         const items = body.items || [];
         const externalId = body.order_id || body.external_id || body.id || null;
 
-        const { data: order, error: orderError } = await supabaseAdmin.from("orders").insert({
+        const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any).insert({
           tenant_id: pz.id,
           external_order_id: externalId ? String(externalId) : null,
           customer_name: customerName,
