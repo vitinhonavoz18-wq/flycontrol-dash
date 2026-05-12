@@ -8,6 +8,7 @@ import { Copy, Check, Plug, Plus, Play, ExternalLink, Loader2 } from "lucide-rea
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
 
