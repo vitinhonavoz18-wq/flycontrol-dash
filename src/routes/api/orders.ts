@@ -3,8 +3,8 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type, x-api-key, authorization, x-client-info, apikey",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
   "Access-Control-Max-Age": "86400",
   "Content-Type": "application/json",
 };
@@ -12,7 +12,7 @@ const cors = {
 export const Route = createFileRoute("/api/orders")({
   server: {
     handlers: {
-      OPTIONS: async () => new Response(null, { headers: cors }),
+      OPTIONS: async () => new Response(JSON.stringify({ success: true, message: "CORS OK" }), { status: 200, headers: cors }),
       POST: async ({ request }) => {
         console.log("📥 [WebHook] Recebendo pedido externo");
         
@@ -27,13 +27,21 @@ export const Route = createFileRoute("/api/orders")({
 
         const apiKey = (request.headers.get("x-api-key") || body?.api_key || "").trim();
         const event = body.event;
-        const pizzeriaSlug = body.pizzeria?.slug || body.slug;
+        const pizzeriaSlug = body.pizzeria?.slug || body.pizzeria_slug || body.slug;
 
-        console.log("🔐 [WebHook] API Key presente?", Boolean(apiKey));
-        console.log("🍕 [WebHook] Slug:", pizzeriaSlug);
+        console.log("📥 [WebHook] /api/orders recebeu requisição");
+        console.log("Método:", request.method);
+        console.log("Headers recebidos (parcial):", request.headers.get("x-api-key") ? "x-api-key presente" : "x-api-key ausente");
+        console.log("Existe x-api-key?", Boolean(apiKey));
+        console.log("Slug recebido:", pizzeriaSlug);
+        console.log("Payload recebido:", JSON.stringify(body, null, 2));
 
         if (!apiKey) {
-          return new Response(JSON.stringify({ success: false, error: "API Key ausente" }), { status: 401, headers: cors });
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "API Key ausente ou inválida",
+            debug: { hasApiKey: false }
+          }), { status: 401, headers: cors });
         }
 
         // 1. Identificar Pizzaria
@@ -43,17 +51,26 @@ export const Route = createFileRoute("/api/orders")({
           pzQuery = pzQuery.eq("slug", pizzeriaSlug);
         }
 
+        console.log("🔍 [WebHook] Buscando pizzaria por slug + api_key");
         const { data: pz, error: pErr } = await pzQuery.maybeSingle();
 
         if (pErr || !pz) {
           console.error("❌ [WebHook] Erro: API Key ou Slug inválidos", pErr);
-          return new Response(JSON.stringify({ success: false, error: "Pizzaria não encontrada ou API Key inválida" }), { status: 403, headers: cors });
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Pizzaria não encontrada",
+            debug: { 
+              receivedSlug: pizzeriaSlug,
+              hasApiKey: true,
+              dbError: pErr?.message 
+            } 
+          }), { status: 403, headers: cors });
         }
 
         console.log("✅ [WebHook] Pizzaria encontrada:", pz.name, `(${pz.id})`);
 
         // 2. Tratar Webhook do SiteCreatorFly (event: order.created)
-        if (event === "order.created") {
+        if (event === "order.created" || body.order) {
           const orderData = body.order || {};
           const customer = body.customer || {};
           const externalOrderId = orderData.id || body.id;
@@ -96,6 +113,7 @@ export const Route = createFileRoute("/api/orders")({
             items: orderData.items || [],
           };
 
+          console.log("💾 [WebHook] Salvando pedido...");
           const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
             .insert(orderToInsert)
             .select("id")
@@ -113,7 +131,7 @@ export const Route = createFileRoute("/api/orders")({
         }
 
         // 3. Tratar Formato Antigo/Simples (fallback)
-        console.log("📦 [WebHook] Payload genérico recebido");
+        console.log("📦 [WebHook] Payload genérico ou simplificado recebido");
         const customerName = body.customer_name || body.customerName || "Cliente Externo";
         const items = body.items || [];
         const externalId = body.order_id || body.external_id || body.id || null;
