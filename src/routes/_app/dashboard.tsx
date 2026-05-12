@@ -252,12 +252,27 @@ function Header({ title, subtitle }: { title: string; subtitle?: string }) {
 function OrderCard({ o, onChange }: { o: Order; onChange: (o: Order, s: string) => void }) {
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
   const items = Array.isArray(o.items) ? o.items : [];
+  
+  const formatItemName = (it: any) => {
+    if (it.name) return it.name;
+    if (it.title) return it.title;
+    if (it.type === "pizza" && it.flavors) {
+      return `Pizza ${it.size || ""} (${it.flavors.join(" / ")})`;
+    }
+    if (it.type === "beverage") return it.name || "Bebida";
+    return "Item";
+  };
+
+  const getItemPrice = (it: any) => {
+    return it.price ?? it.total_price ?? it.unit_price ?? 0;
+  };
+
   return (
     <div className="rounded-xl border border-border bg-card p-4 transition hover:border-primary/30">
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-xs text-muted-foreground">Pedido</div>
-          <div className="text-lg font-bold">#{o.order_number}</div>
+          <div className="text-lg font-bold">#{o.order_number || o.id.substring(0, 5)}</div>
         </div>
         <Badge className={status.color} variant="outline">{status.label}</Badge>
       </div>
@@ -274,18 +289,26 @@ function OrderCard({ o, onChange }: { o: Order; onChange: (o: Order, s: string) 
         </div>
       </div>
       <ul className="mt-3 space-y-1 border-t border-border pt-3 text-sm">
-        {items.slice(0, 4).map((it: any, i: number) => (
-          <li key={i} className="flex justify-between gap-2">
-            <span className="truncate">{it.qty ?? it.quantity ?? 1}× {it.name ?? it.title ?? "Item"}</span>
-            {typeof it.price === "number" && <span className="text-muted-foreground">R$ {Number(it.price).toFixed(2)}</span>}
+        {items.slice(0, 6).map((it: any, i: number) => (
+          <li key={i} className="flex flex-col gap-0.5 mb-2 last:mb-0">
+            <div className="flex justify-between gap-2">
+              <span className="font-medium">{it.qty ?? it.quantity ?? 1}× {formatItemName(it)}</span>
+              <span className="text-muted-foreground whitespace-nowrap">R$ {Number(getItemPrice(it)).toFixed(2)}</span>
+            </div>
+            {it.notes && <div className="text-[11px] text-muted-foreground italic pl-4">Obs: {it.notes}</div>}
           </li>
         ))}
-        {items.length > 4 && <li className="text-xs text-muted-foreground">+{items.length - 4} itens</li>}
+        {items.length > 6 && <li className="text-xs text-muted-foreground">+{items.length - 6} itens</li>}
       </ul>
       <div className="mt-3 flex items-center justify-between border-t border-border pt-3 text-sm">
         <span className="text-muted-foreground">Total</span>
         <span className="text-lg font-bold text-primary">R$ {Number(o.total).toFixed(2)}</span>
       </div>
+      {o.notes && (
+        <div className="mt-2 rounded bg-muted/50 p-2 text-[11px] text-muted-foreground">
+          <strong>Obs Geral:</strong> {o.notes}
+        </div>
+      )}
       <div className="mt-3 flex flex-wrap gap-2">
         <select className="rounded-md border border-input bg-background px-2 py-1.5 text-xs"
           value={o.status} onChange={(e) => onChange(o, e.target.value)}>
