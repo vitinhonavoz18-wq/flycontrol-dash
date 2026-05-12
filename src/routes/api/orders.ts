@@ -20,111 +20,102 @@ export const Route = createFileRoute("/api/orders")({
         try { 
           body = JSON.parse(bodyText); 
         } catch {
-          console.error("Erro: JSON inválido no corpo da requisição");
+          console.error("Erro: JSON inválido");
           return new Response(JSON.stringify({ success: false, error: "JSON inválido" }), { status: 400, headers: cors });
         }
 
-        const headerKey = request.headers.get("x-api-key") ?? "";
-        const auth = request.headers.get("authorization") ?? "";
-        const apiKeyFromAuth = auth.startsWith("Bearer ") ? auth.substring(7) : auth;
-        const apiKey = (headerKey || apiKeyFromAuth || body?.api_key || "").trim();
-        
-        console.log("API Key recebida (parcial):", apiKey ? `${apiKey.substring(0, 4)}...` : "Não informada");
-        console.log("Payload recebido:", JSON.stringify(body, null, 2));
+        const apiKey = (request.headers.get("x-api-key") || body?.api_key || "").trim();
+        const event = body.event;
+        const pizzeriaSlug = body.pizzeria?.slug;
+
+        console.log("Meta:", { event, slug: pizzeriaSlug, apiKeyPartial: apiKey ? `${apiKey.substring(0, 6)}...` : "NONE" });
 
         if (!apiKey) {
-          await logExternalOrder(apiKey, body, 401, "API Key ausente");
           return new Response(JSON.stringify({ success: false, error: "API Key ausente" }), { status: 401, headers: cors });
         }
 
-        const { data: pz, error: pErr } = await supabaseAdmin
-          .from("pizzerias")
-          .select("id, name")
-          .eq("api_key", apiKey)
-          .eq("status", "active")
-          .maybeSingle();
+        // 1. Identificar Pizzaria
+        let pzQuery = supabaseAdmin.from("pizzerias").select("id, name, slug").eq("api_key", apiKey).eq("status", "active");
+        
+        if (pizzeriaSlug) {
+          pzQuery = pzQuery.eq("slug", pizzeriaSlug);
+        }
+
+        const { data: pz, error: pErr } = await pzQuery.maybeSingle();
 
         if (pErr || !pz) {
-          console.error("Erro ao buscar pizzaria ou API Key inválida:", pErr);
-          await logExternalOrder(apiKey, body, 401, "API Key inválida ou pizzaria inativa");
-          return new Response(JSON.stringify({ success: false, error: "API Key inválida ou pizzaria inativa" }), { status: 401, headers: cors });
+          console.error("Erro: API Key ou Slug inválidos", pErr);
+          return new Response(JSON.stringify({ success: false, error: "API Key inválida ou pizzaria não encontrada" }), { status: 403, headers: cors });
         }
 
-        console.log("Pizzaria encontrada:", pz.name, `(ID: ${pz.id})`);
+        // 2. Tratar Webhook do SiteCreatorFly (event: order.created)
+        if (event === "order.created") {
+          const orderData = body.order || {};
+          const customer = body.customer || {};
+          const externalOrderId = orderData.id || body.id;
 
-        // Mapping flexible payload
-        const customer = body.customer ?? {};
-        const customerName = customer.name ?? body.customer_name ?? body.customerName ?? "Cliente Externo";
-        const customerPhone = customer.phone ?? body.customer_phone ?? body.customerPhone ?? body.phone ?? "";
-        const addrRaw = customer.address ?? body.customer_address ?? body.address ?? "";
-        
-        let customerAddress = "";
-        let neighborhood = body.neighborhood ?? null;
+          // Duplicidade
+          if (externalOrderId) {
+            const { data: existing } = await supabaseAdmin
+              .from("orders")
+              .select("id")
+              .eq("tenant_id", pz.id)
+              .eq("external_order_id", String(externalOrderId))
+              .maybeSingle();
 
-        if (typeof addrRaw === "string") {
-          customerAddress = addrRaw;
-        } else if (typeof addrRaw === "object" && addrRaw !== null) {
-          customerAddress = [addrRaw.street, addrRaw.number].filter(Boolean).join(", ");
-          neighborhood = addrRaw.neighborhood ?? neighborhood;
+            if (existing) {
+              return new Response(JSON.stringify({ success: true, message: "Pedido já existe", order_id: existing.id }), { status: 200, headers: cors });
+            }
+          }
+
+          const { data: order, error: orderError } = await supabaseAdmin.from("orders").insert({
+            tenant_id: pz.id,
+            external_order_id: externalOrderId ? String(externalOrderId) : null,
+            customer_name: customer.name || "Cliente",
+            customer_phone: customer.phone || "",
+            customer_address: customer.address || "",
+            neighborhood: customer.neighborhood || null,
+            total: Number(orderData.total || 0),
+            delivery_fee: Number(orderData.delivery_fee || 0),
+            payment_method: orderData.payment_method || "Não informado",
+            change_for: orderData.change_for ? Number(orderData.change_for) : null,
+            notes: orderData.notes || "",
+            status: "novo",
+            items: orderData.items || [],
+          }).select("id").single();
+
+          if (orderError) return new Response(JSON.stringify({ success: false, error: orderError.message }), { status: 500, headers: cors });
+          
+          await logExternalOrder(apiKey, body, 200);
+          return new Response(JSON.stringify({ success: true, order_id: order.id, message: "Pedido recebido" }), { status: 200, headers: cors });
         }
 
-        const items = body.items ?? [];
-        const total = Number(body.total ?? body.total_amount ?? body.totalAmount ?? 0);
-        const paymentMethod = body.payment_method ?? body.paymentMethod ?? "Não informado";
-        const notes = body.notes ?? body.observations ?? "";
-        const deliveryFee = Number(body.delivery_fee ?? body.deliveryFee ?? 0);
-        const externalId = body.order_id ?? body.external_id ?? body.id ?? null;
+        // 3. Tratar Formato Antigo/Simples (fallback)
+        const customerName = body.customer_name || body.customerName || "Cliente Externo";
+        const items = body.items || [];
+        const externalId = body.order_id || body.external_id || body.id || null;
 
-        // Insert Order
         const { data: order, error: orderError } = await supabaseAdmin.from("orders").insert({
           tenant_id: pz.id,
           external_order_id: externalId ? String(externalId) : null,
           customer_name: customerName,
-          customer_phone: customerPhone,
-          customer_address: customerAddress,
-          neighborhood: neighborhood,
-          total: total,
-          delivery_fee: deliveryFee,
-          payment_method: paymentMethod,
-          notes: notes,
+          customer_phone: body.customer_phone || body.phone || "",
+          customer_address: body.customer_address || body.address || "",
+          neighborhood: body.neighborhood || null,
+          total: Number(body.total || 0),
+          delivery_fee: Number(body.delivery_fee || 0),
+          payment_method: body.payment_method || "Não informado",
           status: "novo",
-          items: items, // JSONB backup
+          items: items,
         }).select("id").single();
 
         if (orderError) {
-          console.error("Erro ao criar pedido na tabela orders:", orderError);
           await logExternalOrder(apiKey, body, 500, orderError.message);
           return new Response(JSON.stringify({ success: false, error: orderError.message }), { status: 500, headers: cors });
         }
 
-        console.log("Pedido criado na tabela orders com ID:", order.id);
-
-        // Insert Order Items if we have items
-        if (Array.isArray(items) && items.length > 0) {
-          const orderItems = items.map((item: any) => ({
-            order_id: order.id,
-            product_name: item.name ?? item.product_name ?? "Produto",
-            quantity: Number(item.quantity ?? item.qty ?? 1),
-            price: Number(item.price ?? 0),
-          }));
-
-          const { error: itemsError } = await supabaseAdmin.from("order_items").insert(orderItems);
-          if (itemsError) {
-            console.error("Erro ao criar itens na tabela order_items:", itemsError);
-            // We don't fail the whole request if items fail but order succeeded
-          } else {
-            console.log("Itens criados na tabela order_items");
-          }
-        }
-
-        console.log("Pedido externo finalizado com sucesso");
         await logExternalOrder(apiKey, body, 200);
-
-        return new Response(JSON.stringify({ 
-          success: true, 
-          order_id: order.id,
-          message: "Pedido recebido com sucesso pelo FlyControl" 
-        }), { status: 200, headers: cors });
+        return new Response(JSON.stringify({ success: true, order_id: order.id }), { status: 200, headers: cors });
       },
     },
   },
