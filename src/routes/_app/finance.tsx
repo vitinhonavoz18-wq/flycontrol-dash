@@ -4,15 +4,12 @@ import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { 
-  BarChart3, 
   TrendingUp, 
-  Package, 
   DollarSign, 
   Calendar,
   AlertCircle,
   Trophy,
-  Calculator,
-  ArrowRight
+  Calculator
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -60,17 +57,41 @@ function Finance() {
   async function loadData() {
     setLoading(true);
     try {
-      // Load individual metrics
       const { data: metricsData, error: metricsError } = await supabase.rpc('get_my_financial_metrics');
       
       if (metricsError) throw metricsError;
-      setMetrics(metricsData || []);
+      
+      const sanitizedMetrics: FinancialMetrics[] = (metricsData || []).map((m: any) => ({
+        pizzeria_id: m.pizzeria_id || "",
+        pizzeria_name: m.pizzeria_name || "Sem Nome",
+        revenue_day: Number(m.revenue_day || 0),
+        orders_day: Number(m.orders_day || 0),
+        ticket_avg_day: Number(m.ticket_avg_day || 0),
+        revenue_week: Number(m.revenue_week || 0),
+        orders_week: Number(m.orders_week || 0),
+        ticket_avg_week: Number(m.ticket_avg_week || 0),
+        revenue_month: Number(m.revenue_month || 0),
+        orders_month: Number(m.orders_month || 0),
+        ticket_avg_month: Number(m.ticket_avg_month || 0),
+      }));
+      
+      setMetrics(sanitizedMetrics);
 
-      // Load global metrics if admin
       if (isSuperAdmin) {
         const { data: globalData, error: globalError } = await supabase.rpc('get_admin_global_metrics');
         if (globalError) throw globalError;
-        setGlobal(globalData?.[0] || null);
+        
+        if (globalData && globalData[0]) {
+          const g = globalData[0];
+          setGlobal({
+            total_revenue_day: Number(g.total_revenue_day || 0),
+            total_orders_day: Number(g.total_orders_day || 0),
+            total_revenue_week: Number(g.total_revenue_week || 0),
+            total_orders_week: Number(g.total_orders_week || 0),
+            total_revenue_month: Number(g.total_revenue_month || 0),
+            total_orders_month: Number(g.total_orders_month || 0),
+          });
+        }
       }
     } catch (error: any) {
       console.error("Finance load error:", error);
@@ -106,7 +127,7 @@ function Finance() {
         <section className="space-y-4">
           <div className="flex items-center gap-2">
             <Trophy className="h-5 w-5 text-yellow-500" />
-            <h2 className="text-xl font-semibold uppercase tracking-wider text-muted-foreground/80 text-sm">Visão Geral (Todas as Pizzarias)</h2>
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/80">Visão Geral (Todas as Pizzarias)</h2>
           </div>
           
           <div className="grid gap-4 md:grid-cols-3">
@@ -163,7 +184,7 @@ function Finance() {
       <section className="space-y-6">
         <div className="flex items-center gap-2">
           <Calculator className="h-5 w-5 text-primary" />
-          <h2 className="text-xl font-semibold uppercase tracking-wider text-muted-foreground/80 text-sm">
+          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/80">
             {isSuperAdmin ? "Detalhamento por Unidade" : "Minha Pizzaria"}
           </h2>
         </div>
@@ -256,7 +277,7 @@ function MetricCard({ title, value, subtitle, icon: Icon, trend, highlight = fal
       <CardContent>
         <div className="text-2xl font-bold">{value}</div>
         <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-          {trend && <span className="text-success flex items-center">{trend}</span>}
+          {trend && <span className="text-green-600 flex items-center">{trend}</span>}
           {subtitle}
         </p>
       </CardContent>
