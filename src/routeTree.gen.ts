@@ -17,6 +17,7 @@ import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppFinanceRouteImport } from './routes/_app/finance'
 import { Route as AppDocsRouteImport } from './routes/_app/docs'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
@@ -63,6 +64,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFinanceRoute = AppFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
   getParentRoute: () => AppRoute,
 } as any)
 const AppDocsRoute = AppDocsRouteImport.update({
@@ -113,6 +119,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AppAdminRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/docs': typeof AppDocsRoute
+  '/finance': typeof AppFinanceRoute
   '/settings': typeof AppSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
@@ -130,6 +137,7 @@ export interface FileRoutesByTo {
   '/admin': typeof AppAdminRouteWithChildren
   '/dashboard': typeof AppDashboardRoute
   '/docs': typeof AppDocsRoute
+  '/finance': typeof AppFinanceRoute
   '/settings': typeof AppSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
@@ -149,6 +157,7 @@ export interface FileRoutesById {
   '/_app/admin': typeof AppAdminRouteWithChildren
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/docs': typeof AppDocsRoute
+  '/_app/finance': typeof AppFinanceRoute
   '/_app/settings': typeof AppSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
@@ -168,6 +177,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/docs'
+    | '/finance'
     | '/settings'
     | '/api/health'
     | '/api/orders'
@@ -185,6 +195,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/dashboard'
     | '/docs'
+    | '/finance'
     | '/settings'
     | '/api/health'
     | '/api/orders'
@@ -203,6 +214,7 @@ export interface FileRouteTypes {
     | '/_app/admin'
     | '/_app/dashboard'
     | '/_app/docs'
+    | '/_app/finance'
     | '/_app/settings'
     | '/api/health'
     | '/api/orders'
@@ -285,6 +297,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/finance': {
+      id: '/_app/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof AppFinanceRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/docs': {
       id: '/_app/docs'
       path: '/docs'
@@ -362,6 +381,7 @@ interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRouteWithChildren
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocsRoute: typeof AppDocsRoute
+  AppFinanceRoute: typeof AppFinanceRoute
   AppSettingsRoute: typeof AppSettingsRoute
 }
 
@@ -369,6 +389,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRouteWithChildren,
   AppDashboardRoute: AppDashboardRoute,
   AppDocsRoute: AppDocsRoute,
+  AppFinanceRoute: AppFinanceRoute,
   AppSettingsRoute: AppSettingsRoute,
 }
 

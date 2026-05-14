@@ -154,6 +154,13 @@ export type Database = {
             foreignKeyName: "orders_tenant_id_fkey"
             columns: ["tenant_id"]
             isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "orders_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
             referencedRelation: "pizzerias"
             referencedColumns: ["id"]
           },
@@ -215,6 +222,7 @@ export type Database = {
           created_at: string
           full_name: string | null
           id: string
+          is_admin: boolean | null
           phone: string | null
           updated_at: string
         }
@@ -222,6 +230,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id: string
+          is_admin?: boolean | null
           phone?: string | null
           updated_at?: string
         }
@@ -229,6 +238,7 @@ export type Database = {
           created_at?: string
           full_name?: string | null
           id?: string
+          is_admin?: boolean | null
           phone?: string | null
           updated_at?: string
         }
@@ -254,9 +264,76 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      admin_global_financial_metrics: {
+        Row: {
+          total_orders_day: number | null
+          total_orders_month: number | null
+          total_orders_week: number | null
+          total_revenue_day: number | null
+          total_revenue_month: number | null
+          total_revenue_week: number | null
+        }
+        Relationships: []
+      }
+      pizzeria_financial_metrics: {
+        Row: {
+          orders_day: number | null
+          orders_month: number | null
+          orders_week: number | null
+          owner_id: string | null
+          pizzeria_id: string | null
+          pizzeria_name: string | null
+          revenue_day: number | null
+          revenue_month: number | null
+          revenue_week: number | null
+          ticket_avg_day: number | null
+          ticket_avg_month: number | null
+          ticket_avg_week: number | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      get_admin_global_metrics: {
+        Args: never
+        Returns: {
+          total_orders_day: number | null
+          total_orders_month: number | null
+          total_orders_week: number | null
+          total_revenue_day: number | null
+          total_revenue_month: number | null
+          total_revenue_week: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "admin_global_financial_metrics"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      get_my_financial_metrics: {
+        Args: never
+        Returns: {
+          orders_day: number | null
+          orders_month: number | null
+          orders_week: number | null
+          owner_id: string | null
+          pizzeria_id: string | null
+          pizzeria_name: string | null
+          revenue_day: number | null
+          revenue_month: number | null
+          revenue_week: number | null
+          ticket_avg_day: number | null
+          ticket_avg_month: number | null
+          ticket_avg_week: number | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "pizzeria_financial_metrics"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
