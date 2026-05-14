@@ -126,6 +126,23 @@ export const Route = createFileRoute("/api/orders")({
           }
           
           console.log("💾 [WebHook] Pedido salvo com sucesso ID:", order.id);
+          
+          // Tentar salvar itens na tabela order_items para maior compatibilidade
+          if (Array.isArray(orderToInsert.items) && orderToInsert.items.length > 0) {
+            try {
+              const orderItemsToInsert = orderToInsert.items.map((it: any) => ({
+                order_id: order.id,
+                product_name: it.product_name || it.name || it.title || "Item",
+                quantity: Number(it.quantity || it.qty || 1),
+                price: Number(it.unit_price || it.price || 0),
+              }));
+              await supabaseAdmin.from("order_items").insert(orderItemsToInsert);
+              console.log("💾 [WebHook] Itens do pedido salvos em order_items");
+            } catch (err) {
+              console.warn("⚠️ [WebHook] Falha ao salvar em order_items (opcional):", err);
+            }
+          }
+
           await logExternalOrder(apiKey, body, 200);
           return new Response(JSON.stringify({ success: true, order_id: order.id, message: "Pedido recebido com sucesso" }), { status: 200, headers: cors });
         }
@@ -158,6 +175,23 @@ export const Route = createFileRoute("/api/orders")({
         }
 
         console.log("💾 [WebHook] Pedido genérico salvo com sucesso ID:", order.id);
+        
+        // Tentar salvar itens na tabela order_items para maior compatibilidade
+        if (Array.isArray(items) && items.length > 0) {
+          try {
+            const orderItemsToInsert = items.map((it: any) => ({
+              order_id: order.id,
+              product_name: it.product_name || it.name || it.title || "Item",
+              quantity: Number(it.quantity || it.qty || 1),
+              price: Number(it.unit_price || it.price || 0),
+            }));
+            await supabaseAdmin.from("order_items").insert(orderItemsToInsert);
+            console.log("💾 [WebHook] Itens do pedido genérico salvos em order_items");
+          } catch (err) {
+            console.warn("⚠️ [WebHook] Falha ao salvar em order_items (opcional):", err);
+          }
+        }
+
         await logExternalOrder(apiKey, body, 200);
         return new Response(JSON.stringify({ success: true, order_id: order.id, message: "Pedido recebido com sucesso" }), { status: 200, headers: cors });
       },
