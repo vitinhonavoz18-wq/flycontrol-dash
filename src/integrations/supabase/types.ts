@@ -334,6 +334,30 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_period_metrics: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          last_order_at: string
+          orders_count: number
+          owner_id: string
+          pizzeria_id: string
+          pizzeria_name: string
+          revenue: number
+          status: string
+          ticket_avg: number
+        }[]
+      }
+      get_pizzeria_financial_summary: {
+        Args: { p_pizzeria_id: string }
+        Returns: {
+          best_day_date: string
+          best_day_revenue: number
+          last_order_at: string
+          orders_month: number
+          pizzeria_name: string
+          revenue_month: number
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
