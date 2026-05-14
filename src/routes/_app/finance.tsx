@@ -56,7 +56,7 @@ type Period = "today" | "week" | "month" | "7days" | "30days" | "custom";
 type FinancialData = {
   pizzeria_id: string;
   pizzeria_name: string;
-  owner_id: uuid;
+  owner_id: string;
   revenue: number;
   orders_count: number;
   ticket_avg: number;
@@ -578,4 +578,4 @@ function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse bg-muted ${className}`} />;
 }
 
-type uuid = string;
+
