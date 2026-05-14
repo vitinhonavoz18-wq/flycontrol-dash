@@ -14,7 +14,7 @@ import {
   Package,
   ArrowRight,
   Filter,
-  ArrowDownWideEqual,
+  BarChart3,
   Star,
   Activity,
   ChevronDown
@@ -250,7 +250,7 @@ function Finance() {
             </DropdownMenuContent>
           </DropdownMenu>
           
-          <Button variant="primary" size="sm" className="gap-2 shadow-lg" onClick={loadData}>
+          <Button variant="default" size="sm" className="gap-2 shadow-lg" onClick={loadData}>
             <Activity className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
             Atualizar
           </Button>
@@ -344,7 +344,7 @@ function AdminView({ data, totals, formatCurrency, handleSort, sortBy, sortOrder
         <div className="lg:col-span-2 space-y-4">
           <div className="flex items-center justify-between">
             <h2 className="text-xl font-bold flex items-center gap-2">
-              <ArrowDownWideEqual className="h-5 w-5 text-primary" />
+              <BarChart3 className="h-5 w-5 text-primary" />
               Desempenho por Pizzaria
             </h2>
           </div>
