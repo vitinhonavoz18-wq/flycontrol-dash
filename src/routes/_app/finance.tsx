@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -9,90 +9,134 @@ import {
   Calendar,
   AlertCircle,
   Trophy,
-  Calculator
+  Calculator,
+  ArrowUpRight,
+  Package,
+  ArrowRight,
+  Filter,
+  ArrowDownWideEqual,
+  Star,
+  Activity,
+  ChevronDown
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { 
+  startOfDay, 
+  endOfDay, 
+  startOfWeek, 
+  endOfWeek, 
+  startOfMonth, 
+  endOfMonth, 
+  subDays, 
+  format, 
+  isSameDay 
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export const Route = createFileRoute("/_app/finance" as any)({ component: Finance });
 
-type FinancialMetrics = {
+type Period = "today" | "week" | "month" | "7days" | "30days" | "custom";
+
+type FinancialData = {
   pizzeria_id: string;
   pizzeria_name: string;
-  revenue_day: number;
-  orders_day: number;
-  ticket_avg_day: number;
-  revenue_week: number;
-  orders_week: number;
-  ticket_avg_week: number;
-  revenue_month: number;
-  orders_month: number;
-  ticket_avg_month: number;
+  owner_id: uuid;
+  revenue: number;
+  orders_count: number;
+  ticket_avg: number;
+  last_order_at: string | null;
+  status: string;
 };
 
-type GlobalMetrics = {
-  total_revenue_day: number;
-  total_orders_day: number;
-  total_revenue_week: number;
-  total_orders_week: number;
-  total_revenue_month: number;
-  total_orders_month: number;
+type PizzeriaSummary = {
+  pizzeria_name: string;
+  revenue_month: number;
+  orders_month: number;
+  best_day_date: string | null;
+  best_day_revenue: number;
+  last_order_at: string | null;
 };
 
 function Finance() {
   const { user, isSuperAdmin, loading: authLoading } = useAuth();
   const nav = useNavigate();
-  const [metrics, setMetrics] = useState<FinancialMetrics[]>([]);
-  const [global, setGlobal] = useState<GlobalMetrics | null>(null);
+  
+  const [period, setPeriod] = useState<Period>("month");
+  const [data, setData] = useState<FinancialData[]>([]);
+  const [summary, setSummary] = useState<PizzeriaSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<string>("revenue");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+
+  // Filter specific to Admin
+  const [selectedPizzeriaId, setSelectedPizzeriaId] = useState<string>("all");
 
   useEffect(() => {
     if (!authLoading && !user) nav({ to: "/login" });
   }, [authLoading, user, nav]);
 
   useEffect(() => {
-    if (user) loadData();
-  }, [user, isSuperAdmin]);
+    if (user) {
+      loadData();
+    }
+  }, [user, isSuperAdmin, period, selectedPizzeriaId]);
 
   async function loadData() {
     setLoading(true);
     try {
-      const { data: metricsData, error: metricsError } = await supabase.rpc('get_my_financial_metrics');
+      const { start, end } = getPeriodDates(period);
+      
+      // 1. Get period metrics for all (or filtered) pizzerias
+      const { data: metricsData, error: metricsError } = await supabase.rpc('get_period_metrics', {
+        p_start_date: start.toISOString(),
+        p_end_date: end.toISOString()
+      });
       
       if (metricsError) throw metricsError;
-      
-      const sanitizedMetrics: FinancialMetrics[] = (metricsData || []).map((m: any) => ({
-        pizzeria_id: m.pizzeria_id || "",
-        pizzeria_name: m.pizzeria_name || "Sem Nome",
-        revenue_day: Number(m.revenue_day || 0),
-        orders_day: Number(m.orders_day || 0),
-        ticket_avg_day: Number(m.ticket_avg_day || 0),
-        revenue_week: Number(m.revenue_week || 0),
-        orders_week: Number(m.orders_week || 0),
-        ticket_avg_week: Number(m.ticket_avg_week || 0),
-        revenue_month: Number(m.revenue_month || 0),
-        orders_month: Number(m.orders_month || 0),
-        ticket_avg_month: Number(m.ticket_avg_month || 0),
-      }));
-      
-      setMetrics(sanitizedMetrics);
 
-      if (isSuperAdmin) {
-        const { data: globalData, error: globalError } = await supabase.rpc('get_admin_global_metrics');
-        if (globalError) throw globalError;
-        
-        if (globalData && globalData[0]) {
-          const g = globalData[0];
-          setGlobal({
-            total_revenue_day: Number(g.total_revenue_day || 0),
-            total_orders_day: Number(g.total_orders_day || 0),
-            total_revenue_week: Number(g.total_revenue_week || 0),
-            total_orders_week: Number(g.total_orders_week || 0),
-            total_revenue_month: Number(g.total_revenue_month || 0),
-            total_orders_month: Number(g.total_orders_month || 0),
+      const sanitizedData = (metricsData || []).map((m: any) => ({
+        ...m,
+        revenue: Number(m.revenue || 0),
+        orders_count: Number(m.orders_count || 0),
+        ticket_avg: Number(m.ticket_avg || 0)
+      }));
+      setData(sanitizedData);
+
+      // 2. If it's a single pizzeria or user view, get detailed summary
+      const targetPizzeriaId = !isSuperAdmin ? sanitizedData[0]?.pizzeria_id : (selectedPizzeriaId !== "all" ? selectedPizzeriaId : null);
+      
+      if (targetPizzeriaId) {
+        const { data: summaryData, error: summaryError } = await supabase.rpc('get_pizzeria_financial_summary', {
+          p_pizzeria_id: targetPizzeriaId
+        });
+        if (!summaryError && summaryData?.[0]) {
+          setSummary({
+            ...summaryData[0],
+            revenue_month: Number(summaryData[0].revenue_month || 0),
+            orders_month: Number(summaryData[0].orders_month || 0),
+            best_day_revenue: Number(summaryData[0].best_day_revenue || 0)
           });
         }
+      } else {
+        setSummary(null);
       }
+
     } catch (error: any) {
       console.error("Finance load error:", error);
       toast.error("Erro ao carregar dados financeiros: " + error.message);
@@ -101,186 +145,437 @@ function Finance() {
     }
   }
 
+  function getPeriodDates(p: Period) {
+    const now = new Date();
+    switch (p) {
+      case "today": return { start: startOfDay(now), end: endOfDay(now) };
+      case "week": return { start: startOfWeek(now, { weekStartsOn: 0 }), end: endOfWeek(now, { weekStartsOn: 0 }) };
+      case "month": return { start: startOfMonth(now), end: endOfMonth(now) };
+      case "7days": return { start: subDays(now, 7), end: now };
+      case "30days": return { start: subDays(now, 30), end: now };
+      default: return { start: startOfMonth(now), end: endOfMonth(now) };
+    }
+  }
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
   };
 
-  if (loading) {
+  const totals = useMemo(() => {
+    return data.reduce((acc, curr) => ({
+      revenue: acc.revenue + curr.revenue,
+      orders: acc.orders + curr.orders_count,
+    }), { revenue: 0, orders: 0 });
+  }, [data]);
+
+  const sortedData = useMemo(() => {
+    return [...data].sort((a, b) => {
+      const valA = (a as any)[sortBy] ?? 0;
+      const valB = (b as any)[sortBy] ?? 0;
+      return sortOrder === "desc" ? valB - valA : valA - valB;
+    });
+  }, [data, sortBy, sortOrder]);
+
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+    } else {
+      setSortBy(field);
+      setSortOrder("desc");
+    }
+  };
+
+  if (loading && !data.length) {
     return (
       <div className="p-8 space-y-6">
-        <div className="h-8 w-48 bg-muted animate-pulse rounded" />
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-muted animate-pulse rounded-xl" />)}
+        <div className="flex justify-between items-center">
+          <Skeleton className="h-10 w-48" />
+          <Skeleton className="h-10 w-64" />
         </div>
+        <div className="grid gap-4 md:grid-cols-3">
+          {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
+        </div>
+        <Skeleton className="h-96 w-full rounded-xl" />
       </div>
     );
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Gestão Financeira</h1>
-        <p className="text-muted-foreground">Acompanhe o desempenho bruto das suas pizzarias em tempo real.</p>
+    <div className="p-6 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight text-foreground flex items-center gap-2">
+            <DollarSign className="h-8 w-8 text-primary" /> Gestão Financeira
+          </h1>
+          <p className="text-muted-foreground">Visão estratégica e faturamento bruto em tempo real.</p>
+        </div>
+        
+        <div className="flex flex-wrap items-center gap-2">
+          {isSuperAdmin && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  <Activity className="h-4 w-4" />
+                  {selectedPizzeriaId === "all" ? "Todas as Pizzarias" : data.find(p => p.pizzeria_id === selectedPizzeriaId)?.pizzeria_name || "Selecionar..."}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuItem onClick={() => setSelectedPizzeriaId("all")}>
+                  Todas as Pizzarias
+                </DropdownMenuItem>
+                {data.map(p => (
+                  <DropdownMenuItem key={p.pizzeria_id} onClick={() => setSelectedPizzeriaId(p.pizzeria_id)}>
+                    {p.pizzeria_name}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-2">
+                <Filter className="h-4 w-4" />
+                {getPeriodLabel(period)}
+                <ChevronDown className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setPeriod("today")}>Hoje</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPeriod("week")}>Esta Semana</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPeriod("month")}>Este Mês</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPeriod("7days")}>Últimos 7 dias</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setPeriod("30days")}>Últimos 30 dias</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          
+          <Button variant="primary" size="sm" className="gap-2 shadow-lg" onClick={loadData}>
+            <Activity className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`} />
+            Atualizar
+          </Button>
+        </div>
       </div>
 
-      {isSuperAdmin && global && (
-        <section className="space-y-4">
-          <div className="flex items-center gap-2">
-            <Trophy className="h-5 w-5 text-yellow-500" />
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/80">Visão Geral (Todas as Pizzarias)</h2>
-          </div>
-          
-          <div className="grid gap-4 md:grid-cols-3">
-            <MetricCard 
-              title="TOTAL FATURADO HOJE"
-              value={formatCurrency(global.total_revenue_day)}
-              subtitle={`${global.total_orders_day} pedidos hoje`}
-              icon={Calendar}
-              trend="Faturamento Bruto"
-            />
-            <MetricCard 
-              title="TOTAL FATURADO NA SEMANA"
-              value={formatCurrency(global.total_revenue_week)}
-              subtitle={`${global.total_orders_week} pedidos na semana`}
-              icon={TrendingUp}
-              trend="Faturamento Bruto"
-            />
-            <MetricCard 
-              title="TOTAL FATURADO NO MÊS"
-              value={formatCurrency(global.total_revenue_month)}
-              subtitle={`${global.total_orders_month} pedidos no mês`}
-              icon={DollarSign}
-              trend="Faturamento Bruto"
-              highlight
-            />
-          </div>
-
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-sm font-medium">Ranking de Faturamento (Mês Atual)</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {[...metrics].sort((a, b) => b.revenue_month - a.revenue_month).map((m, i) => (
-                  <div key={m.pizzeria_id} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
-                        {i + 1}
-                      </div>
-                      <span className="text-sm font-medium">{m.pizzeria_name}</span>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-xs text-muted-foreground">{m.orders_month} pedidos</span>
-                      <span className="text-sm font-bold">{formatCurrency(m.revenue_month)}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </section>
-      )}
-
-      <section className="space-y-6">
-        <div className="flex items-center gap-2">
-          <Calculator className="h-5 w-5 text-primary" />
-          <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground/80">
-            {isSuperAdmin ? "Detalhamento por Unidade" : "Minha Pizzaria"}
-          </h2>
-        </div>
-
-        {metrics.map((m) => (
-          <div key={m.pizzeria_id} className="space-y-4">
-            {isSuperAdmin && (
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-primary">{m.pizzeria_name}</h3>
-                <Badge variant="outline">Unidade Ativa</Badge>
-              </div>
-            )}
-            
-            <div className="grid gap-4 md:grid-cols-3">
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs font-bold uppercase">Hoje</CardDescription>
-                  <CardTitle className="text-2xl">{formatCurrency(m.revenue_day)}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Pedidos:</span>
-                    <span className="font-medium">{m.orders_day}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Ticket Médio:</span>
-                    <span className="font-medium">{formatCurrency(m.ticket_avg_day)}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs font-bold uppercase">Esta Semana</CardDescription>
-                  <CardTitle className="text-2xl">{formatCurrency(m.revenue_week)}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Pedidos:</span>
-                    <span className="font-medium">{m.orders_week}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Ticket Médio:</span>
-                    <span className="font-medium">{formatCurrency(m.ticket_avg_week)}</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card className={!isSuperAdmin ? "border-primary/50 bg-primary/5" : ""}>
-                <CardHeader className="pb-2">
-                  <CardDescription className="text-xs font-bold uppercase">Este Mês</CardDescription>
-                  <CardTitle className="text-2xl">{formatCurrency(m.revenue_month)}</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-1">
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Pedidos:</span>
-                    <span className="font-medium">{m.orders_month}</span>
-                  </div>
-                  <div className="flex justify-between text-xs">
-                    <span className="text-muted-foreground">Ticket Médio:</span>
-                    <span className="font-medium">{formatCurrency(m.ticket_avg_month)}</span>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        ))}
-
-        {metrics.length === 0 && (
-          <div className="flex flex-col items-center justify-center p-12 rounded-xl border border-dashed text-center space-y-2">
-            <AlertCircle className="h-8 w-8 text-muted-foreground" />
-            <h3 className="font-medium text-muted-foreground">Nenhum dado financeiro disponível</h3>
-            <p className="text-sm text-muted-foreground">Novos pedidos aparecerão aqui assim que forem realizados.</p>
-          </div>
+      {/* Main Content */}
+      <div className="space-y-10">
+        {isSuperAdmin && selectedPizzeriaId === "all" ? (
+          <AdminView 
+            data={sortedData} 
+            totals={totals} 
+            formatCurrency={formatCurrency} 
+            handleSort={handleSort}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            periodLabel={getPeriodLabel(period)}
+          />
+        ) : (
+          <OwnerView 
+            pizzeria={data[0] || {} as FinancialData} 
+            summary={summary}
+            formatCurrency={formatCurrency}
+            periodLabel={getPeriodLabel(period)}
+          />
         )}
-      </section>
+      </div>
+      
+      {data.length === 0 && !loading && (
+        <div className="flex flex-col items-center justify-center p-20 rounded-2xl border border-dashed border-border bg-muted/30 text-center space-y-4">
+          <div className="p-4 rounded-full bg-primary/10">
+            <AlertCircle className="h-10 w-10 text-primary" />
+          </div>
+          <div>
+            <h3 className="text-xl font-bold">Sem dados no período</h3>
+            <p className="text-muted-foreground max-w-xs mx-auto">
+              Ainda não há pedidos suficientes para gerar a gestão financeira neste intervalo.
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
-function MetricCard({ title, value, subtitle, icon: Icon, trend, highlight = false }: any) {
+function getPeriodLabel(p: Period) {
+  switch (p) {
+    case "today": return "Hoje";
+    case "week": return "Esta Semana";
+    case "month": return "Este Mês";
+    case "7days": return "Últimos 7 dias";
+    case "30days": return "Últimos 30 dias";
+    default: return "Período";
+  }
+}
+
+function AdminView({ data, totals, formatCurrency, handleSort, sortBy, sortOrder, periodLabel }: any) {
   return (
-    <Card className={highlight ? "border-primary shadow-md bg-primary/5" : ""}>
+    <div className="space-y-8">
+      {/* Global Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <MetricCard 
+          title={`TOTAL FATURADO ${periodLabel.toUpperCase()}`}
+          value={formatCurrency(totals.revenue)}
+          subtitle="Somando todas as pizzarias"
+          icon={DollarSign}
+          highlight
+        />
+        <MetricCard 
+          title={`TOTAL DE PEDIDOS ${periodLabel.toUpperCase()}`}
+          value={totals.orders}
+          subtitle="Volume total de vendas"
+          icon={Package}
+        />
+        <MetricCard 
+          title="TICKET MÉDIO GERAL"
+          value={formatCurrency(totals.orders > 0 ? totals.revenue / totals.orders : 0)}
+          subtitle="Média por pedido"
+          icon={TrendingUp}
+        />
+        <MetricCard 
+          title="PIZZARIAS ATIVAS"
+          value={data.length}
+          subtitle="Cadastradas no sistema"
+          icon={Calculator}
+        />
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-3">
+        {/* Table Section */}
+        <div className="lg:col-span-2 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold flex items-center gap-2">
+              <ArrowDownWideEqual className="h-5 w-5 text-primary" />
+              Desempenho por Pizzaria
+            </h2>
+          </div>
+          <Card className="overflow-hidden border-border shadow-md">
+            <Table>
+              <TableHeader className="bg-muted/50">
+                <TableRow>
+                  <TableHead className="cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('pizzeria_name')}>
+                    Pizzaria {sortBy === 'pizzeria_name' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </TableHead>
+                  <TableHead className="text-right cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('orders_count')}>
+                    Pedidos {sortBy === 'orders_count' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </TableHead>
+                  <TableHead className="text-right cursor-pointer hover:text-primary transition-colors" onClick={() => handleSort('revenue')}>
+                    Faturamento {sortBy === 'revenue' && (sortOrder === 'asc' ? '↑' : '↓')}
+                  </TableHead>
+                  <TableHead className="text-right">Ticket Médio</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {data.map((p: any) => (
+                  <TableRow key={p.pizzeria_id} className="hover:bg-muted/30 transition-colors">
+                    <TableCell className="font-medium">
+                      <div className="flex flex-col">
+                        <span>{p.pizzeria_name}</span>
+                        <span className="text-[10px] text-muted-foreground uppercase">{p.status === 'active' ? 'Ativa' : 'Pausada'}</span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-semibold">{p.orders_count}</TableCell>
+                    <TableCell className="text-right font-bold text-primary">{formatCurrency(p.revenue)}</TableCell>
+                    <TableCell className="text-right text-muted-foreground">{formatCurrency(p.ticket_avg)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </Card>
+        </div>
+
+        {/* Rankings Section */}
+        <div className="space-y-4">
+          <h2 className="text-xl font-bold flex items-center gap-2">
+            <Trophy className="h-5 w-5 text-yellow-500" />
+            Ranking das Pizzarias
+          </h2>
+          <Card className="p-5 border-primary/20 shadow-md">
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-sm font-bold uppercase text-muted-foreground mb-4 flex items-center gap-2">
+                  <DollarSign className="h-4 w-4 text-green-500" /> Top Faturamento {periodLabel}
+                </h3>
+                <div className="space-y-3">
+                  {[...data].sort((a, b) => b.revenue - a.revenue).slice(0, 5).map((p, i) => (
+                    <div key={p.pizzeria_id} className="flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <span className={`flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold ${i === 0 ? 'bg-yellow-500 text-white' : i === 1 ? 'bg-slate-300 text-slate-800' : i === 2 ? 'bg-amber-600 text-white' : 'bg-muted text-muted-foreground'}`}>
+                          {i + 1}
+                        </span>
+                        <span className="text-sm font-medium group-hover:text-primary transition-colors truncate max-w-[120px]">{p.pizzeria_name}</span>
+                      </div>
+                      <span className="text-sm font-bold">{formatCurrency(p.revenue)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-border">
+                <h3 className="text-sm font-bold uppercase text-muted-foreground mb-4 flex items-center gap-2">
+                  <Package className="h-4 w-4 text-primary" /> Top Pedidos {periodLabel}
+                </h3>
+                <div className="space-y-3">
+                  {[...data].sort((a, b) => b.orders_count - a.orders_count).slice(0, 5).map((p, i) => (
+                    <div key={p.pizzeria_id} className="flex items-center justify-between group">
+                      <div className="flex items-center gap-3">
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-muted text-[10px] font-bold text-muted-foreground group-hover:bg-primary/20 group-hover:text-primary transition-colors">
+                          {i + 1}
+                        </span>
+                        <span className="text-sm font-medium group-hover:text-primary transition-colors truncate max-w-[120px]">{p.pizzeria_name}</span>
+                      </div>
+                      <span className="text-sm font-bold">{p.orders_count} pedidos</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function OwnerView({ pizzeria, summary, formatCurrency, periodLabel }: any) {
+  return (
+    <div className="space-y-8 animate-in slide-in-from-bottom-4 duration-700">
+      {/* Personal Cards */}
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+        <MetricCard 
+          title={`SEU FATURAMENTO ${periodLabel.toUpperCase()}`}
+          value={formatCurrency(pizzeria.revenue || 0)}
+          subtitle="Faturamento bruto real"
+          icon={DollarSign}
+          highlight
+        />
+        <MetricCard 
+          title={`SEUS PEDIDOS ${periodLabel.toUpperCase()}`}
+          value={pizzeria.orders_count || 0}
+          subtitle="Volume de vendas"
+          icon={Package}
+        />
+        <MetricCard 
+          title="SEU TICKET MÉDIO"
+          value={formatCurrency(pizzeria.ticket_avg || 0)}
+          subtitle="Média por pedido"
+          icon={TrendingUp}
+        />
+        <MetricCard 
+          title="ÚLTIMA VENDA"
+          value={pizzeria.last_order_at ? format(new Date(pizzeria.last_order_at), "HH:mm") : "--:--"}
+          subtitle={pizzeria.last_order_at ? format(new Date(pizzeria.last_order_at), "dd/MM") : "Sem pedidos"}
+          icon={Calendar}
+        />
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-2">
+        {/* Summary Card */}
+        <Card className="overflow-hidden border-primary/20 shadow-lg">
+          <CardHeader className="bg-primary/5 pb-4">
+            <CardTitle className="flex items-center gap-2">
+              <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+              Resumo da Pizzaria
+            </CardTitle>
+            <CardDescription>Visão geral de performance consolidada.</CardDescription>
+          </CardHeader>
+          <CardContent className="pt-6">
+            <div className="space-y-6">
+              <div className="flex justify-between items-center pb-4 border-b">
+                <div className="text-sm text-muted-foreground font-medium uppercase tracking-tight">Nome da Pizzaria</div>
+                <div className="font-bold text-lg text-primary">{pizzeria.pizzeria_name || "Sua Pizzaria"}</div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-6">
+                <div className="space-y-1">
+                  <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Faturado (Mês)</div>
+                  <div className="text-xl font-black">{formatCurrency(summary?.revenue_month || 0)}</div>
+                </div>
+                <div className="space-y-1">
+                  <div className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Pedidos (Mês)</div>
+                  <div className="text-xl font-black">{summary?.orders_month || 0}</div>
+                </div>
+              </div>
+
+              <div className="space-y-4 pt-4 border-t border-dashed">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Trophy className="h-4 w-4 text-yellow-500" />
+                    <span className="text-muted-foreground">Melhor dia de vendas:</span>
+                  </div>
+                  <div className="flex flex-col items-end">
+                    <span className="font-bold">{summary?.best_day_date ? format(new Date(summary.best_day_date + 'T12:00:00'), "dd 'de' MMMM", { locale: ptBR }) : "--"}</span>
+                    <span className="text-[10px] text-success font-bold">{formatCurrency(summary?.best_day_revenue || 0)}</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Activity className="h-4 w-4 text-primary" />
+                    <span className="text-muted-foreground">Status financeiro:</span>
+                  </div>
+                  <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200 uppercase text-[9px] font-bold">Saudável</Badge>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Calendar className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-muted-foreground">Último pedido:</span>
+                  </div>
+                  <span className="text-xs font-medium">{summary?.last_order_at ? format(new Date(summary.last_order_at), "dd/MM/yyyy HH:mm") : "Nenhum pedido"}</span>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Growth/Motivation Card */}
+        <div className="flex flex-col justify-center gap-6 p-8 rounded-2xl bg-gradient-to-br from-primary/10 via-primary/5 to-transparent border border-primary/10">
+          <div className="space-y-2">
+            <h3 className="text-2xl font-black text-primary uppercase tracking-tighter">Cresça com o FlyControl</h3>
+            <p className="text-muted-foreground">O faturamento bruto de <span className="font-bold text-foreground">{formatCurrency(summary?.revenue_month || 0)}</span> este mês é um excelente indicador de tração.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="p-4 rounded-xl bg-white/50 border border-white shadow-sm">
+              <ArrowUpRight className="h-5 w-5 text-success mb-2" />
+              <div className="text-[10px] uppercase font-bold text-muted-foreground">Potencial</div>
+              <div className="text-sm font-bold">Aumente o ticket médio</div>
+            </div>
+            <div className="p-4 rounded-xl bg-white/50 border border-white shadow-sm">
+              <ArrowRight className="h-5 w-5 text-primary mb-2" />
+              <div className="text-[10px] uppercase font-bold text-muted-foreground">Dica</div>
+              <div className="text-sm font-bold">Analise seu melhor dia</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function MetricCard({ title, value, subtitle, icon: Icon, highlight = false }: any) {
+  return (
+    <Card className={`relative overflow-hidden group transition-all duration-300 hover:shadow-xl ${highlight ? "border-primary/50 shadow-md bg-primary/5" : "border-border hover:border-primary/30"}`}>
+      {highlight && <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full -mr-10 -mt-10 transition-transform group-hover:scale-150 duration-700" />}
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-        <CardTitle className="text-[10px] font-bold uppercase text-muted-foreground tracking-tight">
+        <CardTitle className="text-[10px] font-black uppercase text-muted-foreground tracking-widest group-hover:text-primary transition-colors">
           {title}
         </CardTitle>
-        <Icon className={`h-4 w-4 ${highlight ? "text-primary" : "text-muted-foreground"}`} />
+        <div className={`p-2 rounded-lg transition-colors ${highlight ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"}`}>
+          <Icon className="h-4 w-4" />
+        </div>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold">{value}</div>
-        <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
-          {trend && <span className="text-green-600 flex items-center">{trend}</span>}
+        <div className="text-3xl font-black tracking-tighter">{value}</div>
+        <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1 font-medium italic">
           {subtitle}
         </p>
       </CardContent>
     </Card>
   );
 }
+
+function Skeleton({ className }: { className?: string }) {
+  return <div className={`animate-pulse bg-muted ${className}`} />;
+}
+
+type uuid = string;
