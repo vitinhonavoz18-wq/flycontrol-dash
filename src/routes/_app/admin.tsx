@@ -5,7 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ExternalLink, Package, DollarSign, Calendar, TrendingUp } from "lucide-react";
+import { ArrowLeft, ExternalLink, Package, DollarSign, Calendar, TrendingUp, Trash2, AlertTriangle } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_app/admin")({ component: Admin });
 
@@ -13,6 +23,8 @@ function Admin() {
   const { isSuperAdmin, loading } = useAuth();
   const nav = useNavigate();
   const [pz, setPz] = useState<any[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!loading && !isSuperAdmin) nav({ to: "/dashboard" });
@@ -28,6 +40,7 @@ function Admin() {
         *,
         orders(id, total, created_at)
       `)
+      .neq("status", "deleted")
       .order("created_at", { ascending: false });
     
     if (pzError) {
@@ -71,6 +84,20 @@ function Admin() {
     if (error) toast.error(error.message); else load();
   }
 
+  async function handleDelete(id: string) {
+    setIsDeleting(true);
+    const { error } = await supabase.from("pizzerias").update({ status: 'deleted' }).eq("id", id);
+    setIsDeleting(false);
+    setDeletingId(null);
+    
+    if (error) {
+      toast.error("Não foi possível excluir esta pizzaria. Tente novamente.");
+    } else {
+      toast.success("Pizzaria excluída com sucesso.");
+      load();
+    }
+  }
+
   if (!isSuperAdmin) return null;
 
   return (
@@ -82,7 +109,7 @@ function Admin() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {pz.map((p) => (
-          <PizzeriaCard key={p.id} p={p} onStatusChange={setStatus} />
+          <PizzeriaCard key={p.id} p={p} onStatusChange={setStatus} onDelete={() => setDeletingId(p.id)} />
         ))}
         {!pz.length && (
           <div className="col-span-full flex h-40 items-center justify-center rounded-xl border border-dashed border-border text-muted-foreground">
@@ -90,11 +117,44 @@ function Admin() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+        <AlertDialogContent className="border-destructive/20 shadow-2xl">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center text-xl">
+              Tem certeza que deseja excluir esta pizzaria?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Essa ação pode afetar o acesso da pizzaria, pedidos vinculados e relatórios financeiros.
+              <br /><br />
+              <span className="font-semibold text-foreground/80">
+                Essa pizzaria possui histórico de pedidos. Ela será desativada para preservar os dados antigos.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 gap-2 sm:justify-center">
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                if (deletingId) handleDelete(deletingId);
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Excluindo..." : "Excluir pizzaria"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
 
-function PizzeriaCard({ p, onStatusChange }: { p: any, onStatusChange: (id: string, s: string) => void }) {
+function PizzeriaCard({ p, onStatusChange, onDelete }: { p: any, onStatusChange: (id: string, s: string) => void, onDelete: () => void }) {
   const orders = p.orders || [];
   const today = new Date().toISOString().split('T')[0];
   const todayOrders = orders.filter((o: any) => o.created_at.startsWith(today));
@@ -160,6 +220,16 @@ function PizzeriaCard({ p, onStatusChange }: { p: any, onStatusChange: (id: stri
         >
           Acessar Painel <ExternalLink className="ml-1.5 h-3 w-3" />
         </Link>
+
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onDelete}
+          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20"
+          title="Excluir Pizzaria"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );

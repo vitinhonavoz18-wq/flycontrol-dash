@@ -25,7 +25,7 @@ function Analytics() {
     const since = new Date(); since.setDate(since.getDate() - 14);
     const [{ data: orders }, { count: pCount }] = await Promise.all([
       supabase.from("orders").select("created_at,total").gte("created_at", since.toISOString()),
-      supabase.from("pizzerias").select("*", { count: "exact", head: true }),
+      supabase.from("pizzerias").select("*", { count: "exact", head: true }).neq("status", "deleted"),
     ]);
     const byDayMap = new Map<string, { day: string; pedidos: number; receita: number }>();
     (orders ?? []).forEach((o: any) => {
