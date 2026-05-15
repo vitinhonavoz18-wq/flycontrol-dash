@@ -49,7 +49,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export const Route = createFileRoute("/_app/finance" as any)({ component: Finance });
+export const Route = createFileRoute("/_app/finance")({ component: Finance });
 
 type Period = "today" | "week" | "month" | "7days" | "30days" | "custom";
 
@@ -92,23 +92,28 @@ function Finance() {
   const { user, isSuperAdmin, loading: authLoading } = useAuth();
   const nav = useNavigate();
   
+  const [mounted, setMounted] = useState(false);
   const [period, setPeriod] = useState<Period>("month");
   const [data, setData] = useState<FinancialData[]>([]);
   const [globalTotals, setGlobalTotals] = useState<GlobalTotals | null>(null);
   const [ranking, setRanking] = useState<RankingItem[]>([]);
-  const [loading, setLoading] = useState(false); // Start as false
+  const [loading, setLoading] = useState(false);
   const [selectedPizzeriaId, setSelectedPizzeriaId] = useState<string>("all");
 
   useEffect(() => {
-    if (!authLoading && !user) nav({ to: "/login" });
-  }, [authLoading, user, nav]);
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
-    // Only run if we have a user and auth is not loading
-    if (!authLoading && user) {
+    if (mounted && !authLoading && !user) nav({ to: "/login" });
+  }, [authLoading, user, nav, mounted]);
+
+  useEffect(() => {
+    // Only run if we are mounted, have a user and auth is not loading
+    if (mounted && !authLoading && user) {
       loadData();
     }
-  }, [user, authLoading, isSuperAdmin, period, selectedPizzeriaId]);
+  }, [user, authLoading, isSuperAdmin, period, selectedPizzeriaId, mounted]);
 
   async function loadData() {
     if (authLoading || !user) return; // Guard clause for session/JWT issues
@@ -179,8 +184,15 @@ function Finance() {
     return data.find(p => p.pizzeria_id === selectedPizzeriaId) || data[0] || null;
   }, [data, selectedPizzeriaId]);
 
-  if (authLoading) {
-    return <div className="p-8 text-center text-muted-foreground">Verificando autenticação...</div>;
+  if (!mounted || authLoading) {
+    return (
+      <div className="p-8 space-y-6">
+        <div className="h-10 w-48 bg-muted animate-pulse rounded" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-muted animate-pulse rounded-xl" />)}
+        </div>
+      </div>
+    );
   }
 
   if (!user) {
