@@ -5,7 +5,17 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ExternalLink, Package, DollarSign, Calendar, TrendingUp } from "lucide-react";
+import { ArrowLeft, ExternalLink, Package, DollarSign, Calendar, TrendingUp, Trash2, AlertTriangle } from "lucide-react";
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export const Route = createFileRoute("/_app/admin")({ component: Admin });
 
