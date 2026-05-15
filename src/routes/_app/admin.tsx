@@ -220,6 +220,16 @@ function PizzeriaCard({ p, onStatusChange, onDelete }: { p: any, onStatusChange:
         >
           Acessar Painel <ExternalLink className="ml-1.5 h-3 w-3" />
         </Link>
+
+        <Button 
+          variant="outline" 
+          size="sm" 
+          onClick={onDelete}
+          className="h-8 w-8 p-0 text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/20"
+          title="Excluir Pizzaria"
+        >
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
