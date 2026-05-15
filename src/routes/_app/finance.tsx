@@ -630,6 +630,12 @@ function MetricCard({ title, value, subtitle, icon: Icon, highlight = false }: a
       </CardHeader>
       <CardContent>
         <div className="text-3xl font-black tracking-tighter">{value}</div>
+        <p className="text-[10px] text-muted-foreground font-medium mt-1 truncate">{subtitle}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
         <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1 font-medium italic">
           {subtitle}
         </p>
