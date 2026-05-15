@@ -636,14 +636,7 @@ function MetricCard({ title, value, subtitle, icon: Icon, highlight = false }: a
   );
 }
 
-        <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1 font-medium italic">
-          {subtitle}
-        </p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse bg-muted ${className}`} />;
 }
+
