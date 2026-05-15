@@ -83,7 +83,7 @@ function Dashboard() {
     initialLoad.current = true;
     (async () => {
       const { data, error } = await supabase.from("orders").select("*").eq("tenant_id", activeId)
-        .order("created_at", { ascending: false }).limit(200);
+        .neq("status", "deleted").order("created_at", { ascending: false }).limit(200);
       
       if (error?.message.includes("JWT expired")) {
         console.log("Session expired, refreshing...");
@@ -91,7 +91,7 @@ function Dashboard() {
         if (!refreshError && refreshData.session) {
           // Retry once
           const { data: retryData } = await supabase.from("orders").select("*").eq("tenant_id", activeId)
-            .order("created_at", { ascending: false }).limit(200);
+            .neq("status", "deleted").order("created_at", { ascending: false }).limit(200);
           setOrders((retryData ?? []) as Order[]);
         } else {
           toast.error("Sessão expirada. Faça login novamente.");
