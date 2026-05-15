@@ -372,6 +372,7 @@ function AdminView({ data, totals, ranking, formatCurrency }: any) {
                   <TableHead className="text-right">Pedidos Mês</TableHead>
                   <TableHead className="text-right">Faturamento Mês</TableHead>
                   <TableHead className="text-right">Ticket Médio</TableHead>
+                  <TableHead className="text-right">Último Pedido</TableHead>
                   <TableHead className="text-center">Status</TableHead>
                 </TableRow>
               </TableHeader>
