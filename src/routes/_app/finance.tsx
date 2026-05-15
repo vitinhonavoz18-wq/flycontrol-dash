@@ -387,6 +387,9 @@ function AdminView({ data, totals, ranking, formatCurrency }: any) {
                     <TableCell className="text-right font-bold">{p.orders_month}</TableCell>
                     <TableCell className="text-right font-bold text-primary">{formatCurrency(p.revenue_month)}</TableCell>
                     <TableCell className="text-right">{formatCurrency(p.ticket_avg_month)}</TableCell>
+                    <TableCell className="text-right text-xs text-muted-foreground whitespace-nowrap">
+                      {p.last_order_at ? format(new Date(p.last_order_at), "dd/MM HH:mm") : "-"}
+                    </TableCell>
                     <TableCell className="text-center">
                       <Badge variant={p.status === 'active' ? 'default' : 'secondary'} className={p.status === 'active' ? 'bg-green-500/10 text-green-500 hover:bg-green-500/20 border-green-500/20' : ''}>
                         {p.status === 'active' ? 'Ativa' : 'Pausada'}
