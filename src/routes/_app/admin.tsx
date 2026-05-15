@@ -38,6 +38,7 @@ function Admin() {
         *,
         orders(id, total, created_at)
       `)
+      .neq("status", "deleted")
       .order("created_at", { ascending: false });
     
     if (pzError) {
