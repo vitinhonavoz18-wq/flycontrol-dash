@@ -84,6 +84,20 @@ function Admin() {
     if (error) toast.error(error.message); else load();
   }
 
+  async function handleDelete(id: string) {
+    setIsDeleting(true);
+    const { error } = await supabase.from("pizzerias").update({ status: 'deleted' }).eq("id", id);
+    setIsDeleting(false);
+    setDeletingId(null);
+    
+    if (error) {
+      toast.error("Não foi possível excluir esta pizzaria. Tente novamente.");
+    } else {
+      toast.success("Pizzaria excluída com sucesso.");
+      load();
+    }
+  }
+
   if (!isSuperAdmin) return null;
 
   return (
