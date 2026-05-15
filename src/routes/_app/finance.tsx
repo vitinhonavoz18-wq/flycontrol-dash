@@ -423,6 +423,18 @@ function AdminView({ data, totals, ranking, formatCurrency }: any) {
                 icon={Package}
                 iconColor="text-primary"
               />
+              <RankingList 
+                title="Top Faturamento (Hoje)" 
+                items={[...ranking].sort((a: RankingItem, b: RankingItem) => Number(b.revenue_day) - Number(a.revenue_day)).slice(0, 5).map((r: RankingItem) => ({ name: r.pizzeria_name, value: formatCurrency(r.revenue_day) }))} 
+                icon={DollarSign}
+                iconColor="text-green-500"
+              />
+              <RankingList 
+                title="Top Pedidos (Hoje)" 
+                items={[...ranking].sort((a: RankingItem, b: RankingItem) => Number(b.orders_day) - Number(a.orders_day)).slice(0, 5).map((r: RankingItem) => ({ name: r.pizzeria_name, value: `${r.orders_day} pedidos` }))} 
+                icon={Package}
+                iconColor="text-primary"
+              />
             </div>
           </Card>
         </div>
