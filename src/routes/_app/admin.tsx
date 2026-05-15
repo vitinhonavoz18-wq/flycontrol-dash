@@ -23,6 +23,8 @@ function Admin() {
   const { isSuperAdmin, loading } = useAuth();
   const nav = useNavigate();
   const [pz, setPz] = useState<any[]>([]);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     if (!loading && !isSuperAdmin) nav({ to: "/dashboard" });
