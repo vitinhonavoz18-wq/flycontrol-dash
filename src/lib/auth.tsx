@@ -68,6 +68,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   const signUp: AuthCtx["signUp"] = async (email, password, fullName) => {
+    // Verificar se o email está bloqueado antes de tentar o signup
+    const { data: blocked } = await supabase
+      .from("blocked_emails")
+      .select("id")
+      .eq("email", email)
+      .maybeSingle();
+
+    if (blocked) {
+      return { error: "Este email não pode mais ser usado para criar uma conta. Use outro email." };
+    }
+
     const { error } = await supabase.auth.signUp({
       email, password,
       options: {
