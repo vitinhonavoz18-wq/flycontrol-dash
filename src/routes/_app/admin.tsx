@@ -109,7 +109,7 @@ function Admin() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {pz.map((p) => (
-          <PizzeriaCard key={p.id} p={p} onStatusChange={setStatus} />
+          <PizzeriaCard key={p.id} p={p} onStatusChange={setStatus} onDelete={() => setDeletingId(p.id)} />
         ))}
         {!pz.length && (
           <div className="col-span-full flex h-40 items-center justify-center rounded-xl border border-dashed border-border text-muted-foreground">
@@ -117,6 +117,39 @@ function Admin() {
           </div>
         )}
       </div>
+
+      <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && setDeletingId(null)}>
+        <AlertDialogContent className="border-destructive/20 shadow-2xl">
+          <AlertDialogHeader>
+            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-destructive/10">
+              <AlertTriangle className="h-6 w-6 text-destructive" />
+            </div>
+            <AlertDialogTitle className="text-center text-xl">
+              Tem certeza que deseja excluir esta pizzaria?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-center">
+              Essa ação pode afetar o acesso da pizzaria, pedidos vinculados e relatórios financeiros.
+              <br /><br />
+              <span className="font-semibold text-foreground/80">
+                Essa pizzaria possui histórico de pedidos. Ela será desativada para preservar os dados antigos.
+              </span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4 gap-2 sm:justify-center">
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={(e) => {
+                e.preventDefault();
+                if (deletingId) handleDelete(deletingId);
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? "Excluindo..." : "Excluir pizzaria"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
