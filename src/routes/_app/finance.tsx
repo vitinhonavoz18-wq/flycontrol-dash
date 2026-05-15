@@ -409,13 +409,13 @@ function AdminView({ data, totals, ranking, formatCurrency }: any) {
             <div className="space-y-8">
               <RankingList 
                 title="Top Faturamento (Mês)" 
-                items={ranking.map(r => ({ name: r.pizzeria_name, value: formatCurrency(r.revenue_month) }))} 
+                items={ranking.map((r: RankingItem) => ({ name: r.pizzeria_name, value: formatCurrency(r.revenue_month) }))} 
                 icon={DollarSign}
                 iconColor="text-green-500"
               />
               <RankingList 
                 title="Top Pedidos (Mês)" 
-                items={ranking.sort((a, b) => Number(b.orders_month) - Number(a.orders_month)).map(r => ({ name: r.pizzeria_name, value: `${r.orders_month} pedidos` }))} 
+                items={ranking.sort((a: RankingItem, b: RankingItem) => Number(b.orders_month) - Number(a.orders_month)).map((r: RankingItem) => ({ name: r.pizzeria_name, value: `${r.orders_month} pedidos` }))} 
                 icon={Package}
                 iconColor="text-primary"
               />
