@@ -104,7 +104,7 @@ function Settings() {
   const [origin, setOrigin] = useState("");
 
   const loadPizzerias = async () => {
-    let query = supabase.from("pizzerias").select("*").order("created_at");
+    let query = supabase.from("pizzerias").select("*").neq("status", "deleted").order("created_at");
     
     // Se não for super admin, filtra apenas as pizzarias do dono
     if (!isSuperAdmin && user?.id) {
