@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { Bell, BellOff, Printer, Phone, MapPin, Clock, Plus, Copy, Check } from "lucide-react";
+import { Bell, BellOff, Printer, Phone, MapPin, Clock, Plus, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
@@ -83,7 +83,7 @@ function Dashboard() {
     initialLoad.current = true;
     (async () => {
       const { data, error } = await supabase.from("orders").select("*").eq("tenant_id", activeId)
-        .order("created_at", { ascending: false }).limit(200);
+        .neq("status", "deleted").order("created_at", { ascending: false }).limit(200);
       
       if (error?.message.includes("JWT expired")) {
         console.log("Session expired, refreshing...");
@@ -91,7 +91,7 @@ function Dashboard() {
         if (!refreshError && refreshData.session) {
           // Retry once
           const { data: retryData } = await supabase.from("orders").select("*").eq("tenant_id", activeId)
-            .order("created_at", { ascending: false }).limit(200);
+            .neq("status", "deleted").order("created_at", { ascending: false }).limit(200);
           setOrders((retryData ?? []) as Order[]);
         } else {
           toast.error("Sessão expirada. Faça login novamente.");
@@ -121,10 +121,36 @@ function Dashboard() {
 
   const active = pizzerias.find((p) => p.id === activeId);
   const filtered = useMemo(() => {
-    if (filter === "ativos") return orders.filter((o) => !["entregue", "cancelado"].includes(o.status));
-    if (filter === "todos") return orders;
+    if (filter === "ativos") return orders.filter((o) => !["entregue", "cancelado", "deleted"].includes(o.status));
+    if (filter === "todos") return orders.filter((o) => o.status !== "deleted");
     return orders.filter((o) => o.status === filter);
   }, [orders, filter]);
+
+  async function deleteOrder(o: Order) {
+    if (!confirm("Tem certeza que deseja excluir este pedido? O valor deste pedido será removido da gestão e dos relatórios.")) return;
+    
+    const { error } = await supabase.from("orders").update({ status: 'deleted' }).eq("id", o.id);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Pedido excluído com sucesso. Gestão atualizada automaticamente.");
+      setOrders(prev => prev.filter(x => x.id !== o.id));
+    }
+  }
+
+  async function clearAllOrders() {
+    if (!activeId) return;
+    if (!confirm("Essa ação irá remover todos os pedidos desta pizzaria e zerar a gestão. Tem certeza?")) return;
+    if (!confirm("CONFIRMAÇÃO FINAL: Você tem certeza absoluta? Isso não pode ser desfeito.")) return;
+
+    const { error } = await supabase.from("orders").update({ status: 'deleted' }).eq("tenant_id", activeId);
+    if (error) {
+      toast.error(error.message);
+    } else {
+      toast.success("Todos os pedidos foram removidos. Gestão zerada.");
+      setOrders([]);
+    }
+  }
 
   async function changeStatus(o: Order, status: string) {
     const { error } = await supabase.from("orders").update({ status }).eq("id", o.id);
@@ -238,6 +264,14 @@ function Dashboard() {
           <div className="mt-2 text-xs text-muted-foreground">
             Endpoint: <code>{typeof window !== "undefined" ? window.location.origin : ""}/api/orders</code>
           </div>
+          <div className="mt-4 border-t border-border pt-4">
+            <Button variant="destructive" size="sm" className="gap-2" onClick={clearAllOrders}>
+              <Trash2 className="h-4 w-4" /> Limpar Todos os Pedidos
+            </Button>
+            <p className="mt-1 text-[10px] text-muted-foreground">
+              Apenas administradores podem zerar a gestão desta pizzaria.
+            </p>
+          </div>
         </div>
       )}
 
@@ -255,7 +289,7 @@ function Dashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((o) => (
-          <OrderCard key={o.id} o={o} onChange={changeStatus} />
+          <OrderCard key={o.id} o={o} onChange={changeStatus} onDelete={deleteOrder} />
         ))}
         {!filtered.length && (
           <div className="col-span-full grid place-items-center rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
@@ -276,7 +310,7 @@ function Header({ title, subtitle }: { title: string; subtitle?: string }) {
   );
 }
 
-function OrderCard({ o, onChange }: { o: Order; onChange: (o: Order, s: string) => void }) {
+function OrderCard({ o, onChange, onDelete }: { o: Order; onChange: (o: Order, s: string) => void; onDelete: (o: Order) => void }) {
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
   const items = Array.isArray(o.items) ? o.items : [];
   
@@ -344,6 +378,9 @@ function OrderCard({ o, onChange }: { o: Order; onChange: (o: Order, s: string) 
         <a href={`/print/${o.id}`} target="_blank" rel="noreferrer">
           <Button size="sm" variant="outline"><Printer className="h-4 w-4" /> Imprimir</Button>
         </a>
+        <Button size="sm" variant="outline" className="text-destructive hover:bg-destructive/10 border-destructive/20" onClick={() => onDelete(o)}>
+          <Trash2 className="h-4 w-4" />
+        </Button>
       </div>
     </div>
   );
