@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      blocked_emails: {
+        Row: {
+          created_at: string
+          deleted_at: string
+          deleted_by: string | null
+          email: string
+          id: string
+          reason: string | null
+          user_id_antigo: string | null
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string
+          deleted_by?: string | null
+          email: string
+          id?: string
+          reason?: string | null
+          user_id_antigo?: string | null
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string
+          deleted_by?: string | null
+          email?: string
+          id?: string
+          reason?: string | null
+          user_id_antigo?: string | null
+        }
+        Relationships: []
+      }
       external_order_logs: {
         Row: {
           api_key_partial: string | null
@@ -220,6 +250,7 @@ export type Database = {
       profiles: {
         Row: {
           created_at: string
+          deleted_at: string | null
           full_name: string | null
           id: string
           is_admin: boolean | null
@@ -228,6 +259,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_at?: string | null
           full_name?: string | null
           id: string
           is_admin?: boolean | null
@@ -236,6 +268,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_at?: string | null
           full_name?: string | null
           id?: string
           is_admin?: boolean | null
