@@ -266,6 +266,7 @@ export type Database = {
     Views: {
       admin_global_financial_metrics: {
         Row: {
+          ticket_avg_month: number | null
           total_orders_day: number | null
           total_orders_month: number | null
           total_orders_week: number | null
@@ -277,6 +278,7 @@ export type Database = {
       }
       pizzeria_financial_metrics: {
         Row: {
+          last_order_at: string | null
           orders_day: number | null
           orders_month: number | null
           orders_week: number | null
@@ -286,6 +288,7 @@ export type Database = {
           revenue_day: number | null
           revenue_month: number | null
           revenue_week: number | null
+          status: string | null
           ticket_avg_day: number | null
           ticket_avg_month: number | null
           ticket_avg_week: number | null
@@ -297,6 +300,7 @@ export type Database = {
       get_admin_global_metrics: {
         Args: never
         Returns: {
+          ticket_avg_month: number | null
           total_orders_day: number | null
           total_orders_month: number | null
           total_orders_week: number | null
@@ -311,9 +315,24 @@ export type Database = {
           isSetofReturn: true
         }
       }
+      get_dashboard_period_metrics: {
+        Args: {
+          p_end_date: string
+          p_pizzeria_id?: string
+          p_start_date: string
+        }
+        Returns: {
+          orders_count: number
+          pizzeria_id: string
+          pizzeria_name: string
+          revenue: number
+          ticket_avg: number
+        }[]
+      }
       get_my_financial_metrics: {
         Args: never
         Returns: {
+          last_order_at: string | null
           orders_day: number | null
           orders_month: number | null
           orders_week: number | null
@@ -323,6 +342,7 @@ export type Database = {
           revenue_day: number | null
           revenue_month: number | null
           revenue_week: number | null
+          status: string | null
           ticket_avg_day: number | null
           ticket_avg_month: number | null
           ticket_avg_week: number | null
@@ -355,6 +375,16 @@ export type Database = {
           last_order_at: string
           orders_month: number
           pizzeria_name: string
+          revenue_month: number
+        }[]
+      }
+      get_pizzerias_ranking: {
+        Args: { p_limit?: number }
+        Returns: {
+          orders_day: number
+          orders_month: number
+          pizzeria_name: string
+          revenue_day: number
           revenue_month: number
         }[]
       }
