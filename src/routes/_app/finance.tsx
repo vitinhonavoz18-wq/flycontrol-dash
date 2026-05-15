@@ -96,7 +96,7 @@ function Finance() {
   const [data, setData] = useState<FinancialData[]>([]);
   const [globalTotals, setGlobalTotals] = useState<GlobalTotals | null>(null);
   const [ranking, setRanking] = useState<RankingItem[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start as false
   const [selectedPizzeriaId, setSelectedPizzeriaId] = useState<string>("all");
 
   useEffect(() => {
@@ -104,12 +104,15 @@ function Finance() {
   }, [authLoading, user, nav]);
 
   useEffect(() => {
-    if (user) {
+    // Only run if we have a user and auth is not loading
+    if (!authLoading && user) {
       loadData();
     }
-  }, [user, isSuperAdmin, period, selectedPizzeriaId]);
+  }, [user, authLoading, isSuperAdmin, period, selectedPizzeriaId]);
 
   async function loadData() {
+    if (authLoading || !user) return; // Guard clause for session/JWT issues
+    
     setLoading(true);
     try {
       // 1. Load basic pizzeria metrics (Today/Week/Month)
@@ -176,17 +179,25 @@ function Finance() {
     return data.find(p => p.pizzeria_id === selectedPizzeriaId) || data[0] || null;
   }, [data, selectedPizzeriaId]);
 
+  if (authLoading) {
+    return <div className="p-8 text-center text-muted-foreground">Verificando autenticação...</div>;
+  }
+
+  if (!user) {
+    return <div className="p-8 text-center text-muted-foreground">Sessão expirada. Faça login novamente.</div>;
+  }
+
   if (loading && !data.length) {
     return (
       <div className="p-8 space-y-6">
         <div className="flex justify-between items-center">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-10 w-64" />
+          <div className="h-10 w-48 bg-muted animate-pulse rounded" />
+          <div className="h-10 w-64 bg-muted animate-pulse rounded" />
         </div>
         <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 rounded-xl" />)}
+          {[1, 2, 3].map(i => <div key={i} className="h-32 bg-muted animate-pulse rounded-xl" />)}
         </div>
-        <Skeleton className="h-96 w-full rounded-xl" />
+        <div className="h-96 w-full bg-muted animate-pulse rounded-xl" />
       </div>
     );
   }
@@ -619,9 +630,7 @@ function MetricCard({ title, value, subtitle, icon: Icon, highlight = false }: a
       </CardHeader>
       <CardContent>
         <div className="text-3xl font-black tracking-tighter">{value}</div>
-        <p className="text-[10px] text-muted-foreground mt-1 flex items-center gap-1 font-medium italic">
-          {subtitle}
-        </p>
+        <p className="text-[10px] text-muted-foreground font-medium mt-1 truncate">{subtitle}</p>
       </CardContent>
     </Card>
   );
@@ -630,3 +639,4 @@ function MetricCard({ title, value, subtitle, icon: Icon, highlight = false }: a
 function Skeleton({ className }: { className?: string }) {
   return <div className={`animate-pulse bg-muted ${className}`} />;
 }
+
