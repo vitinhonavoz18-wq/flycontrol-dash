@@ -154,7 +154,7 @@ function Admin() {
   );
 }
 
-function PizzeriaCard({ p, onStatusChange }: { p: any, onStatusChange: (id: string, s: string) => void }) {
+function PizzeriaCard({ p, onStatusChange, onDelete }: { p: any, onStatusChange: (id: string, s: string) => void, onDelete: () => void }) {
   const orders = p.orders || [];
   const today = new Date().toISOString().split('T')[0];
   const todayOrders = orders.filter((o: any) => o.created_at.startsWith(today));
