@@ -45,14 +45,22 @@ function playBeep() {
 
 function Dashboard() {
   const { user, isSuperAdmin } = useAuth();
+  const [mounted, setMounted] = useState(false);
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
-  const [activeId, setActiveId] = useState<string | null>(new URLSearchParams(window.location.search).get("pizzeriaId"));
+  const [activeId, setActiveId] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<string>("ativos");
   const [soundOn, setSoundOn] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [copied, setCopied] = useState(false);
   const initialLoad = useRef(true);
+
+  useEffect(() => {
+    setMounted(true);
+    const params = new URLSearchParams(window.location.search);
+    const pId = params.get("pizzeriaId");
+    if (pId) setActiveId(pId);
+  }, []);
 
   useEffect(() => { if (user) loadPizzerias(); }, [user]);
 
@@ -154,6 +162,8 @@ function Dashboard() {
     setActiveId(data!.id);
     setShowNew(false);
   }
+
+  if (!mounted) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
 
   if (!pizzerias.length) {
     return (

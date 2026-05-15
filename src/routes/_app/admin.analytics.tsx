@@ -9,13 +9,18 @@ export const Route = createFileRoute("/_app/admin/analytics")({ component: Analy
 function Analytics() {
   const { isSuperAdmin, loading } = useAuth();
   const nav = useNavigate();
+  const [mounted, setMounted] = useState(false);
   const [stats, setStats] = useState<{ total: number; revenue: number; pizzerias: number; byDay: any[] }>({
     total: 0, revenue: 0, pizzerias: 0, byDay: [],
   });
 
-  useEffect(() => { if (!loading && !isSuperAdmin) nav({ to: "/dashboard" }); }, [loading, isSuperAdmin, nav]);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
-  useEffect(() => { if (isSuperAdmin) load(); }, [isSuperAdmin]);
+  useEffect(() => { if (mounted && !loading && !isSuperAdmin) nav({ to: "/dashboard" }); }, [loading, isSuperAdmin, nav, mounted]);
+
+  useEffect(() => { if (mounted && isSuperAdmin) load(); }, [isSuperAdmin, mounted]);
   async function load() {
     const since = new Date(); since.setDate(since.getDate() - 14);
     const [{ data: orders }, { count: pCount }] = await Promise.all([
@@ -37,6 +42,7 @@ function Analytics() {
     });
   }
 
+  if (!mounted || loading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
   if (!isSuperAdmin) return null;
   return (
     <div className="p-6 md:p-8">

@@ -10,10 +10,15 @@ export const Route = createFileRoute("/_app/admin/users")({ component: Users });
 function Users() {
   const { isSuperAdmin, loading } = useAuth();
   const nav = useNavigate();
+  const [mounted, setMounted] = useState(false);
   const [list, setList] = useState<any[]>([]);
 
-  useEffect(() => { if (!loading && !isSuperAdmin) nav({ to: "/dashboard" }); }, [loading, isSuperAdmin, nav]);
-  useEffect(() => { if (isSuperAdmin) load(); }, [isSuperAdmin]);
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => { if (mounted && !loading && !isSuperAdmin) nav({ to: "/dashboard" }); }, [loading, isSuperAdmin, nav, mounted]);
+  useEffect(() => { if (mounted && isSuperAdmin) load(); }, [isSuperAdmin, mounted]);
 
   async function load() {
     const { data: profiles } = await supabase.from("profiles").select("id, full_name, phone, created_at");
@@ -34,6 +39,7 @@ function Users() {
     toast.success("Atualizado"); load();
   }
 
+  if (!mounted || loading) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
   if (!isSuperAdmin) return null;
   return (
     <div className="p-6 md:p-8">
