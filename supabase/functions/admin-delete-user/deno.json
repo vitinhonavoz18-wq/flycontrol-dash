@@ -1,0 +1,4 @@
+{
+  "functions": ["admin-delete-user"],
+  "importMap": "import_map.json"
+}
