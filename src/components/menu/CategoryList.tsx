@@ -6,7 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, GripVertical, Check, X } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical, Loader2 } from "lucide-react";
+import { syncToExternal } from "@/utils/menuSync";
+
 import {
   Dialog,
   DialogContent,
@@ -19,9 +21,12 @@ interface CategoryListProps {
   pizzeriaId: string;
   categories: any[];
   onRefresh: () => void;
+  pizzeriaSlug?: string;
+  pizzeriaApiKey?: string;
 }
 
-export function CategoryList({ pizzeriaId, categories, onRefresh }: CategoryListProps) {
+export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, pizzeriaApiKey }: CategoryListProps) {
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [name, setName] = useState("");
@@ -56,31 +61,70 @@ export function CategoryList({ pizzeriaId, categories, onRefresh }: CategoryList
       order_index: editingCategory ? editingCategory.order_index : categories.length,
     };
 
-    let error;
-    if (editingCategory) {
-      const { error: err } = await supabase
-        .from("menu_categories")
-        .update(payload)
-        .eq("id", editingCategory.id);
-      error = err;
-    } else {
-      const { error: err } = await supabase
-        .from("menu_categories")
-        .insert(payload);
-      error = err;
-    }
+    try {
+      let externalId = editingCategory?.external_id;
 
-    setLoading(false);
-    if (error) {
-      toast.error("Erro ao salvar categoria: " + error.message);
-    } else {
-      toast.success(`Categoria ${editingCategory ? "atualizada" : "criada"} com sucesso!`);
-      setIsDialogOpen(false);
-      onRefresh();
+      // Sync to external if we have credentials
+      if (pizzeriaSlug && pizzeriaApiKey) {
+        const syncResult = await syncToExternal({
+          type: 'category',
+          action: editingCategory ? 'update' : 'create',
+          id: editingCategory?.id,
+          externalId: editingCategory?.external_id,
+          data: payload,
+          pizzeriaSlug,
+          pizzeriaApiKey
+        });
+
+        if (!syncResult.success) {
+          toast.warning(`Salvo localmente, mas houve um erro ao sincronizar com o site: ${syncResult.error}`);
+        } else {
+          externalId = syncResult.externalId;
+        }
+      }
+
+      const finalPayload = { ...payload, external_id: externalId, external_source: externalId ? 'sitecreatorfly' : null };
+
+      let error;
+      if (editingCategory) {
+        const { error: err } = await supabase
+          .from("menu_categories")
+          .update(finalPayload)
+          .eq("id", editingCategory.id);
+        error = err;
+      } else {
+        const { error: err } = await supabase
+          .from("menu_categories")
+          .insert(finalPayload);
+        error = err;
+      }
+
+      if (error) {
+        toast.error("Erro ao salvar categoria: " + error.message);
+      } else {
+        toast.success(`Categoria ${editingCategory ? "atualizada" : "criada"} com sucesso!`);
+        setIsDialogOpen(false);
+        onRefresh();
+      }
+    } catch (e: any) {
+      toast.error("Erro inesperado: " + e.message);
+    } finally {
+      setLoading(false);
     }
   }
 
   async function toggleActive(cat: any) {
+    if (pizzeriaSlug && pizzeriaApiKey && cat.external_id) {
+      await syncToExternal({
+        type: 'category',
+        action: 'patch',
+        externalId: cat.external_id,
+        data: { field: 'is_active', value: !cat.active },
+        pizzeriaSlug,
+        pizzeriaApiKey
+      });
+    }
+
     const { error } = await supabase
       .from("menu_categories")
       .update({ active: !cat.active })
@@ -93,13 +137,23 @@ export function CategoryList({ pizzeriaId, categories, onRefresh }: CategoryList
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(cat: any) {
     if (!confirm("Tem certeza que deseja excluir esta categoria? Isso pode afetar os produtos vinculados.")) return;
+
+    if (pizzeriaSlug && pizzeriaApiKey && cat.external_id) {
+      await syncToExternal({
+        type: 'category',
+        action: 'delete',
+        externalId: cat.external_id,
+        pizzeriaSlug,
+        pizzeriaApiKey
+      });
+    }
 
     const { error } = await supabase
       .from("menu_categories")
       .delete()
-      .eq("id", id);
+      .eq("id", cat.id);
     
     if (error) {
       toast.error("Erro ao excluir categoria: " + error.message);
@@ -140,7 +194,7 @@ export function CategoryList({ pizzeriaId, categories, onRefresh }: CategoryList
                 <Button variant="ghost" size="icon" onClick={() => openEdit(cat)}>
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(cat.id)}>
+                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(cat)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
