@@ -20,6 +20,8 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   const [syncing, setSyncing] = useState(false);
   const [pizzeria, setPizzeria] = useState<any>(null);
 
+
+
   useEffect(() => {
     if (pizzeriaId) {
       loadPizzeria();
@@ -226,7 +228,13 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
         <div className="mt-6">
           <TabsContent value="categories" className="m-0 focus-visible:outline-none">
-            <CategoryList pizzeriaId={pizzeriaId} categories={categories} onRefresh={loadCategories} />
+            <CategoryList 
+              pizzeriaId={pizzeriaId} 
+              categories={categories} 
+              onRefresh={loadCategories} 
+              pizzeriaSlug={pizzeria?.slug}
+              pizzeriaApiKey={pizzeria?.api_key}
+            />
           </TabsContent>
           
           <TabsContent value="products" className="m-0 focus-visible:outline-none">
@@ -235,6 +243,8 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               categories={categories.filter(c => c.active)} 
               type="standard" 
               title="Sabores & Produtos" 
+              pizzeriaSlug={pizzeria?.slug}
+              pizzeriaApiKey={pizzeria?.api_key}
             />
           </TabsContent>
 
@@ -244,11 +254,17 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               categories={categories.filter(c => c.active)} 
               type="beverage" 
               title="Bebidas" 
+              pizzeriaSlug={pizzeria?.slug}
+              pizzeriaApiKey={pizzeria?.api_key}
             />
           </TabsContent>
 
           <TabsContent value="extras" className="m-0 focus-visible:outline-none">
-            <ExtraList pizzeriaId={pizzeriaId} />
+            <ExtraList 
+              pizzeriaId={pizzeriaId} 
+              pizzeriaSlug={pizzeria?.slug}
+              pizzeriaApiKey={pizzeria?.api_key}
+            />
           </TabsContent>
 
           <TabsContent value="config" className="m-0 focus-visible:outline-none">

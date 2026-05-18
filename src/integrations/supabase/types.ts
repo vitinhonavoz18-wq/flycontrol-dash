@@ -87,9 +87,12 @@ export type Database = {
           created_at: string | null
           description: string | null
           end_time: string | null
+          external_id: string | null
+          external_source: string | null
           highlight: boolean | null
           id: string
           image_url: string | null
+          last_synced_at: string | null
           name: string
           original_price: number
           pizzeria_id: string
@@ -103,9 +106,12 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           end_time?: string | null
+          external_id?: string | null
+          external_source?: string | null
           highlight?: boolean | null
           id?: string
           image_url?: string | null
+          last_synced_at?: string | null
           name: string
           original_price?: number
           pizzeria_id: string
@@ -119,9 +125,12 @@ export type Database = {
           created_at?: string | null
           description?: string | null
           end_time?: string | null
+          external_id?: string | null
+          external_source?: string | null
           highlight?: boolean | null
           id?: string
           image_url?: string | null
+          last_synced_at?: string | null
           name?: string
           original_price?: number
           pizzeria_id?: string
@@ -177,7 +186,10 @@ export type Database = {
           active: boolean | null
           created_at: string | null
           description: string | null
+          external_id: string | null
+          external_source: string | null
           id: string
+          last_synced_at: string | null
           name: string
           order_index: number | null
           pizzeria_id: string
@@ -187,7 +199,10 @@ export type Database = {
           active?: boolean | null
           created_at?: string | null
           description?: string | null
+          external_id?: string | null
+          external_source?: string | null
           id?: string
+          last_synced_at?: string | null
           name: string
           order_index?: number | null
           pizzeria_id: string
@@ -197,7 +212,10 @@ export type Database = {
           active?: boolean | null
           created_at?: string | null
           description?: string | null
+          external_id?: string | null
+          external_source?: string | null
           id?: string
+          last_synced_at?: string | null
           name?: string
           order_index?: number | null
           pizzeria_id?: string
@@ -224,8 +242,11 @@ export type Database = {
         Row: {
           active: boolean | null
           created_at: string | null
+          external_id: string | null
+          external_source: string | null
           extra_type: string
           id: string
+          last_synced_at: string | null
           name: string
           pizzeria_id: string
           price: number
@@ -234,8 +255,11 @@ export type Database = {
         Insert: {
           active?: boolean | null
           created_at?: string | null
+          external_id?: string | null
+          external_source?: string | null
           extra_type: string
           id?: string
+          last_synced_at?: string | null
           name: string
           pizzeria_id: string
           price?: number
@@ -244,8 +268,11 @@ export type Database = {
         Update: {
           active?: boolean | null
           created_at?: string | null
+          external_id?: string | null
+          external_source?: string | null
           extra_type?: string
           id?: string
+          last_synced_at?: string | null
           name?: string
           pizzeria_id?: string
           price?: number
@@ -275,8 +302,11 @@ export type Database = {
           category_id: string | null
           created_at: string | null
           description: string | null
+          external_id: string | null
+          external_source: string | null
           id: string
           image_url: string | null
+          last_synced_at: string | null
           name: string
           pizzeria_id: string
           price: number
@@ -289,8 +319,11 @@ export type Database = {
           category_id?: string | null
           created_at?: string | null
           description?: string | null
+          external_id?: string | null
+          external_source?: string | null
           id?: string
           image_url?: string | null
+          last_synced_at?: string | null
           name: string
           pizzeria_id: string
           price?: number
@@ -303,8 +336,11 @@ export type Database = {
           category_id?: string | null
           created_at?: string | null
           description?: string | null
+          external_id?: string | null
+          external_source?: string | null
           id?: string
           image_url?: string | null
+          last_synced_at?: string | null
           name?: string
           pizzeria_id?: string
           price?: number

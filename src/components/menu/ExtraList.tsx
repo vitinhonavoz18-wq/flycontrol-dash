@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
+import { syncToExternal } from "@/utils/menuSync";
+
 import {
   Dialog,
   DialogContent,
@@ -24,9 +26,12 @@ import {
 
 interface ExtraListProps {
   pizzeriaId: string;
+  pizzeriaSlug?: string;
+  pizzeriaApiKey?: string;
 }
 
-export function ExtraList({ pizzeriaId }: ExtraListProps) {
+export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraListProps) {
+
   const [extras, setExtras] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -82,41 +87,86 @@ export function ExtraList({ pizzeriaId }: ExtraListProps) {
     }
 
     setSaving(true);
+    const numericPrice = parseFloat(price.replace(',', '.'));
     const payload = {
       name,
-      price: parseFloat(price.replace(',', '.')),
+      price: numericPrice,
       extra_type: extraType,
       pizzeria_id: pizzeriaId,
     };
 
-    let error;
-    if (editingExtra) {
-      const { error: err } = await supabase
-        .from("menu_extras")
-        .update(payload)
-        .eq("id", editingExtra.id);
-      error = err;
-    } else {
-      const { error: err } = await supabase
-        .from("menu_extras")
-        .insert(payload);
-      error = err;
-    }
+    try {
+      let externalId = editingExtra?.external_id;
 
-    setSaving(false);
-    if (error) {
-      toast.error("Erro ao salvar complemento: " + error.message);
-    } else {
-      toast.success(`Complemento ${editingExtra ? "atualizado" : "criado"} com sucesso!`);
-      setIsDialogOpen(false);
-      loadExtras();
+      if (pizzeriaSlug && pizzeriaApiKey) {
+        const syncResult = await syncToExternal({
+          type: 'extra',
+          action: editingExtra ? 'update' : 'create',
+          id: editingExtra?.id,
+          externalId: editingExtra?.external_id,
+          data: payload,
+          pizzeriaSlug,
+          pizzeriaApiKey
+        });
+
+        if (!syncResult.success) {
+          toast.warning(`Salvo localmente, mas houve um erro ao sincronizar com o site: ${syncResult.error}`);
+        } else {
+          externalId = syncResult.externalId;
+        }
+      }
+
+      const finalPayload = { 
+        ...payload, 
+        external_id: externalId, 
+        external_source: externalId ? 'sitecreatorfly' : null 
+      };
+
+      let error;
+      if (editingExtra) {
+        const { error: err } = await supabase
+          .from("menu_extras")
+          .update(finalPayload)
+          .eq("id", editingExtra.id);
+        error = err;
+      } else {
+        const { error: err } = await supabase
+          .from("menu_extras")
+          .insert(finalPayload);
+        error = err;
+      }
+
+      if (error) {
+        toast.error("Erro ao salvar complemento: " + error.message);
+      } else {
+        toast.success(`Complemento ${editingExtra ? "atualizado" : "criado"} com sucesso!`);
+        setIsDialogOpen(false);
+        loadExtras();
+      }
+    } catch (e: any) {
+      toast.error("Erro inesperado: " + e.message);
+    } finally {
+      setSaving(false);
     }
   }
 
   async function toggleActive(ext: any) {
+    const newValue = !ext.active;
+    
+    if (pizzeriaSlug && pizzeriaApiKey && ext.external_id) {
+      await syncToExternal({
+        type: 'extra',
+        action: 'patch',
+        externalId: ext.external_id,
+        data: { field: 'is_active', value: newValue },
+        pizzeriaSlug,
+        pizzeriaApiKey
+      });
+    }
+
     const { error } = await supabase
       .from("menu_extras")
-      .update({ active: !ext.active })
+      .update({ active: newValue })
       .eq("id", ext.id);
     
     if (error) {
@@ -126,13 +176,23 @@ export function ExtraList({ pizzeriaId }: ExtraListProps) {
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(ext: any) {
     if (!confirm("Tem certeza que deseja excluir este complemento?")) return;
+
+    if (pizzeriaSlug && pizzeriaApiKey && ext.external_id) {
+      await syncToExternal({
+        type: 'extra',
+        action: 'delete',
+        externalId: ext.external_id,
+        pizzeriaSlug,
+        pizzeriaApiKey
+      });
+    }
 
     const { error } = await supabase
       .from("menu_extras")
       .delete()
-      .eq("id", id);
+      .eq("id", ext.id);
     
     if (error) {
       toast.error("Erro ao excluir: " + error.message);
@@ -244,9 +304,9 @@ function ExtraItem({ ext, onEdit, onToggle, onDelete }: any) {
             className="h-4 w-7"
           />
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(ext)}>
-            <Pencil className="h-4 w-4" />
+                  <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(ext.id)}>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(ext)}>
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
