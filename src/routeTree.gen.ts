@@ -17,9 +17,11 @@ import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppMenuRouteImport } from './routes/_app/menu'
 import { Route as AppFinanceRouteImport } from './routes/_app/finance'
 import { Route as AppDocsRouteImport } from './routes/_app/docs'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppCombosRouteImport } from './routes/_app/combos'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
 import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
@@ -66,6 +68,11 @@ const AppSettingsRoute = AppSettingsRouteImport.update({
   path: '/settings',
   getParentRoute: () => AppRoute,
 } as any)
+const AppMenuRoute = AppMenuRouteImport.update({
+  id: '/menu',
+  path: '/menu',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppFinanceRoute = AppFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -79,6 +86,11 @@ const AppDocsRoute = AppDocsRouteImport.update({
 const AppDashboardRoute = AppDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppCombosRoute = AppCombosRouteImport.update({
+  id: '/combos',
+  path: '/combos',
   getParentRoute: () => AppRoute,
 } as any)
 const AppAdminRoute = AppAdminRouteImport.update({
@@ -117,9 +129,11 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/admin': typeof AppAdminRouteWithChildren
+  '/combos': typeof AppCombosRoute
   '/dashboard': typeof AppDashboardRoute
   '/docs': typeof AppDocsRoute
   '/finance': typeof AppFinanceRoute
+  '/menu': typeof AppMenuRoute
   '/settings': typeof AppSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
@@ -135,9 +149,11 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/admin': typeof AppAdminRouteWithChildren
+  '/combos': typeof AppCombosRoute
   '/dashboard': typeof AppDashboardRoute
   '/docs': typeof AppDocsRoute
   '/finance': typeof AppFinanceRoute
+  '/menu': typeof AppMenuRoute
   '/settings': typeof AppSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
@@ -155,9 +171,11 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/signup': typeof SignupRoute
   '/_app/admin': typeof AppAdminRouteWithChildren
+  '/_app/combos': typeof AppCombosRoute
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/docs': typeof AppDocsRoute
   '/_app/finance': typeof AppFinanceRoute
+  '/_app/menu': typeof AppMenuRoute
   '/_app/settings': typeof AppSettingsRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
@@ -175,9 +193,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/admin'
+    | '/combos'
     | '/dashboard'
     | '/docs'
     | '/finance'
+    | '/menu'
     | '/settings'
     | '/api/health'
     | '/api/orders'
@@ -193,9 +213,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/admin'
+    | '/combos'
     | '/dashboard'
     | '/docs'
     | '/finance'
+    | '/menu'
     | '/settings'
     | '/api/health'
     | '/api/orders'
@@ -212,9 +234,11 @@ export interface FileRouteTypes {
     | '/login'
     | '/signup'
     | '/_app/admin'
+    | '/_app/combos'
     | '/_app/dashboard'
     | '/_app/docs'
     | '/_app/finance'
+    | '/_app/menu'
     | '/_app/settings'
     | '/api/health'
     | '/api/orders'
@@ -297,6 +321,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppSettingsRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/menu': {
+      id: '/_app/menu'
+      path: '/menu'
+      fullPath: '/menu'
+      preLoaderRoute: typeof AppMenuRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/finance': {
       id: '/_app/finance'
       path: '/finance'
@@ -316,6 +347,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/combos': {
+      id: '/_app/combos'
+      path: '/combos'
+      fullPath: '/combos'
+      preLoaderRoute: typeof AppCombosRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/admin': {
@@ -379,17 +417,21 @@ const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRouteWithChildren
+  AppCombosRoute: typeof AppCombosRoute
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocsRoute: typeof AppDocsRoute
   AppFinanceRoute: typeof AppFinanceRoute
+  AppMenuRoute: typeof AppMenuRoute
   AppSettingsRoute: typeof AppSettingsRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRouteWithChildren,
+  AppCombosRoute: AppCombosRoute,
   AppDashboardRoute: AppDashboardRoute,
   AppDocsRoute: AppDocsRoute,
   AppFinanceRoute: AppFinanceRoute,
+  AppMenuRoute: AppMenuRoute,
   AppSettingsRoute: AppSettingsRoute,
 }
 

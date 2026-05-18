@@ -44,6 +44,107 @@ export type Database = {
         }
         Relationships: []
       }
+      combo_items: {
+        Row: {
+          combo_id: string
+          created_at: string | null
+          id: string
+          product_name: string
+          product_type: string | null
+          quantity: number | null
+        }
+        Insert: {
+          combo_id: string
+          created_at?: string | null
+          id?: string
+          product_name: string
+          product_type?: string | null
+          quantity?: number | null
+        }
+        Update: {
+          combo_id?: string
+          created_at?: string | null
+          id?: string
+          product_name?: string
+          product_type?: string | null
+          quantity?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combo_items_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "combos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      combos: {
+        Row: {
+          active: boolean | null
+          available_days: string[] | null
+          combo_price: number
+          created_at: string | null
+          description: string | null
+          end_time: string | null
+          highlight: boolean | null
+          id: string
+          image_url: string | null
+          name: string
+          original_price: number
+          pizzeria_id: string
+          start_time: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          available_days?: string[] | null
+          combo_price?: number
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          highlight?: boolean | null
+          id?: string
+          image_url?: string | null
+          name: string
+          original_price?: number
+          pizzeria_id: string
+          start_time?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          available_days?: string[] | null
+          combo_price?: number
+          created_at?: string | null
+          description?: string | null
+          end_time?: string | null
+          highlight?: boolean | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          original_price?: number
+          pizzeria_id?: string
+          start_time?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "combos_pizzeria_id_fkey"
+            columns: ["pizzeria_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "combos_pizzeria_id_fkey"
+            columns: ["pizzeria_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       external_order_logs: {
         Row: {
           api_key_partial: string | null
@@ -70,6 +171,169 @@ export type Database = {
           status_code?: number | null
         }
         Relationships: []
+      }
+      menu_categories: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          description: string | null
+          id: string
+          name: string
+          order_index: number | null
+          pizzeria_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          order_index?: number | null
+          pizzeria_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          order_index?: number | null
+          pizzeria_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_categories_pizzeria_id_fkey"
+            columns: ["pizzeria_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "menu_categories_pizzeria_id_fkey"
+            columns: ["pizzeria_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_extras: {
+        Row: {
+          active: boolean | null
+          created_at: string | null
+          extra_type: string
+          id: string
+          name: string
+          pizzeria_id: string
+          price: number
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          created_at?: string | null
+          extra_type: string
+          id?: string
+          name: string
+          pizzeria_id: string
+          price?: number
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          created_at?: string | null
+          extra_type?: string
+          id?: string
+          name?: string
+          pizzeria_id?: string
+          price?: number
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_extras_pizzeria_id_fkey"
+            columns: ["pizzeria_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "menu_extras_pizzeria_id_fkey"
+            columns: ["pizzeria_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      menu_products: {
+        Row: {
+          active: boolean | null
+          available: boolean | null
+          category_id: string | null
+          created_at: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          pizzeria_id: string
+          price: number
+          product_type: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          active?: boolean | null
+          available?: boolean | null
+          category_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          pizzeria_id: string
+          price?: number
+          product_type?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          active?: boolean | null
+          available?: boolean | null
+          category_id?: string | null
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          pizzeria_id?: string
+          price?: number
+          product_type?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "menu_products_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "menu_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "menu_products_pizzeria_id_fkey"
+            columns: ["pizzeria_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "menu_products_pizzeria_id_fkey"
+            columns: ["pizzeria_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       order_items: {
         Row: {
