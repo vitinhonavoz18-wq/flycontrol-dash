@@ -40,7 +40,7 @@ function Print() {
   };
 
   return (
-    <div className="mx-auto max-w-[80mm] bg-white p-4 font-sans text-[14px] leading-tight text-black print:p-0">
+    <div className="print-area">
       {/* CABEÇALHO DA PIZZARIA */}
       <div className="mb-4 text-center">
         <div className="text-xl font-bold uppercase leading-none">{pz?.name ?? "Pizzaria"}</div>
@@ -209,7 +209,7 @@ function Print() {
         )}
       </div>
 
-      <div className="mt-6 border-t border-gray-200 pt-2 text-center text-[10px] text-gray-400">
+      <div className="print-footer mt-6 border-t border-gray-200 pt-2 text-center text-[10px] text-gray-400">
         <div>FlyControl · Sistema de Gestão para Pizzarias</div>
         <div>Impressão em {new Date().toLocaleString("pt-BR")}</div>
       </div>
@@ -230,10 +230,110 @@ function Print() {
       </div>
 
       <style>{`
+        /* Reset de tela para visualização no navegador */
+        body {
+          margin: 0;
+          padding: 0;
+          background-color: #f3f4f6;
+          display: flex;
+          justify-content: center;
+          align-items: flex-start;
+          min-height: 100vh;
+        }
+
+        .print-area {
+          width: 80mm;
+          max-width: 100%;
+          background: white;
+          padding: 16px;
+          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+          margin: 20px auto;
+          font-family: sans-serif;
+          color: black;
+          line-height: 1.25;
+        }
+
         @media print {
-          .no-print { display: none !important; }
-          body { background: white !important; margin: 0 !important; padding: 0 !important; }
-          @page { margin: 0; }
+          @page {
+            size: 80mm auto;
+            margin: 0;
+          }
+
+          html, body {
+            width: 80mm !important;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            background: white !important;
+          }
+
+          body * {
+            visibility: hidden;
+          }
+
+          .print-area, .print-area * {
+            visibility: visible;
+          }
+
+          .print-area {
+            position: static !important;
+            width: 76mm !important;
+            max-width: 76mm !important;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 auto !important;
+            padding: 2mm !important;
+            box-sizing: border-box !important;
+            font-family: monospace, Arial, sans-serif !important;
+            font-size: 10px !important;
+            line-height: 1.2 !important;
+            color: #000 !important;
+            background: #fff !important;
+            box-shadow: none !important;
+            page-break-after: avoid !important;
+            page-break-before: avoid !important;
+          }
+
+          .print-area h1,
+          .print-area h2,
+          .print-area h3 {
+            margin: 0 0 2mm 0 !important;
+            padding: 0 !important;
+            line-height: 1.1 !important;
+          }
+
+          .print-area p,
+          .print-area div {
+            margin-top: 0 !important;
+            margin-bottom: 1mm !important;
+          }
+
+          .print-area hr,
+          .separator {
+            margin: 1.5mm 0 !important;
+          }
+
+          .print-footer {
+            margin-top: 2mm !important;
+            padding-bottom: 0 !important;
+            font-size: 8px !important;
+            line-height: 1.1 !important;
+            text-align: center !important;
+          }
+
+          .no-print,
+          button,
+          nav,
+          header,
+          footer:not(.print-footer),
+          iframe,
+          [class*="lovable"],
+          [id*="lovable"] {
+            display: none !important;
+            visibility: hidden !important;
+          }
         }
       `}</style>
     </div>
