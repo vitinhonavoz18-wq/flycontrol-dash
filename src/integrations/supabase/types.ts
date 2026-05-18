@@ -465,9 +465,12 @@ export type Database = {
           address: string | null
           api_key: string
           created_at: string
+          delivery_fee: number | null
+          description: string | null
           id: string
           logo_url: string | null
           name: string
+          opening_hours: Json | null
           owner_id: string | null
           phone: string | null
           primary_color: string | null
@@ -481,9 +484,12 @@ export type Database = {
           address?: string | null
           api_key: string
           created_at?: string
+          delivery_fee?: number | null
+          description?: string | null
           id?: string
           logo_url?: string | null
           name: string
+          opening_hours?: Json | null
           owner_id?: string | null
           phone?: string | null
           primary_color?: string | null
@@ -497,9 +503,12 @@ export type Database = {
           address?: string | null
           api_key?: string
           created_at?: string
+          delivery_fee?: number | null
+          description?: string | null
           id?: string
           logo_url?: string | null
           name?: string
+          opening_hours?: Json | null
           owner_id?: string | null
           phone?: string | null
           primary_color?: string | null
