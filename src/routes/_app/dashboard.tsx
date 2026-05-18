@@ -356,8 +356,8 @@ function Dashboard() {
         {[{ v: "ativos", l: "Em andamento" }, { v: "todos", l: "Todos" }, ...STATUSES.map(s => ({ v: s.value, l: s.label }))].map((f) => (
           <button key={f.v}
             onClick={() => setFilter(f.v)}
-            className={`rounded-full border px-3 py-1.5 text-xs transition ${
-              filter === f.v ? "border-primary bg-primary/15 text-primary" : "border-border text-muted-foreground hover:bg-muted"
+            className={`rounded-full border px-4 py-2 text-xs font-bold transition-all duration-200 uppercase tracking-wider ${
+              filter === f.v ? "border-primary bg-primary text-primary-foreground shadow-lg scale-105" : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
             }`}>
             {f.l}
           </button>

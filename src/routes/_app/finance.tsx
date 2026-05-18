@@ -630,18 +630,18 @@ function OwnerView({ pizzeria, formatCurrency }: any) {
 
 function MetricCard({ title, value, subtitle, icon: Icon, highlight = false }: any) {
   return (
-    <Card className={`relative overflow-hidden group transition-all duration-300 hover:shadow-xl ${highlight ? "border-primary/50 shadow-md bg-primary/5" : "border-border hover:border-primary/30"}`}>
-      {highlight && <div className="absolute top-0 right-0 w-20 h-20 bg-primary/10 rounded-full -mr-10 -mt-10 transition-transform group-hover:scale-150 duration-700" />}
+    <Card className={`relative overflow-hidden group transition-all duration-300 hover:shadow-xl ${highlight ? "border-primary/50 shadow-md bg-primary/5 ring-1 ring-primary/20" : "border-border hover:border-primary/30"}`}>
+      {highlight && <div className="absolute top-0 right-0 w-24 h-24 bg-primary/10 rounded-full -mr-12 -mt-12 transition-transform group-hover:scale-150 duration-700" />}
       <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
         <CardTitle className="text-[10px] font-black uppercase text-muted-foreground tracking-widest group-hover:text-primary transition-colors">
           {title}
         </CardTitle>
-        <div className={`p-2 rounded-lg transition-colors ${highlight ? "bg-primary text-white" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"}`}>
+        <div className={`p-2 rounded-lg transition-colors ${highlight ? "bg-primary text-primary-foreground shadow-lg" : "bg-muted text-muted-foreground group-hover:bg-primary/10 group-hover:text-primary"}`}>
           <Icon className="h-4 w-4" />
         </div>
       </CardHeader>
       <CardContent>
-        <div className="text-3xl font-black tracking-tighter">{value}</div>
+        <div className="text-3xl font-black tracking-tighter text-foreground">{value}</div>
         <p className="text-[10px] text-muted-foreground font-medium mt-1 truncate">{subtitle}</p>
       </CardContent>
     </Card>
