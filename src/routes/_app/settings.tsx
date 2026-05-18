@@ -47,24 +47,43 @@ function AddPizzeriaDialog({ onSuccess }: { onSuccess: () => void }) {
     const fd = new FormData(e.currentTarget);
     const name = fd.get("name") as string;
     const apiKey = fd.get("apiKey") as string;
-    const slug = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
+    
+    // Buscar se já existe
+    const { data: existing, error: searchError } = await supabase
+      .from("pizzerias")
+      .select("*")
+      .or(`api_key.eq.${apiKey}`)
+      .maybeSingle();
 
-    const { error } = await supabase.from("pizzerias").insert({
-      name,
-      api_key: apiKey,
-      slug,
-      owner_id: user?.id,
-      status: "active"
-    });
-
-    setLoading(false);
-    if (error) {
-      toast.error("Erro ao adicionar: " + error.message);
-    } else {
-      toast.success("Pizzaria adicionada com sucesso!");
-      setOpen(false);
-      onSuccess();
+    if (searchError) {
+      toast.error("Erro ao buscar: " + searchError.message);
+      setLoading(true);
+      return;
     }
+
+    if (existing) {
+      if (existing.owner_id && existing.owner_id !== user?.id) {
+        toast.error("Esta pizzaria já possui um dono.");
+        setLoading(false);
+        return;
+      }
+
+      const { error: updateError } = await supabase
+        .from("pizzerias")
+        .update({ owner_id: user?.id, status: "active" })
+        .eq("id", existing.id);
+
+      if (updateError) {
+        toast.error("Erro ao conectar: " + updateError.message);
+      } else {
+        toast.success("Pizzaria sincronizada com sucesso!");
+        setOpen(false);
+        onSuccess();
+      }
+    } else {
+      toast.error("Pizzaria não encontrada com esta API Key no sistema.");
+    }
+    setLoading(false);
   };
 
   return (
