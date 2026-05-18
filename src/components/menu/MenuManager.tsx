@@ -16,7 +16,10 @@ interface MenuManagerProps {
 export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   const [activeTab, setActiveTab] = useState("categories");
   const [categories, setCategories] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [pizzeria, setPizzeria] = useState<any>(null);
+
 
 
   useEffect(() => {
