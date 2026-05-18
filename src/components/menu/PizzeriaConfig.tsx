@@ -40,7 +40,7 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
     setSaving(true);
     const { error } = await supabase
       .from("pizzerias")
-      .update({ [field]: value })
+      .update({ [field]: value } as any)
       .eq("id", pizzeriaId);
 
     if (error) {
