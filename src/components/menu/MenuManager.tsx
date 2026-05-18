@@ -50,11 +50,12 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   return (
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 lg:w-[600px] lg:grid-cols-4 bg-muted/50 p-1">
+        <TabsList className="grid w-full grid-cols-2 lg:w-[750px] lg:grid-cols-5 bg-muted/50 p-1">
           <TabsTrigger value="categories" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Categorias</TabsTrigger>
           <TabsTrigger value="products" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Produtos</TabsTrigger>
           <TabsTrigger value="beverages" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Bebidas</TabsTrigger>
-          <TabsTrigger value="extras" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Complementos</TabsTrigger>
+          <TabsTrigger value="extras" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Bordas/Adicionais</TabsTrigger>
+          <TabsTrigger value="config" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-primary font-semibold">Configurações</TabsTrigger>
         </TabsList>
 
         <div className="mt-6">
@@ -82,6 +83,10 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
           <TabsContent value="extras" className="m-0 focus-visible:outline-none">
             <ExtraList pizzeriaId={pizzeriaId} />
+          </TabsContent>
+
+          <TabsContent value="config" className="m-0 focus-visible:outline-none">
+            <PizzeriaConfig pizzeriaId={pizzeriaId} />
           </TabsContent>
         </div>
       </Tabs>
