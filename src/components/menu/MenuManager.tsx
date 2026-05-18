@@ -109,6 +109,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       console.log("Quantidade de produtos recebidos:", externalMenu.products?.length || 0);
       console.log("Quantidade de bebidas recebidas:", externalMenu.beverages?.length || 0);
       console.log("Quantidade de bordas recebidas:", externalMenu.extras?.length || 0);
+      console.log("Quantidade de combos recebidos:", externalMenu.combos?.length || 0);
 
       // 2. Send to our local sync endpoint
       const syncResponse = await fetch("/api/pizzerias/sync-menu", {
@@ -128,7 +129,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
       if (syncResult.success) {
         const { results } = syncResult;
-        toast.success(`Cardápio sincronizado! Importados: ${results.categories} categorias, ${results.products} produtos, ${results.beverages} bebidas e ${results.extras} bordas/adicionais.`, { id: toastId });
+        toast.success(`Cardápio sincronizado! Importados: ${results.categories} categorias, ${results.products} produtos, ${results.beverages} bebidas, ${results.extras} bordas e ${results.combos} combos.`, { id: toastId });
         loadCategories();
       } else {
         console.error("Erro no mapeamento:", syncResult.error);
