@@ -35,6 +35,8 @@ function AppLayout() {
 
   const items = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/menu", label: "Cardápio", icon: Menu },
+    { to: "/combos", label: "Combos", icon: PieChart },
     { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },
     { to: "/settings", label: "Configurações", icon: Settings },
     { to: "/docs", label: "Documentação", icon: BookOpen },
