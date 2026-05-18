@@ -24,9 +24,12 @@ import {
 
 interface ExtraListProps {
   pizzeriaId: string;
+  pizzeriaSlug?: string;
+  pizzeriaApiKey?: string;
 }
 
-export function ExtraList({ pizzeriaId }: ExtraListProps) {
+export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraListProps) {
+
   const [extras, setExtras] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);

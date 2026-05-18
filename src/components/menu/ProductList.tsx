@@ -27,9 +27,12 @@ interface ProductListProps {
   categories: any[];
   type: string;
   title: string;
+  pizzeriaSlug?: string;
+  pizzeriaApiKey?: string;
 }
 
-export function ProductList({ pizzeriaId, categories, type, title }: ProductListProps) {
+export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug, pizzeriaApiKey }: ProductListProps) {
+
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
