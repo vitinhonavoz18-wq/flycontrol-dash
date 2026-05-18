@@ -17,7 +17,12 @@ export function ThemeProvider({
 }: ThemeProviderProps) {
   const [theme, setThemeState] = useState<Theme>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem(storageKey) as Theme) || defaultTheme;
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved === "light" || saved === "dark") return saved as Theme;
+      } catch (e) {
+        console.error("Error reading theme from localStorage", e);
+      }
     }
     return defaultTheme;
   });
