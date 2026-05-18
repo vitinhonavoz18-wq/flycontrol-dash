@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
+import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import { 
   LayoutDashboard, 
@@ -12,15 +13,20 @@ import {
   BookOpen,
   Menu,
   X,
-  PieChart
+  PieChart,
+  Sun,
+  Moon
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
 function AppLayout() {
   const { user, loading, isSuperAdmin, signOut } = useAuth();
+  const { theme, setTheme } = useTheme();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -93,14 +99,28 @@ function AppLayout() {
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar Desktop */}
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-sidebar md:flex shadow-xl z-20">
-        <Link to="/dashboard" className="flex h-24 items-center justify-center border-b border-sidebar-border px-6 overflow-hidden">
+      <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-sidebar md:flex shadow-xl z-20 transition-all duration-300">
+        <Link to="/dashboard" className="flex h-32 items-center justify-center border-b border-sidebar-border px-8 overflow-hidden bg-primary/5">
           <img 
             src={logo} 
             alt="FlyControl" 
-            className="h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.5)] transition-transform hover:scale-105 duration-300" 
+            className="h-20 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.3)] transition-all hover:scale-105 duration-300 dark:drop-shadow-[0_0_20px_rgba(255,122,0,0.6)]" 
           />
         </Link>
+        
+        <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            {theme === "dark" ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-orange-500" />}
+            <Label htmlFor="theme-toggle" className="text-xs font-medium cursor-pointer">
+              {theme === "dark" ? "Modo Escuro" : "Modo Claro"}
+            </Label>
+          </div>
+          <Switch 
+            id="theme-toggle"
+            checked={theme === "dark"}
+            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+          />
+        </div>
         
         <NavItems />
 
@@ -124,8 +144,8 @@ function AppLayout() {
       <div className="flex-1 flex flex-col min-h-screen">
         <header className="h-16 flex items-center justify-between px-4 border-b border-border bg-background md:hidden sticky top-0 z-30 shadow-sm">
           <Link to="/dashboard" className="flex items-center gap-2">
-            <img src={logo} alt="FlyControl" className="h-8 w-auto" />
-            <span className="font-bold text-sm tracking-tight">FlyControl</span>
+            <img src={logo} alt="FlyControl" className="h-9 w-auto" />
+            <span className="font-bold text-base tracking-tight text-primary">FlyControl</span>
           </Link>
           
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
@@ -136,8 +156,15 @@ function AppLayout() {
             </SheetTrigger>
             <SheetContent side="left" className="w-[280px] p-0 border-r-primary/20 bg-sidebar">
               <div className="flex flex-col h-full">
-                <div className="h-16 flex items-center px-6 border-b border-sidebar-border bg-primary/5">
+                <div className="h-16 flex items-center justify-between px-6 border-b border-sidebar-border bg-primary/5">
                   <span className="font-bold text-lg text-primary">FlyControl</span>
+                  <div className="flex items-center gap-2">
+                    {theme === "dark" ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-orange-500" />}
+                    <Switch 
+                      checked={theme === "dark"}
+                      onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+                    />
+                  </div>
                 </div>
                 <NavItems className="py-4" />
                 <div className="mt-auto border-t border-sidebar-border p-4">
