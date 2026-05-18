@@ -59,17 +59,57 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
     }
 
     setSyncing(true);
-    const toastId = toast.loading("Buscando cardápio no site...");
+    const toastId = toast.loading("Iniciando sincronização com SiteCreatorFly...");
+    
+    const slug = pizzeria.slug;
+    const endpoint = `https://sitecreatorfly.com/api/menu-sync?slug=${slug}`;
+    
+    console.log("--- Início da Sincronização ---");
+    console.log("Slug enviado:", slug);
+    console.log("Endpoint usado:", endpoint);
 
     try {
       // 1. Fetch menu from SiteCreatorFly
-      const response = await fetch(`https://sitecreatorfly.com/api/pizzerias/${pizzeria.slug}/menu-full`);
+      let response;
+      try {
+        response = await fetch(endpoint);
+      } catch (e) {
+        console.error("Erro de conexão:", e);
+        throw new Error("endpoint_no_response");
+      }
       
+      console.log("Status HTTP da resposta:", response.status);
+      
+      if (response.status === 404) {
+        throw new Error("pizzeria_not_found");
+      }
+      
+      if (response.status === 403 || response.status === 401) {
+        throw new Error("permission_error");
+      }
+
       if (!response.ok) {
-        throw new Error("Não foi possível conectar ao SiteCreatorFly.");
+        throw new Error("endpoint_no_response");
       }
 
       const externalMenu = await response.json();
+      console.log("Resposta recebida:", externalMenu);
+
+      if (!externalMenu || (
+        (!externalMenu.categories || externalMenu.categories.length === 0) &&
+        (!externalMenu.products || externalMenu.products.length === 0) &&
+        (!externalMenu.beverages || externalMenu.beverages.length === 0) &&
+        (!externalMenu.extras || externalMenu.extras.length === 0)
+      )) {
+        throw new Error("empty_menu");
+      }
+
+      console.log("Pizzeria ID encontrado:", pizzeriaId);
+      console.log("Quantidade de categorias recebidas:", externalMenu.categories?.length || 0);
+      console.log("Quantidade de produtos recebidos:", externalMenu.products?.length || 0);
+      console.log("Quantidade de bebidas recebidas:", externalMenu.beverages?.length || 0);
+      console.log("Quantidade de bordas recebidas:", externalMenu.extras?.length || 0);
+      console.log("Quantidade de combos recebidos:", externalMenu.combos?.length || 0);
 
       // 2. Send to our local sync endpoint
       const syncResponse = await fetch("/api/pizzerias/sync-menu", {
@@ -89,15 +129,31 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
       if (syncResult.success) {
         const { results } = syncResult;
-        toast.success(`Cardápio sincronizado! Encontramos ${results.categories} categorias, ${results.products} produtos, ${results.beverages} bebidas e ${results.extras} bordas/adicionais.`, { id: toastId });
+        toast.success(`Cardápio sincronizado! Importados: ${results.categories} categorias, ${results.products} produtos, ${results.beverages} bebidas, ${results.extras} bordas e ${results.combos} combos.`, { id: toastId });
         loadCategories();
       } else {
-        toast.error(syncResult.error || "Erro na sincronização.", { id: toastId });
+        console.error("Erro no mapeamento:", syncResult.error);
+        throw new Error("mapping_error");
       }
     } catch (error: any) {
-      console.error("Sync error:", error);
-      toast.error("Nenhum cardápio original encontrado para esta pizzaria ou erro de conexão.", { id: toastId });
+      console.error("Sync error full:", error);
+      
+      let message = "Erro inesperado na sincronização.";
+      if (error.message === "pizzeria_not_found") {
+        message = "Pizzaria não encontrada pelo slug informado.";
+      } else if (error.message === "endpoint_no_response") {
+        message = "Endpoint de sincronização não respondeu.";
+      } else if (error.message === "empty_menu") {
+        message = "Cardápio encontrado, mas sem produtos cadastrados.";
+      } else if (error.message === "permission_error") {
+        message = "Erro de permissão ao acessar cardápio.";
+      } else if (error.message === "mapping_error") {
+        message = "Erro ao mapear os dados recebidos.";
+      }
+      
+      toast.error(message, { id: toastId });
     } finally {
+      console.log("--- Fim da Sincronização ---");
       setSyncing(false);
     }
   }
