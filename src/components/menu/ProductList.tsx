@@ -7,6 +7,8 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Image as ImageIcon, Loader2, Filter } from "lucide-react";
+import { syncToExternal } from "@/utils/menuSync";
+
 import {
   Dialog,
   DialogContent,
@@ -103,43 +105,94 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     }
 
     setSaving(true);
+    const numericPrice = parseFloat(price.replace(',', '.'));
     const payload = {
       name,
       description,
-      price: parseFloat(price.replace(',', '.')),
+      price: numericPrice,
       category_id: categoryId || null,
       image_url: imageUrl,
       product_type: productType,
       pizzeria_id: pizzeriaId,
     };
 
-    let error;
-    if (editingProduct) {
-      const { error: err } = await supabase
-        .from("menu_products")
-        .update(payload)
-        .eq("id", editingProduct.id);
-      error = err;
-    } else {
-      const { error: err } = await supabase
-        .from("menu_products")
-        .insert(payload);
-      error = err;
-    }
+    try {
+      let externalId = editingProduct?.external_id;
 
-    setSaving(false);
-    if (error) {
-      toast.error("Erro ao salvar produto: " + error.message);
-    } else {
-      toast.success(`Produto ${editingProduct ? "atualizado" : "criado"} com sucesso!`);
-      setIsDialogOpen(false);
-      loadProducts();
+      if (pizzeriaSlug && pizzeriaApiKey) {
+        // Find external category ID
+        const cat = categories.find(c => c.id === categoryId);
+        const external_category_id = cat?.external_id;
+
+        const syncResult = await syncToExternal({
+          type: productType as any,
+          action: editingProduct ? 'update' : 'create',
+          id: editingProduct?.id,
+          externalId: editingProduct?.external_id,
+          data: { ...payload, external_category_id },
+          pizzeriaSlug,
+          pizzeriaApiKey
+        });
+
+        if (!syncResult.success) {
+          toast.warning(`Salvo localmente, mas houve um erro ao sincronizar com o site: ${syncResult.error}`);
+        } else {
+          externalId = syncResult.externalId;
+        }
+      }
+
+      const finalPayload = { 
+        ...payload, 
+        external_id: externalId, 
+        external_source: externalId ? 'sitecreatorfly' : null 
+      };
+
+      let error;
+      if (editingProduct) {
+        const { error: err } = await supabase
+          .from("menu_products")
+          .update(finalPayload)
+          .eq("id", editingProduct.id);
+        error = err;
+      } else {
+        const { error: err } = await supabase
+          .from("menu_products")
+          .insert(finalPayload);
+        error = err;
+      }
+
+      if (error) {
+        toast.error("Erro ao salvar produto: " + error.message);
+      } else {
+        toast.success(`Produto ${editingProduct ? "atualizado" : "criado"} com sucesso!`);
+        setIsDialogOpen(false);
+        loadProducts();
+      }
+    } catch (e: any) {
+      toast.error("Erro inesperado: " + e.message);
+    } finally {
+      setSaving(false);
     }
   }
 
   async function toggleStatus(prod: any, field: 'active' | 'available') {
+    const newValue = !prod[field];
+    
+    if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
+      // Map field names if they differ
+      const externalField = field === 'active' ? 'is_active' : 'is_available';
+      await syncToExternal({
+        type: prod.product_type,
+        action: 'patch',
+        externalId: prod.external_id,
+        data: { field: externalField, value: newValue },
+        pizzeriaSlug,
+        pizzeriaApiKey
+      });
+    }
+
     const updateData: any = {};
-    updateData[field] = !prod[field];
+    updateData[field] = newValue;
     
     const { error } = await supabase
       .from("menu_products")
@@ -153,13 +206,23 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(prod: any) {
     if (!confirm("Tem certeza que deseja excluir este produto?")) return;
+
+    if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
+      await syncToExternal({
+        type: prod.product_type,
+        action: 'delete',
+        externalId: prod.external_id,
+        pizzeriaSlug,
+        pizzeriaApiKey
+      });
+    }
 
     const { error } = await supabase
       .from("menu_products")
       .delete()
-      .eq("id", id);
+      .eq("id", prod.id);
     
     if (error) {
       toast.error("Erro ao excluir produto: " + error.message);
@@ -232,7 +295,7 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
                 <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(prod)}>
                   <Pencil className="h-4 w-4" />
                 </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(prod.id)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(prod)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </div>
