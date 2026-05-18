@@ -135,9 +135,12 @@ export function ProductList({ pizzeriaId, categories, type, title }: ProductList
   }
 
   async function toggleStatus(prod: any, field: 'active' | 'available') {
+    const updateData: any = {};
+    updateData[field] = !prod[field];
+    
     const { error } = await supabase
       .from("menu_products")
-      .update({ [field]: !prod[field] })
+      .update(updateData)
       .eq("id", prod.id);
     
     if (error) {
