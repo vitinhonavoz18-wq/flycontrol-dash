@@ -90,13 +90,21 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           for (const prod of menuData.products) {
             const catId = prod.category_id ? (categoriesMap[prod.category_id] || prod.category_id) : null;
             
-            const { data: existing } = await supabaseAdmin
+            // Anti-duplication: pizzeria_id + name + product_type + category_id
+            const query = supabaseAdmin
               .from("menu_products")
               .select("id")
               .eq("pizzeria_id", pizzeriaId)
               .eq("name", prod.name)
-              .eq("product_type", prod.product_type || "standard")
-              .maybeSingle();
+              .eq("product_type", prod.product_type || "standard");
+            
+            if (catId) {
+              query.eq("category_id", catId);
+            } else {
+              query.is("category_id", null);
+            }
+
+            const { data: existing } = await query.maybeSingle();
 
             const payload = {
               pizzeria_id: pizzeriaId,
@@ -119,9 +127,10 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           }
         }
 
-        // 3. Sync Beverages (often separate in SiteCreatorFly)
+        // 3. Sync Beverages
         if (Array.isArray(menuData.beverages)) {
           for (const bev of menuData.beverages) {
+            // Anti-duplication for beverages: pizzeria_id + name + type
             const { data: existing } = await supabaseAdmin
               .from("menu_products")
               .select("id")
@@ -153,6 +162,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
         // 4. Sync Extras (Bordas/Adicionais)
         if (Array.isArray(menuData.extras)) {
           for (const ext of menuData.extras) {
+            // Anti-duplication: pizzeria_id + name + extra_type
             const { data: existing } = await supabaseAdmin
               .from("menu_extras")
               .select("id")
@@ -174,6 +184,61 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             } else {
               await supabaseAdmin.from("menu_extras").insert(payload);
               results.extras++;
+            }
+          }
+        }
+
+        // 5. Sync Combos
+        if (Array.isArray(menuData.combos)) {
+          for (const cb of menuData.combos) {
+            // Anti-duplication: pizzeria_id + name
+            const { data: existing } = await supabaseAdmin
+              .from("combos")
+              .select("id")
+              .eq("pizzeria_id", pizzeriaId)
+              .eq("name", cb.name)
+              .maybeSingle();
+
+            const payload = {
+              pizzeria_id: pizzeriaId,
+              name: cb.name,
+              description: cb.description || null,
+              original_price: cb.original_price || 0,
+              combo_price: cb.combo_price || 0,
+              image_url: cb.image_url || null,
+              active: cb.active !== undefined ? cb.active : true,
+              highlight: cb.highlight !== undefined ? cb.highlight : false,
+              available_days: cb.available_days || ["seg", "ter", "qua", "qui", "sex", "sab", "dom"]
+            };
+
+            let comboId = existing?.id;
+            if (existing) {
+              await supabaseAdmin.from("combos").update(payload).eq("id", existing.id);
+            } else {
+              const { data: inserted } = await supabaseAdmin
+                .from("combos")
+                .insert(payload)
+                .select("id")
+                .single();
+              if (inserted) {
+                comboId = inserted.id;
+                results.combos++;
+              }
+            }
+
+            // Sync Combo Items if provided
+            if (comboId && Array.isArray(cb.items)) {
+              // Clear existing items for this combo to avoid duplicates/conflicts
+              await supabaseAdmin.from("combo_items").delete().eq("combo_id", comboId);
+              
+              for (const item of cb.items) {
+                await supabaseAdmin.from("combo_items").insert({
+                  combo_id: comboId,
+                  product_type: item.product_type || "standard",
+                  product_name: item.product_name,
+                  quantity: item.quantity || 1
+                });
+              }
             }
           }
         }
