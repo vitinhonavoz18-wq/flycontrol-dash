@@ -79,15 +79,16 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
     if (response.status === 204) return { success: true };
 
     const result = await response.json();
+    console.log("[SyncExternal] Resposta recebida:", result);
     
-    if (result.success) {
+    if (result.success || response.status === 200) {
       return { 
         success: true, 
-        externalId: result.data?.id || externalId 
+        externalId: result.data?.id || result.id || externalId 
       };
     } else {
-      console.error("[SyncExternal] Erro retornado:", result.error);
-      return { success: false, error: result.error };
+      console.error("[SyncExternal] Erro retornado:", result.error || result.message);
+      return { success: false, error: result.error || result.message || "Erro desconhecido na API externa" };
     }
   } catch (error: any) {
     console.error("[SyncExternal] Erro na chamada:", error);
@@ -99,21 +100,21 @@ function prepareDataForExternal(type: string, data: any) {
   // Map FlyControl fields to SiteCreatorFly fields
   if (type === 'category') {
     return {
-      name: data.name,
+      name: data.name || data.title,
       description: data.description,
-      is_active: data.active ?? true,
+      is_active: data.active !== undefined ? data.active : true,
       sort_order: data.order_index ?? 0
     };
   }
   
   if (type === 'product' || type === 'beverage' || type === 'extra' || type === 'flavor') {
     return {
-      name: data.name,
+      name: data.name || data.title,
       description: data.description,
       price: data.price,
       image_url: data.image_url,
-      is_active: data.active ?? true,
-      is_available: data.available ?? true,
+      is_active: data.active !== undefined ? data.active : true,
+      is_available: data.available !== undefined ? data.available : true,
       category_id: data.external_category_id // We should pass the external cat id
     };
   }
