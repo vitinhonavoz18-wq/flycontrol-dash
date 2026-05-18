@@ -27,17 +27,21 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           return new Response(JSON.stringify({ error: "API Key, pizzeria_id e menu são obrigatórios" }), { status: 400, headers: cors });
         }
 
-        // Validar API Key
+        // Validar API Key e encontrar pizzaria
+        console.log(`🔍 [Sync] Validando pizzaria_id: ${pizzeriaId}`);
         const { data: pz, error: pzErr } = await supabaseAdmin
           .from("pizzerias")
-          .select("id")
+          .select("id, name, slug")
           .eq("id", pizzeriaId)
           .eq("api_key", apiKey)
           .maybeSingle();
 
         if (pzErr || !pz) {
+          console.error("❌ [Sync] Credenciais inválidas ou pizzaria não encontrada:", pzErr || "Not found");
           return new Response(JSON.stringify({ error: "Credenciais inválidas" }), { status: 403, headers: cors });
         }
+
+        console.log(`✅ [Sync] Pizzaria autorizada: ${pz.name} (${pz.slug})`);
 
         const results = {
           categories: 0,
