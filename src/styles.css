@@ -49,38 +49,35 @@
 :root {
   --radius: 0.85rem;
 
-  /* === FlyControl — Fire & Tech identity === */
-  /* Deep premium black base */
-  --background: oklch(0.13 0.012 35);
-  --foreground: oklch(0.98 0.005 80);
+  /* === LIGHT THEME (White Mode) === */
+  --background: oklch(0.98 0.005 80); /* #F8F9FB */
+  --foreground: oklch(0.12 0.01 40); /* #111827 */
 
-  /* Glassy graphite cards */
-  --card: oklch(0.18 0.018 40);
-  --card-foreground: oklch(0.98 0.005 80);
-  --popover: oklch(0.17 0.018 40);
-  --popover-foreground: oklch(0.98 0.005 80);
+  --card: oklch(1 0 0); /* #FFFFFF */
+  --card-foreground: oklch(0.12 0.01 40);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.12 0.01 40);
 
   /* Fire orange primary */
-  --primary: oklch(0.72 0.21 45);
-  --primary-foreground: oklch(0.12 0.01 40);
+  --primary: oklch(0.72 0.21 45); /* #ff5a00 */
+  --primary-foreground: oklch(1 0 0);
   --primary-glow: oklch(0.85 0.18 80);
 
-  --secondary: oklch(0.24 0.025 40);
-  --secondary-foreground: oklch(0.98 0.005 80);
-  --muted: oklch(0.22 0.018 40);
-  --muted-foreground: oklch(0.72 0.015 70);
+  --secondary: oklch(0.96 0.01 80); /* #F3F4F6 */
+  --secondary-foreground: oklch(0.12 0.01 40);
+  --muted: oklch(0.95 0.01 80);
+  --muted-foreground: oklch(0.45 0.02 60);
 
-  /* Electric blue accent (logo highlight) */
   --accent: oklch(0.7 0.21 240);
-  --accent-foreground: oklch(0.98 0.005 80);
+  --accent-foreground: oklch(1 0 0);
 
-  --destructive: oklch(0.62 0.24 25);
-  --destructive-foreground: oklch(0.98 0.005 80);
-  --success: oklch(0.72 0.18 145);
-  --warning: oklch(0.84 0.17 85);
+  --destructive: oklch(0.6 0.2 25);
+  --destructive-foreground: oklch(1 0 0);
+  --success: oklch(0.7 0.15 145);
+  --warning: oklch(0.85 0.15 85);
 
-  --border: oklch(0.28 0.025 45 / 0.7);
-  --input: oklch(0.22 0.02 40);
+  --border: oklch(0.9 0.01 80); /* #E5E7EB */
+  --input: oklch(1 0 0);
   --ring: oklch(0.72 0.21 45);
 
   --chart-1: oklch(0.72 0.21 45);
@@ -89,28 +86,59 @@
   --chart-4: oklch(0.62 0.24 25);
   --chart-5: oklch(0.78 0.16 60);
 
-  /* Sidebar — premium dark with fire edge */
-  --sidebar: oklch(0.11 0.012 35);
-  --sidebar-foreground: oklch(0.95 0.008 80);
+  /* Sidebar Light */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0.12 0.01 40);
   --sidebar-primary: oklch(0.72 0.21 45);
-  --sidebar-primary-foreground: oklch(0.12 0.01 40);
-  --sidebar-accent: oklch(0.2 0.025 40);
-  --sidebar-accent-foreground: oklch(0.98 0.005 80);
-  --sidebar-border: oklch(0.25 0.025 45 / 0.6);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.96 0.01 80);
+  --sidebar-accent-foreground: oklch(0.12 0.01 40);
+  --sidebar-border: oklch(0.9 0.01 80);
   --sidebar-ring: oklch(0.72 0.21 45);
 
   /* Brand gradients */
   --gradient-primary: linear-gradient(135deg, #ff5a00 0%, #ff7a00 35%, #ffc247 100%);
   --gradient-fire: linear-gradient(135deg, #b91c1c 0%, #ff5a00 45%, #ffc247 100%);
+  --gradient-ember: radial-gradient(circle at 30% 20%, rgba(255, 122, 0, 0.15), transparent 55%),
+                    radial-gradient(circle at 80% 90%, rgba(0, 140, 255, 0.08), transparent 60%);
+  --gradient-blue: linear-gradient(135deg, #008cff 0%, #00b7ff 100%);
+  --gradient-surface: linear-gradient(160deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+
+  /* Shadows */
+  --shadow-glow: 0 10px 40px -10px rgba(255, 90, 0, 0.3);
+  --shadow-elegant: 0 10px 30px -15px rgba(0, 0, 0, 0.1);
+}
+
+.dark {
+  /* === DARK THEME (Premium Black) === */
+  --background: oklch(0.13 0.012 35);
+  --foreground: oklch(0.98 0.005 80);
+
+  --card: oklch(0.18 0.018 40);
+  --card-foreground: oklch(0.98 0.005 80);
+  --popover: oklch(0.17 0.018 40);
+  --popover-foreground: oklch(0.98 0.005 80);
+
+  --secondary: oklch(0.24 0.025 40);
+  --secondary-foreground: oklch(0.98 0.005 80);
+  --muted: oklch(0.22 0.018 40);
+  --muted-foreground: oklch(0.72 0.015 70);
+
+  --border: oklch(0.28 0.025 45 / 0.7);
+  --input: oklch(0.22 0.02 40);
+
+  /* Sidebar Dark */
+  --sidebar: oklch(0.11 0.012 35);
+  --sidebar-foreground: oklch(0.95 0.008 80);
+  --sidebar-accent: oklch(0.2 0.025 40);
+  --sidebar-accent-foreground: oklch(0.98 0.005 80);
+  --sidebar-border: oklch(0.25 0.025 45 / 0.6);
+
+  /* Dark specific gradients */
+  --gradient-surface: linear-gradient(160deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+  --shadow-elegant: 0 20px 60px -25px rgba(0, 0, 0, 0.7);
   --gradient-ember: radial-gradient(circle at 30% 20%, rgba(255, 122, 0, 0.35), transparent 55%),
                     radial-gradient(circle at 80% 90%, rgba(0, 140, 255, 0.18), transparent 60%);
-  --gradient-blue: linear-gradient(135deg, #008cff 0%, #00b7ff 100%);
-  --gradient-surface: linear-gradient(160deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
-
-  /* Shadows / glows */
-  --shadow-glow: 0 10px 40px -10px rgba(255, 122, 0, 0.55);
-  --shadow-glow-blue: 0 10px 40px -10px rgba(0, 140, 255, 0.45);
-  --shadow-elegant: 0 20px 60px -25px rgba(0, 0, 0, 0.7);
 }
 
 @layer base {
