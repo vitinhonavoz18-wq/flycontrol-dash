@@ -83,7 +83,7 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
         }
       }
 
-      const finalPayload = { ...payload, external_id: externalId, external_source: externalId ? 'sitecreatorfly' : null };
+      const finalPayload = { ...payload, external_id: externalId, external_source: externalId ? 'sitecreatorfly' : null, updated_at: new Date().toISOString() };
 
       let error;
       if (editingCategory) {
@@ -127,7 +127,7 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
 
     const { error } = await supabase
       .from("menu_categories")
-      .update({ active: !cat.active })
+      .update({ active: !cat.active, updated_at: new Date().toISOString() })
       .eq("id", cat.id);
     
     if (error) {

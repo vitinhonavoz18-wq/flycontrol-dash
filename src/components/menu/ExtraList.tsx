@@ -119,7 +119,8 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraLis
       const finalPayload = { 
         ...payload, 
         external_id: externalId, 
-        external_source: externalId ? 'sitecreatorfly' : null 
+        external_source: externalId ? 'sitecreatorfly' : null,
+        updated_at: new Date().toISOString()
       };
 
       let error;
@@ -166,7 +167,7 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraLis
 
     const { error } = await supabase
       .from("menu_extras")
-      .update({ active: newValue })
+      .update({ active: newValue, updated_at: new Date().toISOString() })
       .eq("id", ext.id);
     
     if (error) {

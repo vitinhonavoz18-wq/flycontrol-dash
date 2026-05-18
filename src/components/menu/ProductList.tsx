@@ -114,6 +114,8 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
       image_url: imageUrl,
       product_type: productType,
       pizzeria_id: pizzeriaId,
+      active: editingProduct ? editingProduct.active : true,
+      available: editingProduct ? editingProduct.available : true,
     };
 
     try {
@@ -144,7 +146,8 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
       const finalPayload = { 
         ...payload, 
         external_id: externalId, 
-        external_source: externalId ? 'sitecreatorfly' : null 
+        external_source: externalId ? 'sitecreatorfly' : null,
+        updated_at: new Date().toISOString()
       };
 
       let error;
@@ -196,7 +199,7 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     
     const { error } = await supabase
       .from("menu_products")
-      .update(updateData)
+      .update({ ...updateData, updated_at: new Date().toISOString() })
       .eq("id", prod.id);
     
     if (error) {

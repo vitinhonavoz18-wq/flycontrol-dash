@@ -113,6 +113,7 @@ function prepareDataForExternal(type: string, data: any) {
       price: data.price,
       image_url: data.image_url,
       is_active: data.active ?? true,
+      is_available: data.available ?? true,
       category_id: data.external_category_id // We should pass the external cat id
     };
   }
