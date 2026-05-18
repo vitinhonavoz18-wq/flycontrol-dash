@@ -28,17 +28,22 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
         }
 
         // Validar API Key e encontrar pizzaria
-        console.log(`🔍 [Sync] Validando pizzaria_id: ${pizzeriaId}`);
+        console.log(`🔍 [Sync] Iniciando sincronização para pizzeria_id: ${pizzeriaId}`);
         const { data: pz, error: pzErr } = await supabaseAdmin
           .from("pizzerias")
           .select("id, name, slug")
           .eq("id", pizzeriaId)
           .eq("api_key", apiKey)
           .maybeSingle();
+        
+        if (pzErr) {
+          console.error("❌ [Sync] Erro ao buscar pizzaria:", pzErr);
+          return new Response(JSON.stringify({ error: "Erro ao validar credenciais" }), { status: 500, headers: cors });
+        }
 
-        if (pzErr || !pz) {
-          console.error("❌ [Sync] Credenciais inválidas ou pizzaria não encontrada:", pzErr || "Not found");
-          return new Response(JSON.stringify({ error: "Credenciais inválidas" }), { status: 403, headers: cors });
+        if (!pz) {
+          console.error(`❌ [Sync] Credenciais inválidas ou pizzaria não encontrada para ID ${pizzeriaId} e Key ${apiKey.substring(0, 5)}...`);
+          return new Response(JSON.stringify({ error: "Credenciais inválidas ou pizzaria não encontrada" }), { status: 403, headers: cors });
         }
 
         console.log(`✅ [Sync] Pizzaria autorizada: ${pz.name} (${pz.slug})`);
