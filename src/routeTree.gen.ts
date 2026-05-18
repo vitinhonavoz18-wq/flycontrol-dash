@@ -25,6 +25,7 @@ import { Route as AppCombosRouteImport } from './routes/_app/combos'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
 import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
+import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin.users'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin.analytics'
@@ -108,6 +109,11 @@ const ApiPublicCreateOrderRoute = ApiPublicCreateOrderRouteImport.update({
   path: '/api/public/create-order',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPizzeriasSyncMenuRoute = ApiPizzeriasSyncMenuRouteImport.update({
+  id: '/api/pizzerias/sync-menu',
+  path: '/api/pizzerias/sync-menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPizzeriasCreateRoute = ApiPizzeriasCreateRouteImport.update({
   id: '/api/pizzerias/create',
   path: '/api/pizzerias/create',
@@ -141,6 +147,7 @@ export interface FileRoutesByFullPath {
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
+  '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
 }
@@ -161,6 +168,7 @@ export interface FileRoutesByTo {
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
+  '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
 }
@@ -183,6 +191,7 @@ export interface FileRoutesById {
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
+  '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
 }
@@ -205,6 +214,7 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/users'
     | '/api/pizzerias/create'
+    | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
   fileRoutesByTo: FileRoutesByTo
@@ -225,6 +235,7 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/users'
     | '/api/pizzerias/create'
+    | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
   id:
@@ -246,6 +257,7 @@ export interface FileRouteTypes {
     | '/_app/admin/analytics'
     | '/_app/admin/users'
     | '/api/pizzerias/create'
+    | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
   fileRoutesById: FileRoutesById
@@ -259,6 +271,7 @@ export interface RootRouteChildren {
   ApiOrdersRoute: typeof ApiOrdersRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
+  ApiPizzeriasSyncMenuRoute: typeof ApiPizzeriasSyncMenuRoute
   ApiPublicCreateOrderRoute: typeof ApiPublicCreateOrderRoute
   ApiPublicCreatePizzeriaRoute: typeof ApiPublicCreatePizzeriaRoute
 }
@@ -377,6 +390,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicCreateOrderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/pizzerias/sync-menu': {
+      id: '/api/pizzerias/sync-menu'
+      path: '/api/pizzerias/sync-menu'
+      fullPath: '/api/pizzerias/sync-menu'
+      preLoaderRoute: typeof ApiPizzeriasSyncMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pizzerias/create': {
       id: '/api/pizzerias/create'
       path: '/api/pizzerias/create'
@@ -446,6 +466,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOrdersRoute: ApiOrdersRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
+  ApiPizzeriasSyncMenuRoute: ApiPizzeriasSyncMenuRoute,
   ApiPublicCreateOrderRoute: ApiPublicCreateOrderRoute,
   ApiPublicCreatePizzeriaRoute: ApiPublicCreatePizzeriaRoute,
 }
