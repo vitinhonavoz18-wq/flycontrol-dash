@@ -273,9 +273,54 @@ function Settings() {
                 </select>
               </label>
             </div>
-            <div className="mt-4">
+
+            <div className="mt-6 grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label className="text-xs font-medium uppercase text-muted-foreground">Descrição da Pizzaria</Label>
+                <textarea 
+                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                  placeholder="Conte um pouco sobre a sua pizzaria..."
+                  defaultValue={p.description || ""}
+                  onBlur={(e) => update(p.id, { description: e.target.value })}
+                />
+              </div>
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium uppercase text-muted-foreground">Taxa de Entrega (R$)</Label>
+                  <Input 
+                    type="number" 
+                    step="0.01" 
+                    placeholder="0.00" 
+                    defaultValue={p.delivery_fee || 0}
+                    onBlur={(e) => update(p.id, { delivery_fee: parseFloat(e.target.value) || 0 })}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs font-medium uppercase text-muted-foreground">Horários de Funcionamento</Label>
+                  <Input 
+                    placeholder="Ex: Seg a Sex: 18h às 23h" 
+                    defaultValue={typeof p.opening_hours === 'string' ? p.opening_hours : JSON.stringify(p.opening_hours)}
+                    onBlur={(e) => {
+                      let val = e.target.value;
+                      try {
+                        // Tentar parsear se for JSON, senão salvar como string/array simples
+                        if (val.startsWith('[') || val.startsWith('{')) {
+                          update(p.id, { opening_hours: JSON.parse(val) });
+                        } else {
+                          update(p.id, { opening_hours: val });
+                        }
+                      } catch {
+                        update(p.id, { opening_hours: val });
+                      }
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-border pt-4">
               <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium">API Key</span>
+                <span className="text-sm font-medium">API Key Principal</span>
                 <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={async () => {
                   const apiKey = "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
                     .map((b) => b.toString(16).padStart(2, "0")).join("");
