@@ -62,23 +62,34 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
     const toastId = toast.loading("Iniciando sincronização com SiteCreatorFly...");
     
     const slug = pizzeria.slug;
-    const endpoint = `https://sitecreatorfly.com/api/menu-sync?slug=${slug}`;
+    const endpoint = `https://conectfly.lovable.app/api/menu-sync?slug=${slug}`;
     
     console.log("--- Início da Sincronização ---");
     console.log("Slug enviado:", slug);
-    console.log("Endpoint usado:", endpoint);
+    console.log("URL chamada:", endpoint);
 
     try {
-      // 1. Fetch menu from SiteCreatorFly
+      // 1. Fetch menu from SiteCreatorFly with timeout
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 seconds timeout
+
       let response;
       try {
-        response = await fetch(endpoint);
-      } catch (e) {
-        console.error("Erro de conexão:", e);
+        response = await fetch(endpoint, { signal: controller.signal });
+        clearTimeout(timeoutId);
+      } catch (e: any) {
+        console.error("Erro de conexão/fetch:", e);
+        if (e.name === 'AbortError') {
+          throw new Error("timeout");
+        }
+        // Tentativa de detectar erro de CORS
+        if (e.message && (e.message.includes('Failed to fetch') || e.message.includes('CORS'))) {
+          throw new Error("cors_error");
+        }
         throw new Error("endpoint_no_response");
       }
       
-      console.log("Status HTTP da resposta:", response.status);
+      console.log("Status HTTP retornado:", response.status);
       
       if (response.status === 404) {
         throw new Error("pizzeria_not_found");
@@ -88,29 +99,35 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
         throw new Error("permission_error");
       }
 
-      if (!response.ok) {
-        throw new Error("endpoint_no_response");
+      const contentType = response.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        const text = await response.text();
+        console.log("Resposta não-JSON recebida:", text.substring(0, 200));
+        throw new Error("not_json");
       }
 
       const externalMenu = await response.json();
-      console.log("Resposta recebida:", externalMenu);
+      console.log("Resposta JSON recebida:", externalMenu);
 
-      if (!externalMenu || (
-        (!externalMenu.categories || externalMenu.categories.length === 0) &&
-        (!externalMenu.products || externalMenu.products.length === 0) &&
-        (!externalMenu.beverages || externalMenu.beverages.length === 0) &&
-        (!externalMenu.extras || externalMenu.extras.length === 0)
-      )) {
+      if (!externalMenu.success) {
+        const errorMsg = externalMenu.message || externalMenu.error || "Erro retornado pelo endpoint";
+        throw new Error(`api_error:${errorMsg}`);
+      }
+
+      // Check if we have data to import
+      const hasCategories = externalMenu.categories?.length > 0;
+      const hasProducts = externalMenu.products?.length > 0;
+      const hasBeverages = externalMenu.beverages?.length > 0;
+      const hasBorders = externalMenu.borders?.length > 0;
+      const hasAdditionals = externalMenu.additionals?.length > 0;
+      const hasCombos = externalMenu.combos?.length > 0;
+
+      if (!hasCategories && !hasProducts && !hasBeverages && !hasBorders && !hasAdditionals && !hasCombos) {
         throw new Error("empty_menu");
       }
 
-      console.log("Pizzeria ID encontrado:", pizzeriaId);
-      console.log("Quantidade de categorias recebidas:", externalMenu.categories?.length || 0);
-      console.log("Quantidade de produtos recebidos:", externalMenu.products?.length || 0);
-      console.log("Quantidade de bebidas recebidas:", externalMenu.beverages?.length || 0);
-      console.log("Quantidade de bordas recebidas:", externalMenu.extras?.length || 0);
-      console.log("Quantidade de combos recebidos:", externalMenu.combos?.length || 0);
-
+      console.log("Importando dados para Pizzeria ID:", pizzeriaId);
+      
       // 2. Send to our local sync endpoint
       const syncResponse = await fetch("/api/pizzerias/sync-menu", {
         method: "POST",
@@ -121,7 +138,14 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
         body: JSON.stringify({
           pizzeria_id: pizzeriaId,
           api_key: pizzeria.api_key,
-          menu: externalMenu
+          menu: {
+            ...externalMenu,
+            // Ensure compatibility with internal sync endpoint expectations
+            extras: [
+              ...(externalMenu.borders || []).map((b: any) => ({ ...b, extra_type: 'borda' })),
+              ...(externalMenu.additionals || []).map((a: any) => ({ ...a, extra_type: 'adicional' }))
+            ]
+          }
         })
       });
 
@@ -129,26 +153,36 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
       if (syncResult.success) {
         const { results } = syncResult;
-        toast.success(`Cardápio sincronizado! Importados: ${results.categories} categorias, ${results.products} produtos, ${results.beverages} bebidas, ${results.extras} bordas e ${results.combos} combos.`, { id: toastId });
+        toast.success(`Cardápio sincronizado! Importados: ${results.categories} categorias, ${results.products} produtos, ${results.beverages} bebidas, ${results.extras} bordas/adicionais e ${results.combos} combos.`, { id: toastId });
         loadCategories();
       } else {
-        console.error("Erro no mapeamento:", syncResult.error);
+        console.error("Erro no mapeamento local:", syncResult.error);
         throw new Error("mapping_error");
       }
     } catch (error: any) {
-      console.error("Sync error full:", error);
+      console.error("Erro detalhado na sincronização:", error);
       
       let message = "Erro inesperado na sincronização.";
-      if (error.message === "pizzeria_not_found") {
-        message = "Pizzaria não encontrada pelo slug informado.";
-      } else if (error.message === "endpoint_no_response") {
+      const errorMsg = error.message || "";
+
+      if (errorMsg === "pizzeria_not_found") {
+        message = "Endpoint não encontrado no SiteCreatorFly (404).";
+      } else if (errorMsg === "endpoint_no_response") {
         message = "Endpoint de sincronização não respondeu.";
-      } else if (error.message === "empty_menu") {
-        message = "Cardápio encontrado, mas sem produtos cadastrados.";
-      } else if (error.message === "permission_error") {
+      } else if (errorMsg === "cors_error") {
+        message = "Erro de CORS ao acessar o SiteCreatorFly.";
+      } else if (errorMsg === "timeout") {
+        message = "Endpoint demorou para responder (timeout).";
+      } else if (errorMsg === "not_json") {
+        message = "O endpoint respondeu uma página, mas era esperado JSON.";
+      } else if (errorMsg === "empty_menu") {
+        message = "Cardápio encontrado, mas está vazio.";
+      } else if (errorMsg === "permission_error") {
         message = "Erro de permissão ao acessar cardápio.";
-      } else if (error.message === "mapping_error") {
-        message = "Erro ao mapear os dados recebidos.";
+      } else if (errorMsg === "mapping_error") {
+        message = "Erro ao salvar os dados no FlyControl.";
+      } else if (errorMsg.startsWith("api_error:")) {
+        message = errorMsg.replace("api_error:", "");
       }
       
       toast.error(message, { id: toastId });
