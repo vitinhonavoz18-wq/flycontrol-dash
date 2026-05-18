@@ -158,35 +158,112 @@ function Dashboard() {
   }
 
   async function createPizzeria(form: { name: string; slug: string; phone: string; address: string; api_key?: string }) {
-    const slug = form.slug?.trim().toLowerCase() || form.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
-    
-    if (!slug) {
-      toast.error("Nome ou slug inválido");
-      return;
+    const isConnect = !!form.api_key;
+    let targetPizzeriaId: string | null = null;
+    let finalData: any = null;
+
+    if (isConnect) {
+      // Search for existing pizzeria by API Key or Slug
+      // Using .or for flexibility as requested
+      const { data: existing, error: searchError } = await supabase
+        .from("pizzerias")
+        .select("*")
+        .or(`api_key.eq.${form.api_key},slug.eq.${form.slug}`)
+        .maybeSingle();
+
+      if (searchError) {
+        toast.error("Erro ao buscar pizzaria: " + searchError.message);
+        return;
+      }
+
+      if (existing) {
+        // Claim ownership if not already owned or if user is admin
+        if (existing.owner_id && existing.owner_id !== user?.id && !isSuperAdmin) {
+          toast.error("Esta pizzaria já possui um dono vinculado.");
+          return;
+        }
+
+        const { data: updated, error: updateError } = await supabase
+          .from("pizzerias")
+          .update({ 
+            owner_id: user!.id,
+            status: 'active'
+          })
+          .eq("id", existing.id)
+          .select()
+          .single();
+
+        if (updateError) {
+          toast.error("Erro ao conectar pizzaria: " + updateError.message);
+          return;
+        }
+        finalData = updated;
+        targetPizzeriaId = updated.id;
+      } else {
+        toast.error("Pizzaria não encontrada com os dados informados.");
+        return;
+      }
+    } else {
+      // Create new
+      const slug = form.slug?.trim().toLowerCase() || form.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "");
+      
+      if (!slug) {
+        toast.error("Nome ou slug inválido");
+        return;
+      }
+
+      const apiKey = "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
+        .map((b) => b.toString(16).padStart(2, "0")).join("");
+
+      const { data, error } = await supabase.from("pizzerias").insert({
+        name: form.name, 
+        slug: slug, 
+        phone: form.phone, 
+        address: form.address,
+        api_key: apiKey, 
+        owner_id: user!.id,
+        status: "active"
+      }).select("*").single();
+
+      if (error) {
+        toast.error(error.message);
+        return;
+      }
+      finalData = data;
+      targetPizzeriaId = data.id;
     }
 
-    const apiKey = form.api_key?.trim() || "fc_" + Array.from(crypto.getRandomValues(new Uint8Array(32)))
-      .map((b) => b.toString(16).padStart(2, "0")).join("");
+    if (targetPizzeriaId) {
+      // Sincronização: buscar contagens para informar o usuário
+      const [categoriesCount, productsCount, extrasCount, combosCount] = await Promise.all([
+        supabase.from("menu_categories").select("*", { count: 'exact', head: true }).eq("pizzeria_id", targetPizzeriaId),
+        supabase.from("menu_products").select("*", { count: 'exact', head: true }).eq("pizzeria_id", targetPizzeriaId),
+        supabase.from("menu_extras").select("*", { count: 'exact', head: true }).eq("pizzeria_id", targetPizzeriaId),
+        supabase.from("combos").select("*", { count: 'exact', head: true }).eq("pizzeria_id", targetPizzeriaId),
+      ]);
 
-    const { data, error } = await supabase.from("pizzerias").insert({
-      name: form.name, 
-      slug: slug, 
-      phone: form.phone, 
-      address: form.address,
-      api_key: apiKey, 
-      owner_id: user!.id,
-      status: "active"
-    }).select("*").single();
+      const counts = {
+        cats: categoriesCount.count || 0,
+        prods: productsCount.count || 0,
+        extras: extrasCount.count || 0,
+        combos: combosCount.count || 0,
+      };
 
-    if (error) {
-      toast.error(error.message);
-      return;
+      if (isConnect && (counts.cats > 0 || counts.prods > 0)) {
+        toast.success(`Cardápio sincronizado com sucesso. Encontramos ${counts.cats} categorias, ${counts.prods} produtos, ${counts.extras} complementos e ${counts.combos} combos.`);
+      } else if (isConnect) {
+        toast.info("Pizzaria conectada. Nenhum item encontrado no cardápio desta pizzaria. Você pode cadastrar novos itens pelo FlyControl.");
+      } else {
+        toast.success("Pizzaria criada com sucesso!");
+      }
+
+      setPizzerias((p) => {
+        const filtered = p.filter(x => x.id !== targetPizzeriaId);
+        return [...filtered, finalData].sort((a, b) => a.name.localeCompare(b.name));
+      });
+      setActiveId(targetPizzeriaId);
+      setShowNew(false);
     }
-
-    toast.success(form.api_key ? "Pizzaria conectada!" : "Pizzaria criada!");
-    setPizzerias((p) => [...p, data as Pizzeria]);
-    setActiveId(data!.id);
-    setShowNew(false);
   }
 
   if (!mounted) return <div className="p-8 text-center text-muted-foreground">Carregando...</div>;
