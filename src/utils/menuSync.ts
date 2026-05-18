@@ -3,8 +3,10 @@ import { toast } from "sonner";
 
 const SITE_CREATOR_API_URL = "https://conectfly.lovable.app/api/menu-sync";
 
+type MenuType = 'category' | 'product' | 'beverage' | 'extra' | 'combo' | 'flavor' | 'borda' | 'adicional';
+
 interface SyncParams {
-  type: 'category' | 'product' | 'beverage' | 'extra' | 'combo';
+  type: MenuType;
   action: 'create' | 'update' | 'delete' | 'patch';
   id?: string;
   externalId?: string;
@@ -16,8 +18,8 @@ interface SyncParams {
 export async function syncToExternal(params: SyncParams): Promise<{ success: boolean; externalId?: string; error?: string }> {
   const { type, action, id, externalId, data, pizzeriaSlug, pizzeriaApiKey } = params;
   
-  // Mapping FlyControl types to SiteCreatorFly expectations if needed
-  let externalType = type;
+  // Mapping FlyControl types to SiteCreatorFly expectations
+  let externalType: MenuType = type;
   if (type === 'extra') {
     externalType = data?.extra_type === 'borda' ? 'borda' : 'adicional';
   }
@@ -57,7 +59,7 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
         body: JSON.stringify({
           type: externalType,
           id: externalId,
-          data: prepareDataForExternal(type, data, externalId)
+          data: prepareDataForExternal(type, data)
         })
       });
     } else if (action === 'create') {
@@ -72,6 +74,9 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
     }
 
     if (!response) throw new Error("Sem resposta do servidor");
+
+    // Handle 204 No Content or empty responses
+    if (response.status === 204) return { success: true };
 
     const result = await response.json();
     
@@ -90,7 +95,7 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
   }
 }
 
-function prepareDataForExternal(type: string, data: any, externalId?: string) {
+function prepareDataForExternal(type: string, data: any) {
   // Map FlyControl fields to SiteCreatorFly fields
   if (type === 'category') {
     return {
@@ -101,24 +106,15 @@ function prepareDataForExternal(type: string, data: any, externalId?: string) {
     };
   }
   
-  if (type === 'product' || type === 'beverage' || type === 'extra') {
-    // Note: in SiteCreatorFly, Beverages might be in a different table, 
-    // but our API endpoint handles the mapping.
-    const mapped: any = {
+  if (type === 'product' || type === 'beverage' || type === 'extra' || type === 'flavor') {
+    return {
       name: data.name,
       description: data.description,
       price: data.price,
       image_url: data.image_url,
       is_active: data.active ?? true,
+      category_id: data.external_category_id // We should pass the external cat id
     };
-    
-    if (data.category_id) {
-      // We'd need the external category ID here. 
-      // This is a bit complex, might need to fetch it first or store it.
-      // For now, we'll assume category_id is handled if provided.
-    }
-    
-    return mapped;
   }
 
   return data;
