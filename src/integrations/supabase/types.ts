@@ -338,27 +338,42 @@ export type Database = {
       order_items: {
         Row: {
           created_at: string | null
+          discount: number | null
           id: string
+          observations: string | null
           order_id: string
-          price: number
+          pizzeria_id: string | null
           product_name: string
+          product_type: string | null
           quantity: number
+          total_price: number | null
+          unit_price: number
         }
         Insert: {
           created_at?: string | null
+          discount?: number | null
           id?: string
+          observations?: string | null
           order_id: string
-          price: number
+          pizzeria_id?: string | null
           product_name: string
+          product_type?: string | null
           quantity?: number
+          total_price?: number | null
+          unit_price: number
         }
         Update: {
           created_at?: string | null
+          discount?: number | null
           id?: string
+          observations?: string | null
           order_id?: string
-          price?: number
+          pizzeria_id?: string | null
           product_name?: string
+          product_type?: string | null
           quantity?: number
+          total_price?: number | null
+          unit_price?: number
         }
         Relationships: [
           {
@@ -366,6 +381,20 @@ export type Database = {
             columns: ["order_id"]
             isOneToOne: false
             referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "order_items_pizzeria_id_fkey"
+            columns: ["pizzeria_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "order_items_pizzeria_id_fkey"
+            columns: ["pizzeria_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
             referencedColumns: ["id"]
           },
         ]
@@ -380,6 +409,7 @@ export type Database = {
           customer_reference: string | null
           delivery_fee: number
           delivery_type: string | null
+          discount: number | null
           external_order_id: string | null
           id: string
           items: Json
@@ -404,6 +434,7 @@ export type Database = {
           customer_reference?: string | null
           delivery_fee?: number
           delivery_type?: string | null
+          discount?: number | null
           external_order_id?: string | null
           id?: string
           items?: Json
@@ -428,6 +459,7 @@ export type Database = {
           customer_reference?: string | null
           delivery_fee?: number
           delivery_type?: string | null
+          discount?: number | null
           external_order_id?: string | null
           id?: string
           items?: Json
