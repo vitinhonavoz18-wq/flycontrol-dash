@@ -15,9 +15,17 @@ export function ThemeProvider({
   defaultTheme = "dark",
   storageKey = "flycontrol-theme",
 }: ThemeProviderProps) {
-  const [theme, setThemeState] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme
-  );
+  const [theme, setThemeState] = useState<Theme>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem(storageKey);
+        if (saved === "light" || saved === "dark") return saved as Theme;
+      } catch (e) {
+        console.error("Error reading theme from localStorage", e);
+      }
+    }
+    return defaultTheme;
+  });
 
   useEffect(() => {
     const root = window.document.documentElement;
