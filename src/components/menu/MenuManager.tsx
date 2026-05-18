@@ -7,6 +7,7 @@ import { Plus, Loader2 } from "lucide-react";
 import { CategoryList } from "./CategoryList";
 import { ProductList } from "./ProductList";
 import { ExtraList } from "./ExtraList";
+import { PizzeriaConfig } from "./PizzeriaConfig";
 
 interface MenuManagerProps {
   pizzeriaId: string;
