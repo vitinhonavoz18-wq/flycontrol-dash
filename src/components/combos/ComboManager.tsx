@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Image as ImageIcon, Loader2, Star, Clock, Calendar } from "lucide-react";
+import { syncToExternal } from "@/utils/menuSync";
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface ComboManagerProps {
   pizzeriaId: string;
+  pizzeriaSlug?: string;
+  pizzeriaApiKey?: string;
+  syncEndpoint?: string;
 }
 
 const DAYS = [
@@ -30,7 +34,7 @@ const DAYS = [
   { id: "dom", label: "Dom" },
 ];
 
-export function ComboManager({ pizzeriaId }: ComboManagerProps) {
+export function ComboManager({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoint }: ComboManagerProps) {
   const [combos, setCombos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -109,7 +113,7 @@ export function ComboManager({ pizzeriaId }: ComboManagerProps) {
     }
 
     setSaving(true);
-    const comboPayload = {
+    const comboPayload: any = {
       pizzeria_id: pizzeriaId,
       name,
       description,
@@ -123,59 +127,148 @@ export function ComboManager({ pizzeriaId }: ComboManagerProps) {
       end_time: endTime || null,
     };
 
-    let comboId = editingCombo?.id;
-    let error;
+    try {
+      let externalId = editingCombo?.external_id;
 
-    if (editingCombo) {
-      const { error: err } = await supabase
-        .from("combos")
-        .update(comboPayload)
-        .eq("id", editingCombo.id);
-      error = err;
-    } else {
-      const { data, error: err } = await supabase
-        .from("combos")
-        .insert(comboPayload)
-        .select()
-        .single();
-      error = err;
-      if (data) comboId = data.id;
-    }
+      if (pizzeriaSlug && pizzeriaApiKey) {
+        const syncResult = await syncToExternal({
+          type: 'combo',
+          action: editingCombo ? 'update' : 'create',
+          id: editingCombo?.id,
+          externalId: editingCombo?.external_id,
+          data: { 
+            ...comboPayload, 
+            items: items.filter(it => it.product_name.trim() !== "") 
+          },
+          pizzeriaSlug,
+          pizzeriaApiKey,
+          syncEndpoint
+        });
 
-    if (!error && comboId) {
-      // Manage items (simple approach: delete and re-insert for now)
+        if (!syncResult.success) {
+          let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
+          
+          if (syncResult.error === "404") {
+            errorMsg = "Endpoint de sincronização não encontrado (404).";
+          } else if (syncResult.error === "auth_error") {
+            errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
+          } else if (syncResult.error === "cors_error") {
+            errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+          } else if (syncResult.error === "html_response") {
+            errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
+          } else if (syncResult.error?.startsWith("api_error:")) {
+            errorMsg = syncResult.error.replace("api_error:", "");
+          }
+          
+          toast.error(errorMsg);
+          setSaving(false);
+          return;
+        } else {
+          externalId = syncResult.externalId;
+        }
+      }
+
+      const finalComboPayload = {
+        ...comboPayload,
+        external_id: externalId,
+        external_source: externalId ? 'sitecreatorfly' : null,
+        updated_at: new Date().toISOString()
+      };
+
+      let comboId = editingCombo?.id;
+      let error;
+
       if (editingCombo) {
-        await supabase.from("combo_items").delete().eq("combo_id", comboId);
+        const { error: err } = await supabase
+          .from("combos")
+          .update(finalComboPayload)
+          .eq("id", editingCombo.id);
+        error = err;
+      } else {
+        const { data, error: err } = await supabase
+          .from("combos")
+          .insert(finalComboPayload)
+          .select()
+          .single();
+        error = err;
+        if (data) comboId = data.id;
       }
-      
-      const itemsPayload = items
-        .filter(it => it.product_name.trim() !== "")
-        .map(it => ({
-          combo_id: comboId,
-          product_name: it.product_name,
-          quantity: it.quantity,
-          product_type: it.product_type
-        }));
 
-      if (itemsPayload.length > 0) {
-        const { error: itemsError } = await supabase.from("combo_items").insert(itemsPayload);
-        if (itemsError) error = itemsError;
+      if (!error && comboId) {
+        // Manage items (simple approach: delete and re-insert for now)
+        if (editingCombo) {
+          await supabase.from("combo_items").delete().eq("combo_id", comboId);
+        }
+        
+        const itemsPayload = items
+          .filter(it => it.product_name.trim() !== "")
+          .map(it => ({
+            combo_id: comboId,
+            product_name: it.product_name,
+            quantity: it.quantity,
+            product_type: it.product_type
+          }));
+
+        if (itemsPayload.length > 0) {
+          const { error: itemsError } = await supabase.from("combo_items").insert(itemsPayload);
+          if (itemsError) error = itemsError;
+        }
       }
-    }
 
-    setSaving(false);
-    if (error) {
-      toast.error("Erro ao salvar combo: " + error.message);
-    } else {
-      toast.success(`Combo ${editingCombo ? "atualizado" : "criado"} com sucesso!`);
-      setIsDialogOpen(false);
-      loadCombos();
+      if (error) {
+        toast.error("Erro ao salvar combo: " + error.message);
+      } else {
+        toast.success(`Cardápio atualizado no site com sucesso.`);
+        setIsDialogOpen(false);
+        loadCombos();
+      }
+    } catch (e: any) {
+      toast.error("Erro inesperado: " + e.message);
+    } finally {
+      setSaving(false);
     }
   }
 
   async function toggleField(combo: any, field: string) {
+    const newValue = !combo[field];
+
+    if (pizzeriaSlug && pizzeriaApiKey && combo.external_id) {
+      // If the field is 'active', we sync it. SiteCreatorFly standard is 'active'.
+      if (field === 'active') {
+        const syncResult = await syncToExternal({
+          type: 'combo',
+          action: 'status',
+          externalId: combo.external_id,
+          data: { value: newValue },
+          pizzeriaSlug,
+          pizzeriaApiKey,
+          syncEndpoint
+        });
+
+        if (!syncResult.success) {
+          let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
+          
+          if (syncResult.error === "404") {
+            errorMsg = "Endpoint de sincronização não encontrado (404).";
+          } else if (syncResult.error === "auth_error") {
+            errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
+          } else if (syncResult.error === "cors_error") {
+            errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+          } else if (syncResult.error === "html_response") {
+            errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
+          } else if (syncResult.error?.startsWith("api_error:")) {
+            errorMsg = syncResult.error.replace("api_error:", "");
+          }
+          
+          toast.error(errorMsg);
+          return;
+        }
+      }
+    }
+
     const updateData: any = {};
-    updateData[field] = !combo[field];
+    updateData[field] = newValue;
+    updateData.updated_at = new Date().toISOString();
     
     const { error } = await supabase
       .from("combos")
@@ -185,22 +278,53 @@ export function ComboManager({ pizzeriaId }: ComboManagerProps) {
     if (error) {
       toast.error("Erro ao atualizar: " + error.message);
     } else {
+      toast.success("Cardápio atualizado no site com sucesso.");
       loadCombos();
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(combo: any) {
     if (!confirm("Tem certeza que deseja excluir este combo?")) return;
+
+    if (pizzeriaSlug && pizzeriaApiKey && combo.external_id) {
+      const syncResult = await syncToExternal({
+        type: 'combo',
+        action: 'delete',
+        externalId: combo.external_id,
+        pizzeriaSlug,
+        pizzeriaApiKey,
+        syncEndpoint
+      });
+
+      if (!syncResult.success) {
+        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
+        
+        if (syncResult.error === "404") {
+          errorMsg = "Endpoint de sincronização não encontrado (404).";
+        } else if (syncResult.error === "auth_error") {
+          errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
+        } else if (syncResult.error === "cors_error") {
+          errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+        } else if (syncResult.error === "html_response") {
+          errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
+        } else if (syncResult.error?.startsWith("api_error:")) {
+          errorMsg = syncResult.error.replace("api_error:", "");
+        }
+        
+        toast.error(errorMsg);
+        return;
+      }
+    }
 
     const { error } = await supabase
       .from("combos")
       .delete()
-      .eq("id", id);
+      .eq("id", combo.id);
     
     if (error) {
       toast.error("Erro ao excluir: " + error.message);
     } else {
-      toast.success("Combo excluído!");
+      toast.success("Cardápio atualizado no site com sucesso.");
       loadCombos();
     }
   }
@@ -292,7 +416,7 @@ export function ComboManager({ pizzeriaId }: ComboManagerProps) {
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(combo)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(combo.id)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(combo)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>

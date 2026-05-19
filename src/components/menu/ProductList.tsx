@@ -202,13 +202,13 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     const newValue = !prod[field];
     
     if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
-      // Map field names if they differ
-      const externalField = field === 'active' ? 'is_active' : 'is_available';
+      // Standardize to 'active' as requested, using 'is_active' for the external field reference if needed
+      // but syncToExternal already maps body.active = data.value for status action
       const syncResult = await syncToExternal({
         type: prod.product_type,
         action: 'status',
         externalId: prod.external_id,
-        data: { field: externalField, value: newValue },
+        data: { value: newValue },
         pizzeriaSlug,
         pizzeriaApiKey,
         syncEndpoint
