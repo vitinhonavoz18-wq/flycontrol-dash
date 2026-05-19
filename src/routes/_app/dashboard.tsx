@@ -171,8 +171,13 @@ function Dashboard() {
     if (status === o.status) return;
     const { error } = await supabase.from("orders").update({ status }).eq("id", o.id);
     if (error) { toast.error(error.message); return; }
+    setOrders((prev) => prev.map((x) => x.id === o.id ? { ...x, status } : x));
+    openStatusArtModal({ ...o, status }, status);
+  }
+
+  function openStatusArtModal(order: Order, status: string) {
     const kind = getFlyStatusKind(status);
-    if (kind) setFlyStatus({ open: true, kind, order: { ...o, status } });
+    if (kind) setFlyStatus({ open: true, kind, order });
   }
 
   async function createPizzeria(form: { name: string; slug: string; phone: string; address: string; api_key?: string }) {
