@@ -153,9 +153,14 @@ function Dashboard() {
     }
   }
 
+  const [flyStatus, setFlyStatus] = useState<{ open: boolean; kind: FlyStatusKind | null; order: Order | null }>({ open: false, kind: null, order: null });
+
   async function changeStatus(o: Order, status: string) {
+    if (status === o.status) return;
     const { error } = await supabase.from("orders").update({ status }).eq("id", o.id);
-    if (error) toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
+    const kind = getFlyStatusKind(status);
+    if (kind) setFlyStatus({ open: true, kind, order: { ...o, status } });
   }
 
   async function createPizzeria(form: { name: string; slug: string; phone: string; address: string; api_key?: string }) {
