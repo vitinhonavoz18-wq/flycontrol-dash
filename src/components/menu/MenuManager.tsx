@@ -278,6 +278,17 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
             />
           </TabsContent>
 
+          <TabsContent value="pizza_sizes" className="m-0 focus-visible:outline-none">
+            <PizzaSizeList 
+              pizzeriaId={pizzeriaId} 
+              pizzeriaSlug={pizzeria?.slug}
+              pizzeriaApiKey={pizzeria?.api_key}
+              syncEndpoint={pizzeria?.sync_endpoint}
+              onRefresh={handleSync}
+            />
+          </TabsContent>
+
+
           <TabsContent value="beverages" className="m-0 focus-visible:outline-none">
             <ProductList 
               pizzeriaId={pizzeriaId} 
