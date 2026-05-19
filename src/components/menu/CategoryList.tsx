@@ -60,6 +60,7 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
       description,
       pizzeria_id: pizzeriaId,
       order_index: editingCategory ? editingCategory.order_index : categories.length,
+      active: editingCategory ? editingCategory.active : true,
     };
 
     try {
