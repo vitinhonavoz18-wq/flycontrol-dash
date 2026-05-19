@@ -60,16 +60,24 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       return;
     }
 
+    if (!pizzeria?.sync_endpoint) {
+      toast.error("Endpoint de sincronização não configurado. Vá em Configurações.");
+      return;
+    }
+
     setSyncing(true);
     const toastId = toast.loading("Iniciando sincronização com SiteCreatorFly...");
     
     const slug = pizzeria.slug;
-    const endpoint = `https://conectfly.lovable.app/api/menu-sync?slug=${slug}`;
+    // Monta o endpoint com o slug, garantindo que não duplique o "?" se a URL base já tiver parâmetros
+    const baseUrl = pizzeria.sync_endpoint.trim();
+    const separator = baseUrl.includes("?") ? "&" : "?";
+    const endpoint = `${baseUrl}${separator}slug=${slug}`;
     
     console.log("--- Início da Sincronização ---");
     console.log("Pizzaria selecionada:", pizzeria.name);
     console.log("Slug enviado:", slug);
-    console.log("URL chamada:", endpoint);
+    console.log("Endpoint final chamado:", endpoint);
     console.log("Pizzeria ID:", pizzeriaId);
     console.log("API Key presente:", !!pizzeria.api_key);
 
@@ -94,7 +102,6 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
           throw new Error("timeout");
         }
         // No browser, erros de CORS geralmente resultam em TypeError ou Failed to fetch
-        // sem detalhes no e.message por segurança.
         throw new Error("cors_error");
       }
       
@@ -109,14 +116,21 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       }
 
       const contentType = response.headers.get("content-type");
+      const text = await response.text();
+      console.log("Resposta recebida (bruta):", text.substring(0, 1000));
+
       if (!contentType || !contentType.includes("application/json")) {
-        const text = await response.text();
-        console.log("Resposta recebida (não-JSON):", text.substring(0, 500));
         throw new Error("not_json");
       }
 
-      const externalMenu = await response.json();
-      console.log("Resposta JSON recebida:", externalMenu);
+      let externalMenu;
+      try {
+        externalMenu = JSON.parse(text);
+      } catch (e) {
+        throw new Error("not_json");
+      }
+      
+      console.log("Resposta JSON válida recebida:", externalMenu);
 
       if (externalMenu.success === false) {
         const errorMsg = externalMenu.message || externalMenu.error || "Erro retornado pelo endpoint";
