@@ -182,14 +182,15 @@ function Dashboard() {
   }
 
   useEffect(() => {
-    if (!activeId) return;
+    if (loading || !user || !activeId) return;
     initialLoad.current = true;
+    setOrders([]);
     fetchOrders(activeId);
     const ch = subscribeToOrders(activeId);
     return () => {
       supabase.removeChannel(ch);
     };
-  }, [activeId]);
+  }, [activeId, loading, user]);
 
   async function fetchOrders(pizzeriaId: string) {
     const load = () =>
