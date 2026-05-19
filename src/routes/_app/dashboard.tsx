@@ -315,16 +315,10 @@ function Dashboard() {
     if (kind) setFlyStatus({ open: true, kind, order });
   }
 
-  async function createPizzeria(form: {
-    name: string;
-    slug: string;
-    phone: string;
-    address: string;
-    api_key?: string;
-  }) {
+  async function createPizzeria(form: PizzeriaForm) {
     const isConnect = !!form.api_key;
     let targetPizzeriaId: string | null = null;
-    let finalData: any = null;
+    let finalData: Pizzeria | null = null;
 
     if (isConnect) {
       // Search for existing pizzeria by API Key or Slug
@@ -452,6 +446,7 @@ function Dashboard() {
       }
 
       setPizzerias((p) => {
+        if (!finalData) return p;
         const filtered = p.filter((x) => x.id !== targetPizzeriaId);
         return [...filtered, finalData].sort((a, b) => a.name.localeCompare(b.name));
       });
