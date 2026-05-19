@@ -67,8 +67,11 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
     const endpoint = `https://conectfly.lovable.app/api/menu-sync?slug=${slug}`;
     
     console.log("--- Início da Sincronização ---");
+    console.log("Pizzaria selecionada:", pizzeria.name);
     console.log("Slug enviado:", slug);
     console.log("URL chamada:", endpoint);
+    console.log("Pizzeria ID:", pizzeriaId);
+    console.log("API Key presente:", !!pizzeria.api_key);
 
     try {
       // 1. Fetch menu from SiteCreatorFly with timeout
@@ -77,18 +80,22 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
       let response;
       try {
-        response = await fetch(endpoint, { signal: controller.signal });
+        response = await fetch(endpoint, { 
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json'
+          },
+          signal: controller.signal 
+        });
         clearTimeout(timeoutId);
       } catch (e: any) {
-        console.error("Erro de conexão/fetch:", e);
+        console.error("Erro real na chamada HTTP:", e);
         if (e.name === 'AbortError') {
           throw new Error("timeout");
         }
-        // Tentativa de detectar erro de CORS
-        if (e.message && (e.message.includes('Failed to fetch') || e.message.includes('CORS'))) {
-          throw new Error("cors_error");
-        }
-        throw new Error("endpoint_no_response");
+        // No browser, erros de CORS geralmente resultam em TypeError ou Failed to fetch
+        // sem detalhes no e.message por segurança.
+        throw new Error("cors_error");
       }
       
       console.log("Status HTTP retornado:", response.status);
@@ -104,14 +111,14 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       const contentType = response.headers.get("content-type");
       if (!contentType || !contentType.includes("application/json")) {
         const text = await response.text();
-        console.log("Resposta não-JSON recebida:", text.substring(0, 200));
+        console.log("Resposta recebida (não-JSON):", text.substring(0, 500));
         throw new Error("not_json");
       }
 
       const externalMenu = await response.json();
       console.log("Resposta JSON recebida:", externalMenu);
 
-      if (!externalMenu.success) {
+      if (externalMenu.success === false) {
         const errorMsg = externalMenu.message || externalMenu.error || "Erro retornado pelo endpoint";
         throw new Error(`api_error:${errorMsg}`);
       }
@@ -152,6 +159,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       });
 
       const syncResult = await syncResponse.json();
+      console.log("Resultado da sincronização local:", syncResult);
 
       if (syncResult.success) {
         const { results } = syncResult;
@@ -159,30 +167,28 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
         loadCategories();
       } else {
         console.error("Erro no mapeamento local:", syncResult.error);
-        throw new Error("mapping_error");
+        throw new Error(`mapping_error:${syncResult.error}`);
       }
     } catch (error: any) {
-      console.error("Erro detalhado na sincronização:", error);
+      console.error("Erro detalhado capturado:", error);
       
       let message = "Erro inesperado na sincronização.";
       const errorMsg = error.message || "";
 
       if (errorMsg === "pizzeria_not_found") {
-        message = "Endpoint não encontrado no SiteCreatorFly (404).";
-      } else if (errorMsg === "endpoint_no_response") {
-        message = "Endpoint de sincronização não respondeu.";
+        message = "Endpoint de sincronização não encontrado (404).";
       } else if (errorMsg === "cors_error") {
-        message = "Erro de CORS ao acessar o SiteCreatorFly.";
+        message = "Erro de CORS ao acessar o SiteCreatorFly. Verifique as permissões do endpoint no SiteCreatorFly.";
       } else if (errorMsg === "timeout") {
         message = "Endpoint demorou para responder (timeout).";
       } else if (errorMsg === "not_json") {
         message = "O endpoint respondeu uma página, mas era esperado JSON.";
       } else if (errorMsg === "empty_menu") {
-        message = "Cardápio encontrado, mas está vazio.";
+        message = "Cardápio encontrado, mas está vazio no SiteCreatorFly.";
       } else if (errorMsg === "permission_error") {
-        message = "Erro de permissão ao acessar cardápio.";
-      } else if (errorMsg === "mapping_error") {
-        message = "Erro ao salvar os dados no FlyControl.";
+        message = "Erro de permissão ao acessar cardápio (401/403).";
+      } else if (errorMsg.startsWith("mapping_error:")) {
+        message = "Erro ao salvar no FlyControl: " + errorMsg.replace("mapping_error:", "");
       } else if (errorMsg.startsWith("api_error:")) {
         message = errorMsg.replace("api_error:", "");
       }
