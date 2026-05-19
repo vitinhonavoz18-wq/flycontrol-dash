@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Bell, BellOff, Printer, Phone, MapPin, Clock, Plus, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
+import { FlyStatusModal, getFlyStatusKind, type FlyStatusKind, type FlyStatusPizzeria } from "@/components/flystatus/FlyStatusModal";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
