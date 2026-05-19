@@ -18,6 +18,9 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 interface ComboManagerProps {
   pizzeriaId: string;
+  pizzeriaSlug?: string;
+  pizzeriaApiKey?: string;
+  syncEndpoint?: string;
 }
 
 const DAYS = [
