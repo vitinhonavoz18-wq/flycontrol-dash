@@ -26,7 +26,7 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
   else if (type === 'combo') externalType = 'combo';
   else if (type === 'extra' || type === 'border' || type === 'borda') externalType = 'border';
   else if (type === 'additional' || type === 'adicional') externalType = 'additional';
-  else if (type === 'standard' || type === 'product') externalType = 'product';
+  else if (type === 'standard' || type === 'product' || type === 'flavor') externalType = 'product';
 
   // Handle border/additional from 'extra' type
   if (type === 'extra' && data?.extra_type) {
