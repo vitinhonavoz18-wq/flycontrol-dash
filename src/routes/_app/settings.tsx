@@ -319,6 +319,22 @@ function Settings() {
             </div>
 
             <div className="mt-6 border-t border-border pt-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-medium uppercase text-muted-foreground">Endpoint de sincronização do SiteCreatorFly</Label>
+                <div className="flex items-center gap-2">
+                  <Input 
+                    placeholder="https://SEU-PROJETO.supabase.co/functions/v1/menu-sync" 
+                    defaultValue={p.sync_endpoint || ""}
+                    onBlur={(e) => update(p.id, { sync_endpoint: e.target.value })}
+                  />
+                </div>
+                <p className="text-[10px] text-muted-foreground">
+                  URL da Edge Function que fornece os dados do cardápio para sincronização.
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-6 border-t border-border pt-4">
               <div className="mb-2 flex items-center justify-between">
                 <span className="text-sm font-medium">API Key Principal</span>
                 <Button variant="ghost" size="sm" className="h-6 text-[10px] px-2" onClick={async () => {
