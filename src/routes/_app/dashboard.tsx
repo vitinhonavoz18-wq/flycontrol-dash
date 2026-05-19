@@ -13,6 +13,8 @@ export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard }
 type Pizzeria = {
   id: string; name: string; slug: string; api_key: string; status: string;
   sound_enabled: boolean; print_auto: boolean;
+  status_art_preparando_url?: string | null; status_art_saiu_url?: string | null; status_art_entregue_url?: string | null;
+  status_text_preparando?: string | null; status_text_saiu?: string | null; status_text_entregue?: string | null;
 };
 type Order = {
   id: string; order_number: number; tenant_id: string; customer_name: string;
@@ -82,8 +84,13 @@ function Dashboard() {
     
     const { data, error } = await query;
     if (error) { toast.error(error.message); return; }
-    setPizzerias(data ?? []);
-    if (data && data.length && !activeId) setActiveId(data[0].id);
+    const list = (data ?? []) as Pizzeria[];
+    setPizzerias(list);
+    if (list.length) {
+      setActiveId((current) => current && list.some((p) => p.id === current) ? current : list[0].id);
+    } else {
+      setActiveId(null);
+    }
   }
 
   useEffect(() => {
