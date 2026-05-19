@@ -140,7 +140,21 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
         });
 
         if (!syncResult.success) {
-          toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+          let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
+          
+          if (syncResult.error === "404") {
+            errorMsg = "Endpoint de sincronização não encontrado (404).";
+          } else if (syncResult.error === "auth_error") {
+            errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
+          } else if (syncResult.error === "cors_error") {
+            errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+          } else if (syncResult.error === "html_response") {
+            errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
+          } else if (syncResult.error?.startsWith("api_error:")) {
+            errorMsg = syncResult.error.replace("api_error:", "");
+          }
+          
+          toast.error(errorMsg);
           setSaving(false);
           return;
         } else {
@@ -201,7 +215,21 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
       });
 
       if (!syncResult.success) {
-        toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
+        
+        if (syncResult.error === "404") {
+          errorMsg = "Endpoint de sincronização não encontrado (404).";
+        } else if (syncResult.error === "auth_error") {
+          errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
+        } else if (syncResult.error === "cors_error") {
+          errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+        } else if (syncResult.error === "html_response") {
+          errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
+        } else if (syncResult.error?.startsWith("api_error:")) {
+          errorMsg = syncResult.error.replace("api_error:", "");
+        }
+        
+        toast.error(errorMsg);
         return;
       }
     }
@@ -237,7 +265,21 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
       });
 
       if (!syncResult.success) {
-        toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
+        
+        if (syncResult.error === "404") {
+          errorMsg = "Endpoint de sincronização não encontrado (404).";
+        } else if (syncResult.error === "auth_error") {
+          errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
+        } else if (syncResult.error === "cors_error") {
+          errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+        } else if (syncResult.error === "html_response") {
+          errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
+        } else if (syncResult.error?.startsWith("api_error:")) {
+          errorMsg = syncResult.error.replace("api_error:", "");
+        }
+        
+        toast.error(errorMsg);
         return;
       }
     }

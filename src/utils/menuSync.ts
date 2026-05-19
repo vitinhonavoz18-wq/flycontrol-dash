@@ -41,6 +41,9 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
   console.log("Slug usado:", pizzeriaSlug);
   console.log("ID/External ID usado:", externalId);
   console.log("Endpoint chamado:", endpoint);
+  // Log partially redacted API key for safety
+  console.log("Headers: { Content-Type: application/json, x-api-key: " + 
+    (pizzeriaApiKey ? `${pizzeriaApiKey.substring(0, 4)}...${pizzeriaApiKey.substring(pizzeriaApiKey.length - 4)}` : "missing") + " }");
 
   try {
     const headers = {
@@ -59,6 +62,7 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
     }
 
     if (action === 'status') {
+      // In 'status' action, send the direct boolean in 'active' field
       body.active = data.value;
     } else if (action === 'create' || action === 'update') {
       body.data = prepareDataForExternal(externalType, data);
@@ -66,28 +70,40 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
 
     console.log("Payload enviado:", JSON.stringify(body, null, 2));
 
-    let method = "POST";
-    if (action === 'update') method = "PUT";
-    else if (action === 'delete') method = "DELETE";
-    else if (action === 'status') method = "PATCH";
-
+    // Nova regra: Usar POST para todas as ações de escrita
     const response = await fetch(endpoint, {
-      method,
+      method: "POST",
       headers,
       body: JSON.stringify(body)
     });
 
     console.log("Status HTTP recebido:", response.status);
     
+    if (response.status === 404) {
+      console.error("[SyncExternal] 404 - Endpoint não encontrado");
+      return { success: false, error: "404" };
+    }
+    
+    if (response.status === 401 || response.status === 403) {
+      console.error("[SyncExternal] 401/403 - Autorização negada");
+      return { success: false, error: "auth_error" };
+    }
+
+    const contentType = response.headers.get("content-type");
     const text = await response.text();
     console.log("Resposta bruta recebida:", text);
+
+    if (!contentType || !contentType.includes("application/json")) {
+      console.error("[SyncExternal] Resposta não é JSON");
+      return { success: false, error: "html_response" };
+    }
 
     let result;
     try {
       result = JSON.parse(text);
     } catch (e) {
-      console.error("Resposta não é JSON válido");
-      return { success: false, error: "O endpoint respondeu HTML, mas era esperado JSON. Verifique a Edge Function no SiteCreatorFly." };
+      console.error("[SyncExternal] Erro ao parsear JSON");
+      return { success: false, error: "invalid_json" };
     }
 
     console.log("Resposta JSON processada:", result);
@@ -99,12 +115,16 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
       };
     } else {
       const errorMsg = result.message || result.error || "Erro desconhecido na API externa";
-      console.error("[SyncExternal] Erro retornado:", errorMsg);
-      return { success: false, error: errorMsg };
+      console.error("[SyncExternal] Erro retornado pela API:", errorMsg);
+      return { success: false, error: `api_error:${errorMsg}` };
     }
   } catch (error: any) {
     console.error("[SyncExternal] Erro na chamada:", error);
-    return { success: false, error: "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly." };
+    // Detect CORS or Network error
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      return { success: false, error: "cors_error" };
+    }
+    return { success: false, error: error.message || "network_error" };
   } finally {
     console.log(`--- [SyncExternal] Fim da Ação: ${action} ---`);
   }
@@ -126,6 +146,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
       price: data.price,
       image_url: data.image_url,
       active: data.active !== undefined ? data.active : true,
+      available: data.available !== undefined ? data.available : true,
       category_id: data.external_category_id
     };
   }
