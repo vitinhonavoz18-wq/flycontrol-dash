@@ -32,7 +32,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   async function loadPizzeria() {
     const { data } = await supabase
       .from("pizzerias")
-      .select("id, name, slug, api_key")
+      .select("id, name, slug, api_key, sync_endpoint")
       .eq("id", pizzeriaId)
       .single();
     if (data) setPizzeria(data);
