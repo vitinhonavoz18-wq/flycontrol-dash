@@ -196,7 +196,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       } else if (errorMsg === "timeout") {
         message = "Endpoint demorou para responder (timeout).";
       } else if (errorMsg === "not_json") {
-        message = "O endpoint respondeu uma página, mas era esperado JSON.";
+        message = "O endpoint respondeu HTML, mas era esperado JSON. Verifique a Edge Function no SiteCreatorFly.";
       } else if (errorMsg === "empty_menu") {
         message = "Cardápio encontrado, mas está vazio no SiteCreatorFly.";
       } else if (errorMsg === "permission_error") {
