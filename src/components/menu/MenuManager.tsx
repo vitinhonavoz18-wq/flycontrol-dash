@@ -7,6 +7,7 @@ import { Plus, Loader2, RefreshCw } from "lucide-react";
 import { CategoryList } from "./CategoryList";
 import { ProductList } from "./ProductList";
 import { ExtraList } from "./ExtraList";
+import { PizzaSizeList } from "./PizzaSizeList";
 import { PizzeriaConfig } from "./PizzeriaConfig";
 
 interface MenuManagerProps {
@@ -148,8 +149,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       const hasBorders = externalMenu.borders?.length > 0;
       const hasAdditionals = externalMenu.additionals?.length > 0;
       const hasCombos = externalMenu.combos?.length > 0;
+      const hasPizzaSizes = externalMenu.pizza_sizes?.length > 0;
 
-      if (!hasCategories && !hasProducts && !hasBeverages && !hasBorders && !hasAdditionals && !hasCombos) {
+      if (!hasCategories && !hasProducts && !hasBeverages && !hasBorders && !hasAdditionals && !hasCombos && !hasPizzaSizes) {
         throw new Error("empty_menu");
       }
 
@@ -181,7 +183,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
       if (syncResult.success) {
         const { results } = syncResult;
-        toast.success(`Cardápio sincronizado! Importados: ${results.categories} categorias, ${results.products} produtos, ${results.beverages} bebidas, ${results.extras} bordas/adicionais e ${results.combos} combos.`, { id: toastId });
+        toast.success(`Cardápio sincronizado! Importados: ${results.categories} categorias, ${results.products} produtos, ${results.beverages} bebidas, ${results.extras} bordas/adicionais, ${results.combos} combos e ${results.pizza_sizes || 0} tamanhos de pizza.`, { id: toastId });
         loadCategories();
       } else {
         console.error("Erro no mapeamento local:", syncResult.error);
@@ -230,12 +232,13 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
     <div className="space-y-4">
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-          <TabsList className="grid w-full grid-cols-2 lg:w-[750px] lg:grid-cols-5 bg-muted/50 p-1">
+          <TabsList className="grid w-full grid-cols-2 lg:w-[900px] lg:grid-cols-6 bg-muted/50 p-1">
             <TabsTrigger value="categories" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Categorias</TabsTrigger>
-            <TabsTrigger value="products" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Produtos</TabsTrigger>
+            <TabsTrigger value="products" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Sabores</TabsTrigger>
+            <TabsTrigger value="pizza_sizes" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Tamanhos</TabsTrigger>
             <TabsTrigger value="beverages" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Bebidas</TabsTrigger>
-            <TabsTrigger value="extras" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Bordas/Adicionais</TabsTrigger>
-            <TabsTrigger value="config" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-primary font-semibold">Configurações</TabsTrigger>
+            <TabsTrigger value="extras" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Bordas/Adic.</TabsTrigger>
+            <TabsTrigger value="config" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-primary font-semibold">Config.</TabsTrigger>
           </TabsList>
 
           <Button 
@@ -274,6 +277,17 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               onRefresh={handleSync}
             />
           </TabsContent>
+
+          <TabsContent value="pizza_sizes" className="m-0 focus-visible:outline-none">
+            <PizzaSizeList 
+              pizzeriaId={pizzeriaId} 
+              pizzeriaSlug={pizzeria?.slug}
+              pizzeriaApiKey={pizzeria?.api_key}
+              syncEndpoint={pizzeria?.sync_endpoint}
+              onRefresh={handleSync}
+            />
+          </TabsContent>
+
 
           <TabsContent value="beverages" className="m-0 focus-visible:outline-none">
             <ProductList 
