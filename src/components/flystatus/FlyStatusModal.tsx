@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Send, Copy, Check, ImageOff } from "lucide-react";
+import { Send, X, ImageOff, Phone, Hash, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 
 export type FlyStatusKind = "preparando" | "saiu" | "entregue";
@@ -53,27 +53,24 @@ type Props = {
 };
 
 export function FlyStatusModal({ open, onOpenChange, kind, orderNumber, customerName, customerPhone, pizzeria }: Props) {
-  const [copied, setCopied] = useState(false);
-  useEffect(() => { if (!open) setCopied(false); }, [open]);
+  const [sending, setSending] = useState(false);
+  useEffect(() => { if (!open) setSending(false); }, [open]);
 
   if (!kind) return null;
   const meta = FLYSTATUS_META[kind];
   const { url, text } = pickArt(pizzeria, kind);
-  const message = (text || "").replace(/\{NUMERO\}/g, String(orderNumber)).replace(/#NUMERO/g, `#${orderNumber}`);
+  const baseMessage = text || "Seu pedido foi atualizado 😋🍕\n\nPedido #{NUMERO}";
+  const message = baseMessage.replace(/\{NUMERO\}/g, String(orderNumber)).replace(/#NUMERO/g, `#${orderNumber}`);
   const phone = normalizePhone(customerPhone);
   const waUrl = phone
     ? `https://wa.me/${phone}?text=${encodeURIComponent(message + (url ? `\n\n${url}` : ""))}`
     : "";
 
-  async function copyMessage() {
-    try {
-      await navigator.clipboard.writeText(message + (url ? `\n\n${url}` : ""));
-      setCopied(true);
-      toast.success("Mensagem copiada");
-      setTimeout(() => setCopied(false), 1500);
-    } catch {
-      toast.error("Não foi possível copiar");
-    }
+  function sendToCustomer() {
+    if (!phone) { toast.error("Telefone do cliente inválido"); return; }
+    setSending(true);
+    window.open(waUrl, "_blank", "noopener,noreferrer");
+    if (url) toast.info("A arte foi incluída como link para compartilhamento no WhatsApp.");
   }
 
   return (
@@ -92,6 +89,16 @@ export function FlyStatusModal({ open, onOpenChange, kind, orderNumber, customer
         </div>
 
         <div className="px-6">
+          <div className="mb-4 grid grid-cols-2 gap-2 text-xs">
+            <div className="rounded-lg border border-border bg-card p-3">
+              <div className="mb-1 flex items-center gap-1 text-muted-foreground"><Hash className="h-3.5 w-3.5" /> Pedido</div>
+              <div className="font-bold text-foreground">#{orderNumber}</div>
+            </div>
+            <div className="rounded-lg border border-border bg-card p-3">
+              <div className="mb-1 flex items-center gap-1 text-muted-foreground"><Phone className="h-3.5 w-3.5" /> Telefone</div>
+              <div className="truncate font-bold text-foreground">{customerPhone || "Não informado"}</div>
+            </div>
+          </div>
           <div className="relative overflow-hidden rounded-xl border border-border bg-muted/30 aspect-square animate-in fade-in zoom-in-95 duration-300">
             {url ? (
               <img src={url} alt={meta.title} className="h-full w-full object-cover" />
@@ -109,20 +116,21 @@ export function FlyStatusModal({ open, onOpenChange, kind, orderNumber, customer
           </div>
         </div>
 
-        <div className="flex flex-col-reverse gap-2 px-6 py-4 sm:flex-row sm:justify-end">
-          <Button variant="outline" onClick={copyMessage}>
-            {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-            {copied ? "Copiado" : "Copiar mensagem"}
+        <div className="flex flex-col-reverse gap-2 px-6 py-4 sm:flex-row sm:justify-between">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <X className="h-4 w-4" /> Fechar
           </Button>
+          {url && (
+            <Button variant="outline" onClick={() => window.open(url, "_blank", "noopener,noreferrer")}>
+              <ExternalLink className="h-4 w-4" /> Abrir arte
+            </Button>
+          )}
           <Button
             disabled={!phone}
-            onClick={() => {
-              if (!phone) { toast.error("Telefone do cliente inválido"); return; }
-              window.open(waUrl, "_blank", "noopener,noreferrer");
-            }}
-            className="bg-emerald-600 text-white hover:bg-emerald-700"
+            onClick={sendToCustomer}
+            className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            <Send className="h-4 w-4" /> Enviar ao Cliente
+            <Send className="h-4 w-4" /> {sending ? "WhatsApp aberto" : "Enviar ao Cliente"}
           </Button>
         </div>
       </DialogContent>
