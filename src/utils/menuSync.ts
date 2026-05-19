@@ -146,8 +146,23 @@ function prepareDataForExternal(type: MenuType, data: any) {
       price: data.price,
       image_url: data.image_url,
       active: data.active !== undefined ? data.active : true,
-      available: data.available !== undefined ? data.available : true,
       category_id: data.external_category_id
+    };
+  }
+
+  if (type === 'combo') {
+    return {
+      name: data.name,
+      description: data.description,
+      original_price: data.original_price,
+      combo_price: data.combo_price,
+      image_url: data.image_url,
+      active: data.active !== undefined ? data.active : true,
+      highlight: data.highlight,
+      available_days: data.available_days,
+      start_time: data.start_time,
+      end_time: data.end_time,
+      items: data.items // Edge Function should handle the items list
     };
   }
 
