@@ -230,8 +230,45 @@ export function ComboManager({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEnd
   }
 
   async function toggleField(combo: any, field: string) {
+    const newValue = !combo[field];
+
+    if (pizzeriaSlug && pizzeriaApiKey && combo.external_id) {
+      // If the field is 'active', we sync it. SiteCreatorFly standard is 'active'.
+      if (field === 'active') {
+        const syncResult = await syncToExternal({
+          type: 'combo',
+          action: 'status',
+          externalId: combo.external_id,
+          data: { value: newValue },
+          pizzeriaSlug,
+          pizzeriaApiKey,
+          syncEndpoint
+        });
+
+        if (!syncResult.success) {
+          let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
+          
+          if (syncResult.error === "404") {
+            errorMsg = "Endpoint de sincronização não encontrado (404).";
+          } else if (syncResult.error === "auth_error") {
+            errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
+          } else if (syncResult.error === "cors_error") {
+            errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+          } else if (syncResult.error === "html_response") {
+            errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
+          } else if (syncResult.error?.startsWith("api_error:")) {
+            errorMsg = syncResult.error.replace("api_error:", "");
+          }
+          
+          toast.error(errorMsg);
+          return;
+        }
+      }
+    }
+
     const updateData: any = {};
-    updateData[field] = !combo[field];
+    updateData[field] = newValue;
+    updateData.updated_at = new Date().toISOString();
     
     const { error } = await supabase
       .from("combos")
@@ -241,22 +278,53 @@ export function ComboManager({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEnd
     if (error) {
       toast.error("Erro ao atualizar: " + error.message);
     } else {
+      toast.success("Cardápio atualizado no site com sucesso.");
       loadCombos();
     }
   }
 
-  async function handleDelete(id: string) {
+  async function handleDelete(combo: any) {
     if (!confirm("Tem certeza que deseja excluir este combo?")) return;
+
+    if (pizzeriaSlug && pizzeriaApiKey && combo.external_id) {
+      const syncResult = await syncToExternal({
+        type: 'combo',
+        action: 'delete',
+        externalId: combo.external_id,
+        pizzeriaSlug,
+        pizzeriaApiKey,
+        syncEndpoint
+      });
+
+      if (!syncResult.success) {
+        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
+        
+        if (syncResult.error === "404") {
+          errorMsg = "Endpoint de sincronização não encontrado (404).";
+        } else if (syncResult.error === "auth_error") {
+          errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
+        } else if (syncResult.error === "cors_error") {
+          errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+        } else if (syncResult.error === "html_response") {
+          errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
+        } else if (syncResult.error?.startsWith("api_error:")) {
+          errorMsg = syncResult.error.replace("api_error:", "");
+        }
+        
+        toast.error(errorMsg);
+        return;
+      }
+    }
 
     const { error } = await supabase
       .from("combos")
       .delete()
-      .eq("id", id);
+      .eq("id", combo.id);
     
     if (error) {
       toast.error("Erro ao excluir: " + error.message);
     } else {
-      toast.success("Combo excluído!");
+      toast.success("Cardápio atualizado no site com sucesso.");
       loadCombos();
     }
   }
