@@ -28,9 +28,11 @@ interface ExtraListProps {
   pizzeriaId: string;
   pizzeriaSlug?: string;
   pizzeriaApiKey?: string;
+  syncEndpoint?: string;
+  onRefresh?: () => void;
 }
 
-export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraListProps) {
+export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoint, onRefresh }: ExtraListProps) {
 
   const [extras, setExtras] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -106,11 +108,14 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraLis
           externalId: editingExtra?.external_id,
           data: payload,
           pizzeriaSlug,
-          pizzeriaApiKey
+          pizzeriaApiKey,
+          syncEndpoint
         });
 
         if (!syncResult.success) {
-          toast.warning(`Salvo localmente, mas houve um erro ao sincronizar com o site: ${syncResult.error}`);
+          toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+          setSaving(false);
+          return;
         } else {
           externalId = syncResult.externalId;
         }
@@ -140,9 +145,10 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraLis
       if (error) {
         toast.error("Erro ao salvar complemento: " + error.message);
       } else {
-        toast.success(`Complemento ${editingExtra ? "atualizado" : "criado"} com sucesso!`);
+        toast.success("Cardápio atualizado no site com sucesso.");
         setIsDialogOpen(false);
-        loadExtras();
+        if (onRefresh) onRefresh();
+        else loadExtras();
       }
     } catch (e: any) {
       toast.error("Erro inesperado: " + e.message);
@@ -155,14 +161,20 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraLis
     const newValue = !ext.active;
     
     if (pizzeriaSlug && pizzeriaApiKey && ext.external_id) {
-      await syncToExternal({
+      const syncResult = await syncToExternal({
         type: 'extra',
-        action: 'patch',
+        action: 'status',
         externalId: ext.external_id,
         data: { field: 'is_active', value: newValue },
         pizzeriaSlug,
-        pizzeriaApiKey
+        pizzeriaApiKey,
+        syncEndpoint
       });
+
+      if (!syncResult.success) {
+        toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+        return;
+      }
     }
 
     const { error } = await supabase
@@ -173,7 +185,9 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraLis
     if (error) {
       toast.error("Erro ao atualizar: " + error.message);
     } else {
-      loadExtras();
+      toast.success("Cardápio atualizado no site com sucesso.");
+      if (onRefresh) onRefresh();
+      else loadExtras();
     }
   }
 
@@ -181,13 +195,19 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraLis
     if (!confirm("Tem certeza que deseja excluir este complemento?")) return;
 
     if (pizzeriaSlug && pizzeriaApiKey && ext.external_id) {
-      await syncToExternal({
+      const syncResult = await syncToExternal({
         type: 'extra',
         action: 'delete',
         externalId: ext.external_id,
         pizzeriaSlug,
-        pizzeriaApiKey
+        pizzeriaApiKey,
+        syncEndpoint
       });
+
+      if (!syncResult.success) {
+        toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+        return;
+      }
     }
 
     const { error } = await supabase
@@ -198,8 +218,9 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey }: ExtraLis
     if (error) {
       toast.error("Erro ao excluir: " + error.message);
     } else {
-      toast.success("Excluído com sucesso!");
-      loadExtras();
+      toast.success("Cardápio atualizado no site com sucesso.");
+      if (onRefresh) onRefresh();
+      else loadExtras();
     }
   }
 

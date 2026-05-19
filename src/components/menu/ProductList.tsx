@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Image as ImageIcon, Loader2, Filter } from "lucide-react";
+import { Plus, Pencil, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
 
 import {
@@ -31,9 +31,11 @@ interface ProductListProps {
   title: string;
   pizzeriaSlug?: string;
   pizzeriaApiKey?: string;
+  syncEndpoint?: string;
+  onRefresh?: () => void;
 }
 
-export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug, pizzeriaApiKey }: ProductListProps) {
+export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug, pizzeriaApiKey, syncEndpoint, onRefresh }: ProductListProps) {
 
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -127,17 +129,20 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
         const external_category_id = cat?.external_id;
 
         const syncResult = await syncToExternal({
-          type: productType as any,
+          type: productType,
           action: editingProduct ? 'update' : 'create',
           id: editingProduct?.id,
           externalId: editingProduct?.external_id,
           data: { ...payload, external_category_id },
           pizzeriaSlug,
-          pizzeriaApiKey
+          pizzeriaApiKey,
+          syncEndpoint
         });
 
         if (!syncResult.success) {
-          toast.warning(`Salvo localmente, mas houve um erro ao sincronizar com o site: ${syncResult.error}`);
+          toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+          setSaving(false);
+          return;
         } else {
           externalId = syncResult.externalId;
         }
@@ -167,9 +172,10 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
       if (error) {
         toast.error("Erro ao salvar produto: " + error.message);
       } else {
-        toast.success(`Produto ${editingProduct ? "atualizado" : "criado"} com sucesso!`);
+        toast.success("Cardápio atualizado no site com sucesso.");
         setIsDialogOpen(false);
-        loadProducts();
+        if (onRefresh) onRefresh();
+        else loadProducts();
       }
     } catch (e: any) {
       toast.error("Erro inesperado: " + e.message);
@@ -184,14 +190,20 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
       // Map field names if they differ
       const externalField = field === 'active' ? 'is_active' : 'is_available';
-      await syncToExternal({
+      const syncResult = await syncToExternal({
         type: prod.product_type,
-        action: 'patch',
+        action: 'status',
         externalId: prod.external_id,
         data: { field: externalField, value: newValue },
         pizzeriaSlug,
-        pizzeriaApiKey
+        pizzeriaApiKey,
+        syncEndpoint
       });
+
+      if (!syncResult.success) {
+        toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+        return;
+      }
     }
 
     const updateData: any = {};
@@ -205,7 +217,9 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     if (error) {
       toast.error("Erro ao atualizar: " + error.message);
     } else {
-      loadProducts();
+      toast.success("Cardápio atualizado no site com sucesso.");
+      if (onRefresh) onRefresh();
+      else loadProducts();
     }
   }
 
@@ -213,13 +227,19 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     if (!confirm("Tem certeza que deseja excluir este produto?")) return;
 
     if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
-      await syncToExternal({
+      const syncResult = await syncToExternal({
         type: prod.product_type,
         action: 'delete',
         externalId: prod.external_id,
         pizzeriaSlug,
-        pizzeriaApiKey
+        pizzeriaApiKey,
+        syncEndpoint
       });
+
+      if (!syncResult.success) {
+        toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+        return;
+      }
     }
 
     const { error } = await supabase
@@ -230,8 +250,9 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     if (error) {
       toast.error("Erro ao excluir produto: " + error.message);
     } else {
-      toast.success("Produto excluído com sucesso!");
-      loadProducts();
+      toast.success("Cardápio atualizado no site com sucesso.");
+      if (onRefresh) onRefresh();
+      else loadProducts();
     }
   }
 

@@ -1,121 +1,132 @@
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
-const SITE_CREATOR_API_URL = "https://conectfly.lovable.app/api/menu-sync";
+const DEFAULT_SYNC_ENDPOINT = "https://watjejwgtieqfkpebkfz.supabase.co/functions/v1/menu-sync";
 
-type MenuType = 'category' | 'product' | 'beverage' | 'extra' | 'combo' | 'flavor' | 'borda' | 'adicional';
+type MenuType = 'category' | 'product' | 'beverage' | 'border' | 'additional' | 'combo';
 
 interface SyncParams {
-  type: MenuType;
-  action: 'create' | 'update' | 'delete' | 'patch';
+  type: string;
+  action: 'create' | 'update' | 'delete' | 'status';
   id?: string;
   externalId?: string;
   data?: any;
   pizzeriaSlug: string;
   pizzeriaApiKey: string;
+  syncEndpoint?: string;
 }
 
 export async function syncToExternal(params: SyncParams): Promise<{ success: boolean; externalId?: string; error?: string }> {
-  const { type, action, id, externalId, data, pizzeriaSlug, pizzeriaApiKey } = params;
+  const { type, action, externalId, data, pizzeriaSlug, pizzeriaApiKey, syncEndpoint } = params;
   
   // Mapping FlyControl types to SiteCreatorFly expectations
-  let externalType: MenuType = type;
-  if (type === 'extra') {
-    externalType = data?.extra_type === 'borda' ? 'borda' : 'adicional';
+  let externalType: MenuType = 'product';
+  
+  if (type === 'category') externalType = 'category';
+  else if (type === 'beverage') externalType = 'beverage';
+  else if (type === 'combo') externalType = 'combo';
+  else if (type === 'extra' || type === 'border' || type === 'borda') externalType = 'border';
+  else if (type === 'additional' || type === 'adicional') externalType = 'additional';
+  else if (type === 'standard' || type === 'product') externalType = 'product';
+
+  // Handle border/additional from 'extra' type
+  if (type === 'extra' && data?.extra_type) {
+    externalType = data.extra_type === 'borda' ? 'border' : 'additional';
   }
 
-  console.log(`[SyncExternal] ${action} ${type}`, { id, externalId, pizzeriaSlug });
+  const endpoint = (syncEndpoint || DEFAULT_SYNC_ENDPOINT).trim();
+  
+  console.log(`--- [SyncExternal] Início da Ação: ${action} ---`);
+  console.log("Tipo do item:", externalType);
+  console.log("Ação:", action);
+  console.log("Slug usado:", pizzeriaSlug);
+  console.log("ID/External ID usado:", externalId);
+  console.log("Endpoint chamado:", endpoint);
 
   try {
-    let response;
     const headers = {
       "Content-Type": "application/json",
       "x-api-key": pizzeriaApiKey
     };
 
-    if (action === 'delete') {
-      if (!externalId) return { success: true }; // Nothing to delete externally
-      response = await fetch(`${SITE_CREATOR_API_URL}?type=${externalType}&id=${externalId}`, {
-        method: "DELETE",
-        headers
-      });
-    } else if (action === 'patch') {
-      if (!externalId) return { success: true };
-      response = await fetch(SITE_CREATOR_API_URL, {
-        method: "PATCH",
-        headers,
-        body: JSON.stringify({
-          type: externalType,
-          id: externalId,
-          field: data.field,
-          value: data.value
-        })
-      });
-    } else if (action === 'update') {
-      if (!externalId) return { success: true };
-      response = await fetch(SITE_CREATOR_API_URL, {
-        method: "PUT",
-        headers,
-        body: JSON.stringify({
-          type: externalType,
-          id: externalId,
-          data: prepareDataForExternal(type, data)
-        })
-      });
-    } else if (action === 'create') {
-      response = await fetch(SITE_CREATOR_API_URL, {
-        method: "POST",
-        headers,
-        body: JSON.stringify({
-          type: externalType,
-          data: prepareDataForExternal(type, data)
-        })
-      });
+    let body: any = {
+      action,
+      type: externalType,
+      slug: pizzeriaSlug,
+    };
+
+    if (externalId) {
+      body.id = externalId;
     }
 
-    if (!response) throw new Error("Sem resposta do servidor");
+    if (action === 'status') {
+      body.active = data.value;
+    } else if (action === 'create' || action === 'update') {
+      body.data = prepareDataForExternal(externalType, data);
+    }
 
-    // Handle 204 No Content or empty responses
-    if (response.status === 204) return { success: true };
+    console.log("Payload enviado:", JSON.stringify(body, null, 2));
 
-    const result = await response.json();
-    console.log("[SyncExternal] Resposta recebida:", result);
+    let method = "POST";
+    if (action === 'update') method = "PUT";
+    else if (action === 'delete') method = "DELETE";
+    else if (action === 'status') method = "PATCH";
+
+    const response = await fetch(endpoint, {
+      method,
+      headers,
+      body: JSON.stringify(body)
+    });
+
+    console.log("Status HTTP recebido:", response.status);
     
-    if (result.success || response.status === 200) {
+    const text = await response.text();
+    console.log("Resposta bruta recebida:", text);
+
+    let result;
+    try {
+      result = JSON.parse(text);
+    } catch (e) {
+      console.error("Resposta não é JSON válido");
+      return { success: false, error: "O endpoint respondeu HTML, mas era esperado JSON. Verifique a Edge Function no SiteCreatorFly." };
+    }
+
+    console.log("Resposta JSON processada:", result);
+
+    if (result.success) {
       return { 
         success: true, 
         externalId: result.data?.id || result.id || externalId 
       };
     } else {
-      console.error("[SyncExternal] Erro retornado:", result.error || result.message);
-      return { success: false, error: result.error || result.message || "Erro desconhecido na API externa" };
+      const errorMsg = result.message || result.error || "Erro desconhecido na API externa";
+      console.error("[SyncExternal] Erro retornado:", errorMsg);
+      return { success: false, error: errorMsg };
     }
   } catch (error: any) {
     console.error("[SyncExternal] Erro na chamada:", error);
-    return { success: false, error: error.message };
+    return { success: false, error: "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly." };
+  } finally {
+    console.log(`--- [SyncExternal] Fim da Ação: ${action} ---`);
   }
 }
 
-function prepareDataForExternal(type: string, data: any) {
-  // Map FlyControl fields to SiteCreatorFly fields
+function prepareDataForExternal(type: MenuType, data: any) {
   if (type === 'category') {
     return {
-      name: data.name || data.title,
+      name: data.name,
       description: data.description,
-      is_active: data.active !== undefined ? data.active : true,
-      sort_order: data.order_index ?? 0
+      active: data.active !== undefined ? data.active : true,
     };
   }
   
-  if (type === 'product' || type === 'beverage' || type === 'extra' || type === 'flavor') {
+  if (type === 'product' || type === 'beverage' || type === 'border' || type === 'additional') {
     return {
-      name: data.name || data.title,
+      name: data.name,
       description: data.description,
       price: data.price,
       image_url: data.image_url,
-      is_active: data.active !== undefined ? data.active : true,
-      is_available: data.available !== undefined ? data.available : true,
-      category_id: data.external_category_id // We should pass the external cat id
+      active: data.active !== undefined ? data.active : true,
+      category_id: data.external_category_id
     };
   }
 
