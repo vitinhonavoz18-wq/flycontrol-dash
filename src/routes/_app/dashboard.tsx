@@ -45,7 +45,7 @@ function playBeep() {
 }
 
 function Dashboard() {
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, loading } = useAuth();
   const [mounted, setMounted] = useState(false);
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -55,6 +55,11 @@ function Dashboard() {
   const [showNew, setShowNew] = useState(false);
   const [copied, setCopied] = useState(false);
   const initialLoad = useRef(true);
+  const soundOnRef = useRef(soundOn);
+
+  useEffect(() => {
+    soundOnRef.current = soundOn;
+  }, [soundOn]);
 
   useEffect(() => {
     setMounted(true);
@@ -63,7 +68,9 @@ function Dashboard() {
     if (pId) setActiveId(pId);
   }, []);
 
-  useEffect(() => { if (user) loadPizzerias(); }, [user]);
+  useEffect(() => {
+    if (!loading && user) loadPizzerias();
+  }, [loading, user, isSuperAdmin]);
 
   async function loadPizzerias() {
     let query = supabase.from("pizzerias").select("*").neq("status", "deleted").order("created_at");
@@ -82,43 +89,48 @@ function Dashboard() {
   useEffect(() => {
     if (!activeId) return;
     initialLoad.current = true;
-    (async () => {
-      const { data, error } = await supabase.from("orders").select("*").eq("tenant_id", activeId)
-        .neq("status", "deleted").order("created_at", { ascending: false }).limit(200);
-      
-      if (error?.message.includes("JWT expired")) {
-        console.log("Session expired, refreshing...");
-        const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
-        if (!refreshError && refreshData.session) {
-          // Retry once
-          const { data: retryData } = await supabase.from("orders").select("*").eq("tenant_id", activeId)
-            .neq("status", "deleted").order("created_at", { ascending: false }).limit(200);
-          setOrders((retryData ?? []) as Order[]);
-        } else {
-          toast.error("Sessão expirada. Faça login novamente.");
-          return;
-        }
-      } else if (error) {
-        toast.error(error.message);
+    fetchOrders(activeId);
+    const ch = subscribeToOrders(activeId);
+    return () => { supabase.removeChannel(ch); };
+  }, [activeId]);
+
+  async function fetchOrders(pizzeriaId: string) {
+    const load = () => supabase.from("orders").select("*").eq("tenant_id", pizzeriaId)
+      .neq("status", "deleted").order("created_at", { ascending: false }).limit(200);
+
+    const { data, error } = await load();
+    if (error?.message.includes("JWT expired")) {
+      console.log("Session expired, refreshing...");
+      const { data: refreshData, error: refreshError } = await supabase.auth.refreshSession();
+      if (!refreshError && refreshData.session) {
+        const { data: retryData, error: retryError } = await load();
+        if (retryError) toast.error(retryError.message);
+        else setOrders((retryData ?? []) as Order[]);
       } else {
-        setOrders((data ?? []) as Order[]);
+        toast.error("Sessão expirada. Faça login novamente.");
       }
-      initialLoad.current = false;
-    })();
-    const ch = supabase.channel(`orders-${activeId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `tenant_id=eq.${activeId}` }, (p) => {
+    } else if (error) {
+      toast.error(error.message);
+    } else {
+      setOrders((data ?? []) as Order[]);
+    }
+    initialLoad.current = false;
+  }
+
+  function subscribeToOrders(pizzeriaId: string) {
+    return supabase.channel(`orders-${pizzeriaId}`)
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders", filter: `tenant_id=eq.${pizzeriaId}` }, (p) => {
         const o = p.new as Order;
-        setOrders((prev) => [o, ...prev]);
-        if (soundOn) playBeep();
+        setOrders((prev) => prev.some((x) => x.id === o.id) ? prev : [o, ...prev]);
+        if (soundOnRef.current) playBeep();
         toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
       })
-      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `tenant_id=eq.${activeId}` }, (p) => {
+      .on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders", filter: `tenant_id=eq.${pizzeriaId}` }, (p) => {
         const o = p.new as Order;
         setOrders((prev) => prev.map((x) => x.id === o.id ? o : x));
       })
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
-  }, [activeId, soundOn]);
+  }
 
   const active = pizzerias.find((p) => p.id === activeId);
   const filtered = useMemo(() => {
