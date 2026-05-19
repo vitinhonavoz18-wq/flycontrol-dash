@@ -61,7 +61,7 @@ function StatusArtCard({ kind, pizzeria, onUpdated }: { kind: FlyStatusKind; piz
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("status-arts").getPublicUrl(path);
       const publicUrl = pub.publicUrl;
-      const { error: dbErr } = await supabase.from("pizzerias").update({ [urlCol]: publicUrl }).eq("id", pizzeria.id);
+      const { error: dbErr } = await supabase.from("pizzerias").update({ [urlCol]: publicUrl } as any).eq("id", pizzeria.id);
       if (dbErr) throw dbErr;
       onUpdated({ [urlCol]: publicUrl } as Partial<Pz>);
       toast.success("Arte atualizada");
@@ -74,14 +74,14 @@ function StatusArtCard({ kind, pizzeria, onUpdated }: { kind: FlyStatusKind; piz
   }
 
   async function removeArt() {
-    const { error } = await supabase.from("pizzerias").update({ [urlCol]: null }).eq("id", pizzeria.id);
+    const { error } = await supabase.from("pizzerias").update({ [urlCol]: null } as any).eq("id", pizzeria.id);
     if (error) { toast.error(error.message); return; }
     onUpdated({ [urlCol]: null } as Partial<Pz>);
     toast.success("Arte removida");
   }
 
   async function saveText(value: string) {
-    const { error } = await supabase.from("pizzerias").update({ [textCol]: value }).eq("id", pizzeria.id);
+    const { error } = await supabase.from("pizzerias").update({ [textCol]: value } as any).eq("id", pizzeria.id);
     if (error) { toast.error(error.message); return; }
     onUpdated({ [textCol]: value } as Partial<Pz>);
   }
