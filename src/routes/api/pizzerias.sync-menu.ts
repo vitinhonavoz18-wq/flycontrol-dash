@@ -53,7 +53,8 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           products: 0,
           beverages: 0,
           extras: 0,
-          combos: 0
+          combos: 0,
+          pizza_sizes: 0
         };
 
         // 1. Sync Categories
@@ -291,6 +292,45 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
                   quantity: item.quantity || 1
                 });
               }
+            }
+          }
+        }
+
+        // 6. Sync Pizza Sizes
+        if (Array.isArray(menuData.pizza_sizes)) {
+          for (const size of menuData.pizza_sizes) {
+            const externalId = size.id?.toString();
+            
+            let query = supabaseAdmin
+              .from("pizzeria_pizza_sizes")
+              .select("id")
+              .eq("pizzeria_id", pizzeriaId);
+
+            if (externalId) {
+              query = query.or(`external_id.eq.${externalId},name.eq."${size.name}"`);
+            } else {
+              query = query.eq("name", size.name);
+            }
+
+            const { data: existing } = await query.maybeSingle();
+
+            const payload = {
+              pizzeria_id: pizzeriaId,
+              name: size.name,
+              price: size.price || 0,
+              max_flavors: size.max_flavors || 1,
+              slices: size.slices || 8,
+              active: size.active !== undefined ? size.active : true,
+              sort_order: size.sort_order || 0,
+              external_id: externalId,
+              updated_at: new Date().toISOString()
+            };
+
+            if (existing) {
+              await supabaseAdmin.from("pizzeria_pizza_sizes").update(payload).eq("id", existing.id);
+            } else {
+              await supabaseAdmin.from("pizzeria_pizza_sizes").insert(payload);
+              results.pizza_sizes++;
             }
           }
         }
