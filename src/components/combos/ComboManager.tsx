@@ -34,7 +34,7 @@ const DAYS = [
   { id: "dom", label: "Dom" },
 ];
 
-export function ComboManager({ pizzeriaId }: ComboManagerProps) {
+export function ComboManager({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoint }: ComboManagerProps) {
   const [combos, setCombos] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
