@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Image as ImageIcon, Loader2, Star, Clock, Calendar } from "lucide-react";
+import { syncToExternal } from "@/utils/menuSync";
 import {
   Dialog,
   DialogContent,
