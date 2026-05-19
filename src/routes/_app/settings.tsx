@@ -390,6 +390,11 @@ function Settings() {
                 O pedido teste aparecerá no Dashboard se for bem-sucedido.
               </div>
             </div>
+
+            <FlyStatusSettings
+              pizzeria={p}
+              onUpdated={(patch) => setPizzerias((prev) => prev.map((x) => x.id === p.id ? { ...x, ...patch } : x))}
+            />
           </div>
         ))}
         {!pizzerias.length && <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>}
