@@ -23,47 +23,13 @@ interface CategoryListProps {
   onRefresh: () => void;
   pizzeriaSlug?: string;
   pizzeriaApiKey?: string;
+  syncEndpoint?: string;
 }
 
-export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, pizzeriaApiKey }: CategoryListProps) {
+export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, pizzeriaApiKey, syncEndpoint }: CategoryListProps) {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<any>(null);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  function openCreate() {
-    setEditingCategory(null);
-    setName("");
-    setDescription("");
-    setIsDialogOpen(true);
-  }
-
-  function openEdit(cat: any) {
-    setEditingCategory(cat);
-    setName(cat.name);
-    setDescription(cat.description || "");
-    setIsDialogOpen(true);
-  }
-
-  async function handleSave() {
-    if (!name) {
-      toast.error("Nome da categoria é obrigatório");
-      return;
-    }
-
-    setLoading(true);
-    const payload = {
-      name,
-      description,
-      pizzeria_id: pizzeriaId,
-      order_index: editingCategory ? editingCategory.order_index : categories.length,
-    };
-
-    try {
-      let externalId = editingCategory?.external_id;
-
+...
       // Sync to external if we have credentials
       if (pizzeriaSlug && pizzeriaApiKey) {
         const syncResult = await syncToExternal({
@@ -73,36 +39,25 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
           externalId: editingCategory?.external_id,
           data: payload,
           pizzeriaSlug,
-          pizzeriaApiKey
+          pizzeriaApiKey,
+          syncEndpoint
         });
 
         if (!syncResult.success) {
-          toast.warning(`Salvo localmente, mas houve um erro ao sincronizar com o site: ${syncResult.error}`);
+          toast.error(`Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.`);
+          setLoading(false);
+          return; // Don't save locally if external sync failed
         } else {
           externalId = syncResult.externalId;
         }
       }
 
       const finalPayload = { ...payload, external_id: externalId, external_source: externalId ? 'sitecreatorfly' : null, updated_at: new Date().toISOString() };
-
-      let error;
-      if (editingCategory) {
-        const { error: err } = await supabase
-          .from("menu_categories")
-          .update(finalPayload)
-          .eq("id", editingCategory.id);
-        error = err;
-      } else {
-        const { error: err } = await supabase
-          .from("menu_categories")
-          .insert(finalPayload);
-        error = err;
-      }
-
+...
       if (error) {
         toast.error("Erro ao salvar categoria: " + error.message);
       } else {
-        toast.success(`Categoria ${editingCategory ? "atualizada" : "criada"} com sucesso!`);
+        toast.success(`Cardápio atualizado no site com sucesso.`);
         setIsDialogOpen(false);
         onRefresh();
       }
@@ -115,14 +70,20 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
 
   async function toggleActive(cat: any) {
     if (pizzeriaSlug && pizzeriaApiKey && cat.external_id) {
-      await syncToExternal({
+      const syncResult = await syncToExternal({
         type: 'category',
-        action: 'patch',
+        action: 'status',
         externalId: cat.external_id,
         data: { field: 'is_active', value: !cat.active },
         pizzeriaSlug,
-        pizzeriaApiKey
+        pizzeriaApiKey,
+        syncEndpoint
       });
+
+      if (!syncResult.success) {
+        toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+        return;
+      }
     }
 
     const { error } = await supabase
@@ -133,6 +94,7 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
     if (error) {
       toast.error("Erro ao atualizar status: " + error.message);
     } else {
+      toast.success("Cardápio atualizado no site com sucesso.");
       onRefresh();
     }
   }
@@ -141,13 +103,19 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
     if (!confirm("Tem certeza que deseja excluir esta categoria? Isso pode afetar os produtos vinculados.")) return;
 
     if (pizzeriaSlug && pizzeriaApiKey && cat.external_id) {
-      await syncToExternal({
+      const syncResult = await syncToExternal({
         type: 'category',
         action: 'delete',
         externalId: cat.external_id,
         pizzeriaSlug,
-        pizzeriaApiKey
+        pizzeriaApiKey,
+        syncEndpoint
       });
+
+      if (!syncResult.success) {
+        toast.error("Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.");
+        return;
+      }
     }
 
     const { error } = await supabase
@@ -158,7 +126,7 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
     if (error) {
       toast.error("Erro ao excluir categoria: " + error.message);
     } else {
-      toast.success("Categoria excluída com sucesso!");
+      toast.success("Cardápio atualizado no site com sucesso.");
       onRefresh();
     }
   }
