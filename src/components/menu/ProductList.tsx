@@ -112,7 +112,7 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
       name,
       description,
       price: numericPrice,
-      category_id: categoryId || null,
+      category_id: productType === 'beverage' ? null : (categoryId || null),
       image_url: imageUrl,
       product_type: productType,
       pizzeria_id: pizzeriaId,
@@ -390,19 +390,21 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
                 <Label htmlFor="prod-price">Preço (R$)</Label>
                 <Input id="prod-price" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="prod-cat">Categoria</Label>
-                <Select value={categoryId} onValueChange={setCategoryId}>
-                  <SelectTrigger id="prod-cat">
-                    <SelectValue placeholder="Selecione..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
+              {productType !== 'beverage' && (
+                <div className="space-y-2">
+                  <Label htmlFor="prod-cat">Categoria</Label>
+                  <Select value={categoryId} onValueChange={setCategoryId}>
+                    <SelectTrigger id="prod-cat">
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categories.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -419,10 +421,12 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="prod-desc">Descrição</Label>
-              <Input id="prod-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ingredientes, detalhes..." />
-            </div>
+            {productType !== 'beverage' && (
+              <div className="space-y-2">
+                <Label htmlFor="prod-desc">Descrição</Label>
+                <Input id="prod-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ingredientes, detalhes..." />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="prod-img">URL da Imagem</Label>

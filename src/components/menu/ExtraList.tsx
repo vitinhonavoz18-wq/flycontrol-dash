@@ -95,6 +95,7 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
       price: numericPrice,
       extra_type: extraType,
       pizzeria_id: pizzeriaId,
+      active: editingExtra ? editingExtra.active : true,
     };
 
     try {
