@@ -16,7 +16,6 @@ import {
   Copy,
   Check,
   Trash2,
-  AlertTriangle,
 } from "lucide-react";
 import {
   FlyStatusModal,
@@ -50,7 +49,7 @@ type Order = {
   customer_phone: string;
   customer_address: string | null;
   neighborhood: string | null;
-  items: any;
+  items: OrderItem[] | unknown;
   total: number;
   delivery_fee: number;
   payment_method: string | null;
@@ -59,6 +58,22 @@ type Order = {
   status: string;
   created_at: string;
 };
+
+type OrderItem = {
+  name?: string;
+  title?: string;
+  type?: string;
+  flavors?: string[];
+  size?: string;
+  price?: number | string;
+  total_price?: number | string;
+  unit_price?: number | string;
+  qty?: number;
+  quantity?: number;
+  notes?: string;
+};
+
+type PizzeriaForm = { name: string; slug: string; phone: string; address: string; api_key?: string };
 
 const STATUSES = [
   { value: "novo", label: "Novo", color: "bg-primary text-primary-foreground shadow-sm" },
@@ -86,7 +101,8 @@ const STATUSES = [
 
 function playBeep() {
   try {
-    const AC = window.AudioContext || (window as any).webkitAudioContext;
+    const AC = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    if (!AC) return;
     const ctx = new AC();
     const o = ctx.createOscillator();
     const g = ctx.createGain();
@@ -99,7 +115,9 @@ function playBeep() {
     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.6);
     o.start();
     o.stop(ctx.currentTime + 0.65);
-  } catch {}
+  } catch {
+    // O alerta sonoro é opcional e não deve interferir no recebimento de pedidos.
+  }
 }
 
 function Dashboard() {
