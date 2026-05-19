@@ -13,6 +13,8 @@ interface MenuManagerProps {
   pizzeriaId: string;
 }
 
+const DEFAULT_SYNC_ENDPOINT = "https://watjejwgtieqfkpebkfz.supabase.co/functions/v1/menu-sync";
+
 export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   const [activeTab, setActiveTab] = useState("categories");
   const [categories, setCategories] = useState<any[]>([]);
@@ -60,8 +62,11 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       return;
     }
 
-    if (!pizzeria?.sync_endpoint) {
-      toast.error("Endpoint de sincronização não configurado. Vá em Configurações.");
+    // Usar endpoint configurado ou o padrão do sistema
+    const baseUrl = (pizzeria?.sync_endpoint || DEFAULT_SYNC_ENDPOINT).trim();
+    
+    if (!baseUrl) {
+      toast.error("Endpoint de sincronização não configurado.");
       return;
     }
 
@@ -70,7 +75,6 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
     
     const slug = pizzeria.slug;
     // Monta o endpoint com o slug, garantindo que não duplique o "?" se a URL base já tiver parâmetros
-    const baseUrl = pizzeria.sync_endpoint.trim();
     const separator = baseUrl.includes("?") ? "&" : "?";
     const endpoint = `${baseUrl}${separator}slug=${slug}`;
     
