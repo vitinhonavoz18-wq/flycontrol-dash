@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { FlyStatusSettings } from "@/components/flystatus/FlyStatusSettings";
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
 
@@ -389,6 +390,11 @@ function Settings() {
                 O pedido teste aparecerá no Dashboard se for bem-sucedido.
               </div>
             </div>
+
+            <FlyStatusSettings
+              pizzeria={p}
+              onUpdated={(patch) => setPizzerias((prev) => prev.map((x) => x.id === p.id ? { ...x, ...patch } : x))}
+            />
           </div>
         ))}
         {!pizzerias.length && <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>}

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Bell, BellOff, Printer, Phone, MapPin, Clock, Plus, Copy, Check, Trash2, AlertTriangle } from "lucide-react";
+import { FlyStatusModal, getFlyStatusKind, type FlyStatusKind, type FlyStatusPizzeria } from "@/components/flystatus/FlyStatusModal";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
@@ -152,9 +153,14 @@ function Dashboard() {
     }
   }
 
+  const [flyStatus, setFlyStatus] = useState<{ open: boolean; kind: FlyStatusKind | null; order: Order | null }>({ open: false, kind: null, order: null });
+
   async function changeStatus(o: Order, status: string) {
+    if (status === o.status) return;
     const { error } = await supabase.from("orders").update({ status }).eq("id", o.id);
-    if (error) toast.error(error.message);
+    if (error) { toast.error(error.message); return; }
+    const kind = getFlyStatusKind(status);
+    if (kind) setFlyStatus({ open: true, kind, order: { ...o, status } });
   }
 
   async function createPizzeria(form: { name: string; slug: string; phone: string; address: string; api_key?: string }) {
@@ -374,6 +380,16 @@ function Dashboard() {
           </div>
         )}
       </div>
+
+      <FlyStatusModal
+        open={flyStatus.open}
+        onOpenChange={(o) => setFlyStatus((s) => ({ ...s, open: o }))}
+        kind={flyStatus.kind}
+        orderNumber={flyStatus.order?.order_number ?? ""}
+        customerName={flyStatus.order?.customer_name ?? ""}
+        customerPhone={flyStatus.order?.customer_phone ?? ""}
+        pizzeria={(active ?? null) as FlyStatusPizzeria | null}
+      />
     </div>
   );
 }

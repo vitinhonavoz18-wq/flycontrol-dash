@@ -603,6 +603,12 @@ export type Database = {
           slug: string
           sound_enabled: boolean
           status: string
+          status_art_entregue_url: string | null
+          status_art_preparando_url: string | null
+          status_art_saiu_url: string | null
+          status_text_entregue: string | null
+          status_text_preparando: string | null
+          status_text_saiu: string | null
           sync_endpoint: string | null
           updated_at: string
         }
@@ -623,6 +629,12 @@ export type Database = {
           slug: string
           sound_enabled?: boolean
           status?: string
+          status_art_entregue_url?: string | null
+          status_art_preparando_url?: string | null
+          status_art_saiu_url?: string | null
+          status_text_entregue?: string | null
+          status_text_preparando?: string | null
+          status_text_saiu?: string | null
           sync_endpoint?: string | null
           updated_at?: string
         }
@@ -643,6 +655,12 @@ export type Database = {
           slug?: string
           sound_enabled?: boolean
           status?: string
+          status_art_entregue_url?: string | null
+          status_art_preparando_url?: string | null
+          status_art_saiu_url?: string | null
+          status_text_entregue?: string | null
+          status_text_preparando?: string | null
+          status_text_saiu?: string | null
           sync_endpoint?: string | null
           updated_at?: string
         }
