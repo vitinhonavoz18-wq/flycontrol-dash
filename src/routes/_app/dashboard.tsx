@@ -628,9 +628,9 @@ function OrderCard({
   onDelete: (o: Order) => void;
 }) {
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
-  const items = Array.isArray(o.items) ? o.items : [];
+  const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
 
-  const formatItemName = (it: any) => {
+  const formatItemName = (it: OrderItem) => {
     if (it.name) return it.name;
     if (it.title) return it.title;
     if (it.type === "pizza" && it.flavors) {
@@ -640,7 +640,7 @@ function OrderCard({
     return "Item";
   };
 
-  const getItemPrice = (it: any) => {
+  const getItemPrice = (it: OrderItem) => {
     return it.price ?? it.total_price ?? it.unit_price ?? 0;
   };
 
@@ -684,7 +684,7 @@ function OrderCard({
         </div>
       </div>
       <ul className="mt-3 space-y-1 border-t border-border pt-3 text-sm">
-        {items.slice(0, 6).map((it: any, i: number) => (
+        {items.slice(0, 6).map((it, i) => (
           <li key={i} className="flex flex-col gap-0.5 mb-2 last:mb-0">
             <div className="flex justify-between gap-2">
               <span className="font-medium">
@@ -746,7 +746,7 @@ function NewPizzeriaCard({
   onCreate,
   mode = "new",
 }: {
-  onCreate: (f: any) => void;
+  onCreate: (f: PizzeriaForm) => void;
   mode?: "new" | "connect";
 }) {
   const [f, setF] = useState({ name: "", slug: "", phone: "", address: "", api_key: "" });
