@@ -416,7 +416,7 @@ export function ComboManager({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEnd
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(combo)}>
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(combo.id)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(combo)}>
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
