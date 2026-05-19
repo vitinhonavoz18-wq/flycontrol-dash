@@ -73,7 +73,13 @@ type OrderItem = {
   notes?: string;
 };
 
-type PizzeriaForm = { name: string; slug: string; phone: string; address: string; api_key?: string };
+type PizzeriaForm = {
+  name: string;
+  slug: string;
+  phone: string;
+  address: string;
+  api_key?: string;
+};
 
 const STATUSES = [
   { value: "novo", label: "Novo", color: "bg-primary text-primary-foreground shadow-sm" },
@@ -101,7 +107,10 @@ const STATUSES = [
 
 function playBeep() {
   try {
-    const AC = window.AudioContext || (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+    const AC =
+      window.AudioContext ||
+      (window as Window & typeof globalThis & { webkitAudioContext?: typeof AudioContext })
+        .webkitAudioContext;
     if (!AC) return;
     const ctx = new AC();
     const o = ctx.createOscillator();
