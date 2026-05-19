@@ -323,7 +323,8 @@ function Settings() {
                 <Label className="text-xs font-medium uppercase text-muted-foreground">Endpoint de sincronização do SiteCreatorFly</Label>
                 <div className="flex items-center gap-2">
                   <Input 
-                    placeholder="https://SEU-PROJETO.supabase.co/functions/v1/menu-sync" 
+                    placeholder="https://watjejwgtieqfkpebkfz.supabase.co/functions/v1/menu-sync" 
+
                     defaultValue={p.sync_endpoint || ""}
                     onBlur={(e) => update(p.id, { sync_endpoint: e.target.value })}
                   />
