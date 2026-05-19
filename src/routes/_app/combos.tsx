@@ -77,7 +77,14 @@ function CombosPage() {
         />
       </div>
 
-      {activeId && <ComboManager pizzeriaId={activeId} />}
+      {activeId && (
+        <ComboManager 
+          pizzeriaId={activeId} 
+          pizzeriaSlug={pizzerias.find(p => p.id === activeId)?.slug}
+          pizzeriaApiKey={pizzerias.find(p => p.id === activeId)?.api_key}
+          syncEndpoint={pizzerias.find(p => p.id === activeId)?.sync_endpoint}
+        />
+      )}
     </div>
   );
 }
