@@ -318,17 +318,17 @@ function Settings() {
               </div>
             </div>
 
-            <div className=\"mt-6 border-t border-border pt-4\">
-              <div className=\"space-y-2\">
-                <Label className=\"text-xs font-medium uppercase text-muted-foreground\">Endpoint de sincronização do SiteCreatorFly</Label>
-                <div className=\"flex items-center gap-2\">
+            <div className="mt-6 border-t border-border pt-4">
+              <div className="space-y-2">
+                <Label className="text-xs font-medium uppercase text-muted-foreground">Endpoint de sincronização do SiteCreatorFly</Label>
+                <div className="flex items-center gap-2">
                   <Input 
-                    placeholder=\"https://SEU-PROJETO.supabase.co/functions/v1/menu-sync\" 
-                    defaultValue={p.sync_endpoint || \"\"}
+                    placeholder="https://SEU-PROJETO.supabase.co/functions/v1/menu-sync" 
+                    defaultValue={p.sync_endpoint || ""}
                     onBlur={(e) => update(p.id, { sync_endpoint: e.target.value })}
                   />
                 </div>
-                <p className=\"text-[10px] text-muted-foreground\">
+                <p className="text-[10px] text-muted-foreground">
                   URL da Edge Function que fornece os dados do cardápio para sincronização.
                 </p>
               </div>
