@@ -1,54 +1,101 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
-import { Bell, Printer, BarChart3, Shield, Zap, ChefHat } from "lucide-react";
-import logo from "@/assets/flycontrol-logo.png";
+import { Switch } from "@/components/ui/switch";
+import { Bell, Printer, BarChart3, Shield, Zap, ChefHat, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/components/theme-provider";
+import logo from "@/assets/flycontrol-logo-hero.png";
 
 export const Route = createFileRoute("/")({
   component: Landing,
 });
 
 function Landing() {
+  const { theme, setTheme } = useTheme();
+  const isDark = theme === "dark";
+
   return (
-    <div className="min-h-screen bg-background">
-      {/* Nav */}
-      <header className="sticky top-0 z-30 border-b border-border/60 bg-background/80 backdrop-blur">
-        <div className="mx-auto flex h-40 max-w-7xl items-center justify-between px-6">
-          <Link to="/" className="flex items-center">
-            <img src={logo} alt="FlyControl" className="h-32 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,122,0,0.8)]" />
-          </Link>
-          <nav className="flex items-center gap-2">
-            <Link to="/login"><Button variant="ghost">Entrar</Button></Link>
-            <Link to="/signup"><Button>Começar grátis</Button></Link>
-          </nav>
-        </div>
-      </header>
+    <div className="relative min-h-screen overflow-hidden bg-background text-foreground">
+      {/* Atmosphere */}
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div
+          className="absolute left-1/2 top-[-10%] h-[700px] w-[1100px] -translate-x-1/2 rounded-full opacity-40 blur-[120px]"
+          style={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.45), transparent 70%)" }}
+        />
+        <div
+          className="absolute bottom-[-20%] left-1/2 h-[500px] w-[800px] -translate-x-1/2 rounded-full opacity-20 blur-[120px]"
+          style={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.35), transparent 70%)" }}
+        />
+      </div>
+
+      {/* Theme toggle (top-right, floating, no header line) */}
+      <div className="absolute right-4 top-4 z-20 flex items-center gap-2 rounded-full border border-border/60 bg-card/60 px-3 py-1.5 backdrop-blur md:right-8 md:top-6">
+        <Sun className={`h-4 w-4 transition ${isDark ? "text-muted-foreground" : "text-primary"}`} />
+        <Switch
+          checked={isDark}
+          onCheckedChange={(c) => setTheme(c ? "dark" : "light")}
+          aria-label="Alternar tema"
+        />
+        <Moon className={`h-4 w-4 transition ${isDark ? "text-primary" : "text-muted-foreground"}`} />
+      </div>
 
       {/* Hero */}
-      <section className="relative overflow-hidden">
-        <div className="pointer-events-none absolute inset-0 -z-10">
-          <div className="absolute -top-40 left-1/2 h-[600px] w-[900px] -translate-x-1/2 rounded-full opacity-30 blur-3xl"
-            style={{ background: "var(--gradient-primary)" }} />
+      <section className="mx-auto flex max-w-5xl flex-col items-center px-6 pt-16 text-center md:pt-24">
+        <div className="relative">
+          <div
+            className="pointer-events-none absolute inset-0 -z-10 rounded-full opacity-70 blur-3xl"
+            style={{ background: "radial-gradient(circle, hsl(var(--primary) / 0.55), transparent 65%)" }}
+          />
+          <img
+            src={logo}
+            alt="FlyControl"
+            className="mx-auto h-auto w-[280px] select-none object-contain drop-shadow-[0_0_40px_rgba(255,122,0,0.55)] sm:w-[380px] md:w-[480px] lg:w-[560px]"
+            draggable={false}
+          />
         </div>
-        <div className="mx-auto max-w-7xl px-6 py-24 text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
-            <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
-            Painel central para deliveries criados pelo SiteCreatorFly
-          </span>
-          <h1 className="mx-auto mt-6 max-w-4xl text-5xl font-bold leading-tight tracking-tight md:text-7xl">
-            Gerencie todos os seus <span className="bg-clip-text text-transparent" style={{ backgroundImage: "var(--gradient-primary)" }}>pedidos</span> em tempo real
-          </h1>
-          <p className="mx-auto mt-6 max-w-2xl text-lg text-muted-foreground">
-            FlyControl recebe seus pedidos automaticamente, toca alerta sonoro, imprime a comanda e mantém você no controle de cada etapa.
-          </p>
-          <div className="mt-10 flex justify-center gap-3">
-            <Link to="/signup"><Button size="lg" className="h-12 px-8 text-base">Criar conta grátis</Button></Link>
-            <Link to="/login"><Button size="lg" variant="outline" className="h-12 px-8 text-base">Acessar painel</Button></Link>
-          </div>
+
+        <div className="mt-10 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
+          <Link to="/login" className="w-full sm:w-auto">
+            <Button
+              variant="outline"
+              size="lg"
+              className="h-12 w-full border-primary/50 bg-background/40 px-10 text-base font-semibold backdrop-blur transition hover:border-primary hover:bg-primary/10 hover:shadow-[0_0_25px_rgba(255,122,0,0.35)] sm:w-auto"
+            >
+              Entrar
+            </Button>
+          </Link>
+          <Link to="/signup" className="w-full sm:w-auto">
+            <Button
+              size="lg"
+              className="h-12 w-full border-0 px-10 text-base font-semibold text-white shadow-[0_0_30px_rgba(255,122,0,0.45)] transition hover:shadow-[0_0_45px_rgba(255,122,0,0.7)] sm:w-auto"
+              style={{ background: "linear-gradient(135deg, hsl(35 100% 55%), hsl(20 100% 50%))" }}
+            >
+              Começar grátis
+            </Button>
+          </Link>
         </div>
+
+        <span className="mt-12 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+          Painel central para deliveries criados pelo SiteCreatorFly
+        </span>
+
+        <h1 className="mx-auto mt-8 max-w-3xl text-4xl font-bold leading-tight tracking-tight md:text-6xl">
+          Gerencie todos os seus{" "}
+          <span
+            className="bg-clip-text text-transparent"
+            style={{ backgroundImage: "linear-gradient(135deg, hsl(35 100% 55%), hsl(20 100% 50%))" }}
+          >
+            pedidos
+          </span>{" "}
+          em tempo real
+        </h1>
+        <p className="mx-auto mt-5 max-w-2xl text-base text-muted-foreground md:text-lg">
+          FlyControl recebe seus pedidos automaticamente, toca alerta sonoro, imprime a comanda e mantém você no controle de cada etapa.
+        </p>
       </section>
 
       {/* Features */}
-      <section className="mx-auto max-w-7xl px-6 pb-24">
+      <section className="mx-auto max-w-6xl px-6 py-20">
         <div className="grid gap-6 md:grid-cols-3">
           {[
             { icon: Bell, title: "Realtime + som", desc: "Novos pedidos chegam instantaneamente com alerta sonoro." },
@@ -58,8 +105,11 @@ function Landing() {
             { icon: ChefHat, title: "Status do pedido", desc: "Novo → Preparando → Saiu → Entregue, com 1 toque." },
             { icon: Zap, title: "Integração SiteCreatorFly", desc: "Seus sites enviam pedidos via API key automaticamente." },
           ].map((f) => (
-            <div key={f.title} className="group rounded-xl border border-border bg-card p-6 transition hover:border-primary/40 hover:shadow-[var(--shadow-glow)]">
-              <div className="mb-4 grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary">
+            <div
+              key={f.title}
+              className="group rounded-xl border border-border/60 bg-card/40 p-6 backdrop-blur transition hover:border-primary/50 hover:shadow-[0_0_30px_rgba(255,122,0,0.18)]"
+            >
+              <div className="mb-4 grid h-10 w-10 place-items-center rounded-lg bg-primary/15 text-primary">
                 <f.icon className="h-5 w-5" />
               </div>
               <h3 className="font-semibold">{f.title}</h3>
@@ -69,7 +119,7 @@ function Landing() {
         </div>
       </section>
 
-      <footer className="border-t border-border/60 py-8 text-center text-xs text-muted-foreground">
+      <footer className="py-8 text-center text-xs text-muted-foreground">
         © {new Date().getFullYear()} FlyControl. Todos os direitos reservados.
       </footer>
     </div>
