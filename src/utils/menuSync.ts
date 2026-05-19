@@ -134,12 +134,12 @@ function prepareDataForExternal(type: MenuType, data: any) {
   if (type === 'category') {
     return {
       name: data.name,
-      description: data.description,
       active: data.active !== undefined ? data.active : true,
+      sort_order: data.order_index // FlyControl uses order_index, SiteCreatorFly expects sort_order
     };
   }
   
-  if (type === 'product' || type === 'beverage' || type === 'border' || type === 'additional') {
+  if (type === 'product') {
     return {
       name: data.name,
       description: data.description,
@@ -147,6 +147,23 @@ function prepareDataForExternal(type: MenuType, data: any) {
       image_url: data.image_url,
       active: data.active !== undefined ? data.active : true,
       category_id: data.external_category_id
+    };
+  }
+
+  if (type === 'beverage') {
+    return {
+      name: data.name,
+      price: data.price,
+      image_url: data.image_url,
+      active: data.active !== undefined ? data.active : true
+    };
+  }
+
+  if (type === 'border' || type === 'additional') {
+    return {
+      name: data.name,
+      price: data.price,
+      active: data.active !== undefined ? data.active : true
     };
   }
 
@@ -162,7 +179,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
       available_days: data.available_days,
       start_time: data.start_time,
       end_time: data.end_time,
-      items: data.items // Edge Function should handle the items list
+      items: data.items 
     };
   }
 
