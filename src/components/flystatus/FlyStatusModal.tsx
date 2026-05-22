@@ -99,46 +99,47 @@ export function FlyStatusModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg overflow-hidden p-0">
-        <div className={`bg-gradient-to-b ${meta.accent} px-6 pt-6 pb-4`}>
+      <DialogContent className="max-w-[680px] lg:max-w-[820px] max-h-[90vh] overflow-hidden p-0 flex flex-col">
+        <div className={`bg-gradient-to-b ${meta.accent} px-6 pt-5 pb-3 shrink-0`}>
           <DialogHeader>
-            <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
               FlyStatus
             </div>
-            <DialogTitle className="text-2xl font-black">
+            <DialogTitle className="text-xl font-black">
               <span className="mr-2">{meta.emoji}</span>
               {meta.title}
             </DialogTitle>
-            <p className="text-xs text-muted-foreground">
+            <p className="text-[11px] text-muted-foreground">
               Pedido <span className="font-semibold text-foreground">#{orderNumber}</span> ·{" "}
               {customerName}
             </p>
           </DialogHeader>
         </div>
 
-        <div className="px-6">
-          <div className="mb-4 grid grid-cols-2 gap-2 text-xs">
-            <div className="rounded-lg border border-border bg-card p-3">
-              <div className="mb-1 flex items-center gap-1 text-muted-foreground">
-                <Hash className="h-3.5 w-3.5" /> Pedido
+        <div className="px-6 py-2 overflow-y-auto flex-1">
+          <div className="mb-3 grid grid-cols-2 gap-2 text-[11px]">
+            <div className="rounded-lg border border-border bg-card p-2">
+              <div className="mb-0.5 flex items-center gap-1 text-muted-foreground">
+                <Hash className="h-3 w-3" /> Pedido
               </div>
               <div className="font-bold text-foreground">#{orderNumber}</div>
             </div>
-            <div className="rounded-lg border border-border bg-card p-3">
-              <div className="mb-1 flex items-center gap-1 text-muted-foreground">
-                <Phone className="h-3.5 w-3.5" /> Telefone
+            <div className="rounded-lg border border-border bg-card p-2">
+              <div className="mb-0.5 flex items-center gap-1 text-muted-foreground">
+                <Phone className="h-3 w-3" /> Telefone
               </div>
               <div className="truncate font-bold text-foreground">
                 {customerPhone || "Não informado"}
               </div>
             </div>
           </div>
-          <div className="relative overflow-hidden rounded-xl border border-border bg-muted/30 aspect-square animate-in fade-in zoom-in-95 duration-300">
+          
+          <div className="relative overflow-hidden rounded-xl border border-border bg-muted/30 h-[220px] md:h-[300px] animate-in fade-in zoom-in-95 duration-300">
             {url ? (
-              <img src={url} alt={meta.title} className="h-full w-full object-cover" />
+              <img src={url} alt={meta.title} className="h-full w-full object-contain bg-black/20" />
             ) : (
               <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center text-muted-foreground p-6">
-                <ImageOff className="h-10 w-10 opacity-50" />
+                <ImageOff className="h-8 w-8 opacity-50" />
                 <div className="text-sm font-medium">Nenhuma arte configurada</div>
                 <div className="text-xs">
                   Vá em Configurações → Artes de Status para enviar a imagem.
@@ -147,31 +148,34 @@ export function FlyStatusModal({
             )}
           </div>
 
-          <div className="mt-4 rounded-lg border border-border bg-card p-3 text-sm whitespace-pre-wrap leading-relaxed">
+          <div className="mt-3 rounded-lg border border-border bg-card p-3 text-xs whitespace-pre-wrap leading-relaxed">
             {message || (
               <span className="text-muted-foreground italic">Sem mensagem configurada.</span>
             )}
           </div>
         </div>
 
-        <div className="flex flex-col-reverse gap-2 px-6 py-4 sm:flex-row sm:justify-between">
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            <X className="h-4 w-4" /> Fechar
+        <div className="flex flex-col-reverse gap-2 px-6 py-4 sm:flex-row sm:justify-end border-t border-border bg-card shrink-0">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            <X className="h-3.5 w-3.5" /> Fechar
           </Button>
           {url && (
             <Button
               variant="outline"
+              size="sm"
               onClick={() => window.open(url, "_blank", "noopener,noreferrer")}
+              className="hidden sm:flex"
             >
-              <ExternalLink className="h-4 w-4" /> Abrir arte
+              <ExternalLink className="h-3.5 w-3.5" /> Abrir arte
             </Button>
           )}
           <Button
             disabled={!phone}
             onClick={sendToCustomer}
+            size="sm"
             className="bg-primary text-primary-foreground hover:bg-primary/90"
           >
-            <Send className="h-4 w-4" /> {sending ? "WhatsApp aberto" : "Enviar ao Cliente"}
+            <Send className="h-3.5 w-3.5" /> {sending ? "WhatsApp aberto" : "Enviar ao Cliente"}
           </Button>
         </div>
       </DialogContent>
