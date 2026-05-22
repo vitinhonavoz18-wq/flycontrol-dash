@@ -593,6 +593,7 @@ export type Database = {
           delivery_fee: number | null
           description: string | null
           id: string
+          is_active: boolean | null
           logo_url: string | null
           name: string
           opening_hours: Json | null
@@ -619,6 +620,7 @@ export type Database = {
           delivery_fee?: number | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
           name: string
           opening_hours?: Json | null
@@ -645,6 +647,7 @@ export type Database = {
           delivery_fee?: number | null
           description?: string | null
           id?: string
+          is_active?: boolean | null
           logo_url?: string | null
           name?: string
           opening_hours?: Json | null
