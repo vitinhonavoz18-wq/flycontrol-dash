@@ -84,6 +84,19 @@ function Admin() {
     if (error) toast.error(error.message); else load();
   }
 
+  async function toggleActive(id: string, current: boolean) {
+    const action = current ? "desativar" : "ativar";
+    if (!confirm(`Tem certeza que deseja ${action} esta pizzaria?`)) return;
+
+    const { error } = await supabase.from("pizzerias").update({ is_active: !current }).eq("id", id);
+    if (error) {
+      toast.error("Erro ao alterar status: " + error.message);
+    } else {
+      toast.success(`Pizzaria ${current ? "desativada" : "ativada"} com sucesso.`);
+      load();
+    }
+  }
+
   async function handleDelete(id: string) {
     setIsDeleting(true);
     const { error } = await supabase.from("pizzerias").update({ status: 'deleted' }).eq("id", id);
@@ -109,7 +122,7 @@ function Admin() {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {pz.map((p) => (
-          <PizzeriaCard key={p.id} p={p} onStatusChange={setStatus} onDelete={() => setDeletingId(p.id)} />
+          <PizzeriaCard key={p.id} p={p} onStatusChange={setStatus} onToggleActive={toggleActive} onDelete={() => setDeletingId(p.id)} />
         ))}
         {!pz.length && (
           <div className="col-span-full flex h-40 items-center justify-center rounded-xl border border-dashed border-border text-muted-foreground">
@@ -154,7 +167,7 @@ function Admin() {
   );
 }
 
-function PizzeriaCard({ p, onStatusChange, onDelete }: { p: any, onStatusChange: (id: string, s: string) => void, onDelete: () => void }) {
+function PizzeriaCard({ p, onStatusChange, onToggleActive, onDelete }: { p: any, onStatusChange: (id: string, s: string) => void, onToggleActive: (id: string, current: boolean) => void, onDelete: () => void }) {
   const orders = p.orders || [];
   const today = new Date().toISOString().split('T')[0];
   const todayOrders = orders.filter((o: any) => o.created_at.startsWith(today));
@@ -168,9 +181,14 @@ function PizzeriaCard({ p, onStatusChange, onDelete }: { p: any, onStatusChange:
           <h3 className="text-lg font-bold text-foreground">{p.name}</h3>
           <p className="text-xs text-muted-foreground">/{p.slug}</p>
         </div>
-        <Badge variant={p.status === 'active' ? 'default' : 'outline'} className={p.status === 'active' ? 'bg-success/20 text-success border-success/40' : ''}>
-          {p.status === 'active' ? 'Ativa' : 'Pausada'}
-        </Badge>
+        <div className="flex flex-col items-end gap-2">
+          <Badge variant={p.status === 'active' ? 'default' : 'outline'} className={p.status === 'active' ? 'bg-success/20 text-success border-success/40' : ''}>
+            {p.status === 'active' ? 'Ativa' : 'Pausada'}
+          </Badge>
+          <Badge variant={p.is_active !== false ? 'default' : 'destructive'} className={p.is_active !== false ? 'bg-emerald-500/20 text-emerald-600 border-emerald-500/40' : 'bg-rose-500/20 text-rose-600 border-rose-500/40'}>
+            {p.is_active !== false ? 'CONTA ATIVA' : 'CONTA INATIVA'}
+          </Badge>
+        </div>
       </div>
 
       <div className="mb-4 grid grid-cols-2 gap-4">
@@ -212,6 +230,15 @@ function PizzeriaCard({ p, onStatusChange, onDelete }: { p: any, onStatusChange:
           <option value="active">Ativo</option>
           <option value="paused">Pausado</option>
         </select>
+        
+        <Button
+          variant={p.is_active !== false ? "destructive" : "default"}
+          size="sm"
+          className="h-8 text-xs px-2"
+          onClick={() => onToggleActive(p.id, p.is_active !== false)}
+        >
+          {p.is_active !== false ? "Desativar Conta" : "Ativar Conta"}
+        </Button>
         
         <Link 
           to="/dashboard" 
