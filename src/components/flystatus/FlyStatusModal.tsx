@@ -35,13 +35,41 @@ export type FlyStatusPizzeria = {
   status_text_entregue?: string | null;
 };
 
+// Default global arts (from conectfly-pizza)
+const GLOBAL_ARTS: Record<FlyStatusKind, { url: string; text: string }> = {
+  preparando: {
+    url: "https://laufyadcizmruejafcpi.supabase.co/storage/v1/object/public/status-arts/02e160ec-cbfa-4a90-9a7f-085fcbd79838/preparando-1779197046915.png",
+    text: "Seu pedido entrou no forno! 🍕🔥\n\nLogo logo ele estará pronto e quentinho para você.\n\nPedido #{NUMERO}"
+  },
+  saiu: {
+    url: "https://laufyadcizmruejafcpi.supabase.co/storage/v1/object/public/status-arts/02e160ec-cbfa-4a90-9a7f-085fcbd79838/saiu-1779197070103.png",
+    text: "Acelera! 🛵💨\n\nSeu pedido acabou de sair para entrega.\n\nPedido #{NUMERO}"
+  },
+  entregue: {
+    url: "https://laufyadcizmruejafcpi.supabase.co/storage/v1/object/public/status-arts/02e160ec-cbfa-4a90-9a7f-085fcbd79838/entregue-1779197097530.png",
+    text: "Pedido Entregue! 🍕❤️\n\nBom apetite! Se puder, nos conte o que achou.\n\nPedido #{NUMERO}"
+  }
+};
+
 export function pickArt(pz: FlyStatusPizzeria | null | undefined, kind: FlyStatusKind) {
-  if (!pz) return { url: "", text: "" };
-  if (kind === "preparando")
-    return { url: pz.status_art_preparando_url ?? "", text: pz.status_text_preparando ?? "" };
-  if (kind === "saiu")
-    return { url: pz.status_art_saiu_url ?? "", text: pz.status_text_saiu ?? "" };
-  return { url: pz.status_art_entregue_url ?? "", text: pz.status_text_entregue ?? "" };
+  const global = GLOBAL_ARTS[kind];
+  if (!pz) return global;
+  
+  let url = "";
+  let text = "";
+
+  if (kind === "preparando") {
+    url = pz.status_art_preparando_url || global.url;
+    text = pz.status_text_preparando || global.text;
+  } else if (kind === "saiu") {
+    url = pz.status_art_saiu_url || global.url;
+    text = pz.status_text_saiu || global.text;
+  } else {
+    url = pz.status_art_entregue_url || global.url;
+    text = pz.status_text_entregue || global.text;
+  }
+
+  return { url, text };
 }
 
 function normalizePhone(raw: string) {
