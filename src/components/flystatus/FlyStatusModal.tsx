@@ -33,6 +33,8 @@ export type FlyStatusPizzeria = {
   status_text_preparando?: string | null;
   status_text_saiu?: string | null;
   status_text_entregue?: string | null;
+};
+
 // Default global arts (from conectfly-pizza)
 const GLOBAL_ARTS: Record<FlyStatusKind, { url: string; text: string }> = {
   preparando: {
