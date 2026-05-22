@@ -30,10 +30,70 @@ function AppLayout() {
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [pizzeriaStatus, setPizzeriaStatus] = useState<{ is_active: boolean } | null>(null);
+  const [checkingStatus, setCheckingStatus] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/login" });
   }, [loading, user, nav]);
+
+  useEffect(() => {
+    async function checkPizzeriaStatus() {
+      if (!user || isSuperAdmin || loading) return;
+      
+      setCheckingStatus(true);
+      const params = new URLSearchParams(window.location.search);
+      const pizzeriaId = params.get("pizzeriaId");
+
+      let query = supabase.from("pizzerias").select("is_active");
+      
+      if (pizzeriaId) {
+        query = query.eq("id", pizzeriaId);
+      } else {
+        query = query.eq("owner_id", user.id).neq("status", "deleted").order("created_at").limit(1);
+      }
+
+      const { data, error } = await query.maybeSingle();
+      
+      if (!error && data) {
+        setPizzeriaStatus({ is_active: data.is_active ?? true });
+      }
+      setCheckingStatus(false);
+    }
+
+    checkPizzeriaStatus();
+  }, [user, isSuperAdmin, loading, path]);
+
+  if (loading || !user || checkingStatus) {
+    return <div className="grid min-h-screen place-items-center text-muted-foreground">Carregando...</div>;
+  }
+
+  // Block access if inactive and not super admin
+  const isInactive = pizzeriaStatus && !pizzeriaStatus.is_active && !isSuperAdmin;
+  const isPublicRoute = ["/docs", "/settings"].includes(path); // Settings is restricted but we might want them to see it? User said block main functions.
+  
+  // We block if inactive, not super admin, and trying to access anything other than docs or if explicitly blocked
+  const shouldBlock = isInactive && !path.startsWith("/admin") && path !== "/docs";
+
+  if (shouldBlock) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-6 text-center">
+        <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-destructive/10">
+          <X className="h-10 w-10 text-destructive" />
+        </div>
+        <h1 className="mb-2 text-2xl font-bold">Conta Inativa</h1>
+        <p className="mb-8 max-w-md text-muted-foreground">
+          Sua conta está temporariamente inativa. Entre em contato com o suporte para regularizar o acesso.
+        </p>
+        <Button 
+          variant="outline" 
+          onClick={async () => { await signOut(); nav({ to: "/login" }); }}
+        >
+          <LogOut className="mr-2 h-4 w-4" /> Sair da conta
+        </Button>
+      </div>
+    );
+  }
 
   if (loading || !user) {
     return <div className="grid min-h-screen place-items-center text-muted-foreground">Carregando...</div>;
