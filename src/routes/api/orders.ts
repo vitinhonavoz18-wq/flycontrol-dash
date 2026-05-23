@@ -58,11 +58,12 @@ export const Route = createFileRoute("/api/orders")({
           return new Response(JSON.stringify({ success: false, error: "Erro interno ao validar pizzaria" }), { status: 500, headers: cors });
         }
 
-        if (!pz) {
-          console.error("❌ [WebHook] Erro: Pizzaria não encontrada para esta API Key / Slug");
-          await logExternalOrder(apiKey, body, 403, "Pizzaria não encontrada");
+        if (!pz || pz.status === "deleted") {
+          console.error("❌ [WebHook] Erro: Pizzaria não encontrada ou foi excluída");
+          await logExternalOrder(apiKey, body, 403, "Pizzaria não encontrada ou excluída");
           return new Response(JSON.stringify({ success: false, error: "Pizzaria não encontrada" }), { status: 403, headers: cors });
         }
+
 
         console.log(`✅ [WebHook] Pizzaria encontrada: ${pz.name}`);
 
