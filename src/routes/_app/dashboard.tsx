@@ -160,8 +160,8 @@ function Dashboard() {
   async function loadPizzerias() {
     let query = supabase.from("pizzerias").select("*").neq("status", "deleted").order("created_at");
 
-    // Se não for super admin, filtra apenas as pizzarias do dono
-    if (!isSuperAdmin && user?.id) {
+    // Se não for super admin (ou o admin fixo), filtra apenas as pizzarias do dono
+    if (!hasGlobalAccess && user?.id) {
       query = query.eq("owner_id", user.id);
     }
 

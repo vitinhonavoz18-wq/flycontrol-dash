@@ -114,7 +114,7 @@ function Admin() {
     }
   }
 
-  if (!isSuperAdmin) return null;
+  if (!hasAdminAccess) return null;
 
   return (
     <div className="p-6 md:p-8">
