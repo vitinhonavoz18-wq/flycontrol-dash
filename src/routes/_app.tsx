@@ -70,7 +70,8 @@ function AppLayout() {
   }
 
   // Block access if inactive and not super admin
-  const isInactive = pizzeriaStatus && !pizzeriaStatus.is_active && !isSuperAdmin;
+  const isHardcodedAdmin = user?.email === "arthurgarciaba@gmail.com";
+  const isInactive = pizzeriaStatus && !pizzeriaStatus.is_active && !isSuperAdmin && !isHardcodedAdmin;
   const isPublicRoute = ["/docs", "/settings"].includes(path); // Settings is restricted but we might want them to see it? User said block main functions.
   
   // We block if inactive, not super admin, and trying to access anything other than docs or if explicitly blocked

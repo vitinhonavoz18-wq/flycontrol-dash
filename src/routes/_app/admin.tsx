@@ -20,17 +20,20 @@ import {
 export const Route = createFileRoute("/_app/admin")({ component: Admin });
 
 function Admin() {
-  const { isSuperAdmin, loading } = useAuth();
+  const { user, isSuperAdmin, loading } = useAuth();
   const nav = useNavigate();
   const [pz, setPz] = useState<any[]>([]);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  useEffect(() => {
-    if (!loading && !isSuperAdmin) nav({ to: "/dashboard" });
-  }, [loading, isSuperAdmin, nav]);
+  const isHardcodedAdmin = user?.email === "arthurgarciaba@gmail.com";
+  const hasAdminAccess = isSuperAdmin || isHardcodedAdmin;
 
-  useEffect(() => { if (isSuperAdmin) load(); }, [isSuperAdmin]);
+  useEffect(() => {
+    if (!loading && !hasAdminAccess) nav({ to: "/dashboard" });
+  }, [loading, hasAdminAccess, nav]);
+
+  useEffect(() => { if (hasAdminAccess) load(); }, [hasAdminAccess]);
   
   async function load() {
     // 1. Buscamos as pizzarias e seus pedidos (relacionamento que funciona)
