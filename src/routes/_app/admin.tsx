@@ -26,7 +26,7 @@ function Admin() {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
-  const isHardcodedAdmin = user?.email === "arthurgarciaba@gmail.com";
+  const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
   const hasAdminAccess = isSuperAdmin || isHardcodedAdmin;
 
   useEffect(() => {
