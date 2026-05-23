@@ -131,6 +131,8 @@ function playBeep() {
 
 function Dashboard() {
   const { user, isSuperAdmin, loading } = useAuth();
+  const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
+  const hasGlobalAccess = isSuperAdmin || isHardcodedAdmin;
   const [mounted, setMounted] = useState(false);
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
