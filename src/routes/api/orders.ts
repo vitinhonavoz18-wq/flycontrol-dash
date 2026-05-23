@@ -20,9 +20,8 @@ export const Route = createFileRoute("/api/orders")({
         try { 
           const bodyText = await request.clone().text();
           body = JSON.parse(bodyText); 
-          console.log("📦 [WebHook] Payload decodificado:", JSON.stringify(body).substring(0, 200) + "...");
         } catch (err) {
-          console.error("❌ [WebHook] Erro: JSON inválido no corpo da requisição");
+          console.error("❌ [WebHook] Erro detalhado: JSON inválido no corpo da requisição");
           return new Response(JSON.stringify({ success: false, error: "JSON inválido" }), { status: 400, headers: cors });
         }
 
@@ -31,9 +30,6 @@ export const Route = createFileRoute("/api/orders")({
         const apiKey = (bearerToken || request.headers.get("x-api-key") || body?.api_key || "").trim();
         const pizzeriaSlug = body.pizzeria?.slug || body.pizzeria_slug || body.slug;
         
-        const maskedKey = apiKey ? `${apiKey.substring(0, 4)}***${apiKey.slice(-4)}` : "ausente";
-        console.log(`🔑 [WebHook] Validando API Key: ${maskedKey} | Slug: ${pizzeriaSlug || "não informado"}`);
-
         if (!apiKey) {
           console.error("❌ [WebHook] Erro: API Key ausente");
           return new Response(JSON.stringify({ 
@@ -43,8 +39,7 @@ export const Route = createFileRoute("/api/orders")({
           }), { status: 401, headers: cors });
         }
 
-        // 1. Identificar Pizzaria - Removido filtro de status active/is_active para permitir recebimento
-        // Filtramos apenas para não pegar pizzarias excluídas (deleted)
+        // 1. Identificar Pizzaria - Sem filtros restritivos de status para não bloquear recebimento
         let pzQuery = supabaseAdmin
           .from("pizzerias")
           .select("id, name, slug, status, is_active")
@@ -58,51 +53,26 @@ export const Route = createFileRoute("/api/orders")({
         const { data: pz, error: pErr } = await pzQuery.maybeSingle();
 
         if (pErr) {
-          console.error("❌ [WebHook] Erro de banco ao buscar pizzaria:", pErr);
+          console.error("❌ [WebHook] Erro detalhado de banco:", pErr.message);
           await logExternalOrder(apiKey, body, 500, `Erro DB: ${pErr.message}`);
           return new Response(JSON.stringify({ success: false, error: "Erro interno ao validar pizzaria" }), { status: 500, headers: cors });
         }
 
         if (!pz) {
-          console.error("❌ [WebHook] Erro: Nenhuma pizzaria encontrada para esta API Key / Slug");
-          await logExternalOrder(apiKey, body, 403, "Pizzaria não encontrada ou excluída");
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "Pizzaria não encontrada",
-            debug: { 
-              receivedSlug: pizzeriaSlug,
-              hasApiKey: true
-            } 
-          }), { status: 403, headers: cors });
+          console.error("❌ [WebHook] Erro: Pizzaria não encontrada para esta API Key / Slug");
+          await logExternalOrder(apiKey, body, 403, "Pizzaria não encontrada");
+          return new Response(JSON.stringify({ success: false, error: "Pizzaria não encontrada" }), { status: 403, headers: cors });
         }
 
-        console.log(`✅ [WebHook] Pizzaria encontrada: ${pz.name} (ID: ${pz.id}) | Status: ${pz.status} | Ativa: ${pz.is_active !== false}`);
+        console.log(`✅ [WebHook] Pizzaria encontrada: ${pz.name}`);
 
-
-        // 2. Extrair dados do pedido independente do formato do payload
+        // 2. Extrair dados do pedido
         const orderData = body.order || body || {};
         const customer = body.customer || body || {};
         const externalOrderId = orderData.id || body.order_id || body.id || null;
         const items = orderData.items || body.items || [];
 
-        console.log("📦 [WebHook] Preparando inserção do pedido ID Externo:", externalOrderId);
-
-        // Verificar duplicidade
-        if (externalOrderId) {
-          const { data: existing } = await supabaseAdmin
-            .from("orders")
-            .select("id")
-            .eq("tenant_id", pz.id)
-            .eq("external_order_id", String(externalOrderId))
-            .maybeSingle();
-
-          if (existing) {
-            console.log("🔁 [WebHook] Pedido já existe, ignorando duplicado.");
-            return new Response(JSON.stringify({ success: true, message: "Pedido já registrado anteriormente", order_id: existing.id }), { status: 200, headers: cors });
-          }
-        }
-
-        // Normalização de valores monetários
+        // Normalização de valores
         const parseMoney = (val: any) => {
           if (typeof val === "number") return val;
           if (typeof val === "string") {
@@ -131,22 +101,22 @@ export const Route = createFileRoute("/api/orders")({
           whatsapp_message: orderData.whatsapp_message || body.whatsapp_message || null,
           status: "novo",
           source: body.source || "sitecreatorfly",
-          items: items, // Mantém JSON para fallback de exibição
+          items: items,
         };
 
-        console.log("💾 [WebHook] Salvando pedido no banco...");
         const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
           .insert(orderToInsert)
           .select("id")
           .single();
 
         if (orderError) {
-          console.error("❌ [WebHook] Erro ao salvar pedido:", orderError);
-          await logExternalOrder(apiKey, body, 500, `Erro ao salvar order: ${orderError.message}`);
-          return new Response(JSON.stringify({ success: false, error: "Erro interno ao salvar pedido", details: orderError.message }), { status: 500, headers: cors });
+          console.error("❌ [WebHook] Erro detalhado ao salvar pedido:", orderError.message);
+          await logExternalOrder(apiKey, body, 500, `Erro insert: ${orderError.message}`);
+          return new Response(JSON.stringify({ success: false, error: "Erro ao salvar pedido" }), { status: 500, headers: cors });
         }
         
-        console.log("💾 [WebHook] Pedido salvo com sucesso ID:", order.id);
+        console.log("✅ [WebHook] Pedido salvo com sucesso");
+
         
         // 3. Salvar itens detalhados na tabela order_items
         if (Array.isArray(items) && items.length > 0) {
