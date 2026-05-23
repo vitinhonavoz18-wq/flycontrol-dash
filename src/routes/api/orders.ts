@@ -14,30 +14,25 @@ export const Route = createFileRoute("/api/orders")({
     handlers: {
       OPTIONS: async () => new Response(JSON.stringify({ success: true, message: "CORS OK" }), { status: 200, headers: cors }),
       POST: async ({ request }) => {
-        console.log("📥 [WebHook] Recebendo pedido externo");
+        console.log("📥 [WebHook] Pedido recebido do SiteCreatorFly");
         
         let body: any;
         try { 
           const bodyText = await request.clone().text();
           body = JSON.parse(bodyText); 
+          console.log("📦 [WebHook] Payload decodificado:", JSON.stringify(body).substring(0, 200) + "...");
         } catch (err) {
-          console.error("❌ [WebHook] Erro: JSON inválido");
+          console.error("❌ [WebHook] Erro: JSON inválido no corpo da requisição");
           return new Response(JSON.stringify({ success: false, error: "JSON inválido" }), { status: 400, headers: cors });
         }
 
         const authHeader = request.headers.get("authorization") || "";
         const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : "";
         const apiKey = (bearerToken || request.headers.get("x-api-key") || body?.api_key || "").trim();
-        const event = body.event;
         const pizzeriaSlug = body.pizzeria?.slug || body.pizzeria_slug || body.slug;
-
-        console.log("📥 [WebHook] /api/orders recebeu requisição");
-        console.log("Método:", request.method);
-        console.log("Existe API Key?", Boolean(apiKey));
-        console.log("Slug recebido:", pizzeriaSlug);
         
         const maskedKey = apiKey ? `${apiKey.substring(0, 4)}***${apiKey.slice(-4)}` : "ausente";
-        console.log("API Key recebida (mascarada):", maskedKey);
+        console.log(`🔑 [WebHook] Validando API Key: ${maskedKey} | Slug: ${pizzeriaSlug || "não informado"}`);
 
         if (!apiKey) {
           console.error("❌ [WebHook] Erro: API Key ausente");
@@ -48,31 +43,41 @@ export const Route = createFileRoute("/api/orders")({
           }), { status: 401, headers: cors });
         }
 
-        // 1. Identificar Pizzaria
-        let pzQuery = supabaseAdmin.from("pizzerias").select("id, name, slug").eq("api_key", apiKey).eq("status", "active");
+        // 1. Identificar Pizzaria - Removido filtro de status active/is_active para permitir recebimento
+        // Filtramos apenas para não pegar pizzarias excluídas (deleted)
+        let pzQuery = supabaseAdmin
+          .from("pizzerias")
+          .select("id, name, slug, status, is_active")
+          .eq("api_key", apiKey)
+          .neq("status", "deleted");
         
         if (pizzeriaSlug) {
           pzQuery = pzQuery.eq("slug", pizzeriaSlug);
         }
 
-        console.log("🔍 [WebHook] Buscando pizzaria por api_key (+ slug se presente)");
         const { data: pz, error: pErr } = await pzQuery.maybeSingle();
 
-        if (pErr || !pz) {
-          console.error("❌ [WebHook] Erro: API Key ou Slug inválidos", pErr || "Pizzaria não encontrada");
-          await logExternalOrder(apiKey, body, 403, "Pizzaria não encontrada ou inativa");
+        if (pErr) {
+          console.error("❌ [WebHook] Erro de banco ao buscar pizzaria:", pErr);
+          await logExternalOrder(apiKey, body, 500, `Erro DB: ${pErr.message}`);
+          return new Response(JSON.stringify({ success: false, error: "Erro interno ao validar pizzaria" }), { status: 500, headers: cors });
+        }
+
+        if (!pz) {
+          console.error("❌ [WebHook] Erro: Nenhuma pizzaria encontrada para esta API Key / Slug");
+          await logExternalOrder(apiKey, body, 403, "Pizzaria não encontrada ou excluída");
           return new Response(JSON.stringify({ 
             success: false, 
             error: "Pizzaria não encontrada",
             debug: { 
               receivedSlug: pizzeriaSlug,
-              hasApiKey: true,
-              dbError: pErr?.message 
+              hasApiKey: true
             } 
           }), { status: 403, headers: cors });
         }
 
-        console.log("✅ [WebHook] Pizzaria encontrada:", pz.name, `(${pz.id})`);
+        console.log(`✅ [WebHook] Pizzaria encontrada: ${pz.name} (ID: ${pz.id}) | Status: ${pz.status} | Ativa: ${pz.is_active !== false}`);
+
 
         // 2. Extrair dados do pedido independente do formato do payload
         const orderData = body.order || body || {};
