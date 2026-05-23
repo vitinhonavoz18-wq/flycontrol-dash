@@ -131,6 +131,8 @@ function playBeep() {
 
 function Dashboard() {
   const { user, isSuperAdmin, loading } = useAuth();
+  const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
+  const hasGlobalAccess = isSuperAdmin || isHardcodedAdmin;
   const [mounted, setMounted] = useState(false);
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -160,8 +162,8 @@ function Dashboard() {
   async function loadPizzerias() {
     let query = supabase.from("pizzerias").select("*").neq("status", "deleted").order("created_at");
 
-    // Se não for super admin, filtra apenas as pizzarias do dono
-    if (!isSuperAdmin && user?.id) {
+    // Se não for super admin (ou o admin fixo), filtra apenas as pizzarias do dono
+    if (!hasGlobalAccess && user?.id) {
       query = query.eq("owner_id", user.id);
     }
 

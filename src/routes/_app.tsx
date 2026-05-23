@@ -135,7 +135,7 @@ function AppLayout() {
         </Link>
       ))}
       
-      {isSuperAdmin && (
+      {(isSuperAdmin || isHardcodedAdmin) && (
         <>
           <div className="px-3 pb-1 pt-6 text-xs font-semibold uppercase text-muted-foreground/70 border-t border-sidebar-border mt-4">Painel Admin</div>
           {adminItems.map((it) => (

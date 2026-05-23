@@ -14,14 +14,15 @@ export const Route = createFileRoute("/api/orders")({
     handlers: {
       OPTIONS: async () => new Response(JSON.stringify({ success: true, message: "CORS OK" }), { status: 200, headers: cors }),
       POST: async ({ request }) => {
-        console.log("📥 [WebHook] Pedido recebido do SiteCreatorFly");
+        console.log("📥 [WebHook] Nova requisição de pedido recebida");
         
         let body: any;
         try { 
           const bodyText = await request.clone().text();
           body = JSON.parse(bodyText); 
+          console.log("📦 [WebHook] Payload recebido:", JSON.stringify(body, null, 2));
         } catch (err) {
-          console.error("❌ [WebHook] Erro detalhado: JSON inválido no corpo da requisição");
+          console.error("❌ [WebHook] Erro: JSON inválido no corpo da requisição");
           return new Response(JSON.stringify({ success: false, error: "JSON inválido" }), { status: 400, headers: cors });
         }
 
@@ -34,38 +35,40 @@ export const Route = createFileRoute("/api/orders")({
           console.error("❌ [WebHook] Erro: API Key ausente");
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "API Key ausente ou inválida",
+            error: "API Key ausente ou inválida. Verifique os headers 'Authorization' ou 'x-api-key'.",
             debug: { hasApiKey: false }
           }), { status: 401, headers: cors });
         }
 
-        // 1. Identificar Pizzaria - Sem filtros restritivos de status para não bloquear recebimento
-        let pzQuery = supabaseAdmin
+        // 1. Identificar Pizzaria - Apenas por API Key (única) para evitar problemas de sincronismo com slug
+        console.log(`🔍 [WebHook] Buscando pizzaria com API Key: ${apiKey.substring(0, 6)}...`);
+        
+        const { data: pz, error: pErr } = await supabaseAdmin
           .from("pizzerias")
           .select("id, name, slug, status, is_active")
           .eq("api_key", apiKey)
-          .neq("status", "deleted");
-        
-        if (pizzeriaSlug) {
-          pzQuery = pzQuery.eq("slug", pizzeriaSlug);
-        }
-
-        const { data: pz, error: pErr } = await pzQuery.maybeSingle();
+          .neq("status", "deleted")
+          .maybeSingle();
 
         if (pErr) {
-          console.error("❌ [WebHook] Erro detalhado de banco:", pErr.message);
+          console.error("❌ [WebHook] Erro de banco ao buscar pizzaria:", pErr.message);
           await logExternalOrder(apiKey, body, 500, `Erro DB: ${pErr.message}`);
           return new Response(JSON.stringify({ success: false, error: "Erro interno ao validar pizzaria" }), { status: 500, headers: cors });
         }
 
-        if (!pz || pz.status === "deleted") {
-          console.error("❌ [WebHook] Erro: Pizzaria não encontrada ou foi excluída");
-          await logExternalOrder(apiKey, body, 403, "Pizzaria não encontrada ou excluída");
-          return new Response(JSON.stringify({ success: false, error: "Pizzaria não encontrada" }), { status: 403, headers: cors });
+        if (!pz) {
+          console.error("❌ [WebHook] Erro: Nenhuma pizzaria encontrada para esta API Key");
+          await logExternalOrder(apiKey, body, 403, "API Key não vinculada a nenhuma pizzaria ativa");
+          return new Response(JSON.stringify({ success: false, error: "API Key não autorizada" }), { status: 403, headers: cors });
         }
 
+        if (pz.status === "deleted") {
+          console.error("❌ [WebHook] Erro: Pizzaria encontrada mas está com status 'deleted'");
+          await logExternalOrder(apiKey, body, 403, "Pizzaria excluída");
+          return new Response(JSON.stringify({ success: false, error: "Pizzaria excluída" }), { status: 403, headers: cors });
+        }
 
-        console.log(`✅ [WebHook] Pizzaria encontrada: ${pz.name}`);
+        console.log(`✅ [WebHook] Pizzaria identificada: ${pz.name} (ID: ${pz.id})`);
 
         // 2. Extrair dados do pedido
         const orderData = body.order || body || {};
@@ -111,12 +114,16 @@ export const Route = createFileRoute("/api/orders")({
           .single();
 
         if (orderError) {
-          console.error("❌ [WebHook] Erro detalhado ao salvar pedido:", orderError.message);
-          await logExternalOrder(apiKey, body, 500, `Erro insert: ${orderError.message}`);
-          return new Response(JSON.stringify({ success: false, error: "Erro ao salvar pedido" }), { status: 500, headers: cors });
+          console.error("❌ [WebHook] Erro ao inserir na tabela 'orders':", orderError.message);
+          await logExternalOrder(apiKey, body, 500, `Erro insert orders: ${orderError.message}`);
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Erro ao salvar o pedido no banco de dados",
+            details: orderError.message 
+          }), { status: 500, headers: cors });
         }
         
-        console.log("✅ [WebHook] Pedido salvo com sucesso");
+        console.log(`✅ [WebHook] Pedido principal salvo. ID: ${order.id}`);
 
         
         // 3. Salvar itens detalhados na tabela order_items
@@ -145,10 +152,10 @@ export const Route = createFileRoute("/api/orders")({
             const { error: itemsError } = await (supabaseAdmin.from("order_items") as any).insert(orderItemsToInsert);
             
             if (itemsError) {
-              console.error("⚠️ [WebHook] Erro ao salvar itens detalhados:", itemsError);
-              // Não falha a requisição se o pedido principal foi salvo
+              console.error("⚠️ [WebHook] Erro ao inserir itens detalhados (order_items):", itemsError.message);
+              // Não falha a requisição se o pedido principal foi salvo, mas avisa no log
             } else {
-              console.log("✅ [WebHook] Itens do pedido salvos com sucesso.");
+              console.log(`✅ [WebHook] ${orderItemsToInsert.length} itens do pedido salvos com sucesso.`);
             }
           } catch (err) {
             console.warn("⚠️ [WebHook] Exceção ao processar order_items:", err);
