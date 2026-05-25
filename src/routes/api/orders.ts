@@ -1,48 +1,83 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Max-Age": "86400",
-  "Content-Type": "application/json",
+// Função auxiliar para gerar headers CORS robustos
+const getCorsHeaders = (request?: Request) => {
+  const origin = request?.headers.get("origin") || "*";
+  return {
+    "Access-Control-Allow-Origin": origin,
+    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, accept",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Access-Control-Max-Age": "86400",
+    "Access-Control-Allow-Credentials": "true",
+    "Content-Type": "application/json",
+  };
 };
 
 export const Route = createFileRoute("/api/orders")({
   server: {
     handlers: {
-      OPTIONS: async () => new Response(JSON.stringify({ success: true, message: "CORS OK" }), { status: 200, headers: cors }),
+      OPTIONS: async ({ request }) => {
+        return new Response(null, { 
+          status: 204, 
+          headers: getCorsHeaders(request) 
+        });
+      },
       POST: async ({ request }) => {
-        console.log("📥 [WebHook] Nova requisição de pedido recebida");
+        const cors = getCorsHeaders(request);
+        const origin = request.headers.get("origin") || "N/A";
         
+        // Coleta de headers para log (ocultando segredos)
+        const headersLog: Record<string, string> = {};
+        request.headers.forEach((v, k) => {
+          if (k.toLowerCase() === "authorization" || k.toLowerCase() === "x-api-key") {
+            headersLog[k] = v.substring(0, 10) + "...";
+          } else {
+            headersLog[k] = v;
+          }
+        });
+
+        console.log("📥 [API/Orders] Nova requisição recebida");
+        console.log(`🌐 Origem: ${origin}`);
+        console.log(`📋 Headers:`, JSON.stringify(headersLog));
+
         let body: any;
-        try { 
+        try {
           const bodyText = await request.clone().text();
-          body = JSON.parse(bodyText); 
-          console.log("📦 [WebHook] Payload recebido:", JSON.stringify(body, null, 2));
+          body = JSON.parse(bodyText);
+          console.log("📦 Payload recebido (simplificado):", JSON.stringify({
+            customer: body.customer?.name || body.customer_name,
+            total: body.order?.total || body.total,
+            items_count: (body.order?.items || body.items || []).length
+          }));
         } catch (err) {
-          console.error("❌ [WebHook] Erro: JSON inválido no corpo da requisição");
-          return new Response(JSON.stringify({ success: false, error: "JSON inválido" }), { status: 400, headers: cors });
+          console.error("❌ [API/Orders] JSON inválido no corpo da requisição");
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Corpo da requisição deve ser um JSON válido" 
+          }), { status: 400, headers: cors });
         }
 
         const authHeader = request.headers.get("authorization") || "";
-        const bearerToken = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : "";
-        const apiKey = (bearerToken || request.headers.get("x-api-key") || body?.api_key || "").trim();
-        const pizzeriaSlug = body.pizzeria?.slug || body.pizzeria_slug || body.slug;
-        
+        const apiKey = (
+          (authHeader.startsWith("Bearer ") ? authHeader.substring(7) : "") || 
+          request.headers.get("x-api-key") || 
+          body?.api_key || 
+          ""
+        ).trim();
+
+        console.log(`🔑 API Key presente: ${apiKey ? "Sim" : "Não"}`);
+
         if (!apiKey) {
-          console.error("❌ [WebHook] Erro: API Key ausente");
+          console.error("❌ [API/Orders] Erro: API Key não fornecida");
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "API Key ausente ou inválida. Verifique os headers 'Authorization' ou 'x-api-key'.",
-            debug: { hasApiKey: false }
+            error: "API Key ausente. Envie via header 'x-api-key', 'Authorization: Bearer KEY' ou no JSON como 'api_key'." 
           }), { status: 401, headers: cors });
         }
 
-        // 1. Identificar Pizzaria - Apenas por API Key (única) para evitar problemas de sincronismo com slug
-        console.log(`🔍 [WebHook] Buscando pizzaria com API Key: ${apiKey.substring(0, 6)}...`);
-        
+        // 1. Identificar Pizzaria apenas pela API Key
+        console.log(`🔍 [API/Orders] Validando API Key no banco...`);
         const { data: pz, error: pErr } = await supabaseAdmin
           .from("pizzerias")
           .select("id, name, slug, status, is_active")
@@ -51,32 +86,32 @@ export const Route = createFileRoute("/api/orders")({
           .maybeSingle();
 
         if (pErr) {
-          console.error("❌ [WebHook] Erro de banco ao buscar pizzaria:", pErr.message);
-          await logExternalOrder(apiKey, body, 500, `Erro DB: ${pErr.message}`);
-          return new Response(JSON.stringify({ success: false, error: "Erro interno ao validar pizzaria" }), { status: 500, headers: cors });
+          console.error("❌ [API/Orders] Erro de banco ao buscar pizzaria:", pErr.message);
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Erro interno ao processar validação da loja",
+            details: pErr.message
+          }), { status: 500, headers: cors });
         }
 
         if (!pz) {
-          console.error("❌ [WebHook] Erro: Nenhuma pizzaria encontrada para esta API Key");
-          await logExternalOrder(apiKey, body, 403, "API Key não vinculada a nenhuma pizzaria ativa");
-          return new Response(JSON.stringify({ success: false, error: "API Key não autorizada" }), { status: 403, headers: cors });
+          console.error("❌ [API/Orders] API Key não encontrada ou loja excluída");
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "API Key inválida ou loja não encontrada" 
+          }), { status: 403, headers: cors });
         }
 
-        if (pz.status === "deleted") {
-          console.error("❌ [WebHook] Erro: Pizzaria encontrada mas está com status 'deleted'");
-          await logExternalOrder(apiKey, body, 403, "Pizzaria excluída");
-          return new Response(JSON.stringify({ success: false, error: "Pizzaria excluída" }), { status: 403, headers: cors });
-        }
+        // IMPORTANTE: Não bloqueamos o recebimento se a loja estiver inativa (assinatura vencida)
+        // O bloqueio deve ser apenas no painel administrativo do dono.
+        console.log(`✅ [API/Orders] Pizzaria identificada: ${pz.name} (ID: ${pz.id}) - Status: ${pz.status}, Ativa: ${pz.is_active}`);
 
-        console.log(`✅ [WebHook] Pizzaria identificada: ${pz.name} (ID: ${pz.id})`);
-
-        // 2. Extrair dados do pedido
+        // 2. Extrair e normalizar dados do pedido
         const orderData = body.order || body || {};
         const customer = body.customer || body || {};
         const externalOrderId = orderData.id || body.order_id || body.id || null;
         const items = orderData.items || body.items || [];
 
-        // Normalização de valores
         const parseMoney = (val: any) => {
           if (typeof val === "number") return val;
           if (typeof val === "string") {
@@ -89,9 +124,9 @@ export const Route = createFileRoute("/api/orders")({
         const orderToInsert = {
           tenant_id: pz.id,
           external_order_id: externalOrderId ? String(externalOrderId) : null,
-          customer_name: customer.name || customer.customer_name || body.customer_name || "Cliente",
+          customer_name: customer.name || customer.customer_name || body.customer_name || "Cliente Site",
           customer_phone: customer.phone || customer.customer_phone || body.customer_phone || "",
-          customer_address: customer.address || customer.customer_address || body.customer_address || "",
+          customer_address: customer.address || customer.customer_address || body.customer_address || "Não informado",
           neighborhood: customer.neighborhood || body.neighborhood || null,
           customer_reference: customer.reference || body.customer_reference || null,
           total: parseMoney(orderData.total || body.total || 0),
@@ -108,65 +143,53 @@ export const Route = createFileRoute("/api/orders")({
           items: items,
         };
 
+        console.log("💾 [API/Orders] Salvando pedido no banco...");
         const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
           .insert(orderToInsert)
           .select("id")
           .single();
 
         if (orderError) {
-          console.error("❌ [WebHook] Erro ao inserir na tabela 'orders':", orderError.message);
-          await logExternalOrder(apiKey, body, 500, `Erro insert orders: ${orderError.message}`);
+          console.error("❌ [API/Orders] Erro ao salvar pedido principal:", orderError.message);
+          await logExternalOrder(apiKey, body, 500, `Erro insert: ${orderError.message}`);
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "Erro ao salvar o pedido no banco de dados",
+            error: "Falha ao registrar pedido no banco de dados",
             details: orderError.message 
           }), { status: 500, headers: cors });
         }
         
-        console.log(`✅ [WebHook] Pedido principal salvo. ID: ${order.id}`);
+        console.log(`✅ [API/Orders] Pedido salvo com sucesso! ID Interno: ${order.id}`);
 
-        
-        // 3. Salvar itens detalhados na tabela order_items
+        // 3. Salvar itens detalhados (opcional, não bloqueia o sucesso)
         if (Array.isArray(items) && items.length > 0) {
-          console.log(`💾 [WebHook] Processando ${items.length} itens...`);
           try {
-            const orderItemsToInsert = items.map((it: any) => {
-              const unitPrice = parseMoney(it.unit_price || it.price || 0);
-              const qty = Number(it.quantity || it.qty || 1);
-              const disc = parseMoney(it.discount || 0);
-              const totPrice = parseMoney(it.total_price || (unitPrice * qty) - disc);
-
-              return {
-                order_id: order.id,
-                pizzeria_id: pz.id,
-                product_name: it.product_name || it.name || it.title || "Item",
-                product_type: it.product_type || it.type || "produto",
-                quantity: qty,
-                unit_price: unitPrice,
-                total_price: totPrice,
-                discount: disc,
-                observations: it.observations || it.obs || it.notes || ""
-              };
-            });
+            const orderItemsToInsert = items.map((it: any) => ({
+              order_id: order.id,
+              pizzeria_id: pz.id,
+              product_name: it.product_name || it.name || it.title || "Item",
+              product_type: it.product_type || it.type || "produto",
+              quantity: Number(it.quantity || it.qty || 1),
+              unit_price: parseMoney(it.unit_price || it.price || 0),
+              total_price: parseMoney(it.total_price || 0),
+              discount: parseMoney(it.discount || 0),
+              observations: it.observations || it.obs || it.notes || ""
+            }));
 
             const { error: itemsError } = await (supabaseAdmin.from("order_items") as any).insert(orderItemsToInsert);
-            
-            if (itemsError) {
-              console.error("⚠️ [WebHook] Erro ao inserir itens detalhados (order_items):", itemsError.message);
-              // Não falha a requisição se o pedido principal foi salvo, mas avisa no log
-            } else {
-              console.log(`✅ [WebHook] ${orderItemsToInsert.length} itens do pedido salvos com sucesso.`);
-            }
+            if (itemsError) console.warn("⚠️ [API/Orders] Erro ao salvar itens do pedido:", itemsError.message);
           } catch (err) {
-            console.warn("⚠️ [WebHook] Exceção ao processar order_items:", err);
+            console.warn("⚠️ [API/Orders] Exceção ao processar itens:", err);
           }
         }
 
+        // Registrar log de sucesso
         await logExternalOrder(apiKey, body, 200);
+
         return new Response(JSON.stringify({ 
           success: true, 
           order_id: order.id, 
-          message: "Pedido recebido e processado com sucesso" 
+          message: "Pedido recebido pelo FlyControl" 
         }), { status: 200, headers: cors });
       },
     },
@@ -175,7 +198,7 @@ export const Route = createFileRoute("/api/orders")({
 
 async function logExternalOrder(apiKey: string, payload: any, statusCode: number, errorMessage?: string) {
   try {
-    const partialKey = apiKey ? `${apiKey.substring(0, 4)}***${apiKey.slice(-4)}` : null;
+    const partialKey = apiKey ? `${apiKey.substring(0, 4)}***${apiKey.slice(-4)}` : "N/A";
     await supabaseAdmin.from("external_order_logs").insert({
       api_key_partial: partialKey,
       payload: payload,
