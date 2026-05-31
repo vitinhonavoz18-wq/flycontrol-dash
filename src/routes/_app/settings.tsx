@@ -10,6 +10,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { FlyStatusSettings } from "@/components/flystatus/FlyStatusSettings";
+import { FiqonSettings } from "@/components/pizzerias/FiqonSettings";
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
 
@@ -392,6 +393,10 @@ function Settings() {
             </div>
 
             <FlyStatusSettings
+              pizzeria={p}
+              onUpdated={(patch) => setPizzerias((prev) => prev.map((x) => x.id === p.id ? { ...x, ...patch } : x))}
+            />
+            <FiqonSettings
               pizzeria={p}
               onUpdated={(patch) => setPizzerias((prev) => prev.map((x) => x.id === p.id ? { ...x, ...patch } : x))}
             />

@@ -197,7 +197,7 @@ export function FiqonSettings({ pizzeria, onUpdated }: FiqonSettingsProps) {
                         </span>
                       </div>
                       <span className="text-muted-foreground">
-                        {format(new Date(log.created_at), "dd/MM HH:mm:ss", { locale: pt_BR })}
+                        {format(new Date(log.created_at), "dd/MM HH:mm:ss", { locale: ptBR })}
                       </span>
                     </div>
                     {log.error_message && (
