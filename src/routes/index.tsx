@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Printer, BarChart3, Shield, Zap, ChefHat, Moon, Sun } from "lucide-react";
+import { Bell, Printer, BarChart3, Shield, Zap, ChefHat, Moon, Sun, Layout } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import logo from "@/assets/flycontrol-logo-hero.png";
 
