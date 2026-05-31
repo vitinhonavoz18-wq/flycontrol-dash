@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/orders")({
         console.log(`🔍 [API/Orders] Buscando pizzaria pela API Key...`);
         const { data: pz, error: pErr } = await supabaseAdmin
           .from("pizzerias")
-          .select("id, name, slug, status, is_active")
+          .select("id, name, slug, status, is_active, fiqon_enabled, fiqon_webhook_url")
           .eq("api_key", apiKey)
           .neq("status", "deleted")
           .maybeSingle();
@@ -172,6 +172,71 @@ export const Route = createFileRoute("/api/orders")({
         }
 
         await logExternalOrder(apiKey, body, 200);
+
+        // 4. Integração FIQON (Assíncrona/Não-bloqueante para o cliente)
+        if (pz.fiqon_enabled && pz.fiqon_webhook_url) {
+          console.log("🚀 [API/Orders] Disparando integração FIQON...");
+          // Usamos uma IIFE para não aguardar a resposta da FIQON antes de responder ao cliente
+          (async () => {
+            try {
+              const fiqonPayload = {
+                event: "order.created",
+                source: "flycontrol",
+                restaurant: {
+                  slug: pz.slug,
+                  name: pz.name
+                },
+                order: {
+                  id: order.id,
+                  customer_name: orderToInsert.customer_name,
+                  customer_phone: orderToInsert.customer_phone,
+                  address: orderToInsert.customer_address,
+                  items: orderToInsert.items,
+                  subtotal: orderToInsert.subtotal,
+                  delivery_fee: orderToInsert.delivery_fee,
+                  total: orderToInsert.total,
+                  payment_method: orderToInsert.payment_method,
+                  notes: orderToInsert.notes,
+                  status: orderToInsert.status,
+                  created_at: new Date().toISOString()
+                }
+              };
+
+              const response = await fetch(pz.fiqon_webhook_url!, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(fiqonPayload)
+              });
+
+              const respText = await response.text();
+              const isSuccess = response.status >= 200 && response.status < 300;
+
+              // Registrar log da FIQON
+              await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
+                restaurant_id: pz.id,
+                order_id: order.id,
+                fiqon_url: pz.fiqon_webhook_url,
+                payload: fiqonPayload,
+                status_http: response.status,
+                response_body: respText,
+                success: isSuccess,
+                error_message: isSuccess ? null : `Status ${response.status}: ${respText.substring(0, 100)}`
+              });
+
+              console.log(`✅ [FIQON] Resposta: ${response.status}`);
+            } catch (err: any) {
+              console.error("❌ [FIQON] Erro no envio:", err.message);
+              await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
+                restaurant_id: pz.id,
+                order_id: order.id,
+                fiqon_url: pz.fiqon_webhook_url,
+                payload: {},
+                success: false,
+                error_message: err.message
+              });
+            }
+          })();
+        }
 
         return new Response(JSON.stringify({ 
           success: true, 

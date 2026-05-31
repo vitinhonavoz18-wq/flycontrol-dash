@@ -26,6 +26,7 @@ import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
 import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
 import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
+import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin.users'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin.analytics'
@@ -114,6 +115,11 @@ const ApiPizzeriasSyncMenuRoute = ApiPizzeriasSyncMenuRouteImport.update({
   path: '/api/pizzerias/sync-menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPizzeriasFiqonTestRoute = ApiPizzeriasFiqonTestRouteImport.update({
+  id: '/api/pizzerias/fiqon-test',
+  path: '/api/pizzerias/fiqon-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPizzeriasCreateRoute = ApiPizzeriasCreateRouteImport.update({
   id: '/api/pizzerias/create',
   path: '/api/pizzerias/create',
@@ -147,6 +153,7 @@ export interface FileRoutesByFullPath {
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
+  '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
@@ -168,6 +175,7 @@ export interface FileRoutesByTo {
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
+  '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
@@ -191,6 +199,7 @@ export interface FileRoutesById {
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
+  '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
@@ -214,6 +223,7 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/users'
     | '/api/pizzerias/create'
+    | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
@@ -235,6 +245,7 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/users'
     | '/api/pizzerias/create'
+    | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
@@ -257,6 +268,7 @@ export interface FileRouteTypes {
     | '/_app/admin/analytics'
     | '/_app/admin/users'
     | '/api/pizzerias/create'
+    | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
@@ -271,6 +283,7 @@ export interface RootRouteChildren {
   ApiOrdersRoute: typeof ApiOrdersRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
+  ApiPizzeriasFiqonTestRoute: typeof ApiPizzeriasFiqonTestRoute
   ApiPizzeriasSyncMenuRoute: typeof ApiPizzeriasSyncMenuRoute
   ApiPublicCreateOrderRoute: typeof ApiPublicCreateOrderRoute
   ApiPublicCreatePizzeriaRoute: typeof ApiPublicCreatePizzeriaRoute
@@ -397,6 +410,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPizzeriasSyncMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/pizzerias/fiqon-test': {
+      id: '/api/pizzerias/fiqon-test'
+      path: '/api/pizzerias/fiqon-test'
+      fullPath: '/api/pizzerias/fiqon-test'
+      preLoaderRoute: typeof ApiPizzeriasFiqonTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pizzerias/create': {
       id: '/api/pizzerias/create'
       path: '/api/pizzerias/create'
@@ -466,6 +486,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOrdersRoute: ApiOrdersRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
+  ApiPizzeriasFiqonTestRoute: ApiPizzeriasFiqonTestRoute,
   ApiPizzeriasSyncMenuRoute: ApiPizzeriasSyncMenuRoute,
   ApiPublicCreateOrderRoute: ApiPublicCreateOrderRoute,
   ApiPublicCreatePizzeriaRoute: ApiPublicCreatePizzeriaRoute,

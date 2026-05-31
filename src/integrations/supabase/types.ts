@@ -181,6 +181,67 @@ export type Database = {
         }
         Relationships: []
       }
+      flycontrol_fiqon_logs: {
+        Row: {
+          created_at: string
+          error_message: string | null
+          fiqon_url: string | null
+          id: string
+          order_id: string | null
+          payload: Json | null
+          response_body: string | null
+          restaurant_id: string | null
+          status_http: number | null
+          success: boolean | null
+        }
+        Insert: {
+          created_at?: string
+          error_message?: string | null
+          fiqon_url?: string | null
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+          response_body?: string | null
+          restaurant_id?: string | null
+          status_http?: number | null
+          success?: boolean | null
+        }
+        Update: {
+          created_at?: string
+          error_message?: string | null
+          fiqon_url?: string | null
+          id?: string
+          order_id?: string | null
+          payload?: Json | null
+          response_body?: string | null
+          restaurant_id?: string | null
+          status_http?: number | null
+          success?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "flycontrol_fiqon_logs_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "flycontrol_fiqon_logs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "flycontrol_fiqon_logs_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       menu_categories: {
         Row: {
           active: boolean | null
@@ -592,6 +653,8 @@ export type Database = {
           created_at: string
           delivery_fee: number | null
           description: string | null
+          fiqon_enabled: boolean | null
+          fiqon_webhook_url: string | null
           id: string
           is_active: boolean | null
           logo_url: string | null
@@ -619,6 +682,8 @@ export type Database = {
           created_at?: string
           delivery_fee?: number | null
           description?: string | null
+          fiqon_enabled?: boolean | null
+          fiqon_webhook_url?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
@@ -646,6 +711,8 @@ export type Database = {
           created_at?: string
           delivery_fee?: number | null
           description?: string | null
+          fiqon_enabled?: boolean | null
+          fiqon_webhook_url?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
