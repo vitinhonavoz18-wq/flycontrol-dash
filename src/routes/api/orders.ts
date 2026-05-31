@@ -202,7 +202,7 @@ export const Route = createFileRoute("/api/orders")({
                 }
               };
 
-              const response = await fetch(pz.fiqon_webhook_url, {
+              const response = await fetch(pz.fiqon_webhook_url!, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(fiqonPayload)
