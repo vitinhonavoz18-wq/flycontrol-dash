@@ -59,64 +59,25 @@ export function FiqonSettings({ pizzeria, onUpdated }: FiqonSettingsProps) {
 
     setTesting(true);
     try {
-      const payload = {
-        event: "order.created",
-        source: "flycontrol_manual_test",
-        restaurant: {
-          slug: pizzeria.slug,
-          name: pizzeria.name
-        },
-        order: {
-          id: "TEST-" + Math.random().toString(36).substring(7).toUpperCase(),
-          customer_name: "Teste FIQON",
-          customer_phone: "(11) 99999-9999",
-          address: "Rua Teste, 123",
-          items: [{ name: "Pizza Teste", quantity: 1, price: 50.0 }],
-          subtotal: 50.0,
-          delivery_fee: 5.0,
-          total: 55.0,
-          payment_method: "Cartão",
-          notes: "Pedido de teste manual via painel FlyControl",
-          status: "novo",
-          created_at: new Date().toISOString()
-        }
-      };
-
-      const response = await fetch(pizzeria.fiqon_webhook_url, {
+      const response = await fetch("/api/pizzerias/fiqon-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          pizzeria_id: pizzeria.id,
+          api_key: pizzeria.api_key
+        })
       });
 
-      const respText = await response.text();
-      const isSuccess = response.status >= 200 && response.status < 300;
+      const data = await response.json();
 
-      // Salvar log do teste
-      await supabase.from("flycontrol_fiqon_logs").insert({
-        restaurant_id: pizzeria.id,
-        fiqon_url: pizzeria.fiqon_webhook_url,
-        payload: payload,
-        status_http: response.status,
-        response_body: respText,
-        success: isSuccess,
-        error_message: isSuccess ? null : `Status ${response.status}: ${respText.substring(0, 100)}`
-      });
-
-      if (isSuccess) {
+      if (data.success) {
         toast.success("Teste enviado com sucesso!");
       } else {
-        toast.error(`Falha no envio: Status ${response.status}`);
+        toast.error(`Falha no envio: ${data.error || "Status " + data.status}`);
       }
       loadLogs();
     } catch (err: any) {
       toast.error("Erro na conexão: " + err.message);
-      await supabase.from("flycontrol_fiqon_logs").insert({
-        restaurant_id: pizzeria.id,
-        fiqon_url: pizzeria.fiqon_webhook_url,
-        payload: {},
-        success: false,
-        error_message: err.message
-      });
       loadLogs();
     } finally {
       setTesting(false);
