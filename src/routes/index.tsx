@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { Bell, Printer, BarChart3, Shield, Zap, ChefHat, Moon, Sun } from "lucide-react";
+import { Bell, Printer, BarChart3, Shield, Zap, ChefHat, Moon, Sun, Layout } from "lucide-react";
 import { useTheme } from "@/components/theme-provider";
 import logo from "@/assets/flycontrol-logo-hero.png";
 
@@ -70,6 +70,16 @@ function Landing() {
               style={{ background: "linear-gradient(135deg, hsl(35 100% 55%), hsl(20 100% 50%))" }}
             >
               Começar grátis
+            </Button>
+          </Link>
+          <Link to="/presentation" className="w-full sm:w-auto">
+            <Button
+              variant="ghost"
+              size="lg"
+              className="h-12 w-full border-border/40 bg-card/20 px-10 text-base font-semibold backdrop-blur transition hover:bg-card/40 sm:w-auto"
+            >
+              <Layout className="mr-2 h-5 w-5 text-primary" />
+              Ver Apresentação
             </Button>
           </Link>
         </div>
