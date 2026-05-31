@@ -72,6 +72,16 @@ function Landing() {
               Começar grátis
             </Button>
           </Link>
+          <Link to="/presentation" className="w-full sm:w-auto">
+            <Button
+              variant="ghost"
+              size="lg"
+              className="h-12 w-full border-border/40 bg-card/20 px-10 text-base font-semibold backdrop-blur transition hover:bg-card/40 sm:w-auto"
+            >
+              <Layout className="mr-2 h-5 w-5 text-primary" />
+              Ver Apresentação
+            </Button>
+          </Link>
         </div>
 
         <span className="mt-12 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-primary/10 px-4 py-1.5 text-xs font-medium text-primary">
