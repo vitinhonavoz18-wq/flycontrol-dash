@@ -244,59 +244,92 @@ function Finance() {
     return t >= r.start.getTime() && t <= r.end.getTime();
   };
 
-  const ordersInPeriod = useMemo(() => orders.filter((o) => inRange(o, range)), [orders, range]);
-  const ordersPrev = useMemo(() => orders.filter((o) => inRange(o, prevRange)), [orders, prevRange]);
+  // Applied filters on top of the date range
+  const filteredOrders = useMemo(() => {
+    return orders.filter(o => {
+      const matchesPayment = paymentFilter === "all" || normalizePaymentMethod(o.payment_method) === paymentFilter;
+      const matchesStatus = statusFilter === "all" || o.status === statusFilter;
+      return matchesPayment && matchesStatus;
+    });
+  }, [orders, paymentFilter, statusFilter]);
 
-  const sum = (arr: OrderRow[]) => arr.reduce((acc, o) => acc + Number(o.total || 0), 0);
+  const ordersInPeriod = useMemo(() => filteredOrders.filter((o) => inRange(o, range)), [filteredOrders, range]);
+  const ordersPrev = useMemo(() => filteredOrders.filter((o) => inRange(o, prevRange)), [filteredOrders, prevRange]);
 
-  const now = new Date();
-  const revenueToday = sum(orders.filter((o) => inRange(o, { start: startOfDay(now), end: endOfDay(now) })));
-  const revenueYesterday = sum(
-    orders.filter((o) => inRange(o, { start: startOfDay(subDays(now, 1)), end: endOfDay(subDays(now, 1)) })),
-  );
-  const revenueWeek = sum(orders.filter((o) => inRange(o, { start: startOfWeek(now, { locale: ptBR }), end: endOfWeek(now, { locale: ptBR }) })));
-  const revenueMonth = sum(orders.filter((o) => inRange(o, { start: startOfMonth(now), end: endOfMonth(now) })));
-  const revenueTotal = sum(orders);
-  const ordersToday = orders.filter((o) => inRange(o, { start: startOfDay(now), end: endOfDay(now) })).length;
-  const ticketToday = ordersToday > 0 ? revenueToday / ordersToday : 0;
-  const ticketPeriod = ordersInPeriod.length > 0 ? sum(ordersInPeriod) / ordersInPeriod.length : 0;
-  const ticketWeek =
-    orders.filter((o) => inRange(o, { start: startOfWeek(now, { locale: ptBR }), end: endOfWeek(now, { locale: ptBR }) })).length > 0
-      ? revenueWeek /
-        orders.filter((o) => inRange(o, { start: startOfWeek(now, { locale: ptBR }), end: endOfWeek(now, { locale: ptBR }) })).length
-      : 0;
-  const ticketMonth =
-    orders.filter((o) => inRange(o, { start: startOfMonth(now), end: endOfMonth(now) })).length > 0
-      ? revenueMonth /
-        orders.filter((o) => inRange(o, { start: startOfMonth(now), end: endOfMonth(now) })).length
-      : 0;
+  const calculateMetrics = (arr: OrderRow[]) => {
+    const revenue = arr.reduce((acc, o) => acc + o.total, 0);
+    const deliveryFees = arr.reduce((acc, o) => acc + o.delivery_fee, 0);
+    const subtotal = arr.reduce((acc, o) => acc + o.subtotal, 0);
+    const count = arr.length;
+    const ticket = count > 0 ? revenue / count : 0;
+    
+    // Payment method breakdown
+    const payments = new Map<string, number>();
+    arr.forEach(o => {
+      const method = normalizePaymentMethod(o.payment_method);
+      payments.set(method, (payments.get(method) || 0) + 1);
+    });
+
+    return { revenue, deliveryFees, subtotal, count, ticket, payments };
+  };
+
+  const currentMetrics = useMemo(() => calculateMetrics(ordersInPeriod), [ordersInPeriod]);
+  const prevMetrics = useMemo(() => calculateMetrics(ordersPrev), [ordersPrev]);
 
   const growth = (current: number, prev: number) => {
     if (prev <= 0) return null;
     return ((current - prev) / prev) * 100;
   };
-  const growthToday = growth(revenueToday, revenueYesterday);
-  const growthPeriod = growth(sum(ordersInPeriod), sum(ordersPrev));
+
+  const revenueGrowth = growth(currentMetrics.revenue, prevMetrics.revenue);
+  const ordersGrowth = growth(currentMetrics.count, prevMetrics.count);
 
   // Chart series — group by day across current period
   const chartData = useMemo(() => {
-    const days = Math.ceil((range.end.getTime() - range.start.getTime()) / (1000 * 60 * 60 * 24));
+    const days = eachDayOfInterval({ start: range.start, end: range.end });
     const buckets = new Map<string, { day: string; faturamento: number; pedidos: number; dateObj: Date }>();
-    for (let i = 0; i < days; i++) {
-      const d = new Date(range.start.getTime() + i * 24 * 60 * 60 * 1000);
+    
+    days.forEach(d => {
       const key = format(d, "yyyy-MM-dd");
-      buckets.set(key, { day: format(d, "dd/MM"), faturamento: 0, pedidos: 0, dateObj: d });
-    }
+      buckets.set(key, { 
+        day: format(d, days.length > 31 ? "MM/yy" : "dd/MM"), 
+        faturamento: 0, 
+        pedidos: 0, 
+        dateObj: d 
+      });
+    });
+
     ordersInPeriod.forEach((o) => {
       const key = format(new Date(o.created_at), "yyyy-MM-dd");
       const b = buckets.get(key);
       if (b) {
-        b.faturamento += Number(o.total || 0);
+        b.faturamento += o.total;
         b.pedidos += 1;
       }
     });
     return Array.from(buckets.values());
   }, [ordersInPeriod, range]);
+
+  // Payment method chart data
+  const paymentChartData = useMemo(() => {
+    const data: { name: string; value: number; color: string }[] = [];
+    const colors = {
+      PIX: "#10b981",
+      Cartão: "#3b82f6",
+      Dinheiro: "#f59e0b",
+      Outros: "#94a3b8"
+    };
+    
+    currentMetrics.payments.forEach((count, method) => {
+      data.push({ 
+        name: method, 
+        value: count, 
+        color: colors[method as keyof typeof colors] || colors.Outros 
+      });
+    });
+    
+    return data.sort((a, b) => b.value - a.value);
+  }, [currentMetrics.payments]);
 
   // Rankings
   const rankings = useMemo(() => {
@@ -321,24 +354,26 @@ function Finance() {
     return {
       pizzas: decorate(all.filter((x) => x.type === "pizza")).slice(0, 5),
       bebidas: decorate(all.filter((x) => x.type === "bebida")).slice(0, 5),
-      top: decorate(all).slice(0, 5),
+      top: decorate(all).slice(0, 10),
     };
   }, [ordersInPeriod]);
 
   // Best hour
-  const peakHour = useMemo(() => {
-    const h = new Array(24).fill(0);
+  const hourlyData = useMemo(() => {
+    const h = new Array(24).fill(0).map((_, i) => ({ hour: i, count: 0 }));
     ordersInPeriod.forEach((o) => {
-      h[new Date(o.created_at).getHours()] += 1;
+      const hour = new Date(o.created_at).getHours();
+      h[hour].count += 1;
     });
-    const max = Math.max(...h);
-    if (max === 0) return null;
-    return { hour: h.indexOf(max), count: max };
+    return h;
   }, [ordersInPeriod]);
 
-  const lastOrder = orders[0];
-  const healthStatus: "Saudável" | "Atenção" | "Baixo movimento" =
-    revenueMonth > 1000 ? "Saudável" : revenueMonth > 200 ? "Atenção" : "Baixo movimento";
+  const peakHour = useMemo(() => {
+    const max = Math.max(...hourlyData.map(d => d.count));
+    if (max === 0) return null;
+    const item = hourlyData.find(d => d.count === max);
+    return item ? { hour: item.hour, count: max } : null;
+  }, [hourlyData]);
 
   const selectedPizzeria = pizzerias.find((p) => p.id === selectedPizzeriaId);
 
