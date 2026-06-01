@@ -185,9 +185,10 @@ function AdminFinance() {
     return orders.filter(o => {
       const isInDate = inRange(o, range);
       const matchesPayment = paymentFilter === "all" || normalizePaymentMethod(o.payment_method) === paymentFilter;
-      return isInDate && matchesPayment;
+      const matchesOrderStatus = orderStatusFilter === "all" || o.status === orderStatusFilter;
+      return isInDate && matchesPayment && matchesOrderStatus;
     });
-  }, [orders, range, paymentFilter]);
+  }, [orders, range, paymentFilter, orderStatusFilter]);
 
   const prevOrders = useMemo(() => {
     return orders.filter(o => inRange(o, prevRange));
