@@ -28,8 +28,16 @@ import {
   RefreshCw,
   ShoppingBag,
   Flame,
+  CreditCard,
+  Banknote,
+  Smartphone,
+  Info,
+  Truck,
+  History,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -37,6 +45,8 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
 import {
   ResponsiveContainer,
@@ -48,27 +58,45 @@ import {
   CartesianGrid,
   BarChart,
   Bar,
+  Cell,
+  PieChart,
+  Pie,
 } from "recharts";
-import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek } from "date-fns";
+import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, subMonths, eachDayOfInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 
 export const Route = createFileRoute("/_app/finance")({ component: Finance });
 
-type Period = "today" | "7days" | "30days" | "month";
+type Period = "today" | "yesterday" | "7days" | "30days" | "month" | "last_month";
 
 type Pizzeria = { id: string; name: string; owner_id: string | null; status: string };
 
 type OrderRow = {
   id: string;
   tenant_id: string;
-  total: number | string | null;
+  total: number;
+  subtotal: number;
+  delivery_fee: number;
+  discount: number;
   status: string;
+  payment_method: string | null;
   created_at: string;
   items: Array<{ name?: string; qty?: number; price?: number; notes?: string }> | null;
+  order_number: number;
+  customer_name: string | null;
 };
 
 const periodLabel = (p: Period) =>
-  ({ today: "Hoje", "7days": "Últimos 7 dias", "30days": "Últimos 30 dias", month: "Este mês" }[p]);
+  ({
+    today: "Hoje",
+    yesterday: "Ontem",
+    "7days": "Últimos 7 dias",
+    "30days": "Últimos 30 dias",
+    month: "Este mês",
+    last_month: "Mês passado",
+  }[p]);
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
@@ -76,9 +104,11 @@ const fmtBRL = (v: number) =>
 function getRange(p: Period): { start: Date; end: Date } {
   const now = new Date();
   if (p === "today") return { start: startOfDay(now), end: endOfDay(now) };
+  if (p === "yesterday") return { start: startOfDay(subDays(now, 1)), end: endOfDay(subDays(now, 1)) };
   if (p === "7days") return { start: startOfDay(subDays(now, 6)), end: endOfDay(now) };
   if (p === "30days") return { start: startOfDay(subDays(now, 29)), end: endOfDay(now) };
-  return { start: startOfMonth(now), end: endOfMonth(now) };
+  if (p === "month") return { start: startOfMonth(now), end: endOfMonth(now) };
+  return { start: startOfMonth(subMonths(now, 1)), end: endOfMonth(subMonths(now, 1)) };
 }
 
 function classify(name: string): "pizza" | "bebida" | "outro" {
