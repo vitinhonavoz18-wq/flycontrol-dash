@@ -588,13 +588,42 @@ function AdminFinance() {
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="h-9 gap-2">
                   <Filter className="h-4 w-4" />
-                  Status: {statusFilter === "all" ? "Todos" : statusFilter === "active" ? "Ativos" : "Inativos"}
+                  Conta: {accountStatusFilter === "all" ? "Todos" : accountStatusFilter === "active" ? "Ativos" : "Inativos"}
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setStatusFilter("all")}>Todos</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter("active")}>Ativos</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter("inactive")}>Inativos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAccountStatusFilter("all")}>Todos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAccountStatusFilter("active")}>Ativos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setAccountStatusFilter("inactive")}>Inativos</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-2">
+                  <Package className="h-4 w-4" />
+                  Pedido: {orderStatusFilter === "all" ? "Todos" : orderStatusFilter}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setOrderStatusFilter("all")}>Todos Status</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setOrderStatusFilter("novo")}>Novo</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setOrderStatusFilter("entregue")}>Entregue</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-2">
+                  <CreditCard className="h-4 w-4" />
+                  Pagamento: {paymentFilter === "all" ? "Todos" : paymentFilter}
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setPaymentFilter("all")}>Todos Pagamentos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPaymentFilter("PIX")}>PIX</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPaymentFilter("Cartão")}>Cartão</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPaymentFilter("Dinheiro")}>Dinheiro</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
