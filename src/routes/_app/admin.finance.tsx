@@ -636,7 +636,12 @@ function AdminFinance() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={p.is_active ? "default" : "destructive"} className={p.is_active ? "bg-green-500/10 text-green-600 hover:bg-green-500/20 border-green-500/20" : "bg-red-500/10 text-red-600 hover:bg-red-500/20 border-red-500/20"}>
-                          {p.is_active ? "Ativo" : "Inativo"}
+                          {p.is_active ? "Ativa" : "Inativa"}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline" className={p.status === 'active' ? 'border-primary/30 text-primary' : 'border-muted-foreground/30 text-muted-foreground'}>
+                          {p.status === 'active' ? 'Online' : 'Pausado'}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right font-medium">{p.count}</TableCell>
