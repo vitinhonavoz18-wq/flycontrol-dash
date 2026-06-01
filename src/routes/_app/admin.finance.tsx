@@ -664,7 +664,7 @@ function AdminFinance() {
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={7} className="h-40 text-center text-muted-foreground">
+                    <TableCell colSpan={8} className="h-40 text-center text-muted-foreground">
                       Nenhum dado encontrado para os filtros selecionados.
                     </TableCell>
                   </TableRow>
