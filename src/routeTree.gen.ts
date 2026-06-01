@@ -30,6 +30,7 @@ import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin.users'
+import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin.finance'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin.analytics'
 
 const SignupRoute = SignupRouteImport.update({
@@ -136,6 +137,11 @@ const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppAdminFinanceRoute = AppAdminFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppAdminAnalyticsRoute = AppAdminAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
@@ -158,6 +164,7 @@ export interface FileRoutesByFullPath {
   '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
+  '/admin/finance': typeof AppAdminFinanceRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -181,6 +188,7 @@ export interface FileRoutesByTo {
   '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
+  '/admin/finance': typeof AppAdminFinanceRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -206,6 +214,7 @@ export interface FileRoutesById {
   '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
+  '/_app/admin/finance': typeof AppAdminFinanceRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -231,6 +240,7 @@ export interface FileRouteTypes {
     | '/api/orders'
     | '/print/$orderId'
     | '/admin/analytics'
+    | '/admin/finance'
     | '/admin/users'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -254,6 +264,7 @@ export interface FileRouteTypes {
     | '/api/orders'
     | '/print/$orderId'
     | '/admin/analytics'
+    | '/admin/finance'
     | '/admin/users'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -278,6 +289,7 @@ export interface FileRouteTypes {
     | '/api/orders'
     | '/print/$orderId'
     | '/_app/admin/analytics'
+    | '/_app/admin/finance'
     | '/_app/admin/users'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -451,6 +463,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/_app/admin/finance': {
+      id: '/_app/admin/finance'
+      path: '/finance'
+      fullPath: '/admin/finance'
+      preLoaderRoute: typeof AppAdminFinanceRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/admin/analytics': {
       id: '/_app/admin/analytics'
       path: '/analytics'
@@ -463,11 +482,13 @@ declare module '@tanstack/react-router' {
 
 interface AppAdminRouteChildren {
   AppAdminAnalyticsRoute: typeof AppAdminAnalyticsRoute
+  AppAdminFinanceRoute: typeof AppAdminFinanceRoute
   AppAdminUsersRoute: typeof AppAdminUsersRoute
 }
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminAnalyticsRoute: AppAdminAnalyticsRoute,
+  AppAdminFinanceRoute: AppAdminFinanceRoute,
   AppAdminUsersRoute: AppAdminUsersRoute,
 }
 

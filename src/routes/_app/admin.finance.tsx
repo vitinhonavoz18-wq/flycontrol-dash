@@ -66,7 +66,7 @@ type Pizzeria = {
   name: string; 
   slug: string; 
   status: string; 
-  is_active: boolean;
+  is_active: boolean | null;
   created_at: string;
 };
 
