@@ -262,10 +262,10 @@ function AdminFinance() {
   const searchedRanking = useMemo(() => {
     return restaurantRanking.filter(p => {
       const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.slug.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === "all" || (statusFilter === "active" ? p.is_active : !p.is_active);
+      const matchesStatus = accountStatusFilter === "all" || (accountStatusFilter === "active" ? p.is_active : !p.is_active);
       return matchesSearch && matchesStatus;
     });
-  }, [restaurantRanking, searchTerm, statusFilter]);
+  }, [restaurantRanking, searchTerm, accountStatusFilter]);
 
   // Chart data
   const chartData = useMemo(() => {
