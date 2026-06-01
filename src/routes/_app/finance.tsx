@@ -379,24 +379,29 @@ function Finance() {
 
   if (!mounted || authLoading) {
     return (
-      <div className="p-8 space-y-6">
-        <div className="h-10 w-48 bg-muted animate-pulse rounded" />
+      <div className="p-4 md:p-8 space-y-8 max-w-7xl mx-auto">
+        <Skeleton className="h-32 w-full rounded-3xl" />
         <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-32 bg-muted animate-pulse rounded-xl" />
-          ))}
+          <Skeleton className="h-40 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
+          <Skeleton className="h-40 rounded-2xl" />
+        </div>
+        <div className="grid gap-6 md:grid-cols-3">
+          <Skeleton className="h-[400px] md:col-span-2 rounded-2xl" />
+          <Skeleton className="h-[400px] rounded-2xl" />
         </div>
       </div>
     );
   }
-  if (!user) {
-    return <div className="p-8 text-center text-muted-foreground">Sessão expirada. Faça login novamente.</div>;
-  }
+
+  const lastOrder = orders[0];
+  const healthStatus: "Saudável" | "Atenção" | "Baixo movimento" =
+    currentMetrics.revenue > 1000 ? "Saudável" : currentMetrics.revenue > 200 ? "Atenção" : "Baixo movimento";
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
       {/* ========== HEADER ========== */}
-      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 md:p-8">
+      <div className="relative overflow-hidden rounded-3xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-transparent p-6 md:p-8 shadow-sm">
         <div className="absolute -top-20 -right-20 w-72 h-72 rounded-full bg-primary/20 blur-3xl opacity-50" />
         <div className="absolute -bottom-24 -left-24 w-64 h-64 rounded-full bg-orange-500/10 blur-3xl" />
         <div className="relative flex flex-col lg:flex-row lg:items-center justify-between gap-6">
@@ -408,18 +413,21 @@ function Finance() {
               <div>
                 <h1 className="text-2xl md:text-3xl font-black tracking-tight">Gestão Financeira</h1>
                 <p className="text-sm text-muted-foreground max-w-xl">
-                  Controle seu faturamento, acompanhe vendas e descubra quais produtos mais movimentam sua pizzaria.
+                  Controle total do seu delivery. Acompanhe faturamento, ticket médio e desempenho de produtos em tempo real.
                 </p>
               </div>
             </div>
-            <div className="flex items-center gap-2 pt-1">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
-              </span>
-              <span className="text-xs font-semibold text-muted-foreground">Dados em tempo real</span>
-              {selectedPizzeria && (
-                <Badge variant="outline" className="ml-2 border-primary/30">
+            <div className="flex flex-wrap items-center gap-4 pt-1">
+              <div className="flex items-center gap-2">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+                </span>
+                <span className="text-xs font-semibold text-muted-foreground">Atualizado agora</span>
+              </div>
+              {selectedPizzeria && selectedPizzeriaId !== "all" && (
+                <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
+                  <Pizza className="h-3 w-3 mr-1.5" />
                   {selectedPizzeria.name}
                 </Badge>
               )}
@@ -430,13 +438,15 @@ function Finance() {
             {isSuperAdmin && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
+                  <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
                     <Activity className="h-4 w-4" />
                     {selectedPizzeriaId === "all" ? "Todas as Pizzarias" : selectedPizzeria?.name || "Selecionar"}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 max-h-72 overflow-auto">
+                  <DropdownMenuLabel>Filtrar por Restaurante</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={() => setSelectedPizzeriaId("all")}>Todas as Pizzarias</DropdownMenuItem>
                   {pizzerias.map((p) => (
                     <DropdownMenuItem key={p.id} onClick={() => setSelectedPizzeriaId(p.id)}>
@@ -446,24 +456,44 @@ function Finance() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
+            
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
+                <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
                   <Filter className="h-4 w-4" />
+                  Pagamento: {paymentFilter === "all" ? "Todos" : paymentFilter}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setPaymentFilter("all")}>Todos os Métodos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPaymentFilter("PIX")}>PIX</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPaymentFilter("Cartão")}>Cartão</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPaymentFilter("Dinheiro")}>Dinheiro</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
+                  <History className="h-4 w-4" />
                   {periodLabel(period)}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setPeriod("today")}>Hoje</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPeriod("yesterday")}>Ontem</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPeriod("7days")}>Últimos 7 dias</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPeriod("30days")}>Últimos 30 dias</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPeriod("month")}>Este mês</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPeriod("last_month")}>Mês passado</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
             <Button size="sm" className="gap-2 shadow-lg shadow-primary/20" onClick={loadOrders} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              Atualizar
+              <span className="hidden sm:inline">Sincronizar</span>
             </Button>
           </div>
         </div>
@@ -474,245 +504,296 @@ function Finance() {
         <EmptyState />
       ) : (
         <>
-          {/* ========== KPI CARDS ========== */}
-          <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-            <KpiBig
-              title="Faturamento Hoje"
-              value={fmtBRL(revenueToday)}
-              subtitle={
-                growthToday === null
-                  ? "Sem comparação suficiente ainda"
-                  : `${growthToday >= 0 ? "+" : ""}${growthToday.toFixed(1)}% em relação a ontem`
-              }
-              icon={Flame}
-              trend={growthToday}
-              highlight
-            />
-            <KpiBig
-              title="Faturamento da Semana"
-              value={fmtBRL(revenueWeek)}
-              subtitle="Acumulado da semana atual"
-              icon={Calendar}
-            />
-            <KpiBig
-              title="Faturamento do Mês"
-              value={fmtBRL(revenueMonth)}
-              subtitle="Acumulado do mês atual"
+          {/* ========== MAIN KPIs ========== */}
+          <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+            <KpiCard
+              title="Faturamento Bruto"
+              value={fmtBRL(currentMetrics.revenue)}
+              trend={revenueGrowth}
               icon={TrendingUp}
+              description={`Comparado a: ${periodLabel(period === 'month' ? 'last_month' : period)}`}
               highlight
             />
-            <KpiSmall title="Faturamento Total" value={fmtBRL(revenueTotal)} subtitle="Últimos 60 dias" icon={DollarSign} />
-            <KpiSmall
-              title="Pedidos Hoje"
-              value={String(ordersToday)}
-              subtitle="Volume de vendas de hoje"
-              icon={ShoppingBag}
+            <KpiCard
+              title="Total de Pedidos"
+              value={String(currentMetrics.count)}
+              trend={ordersGrowth}
+              icon={Package}
+              description="Volume total no período"
             />
-            <KpiSmall
+            <KpiCard
               title="Ticket Médio"
-              value={fmtBRL(ticketToday)}
-              subtitle="Média por pedido hoje"
+              value={fmtBRL(currentMetrics.ticket)}
+              trend={growth(currentMetrics.ticket, prevMetrics.ticket)}
               icon={Receipt}
+              description="Valor médio por pedido"
+            />
+            <KpiCard
+              title="Taxas de Entrega"
+              value={fmtBRL(currentMetrics.deliveryFees)}
+              icon={Truck}
+              description="Total arrecadado em fretes"
             />
           </section>
 
-          {/* ========== CHART + TICKET ANALYSIS ========== */}
+          {/* ========== CHARTS SECTION ========== */}
           <section className="grid gap-6 lg:grid-cols-3">
-            <Card className="lg:col-span-2 overflow-hidden border-border/60 shadow-sm">
+            <Card className="lg:col-span-2 border-border/60 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <div>
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <BarChart3 className="h-5 w-5 text-primary" /> Evolução do Faturamento
+                  <CardTitle className="flex items-center gap-2 text-base font-bold">
+                    <BarChart3 className="h-5 w-5 text-primary" /> Desempenho Diário
                   </CardTitle>
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Faturamento e pedidos por dia — {periodLabel(period).toLowerCase()}
-                  </p>
+                  <CardDescription>
+                    Evolução das vendas em {periodLabel(period).toLowerCase()}
+                  </CardDescription>
                 </div>
-                <Badge variant="outline" className="border-primary/30 text-primary">
-                  {ordersInPeriod.length} pedidos
-                </Badge>
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-1.5">
+                    <div className="h-3 w-3 rounded-full bg-primary" />
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Faturamento</span>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="pt-4">
+              <CardContent className="pt-6">
                 <div className="h-72 w-full">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={chartData} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
                       <defs>
-                        <linearGradient id="grad1" x1="0" y1="0" x2="0" y2="1">
-                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.4} />
+                        <linearGradient id="revenueGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="hsl(var(--primary))" stopOpacity={0.3} />
                           <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-                      <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} tickLine={false} axisLine={false} tickFormatter={(v) => `R$${v}`} />
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} opacity={0.5} />
+                      <XAxis 
+                        dataKey="day" 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={11} 
+                        tickLine={false} 
+                        axisLine={false}
+                        interval="preserveStartEnd"
+                      />
+                      <YAxis 
+                        stroke="hsl(var(--muted-foreground))" 
+                        fontSize={11} 
+                        tickLine={false} 
+                        axisLine={false} 
+                        tickFormatter={(v) => `R$${v >= 1000 ? (v/1000).toFixed(1) + 'k' : v}`}
+                      />
                       <RTooltip
-                        contentStyle={{
-                          background: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: 12,
-                          fontSize: 12,
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-background border border-border shadow-xl rounded-xl p-3 text-xs">
+                                <p className="font-bold mb-1 text-muted-foreground">{payload[0].payload.day}</p>
+                                <p className="text-primary font-black text-sm">{fmtBRL(payload[0].value as number)}</p>
+                                <p className="text-muted-foreground mt-0.5">{payload[0].payload.pedidos} pedidos</p>
+                              </div>
+                            );
+                          }
+                          return null;
                         }}
-                        formatter={(val: number, name) => [name === "faturamento" ? fmtBRL(val) : val, name === "faturamento" ? "Faturamento" : "Pedidos"]}
                       />
                       <Area
                         type="monotone"
                         dataKey="faturamento"
                         stroke="hsl(var(--primary))"
-                        strokeWidth={2.5}
-                        fill="url(#grad1)"
+                        strokeWidth={3}
+                        fill="url(#revenueGrad)"
+                        animationDuration={1500}
                       />
                     </AreaChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="h-24 w-full mt-2">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={chartData} margin={{ top: 0, right: 8, left: -16, bottom: 0 }}>
-                      <XAxis dataKey="day" stroke="hsl(var(--muted-foreground))" fontSize={10} tickLine={false} axisLine={false} />
-                      <RTooltip
-                        contentStyle={{
-                          background: "hsl(var(--card))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: 12,
-                          fontSize: 12,
-                        }}
-                        formatter={(v: number) => [`${v} pedidos`, "Pedidos"]}
-                      />
-                      <Bar dataKey="pedidos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} opacity={0.7} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
               </CardContent>
             </Card>
 
-            <Card className="border-border/60 shadow-sm bg-gradient-to-br from-orange-500/5 via-transparent to-transparent">
+            <Card className="border-border/60 shadow-sm bg-card/50 backdrop-blur-sm">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Target className="h-5 w-5 text-primary" /> Ticket Médio
+                <CardTitle className="flex items-center gap-2 text-base font-bold">
+                  <CreditCard className="h-5 w-5 text-primary" /> Métodos de Pagamento
                 </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <TicketRow label="Hoje" value={ticketToday} />
-                <TicketRow label="Semana" value={ticketWeek} />
-                <TicketRow label="Mês" value={ticketMonth} />
-                <div className="pt-3 border-t border-dashed border-border">
-                  <div className="flex items-start gap-2 p-3 rounded-xl bg-primary/5 border border-primary/10">
-                    <Lightbulb className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-                    <p className="text-xs text-foreground/80 leading-relaxed">
-                      {ticketMonth < 50
-                        ? "Sugestão: crie combos com bebida ou borda recheada para aumentar o valor por pedido."
-                        : "Ótimo desempenho! Seus pedidos estão mantendo bom valor médio."}
-                    </p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-
-          {/* ========== RANKINGS ========== */}
-          <section className="grid gap-6 lg:grid-cols-2">
-            <RankingCard
-              title="Pizzas mais vendidas"
-              icon={Pizza}
-              accent="from-orange-500/10"
-              items={rankings.pizzas}
-              emptyText="Nenhuma pizza vendida no período."
-            />
-            <RankingCard
-              title="Bebidas mais vendidas"
-              icon={CupSoda}
-              accent="from-sky-500/10"
-              items={rankings.bebidas}
-              emptyText="Nenhuma bebida vendida no período. Adicione bebidas ao cardápio para aumentar o ticket médio."
-            />
-          </section>
-
-          {/* ========== OPERATIONAL SUMMARY + INSIGHTS ========== */}
-          <section className="grid gap-6 lg:grid-cols-5">
-            <Card className="lg:col-span-3 border-border/60 shadow-sm">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <BarChart3 className="h-5 w-5 text-primary" /> Resumo da operação
-                </CardTitle>
+                <CardDescription>Distribuição de pedidos por forma de pagamento</CardDescription>
               </CardHeader>
               <CardContent>
-                <dl className="divide-y divide-border/60">
-                  <SummaryRow label="Total de pedidos no período" value={String(ordersInPeriod.length)} icon={Package} />
-                  <SummaryRow label="Faturamento bruto" value={fmtBRL(sum(ordersInPeriod))} icon={DollarSign} />
-                  <SummaryRow
-                    label="Produto campeão"
-                    value={rankings.top[0]?.name || "—"}
-                    icon={Trophy}
-                  />
-                  <SummaryRow
-                    label="Bebida campeã"
-                    value={rankings.bebidas[0]?.name || "Nenhuma"}
-                    icon={CupSoda}
-                  />
-                  <SummaryRow
-                    label="Último pedido recebido"
-                    value={lastOrder ? format(new Date(lastOrder.created_at), "dd/MM 'às' HH:mm", { locale: ptBR }) : "—"}
-                    icon={Clock}
-                  />
-                  <SummaryRow
-                    label="Horário de maior movimento"
-                    value={peakHour ? `${String(peakHour.hour).padStart(2, "0")}:00h (${peakHour.count} pedidos)` : "Sem dados ainda"}
-                    icon={Activity}
-                  />
-                  <div className="flex items-center justify-between py-3">
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Star className="h-4 w-4" /> Status financeiro
-                    </div>
-                    <Badge
-                      className={
-                        healthStatus === "Saudável"
-                          ? "bg-green-500/15 text-green-600 dark:text-green-400 border-green-500/30"
-                          : healthStatus === "Atenção"
-                          ? "bg-yellow-500/15 text-yellow-600 dark:text-yellow-400 border-yellow-500/30"
-                          : "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30"
-                      }
-                    >
-                      {healthStatus}
-                    </Badge>
+                <div className="h-56 w-full relative">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={paymentChartData}
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {paymentChartData.map((entry, index) => (
+                          <Cell key={`cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <RTooltip />
+                    </PieChart>
+                  </ResponsiveContainer>
+                  <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                    <span className="text-2xl font-black">{currentMetrics.count}</span>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">Total</span>
                   </div>
-                </dl>
+                </div>
+                <div className="grid grid-cols-2 gap-3 mt-4">
+                  {paymentChartData.map((item) => (
+                    <div key={item.name} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-border/40">
+                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+                      <div className="min-w-0">
+                        <div className="text-[10px] font-bold text-muted-foreground truncate uppercase">{item.name}</div>
+                        <div className="text-sm font-black">{item.value} <span className="text-[10px] font-normal text-muted-foreground">({((item.value / (currentMetrics.count || 1)) * 100).toFixed(0)}%)</span></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </CardContent>
             </Card>
+          </section>
 
-            <Card className="lg:col-span-2 border-border/60 shadow-sm overflow-hidden">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-base">
-                  <Sparkles className="h-5 w-5 text-primary" /> Insights inteligentes
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <InsightCard
-                  icon={Flame}
-                  text={
-                    rankings.top[0]
-                      ? `Seu produto mais vendido foi ${rankings.top[0].name} (${rankings.top[0].qty} vendas).`
-                      : "Ainda não há produtos vendidos no período."
-                  }
-                />
-                <InsightCard icon={Receipt} text={`Seu ticket médio está em ${fmtBRL(ticketPeriod)}.`} />
-                {rankings.bebidas.length === 0 && (
-                  <InsightCard icon={CupSoda} text="As bebidas representam uma oportunidade de venda adicional." />
-                )}
-                {ticketMonth < 60 && (
-                  <InsightCard icon={Zap} text="Adicionar combos pode aumentar o faturamento por pedido." />
-                )}
-                {peakHour && (
+          {/* ========== RANKINGS & OPERATIONAL ========== */}
+          <section className="grid gap-6 lg:grid-cols-2">
+            <RankingCard
+              title="Top 10 Produtos"
+              icon={Trophy}
+              items={rankings.top}
+              emptyText="Nenhum produto vendido no período."
+            />
+            
+            <div className="grid gap-6">
+              <Card className="border-border/60 shadow-sm">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-bold">
+                    <Activity className="h-5 w-5 text-primary" /> Resumo da Operação
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-2xl bg-muted/30 border border-border/40">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                        <Clock className="h-3.5 w-3.5" /> Horário de Pico
+                      </div>
+                      <div className="text-xl font-black">
+                        {peakHour ? `${String(peakHour.hour).padStart(2, "0")}:00h` : "—"}
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 font-bold uppercase">
+                        {peakHour ? `${peakHour.count} pedidos nesta hora` : "Sem dados suficientes"}
+                      </div>
+                    </div>
+                    <div className="p-4 rounded-2xl bg-muted/30 border border-border/40">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+                        <Star className="h-3.5 w-3.5" /> Saúde Financeira
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className={`h-2.5 w-2.5 rounded-full ${
+                          healthStatus === "Saudável" ? "bg-green-500" : healthStatus === "Atenção" ? "bg-yellow-500" : "bg-red-500"
+                        }`} />
+                        <span className="text-lg font-black">{healthStatus}</span>
+                      </div>
+                      <div className="text-[10px] text-muted-foreground mt-0.5 font-bold uppercase truncate">
+                        Status do faturamento mensal
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3 pt-2">
+                    <SummaryRow icon={DollarSign} label="Subtotal de Vendas" value={fmtBRL(currentMetrics.subtotal)} />
+                    <SummaryRow icon={Truck} label="Taxas de Entrega" value={fmtBRL(currentMetrics.deliveryFees)} />
+                    <SummaryRow icon={ShoppingBag} label="Faturamento Total" value={fmtBRL(currentMetrics.revenue)} highlight />
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/60 shadow-sm overflow-hidden">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base font-bold">
+                    <Sparkles className="h-5 w-5 text-primary" /> Insights Estratégicos
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
                   <InsightCard
-                    icon={Clock}
-                    text={`Seu horário de pico é ${String(peakHour.hour).padStart(2, "0")}h — divulgue promoções fora desse horário para suavizar o movimento.`}
+                    icon={Flame}
+                    text={rankings.top[0] ? `Seu carro-chefe é ${rankings.top[0].name}. Considere criar combos em torno dele.` : "Analise seus produtos mais vendidos para criar ofertas matadoras."}
                   />
-                )}
-                {growthPeriod !== null && growthPeriod > 0 && (
                   <InsightCard
-                    icon={TrendingUp}
-                    text={`Crescimento de ${growthPeriod.toFixed(1)}% comparado ao período anterior. Excelente!`}
+                    icon={Zap}
+                    text={currentMetrics.ticket < 60 ? "Seu ticket médio pode subir! Experimente sugerir bebidas ou sobremesas no checkout." : "Seu ticket médio está excelente! Continue mantendo a qualidade do mix."}
                   />
-                )}
-              </CardContent>
+                  {peakHour && (
+                    <InsightCard
+                      icon={Clock}
+                      text={`O pico das ${peakHour.hour}h exige equipe completa. Use promoções para atrair clientes em horários mais calmos.`}
+                    />
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </section>
+
+          {/* ========== RECENT ORDERS TABLE ========== */}
+          <section className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-black flex items-center gap-2">
+                <Receipt className="h-5 w-5 text-primary" /> Últimos Pedidos no Período
+              </h2>
+              <Badge variant="outline">{ordersInPeriod.length} resultados</Badge>
+            </div>
+            
+            <Card className="border-border/60 shadow-sm overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/30">
+                    <TableHead className="w-[100px]">Número</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Data / Hora</TableHead>
+                    <TableHead>Pagamento</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ordersInPeriod.slice(0, 10).map((order) => (
+                    <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
+                      <TableCell className="font-bold text-primary">#{order.order_number}</TableCell>
+                      <TableCell className="font-semibold">{order.customer_name || "Cliente Final"}</TableCell>
+                      <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
+                        {format(new Date(order.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="secondary" className="font-normal text-[10px] uppercase tracking-wider">
+                          {normalizePaymentMethod(order.payment_method)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant="outline" 
+                          className={`text-[10px] uppercase font-bold ${
+                            order.status === "entregue" ? "border-green-500 text-green-600" : "border-blue-500 text-blue-600"
+                          }`}
+                        >
+                          {order.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right font-black">{fmtBRL(order.total)}</TableCell>
+                    </TableRow>
+                  ))}
+                  {ordersInPeriod.length === 0 && (
+                    <TableRow>
+                      <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                        Nenhum pedido encontrado com os filtros atuais.
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+              {ordersInPeriod.length > 10 && (
+                <div className="p-4 text-center border-t border-border/60">
+                  <p className="text-xs text-muted-foreground">Exibindo os 10 pedidos mais recentes de um total de {ordersInPeriod.length}.</p>
+                </div>
+              )}
             </Card>
           </section>
         </>
@@ -723,91 +804,165 @@ function Finance() {
 
 // ============ Sub-components ============
 
-function KpiBig({
+function KpiCard({
   title,
   value,
-  subtitle,
-  icon: Icon,
   trend,
+  icon: Icon,
+  description,
   highlight,
 }: {
   title: string;
   value: string;
-  subtitle: string;
-  icon: React.ComponentType<{ className?: string }>;
   trend?: number | null;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
   highlight?: boolean;
 }) {
-  const TrendIcon = trend == null ? null : trend >= 0 ? TrendingUp : TrendingDown;
   return (
-    <Card
-      className={`relative overflow-hidden transition-all hover:shadow-xl hover:-translate-y-0.5 ${
-        highlight ? "border-primary/30 bg-gradient-to-br from-primary/10 to-transparent" : "border-border/60"
-      }`}
-    >
+    <Card className={`overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 border-border/60 ${highlight ? 'bg-primary/5 border-primary/20' : ''}`}>
       <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-4">
-          <div
-            className={`p-2.5 rounded-xl ${
-              highlight ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "bg-muted text-foreground"
-            }`}
-          >
+        <div className="flex justify-between items-start mb-4">
+          <div className={`p-2.5 rounded-2xl ${highlight ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' : 'bg-muted/50 text-foreground'}`}>
             <Icon className="h-5 w-5" />
           </div>
-          {TrendIcon && trend != null && (
-            <div
-              className={`flex items-center gap-1 text-xs font-bold px-2 py-1 rounded-full ${
-                trend >= 0 ? "bg-green-500/15 text-green-600 dark:text-green-400" : "bg-red-500/15 text-red-600 dark:text-red-400"
-              }`}
-            >
-              <TrendIcon className="h-3 w-3" />
+          {trend !== undefined && trend !== null && (
+            <div className={`flex items-center gap-0.5 text-[10px] font-black px-2 py-1 rounded-full ${trend >= 0 ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
+              {trend >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
               {Math.abs(trend).toFixed(1)}%
             </div>
           )}
         </div>
-        <div className="text-xs uppercase tracking-widest font-bold text-muted-foreground">{title}</div>
-        <div className="text-3xl font-black tracking-tight mt-1">{value}</div>
-        <div className="text-xs text-muted-foreground mt-2">{subtitle}</div>
+        <div className="space-y-1">
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
+          <p className="text-2xl font-black tracking-tight">{value}</p>
+          <p className="text-[11px] text-muted-foreground leading-tight mt-1">{description}</p>
+        </div>
       </CardContent>
     </Card>
   );
 }
 
-function KpiSmall({
+function RankingCard({
   title,
-  value,
-  subtitle,
   icon: Icon,
+  items,
+  emptyText,
 }: {
   title: string;
-  value: string;
-  subtitle: string;
   icon: React.ComponentType<{ className?: string }>;
+  items: Array<{ name: string; qty: number; revenue: number; share: number }>;
+  emptyText: string;
 }) {
   return (
-    <Card className="border-border/60 hover:border-primary/30 transition-all hover:shadow-md">
-      <CardContent className="p-5 flex items-center gap-4">
-        <div className="p-3 rounded-xl bg-primary/10 text-primary shrink-0">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div className="min-w-0 flex-1">
-          <div className="text-[10px] uppercase tracking-widest font-bold text-muted-foreground truncate">{title}</div>
-          <div className="text-xl font-black tracking-tight">{value}</div>
-          <div className="text-[11px] text-muted-foreground truncate">{subtitle}</div>
-        </div>
+    <Card className="border-border/60 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
+      <CardHeader className="pb-3 border-b border-border/40">
+        <CardTitle className="flex items-center gap-2 text-base font-bold">
+          <Icon className="h-5 w-5 text-primary" /> {title}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="p-0">
+        {items.length === 0 ? (
+          <div className="text-sm text-muted-foreground py-16 text-center">{emptyText}</div>
+        ) : (
+          <div className="divide-y divide-border/40">
+            {items.map((it, i) => (
+              <div key={it.name} className="p-4 hover:bg-muted/20 transition-colors">
+                <div className="flex items-center justify-between gap-4 mb-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <div className={`flex h-6 w-6 items-center justify-center rounded-lg text-[10px] font-black shrink-0 ${
+                      i === 0 ? "bg-yellow-400 text-yellow-950 shadow-sm" : 
+                      i === 1 ? "bg-slate-300 text-slate-800" : 
+                      i === 2 ? "bg-amber-700 text-white" : "bg-muted text-muted-foreground"
+                    }`}>
+                      {i + 1}
+                    </div>
+                    <span className="font-bold text-sm truncate">{it.name}</span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <div className="text-sm font-black text-primary">{it.qty}x</div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase">{fmtBRL(it.revenue)}</div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="flex-1 h-1.5 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full bg-primary rounded-full"
+                      style={{ width: `${Math.min(it.share, 100)}%` }}
+                    />
+                  </div>
+                  <span className="text-[10px] font-bold text-muted-foreground w-8 text-right">
+                    {it.share.toFixed(0)}%
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
 }
 
-function TicketRow({ label, value }: { label: string; value: number }) {
+function SummaryRow({
+  label,
+  value,
+  icon: Icon,
+  highlight
+}: {
+  label: string;
+  value: string;
+  icon: React.ComponentType<{ className?: string }>;
+  highlight?: boolean;
+}) {
   return (
-    <div className="flex items-center justify-between">
-      <span className="text-sm text-muted-foreground">{label}</span>
-      <span className="text-lg font-black">{fmtBRL(value)}</span>
+    <div className={`flex items-center justify-between p-3 rounded-xl ${highlight ? 'bg-primary/5 border border-primary/20' : 'bg-muted/20 border border-border/40'}`}>
+      <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-tight">
+        <Icon className={`h-4 w-4 ${highlight ? 'text-primary' : ''}`} />
+        {label}
+      </div>
+      <span className={`text-sm font-black ${highlight ? 'text-primary text-lg' : ''}`}>{value}</span>
     </div>
   );
 }
+
+function InsightCard({
+  icon: Icon,
+  text,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  text: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 p-4 rounded-2xl bg-muted/40 hover:bg-muted/70 transition-colors border border-border/40 group">
+      <div className="p-2 rounded-xl bg-primary/10 text-primary shrink-0 group-hover:scale-110 transition-transform">
+        <Icon className="h-4 w-4" />
+      </div>
+      <p className="text-xs leading-relaxed text-foreground/90 font-medium">{text}</p>
+    </div>
+  );
+}
+
+function EmptyState() {
+  return (
+    <div className="flex flex-col items-center justify-center p-16 rounded-3xl border border-dashed border-primary/30 bg-gradient-to-br from-primary/5 to-transparent text-center space-y-6">
+      <div className="p-6 rounded-3xl bg-primary/10 relative">
+        <div className="absolute inset-0 animate-pulse bg-primary/20 rounded-3xl blur-xl" />
+        <Calculator className="h-12 w-12 text-primary relative z-10" />
+      </div>
+      <div className="space-y-2 max-w-md">
+        <h3 className="text-2xl font-black tracking-tight">Painel pronto para decolar!</h3>
+        <p className="text-sm text-muted-foreground">
+          Assim que seus primeiros pedidos forem recebidos, este dashboard se transformará em uma central de inteligência financeira com gráficos, rankings e métricas reais.
+        </p>
+      </div>
+      <Button variant="outline" className="rounded-xl" onClick={() => window.location.reload()}>
+        Tentar Atualizar
+      </Button>
+    </div>
+  );
+}
+
 
 function RankingCard({
   title,
