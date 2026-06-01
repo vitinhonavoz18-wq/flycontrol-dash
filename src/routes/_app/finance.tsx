@@ -460,6 +460,21 @@ function Finance() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
+                  <Activity className="h-4 w-4" />
+                  Status: {statusFilter === "all" ? "Todos" : statusFilter}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setStatusFilter("all")}>Todos os Status</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("novo")}>Novo</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("entregue")}>Entregue</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
                   <Filter className="h-4 w-4" />
                   Pagamento: {paymentFilter === "all" ? "Todos" : paymentFilter}
                   <ChevronDown className="h-4 w-4" />
