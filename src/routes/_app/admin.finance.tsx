@@ -435,12 +435,12 @@ function AdminFinance() {
       </div>
 
       {/* CHARTS SECTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <Card className="lg:col-span-2 border-border/50 shadow-sm overflow-hidden">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-border/50 shadow-sm overflow-hidden">
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-7">
             <div>
               <CardTitle className="text-lg font-bold">Desempenho Diário</CardTitle>
-              <CardDescription>Faturamento e pedidos por dia no período selecionado</CardDescription>
+              <CardDescription>Faturamento e pedidos por dia no período</CardDescription>
             </div>
           </CardHeader>
           <CardContent className="px-2">
@@ -474,6 +474,7 @@ function AdminFinance() {
                   <Area 
                     type="monotone" 
                     dataKey="revenue" 
+                    name="revenue"
                     stroke="hsl(var(--primary))" 
                     strokeWidth={3}
                     fillOpacity={1} 
@@ -487,19 +488,55 @@ function AdminFinance() {
 
         <Card className="border-border/50 shadow-sm">
           <CardHeader>
-            <CardTitle className="text-lg font-bold">Formas de Pagamento</CardTitle>
-            <CardDescription>Distribuição por volume de pedidos</CardDescription>
+            <CardTitle className="text-lg font-bold">Top 10 Restaurantes</CardTitle>
+            <CardDescription>Por faturamento no período selecionado</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="h-[280px]">
+            <div className="h-[350px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={top10Restaurants} layout="vertical" margin={{ left: 30, right: 30 }}>
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#e2e8f0" />
+                  <XAxis type="number" hide />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    axisLine={false} 
+                    tickLine={false}
+                    tick={{fill: '#64748b', fontSize: 10}}
+                    width={100}
+                  />
+                  <RTooltip 
+                    formatter={(v: any) => fmtBRL(v)}
+                    contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.1)' }}
+                  />
+                  <Bar dataKey="revenue" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
+                    {top10Restaurants.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fillOpacity={1 - (index * 0.05)} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+        <Card className="lg:col-span-1 border-border/50 shadow-sm">
+          <CardHeader>
+            <CardTitle className="text-lg font-bold">Pagamentos</CardTitle>
+            <CardDescription>Volume de pedidos</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="h-[200px]">
               <ResponsiveContainer width="100%" height="100%">
                 <PieChart>
                   <Pie
                     data={paymentChartData}
                     cx="50%"
                     cy="50%"
-                    innerRadius={60}
-                    outerRadius={80}
+                    innerRadius={50}
+                    outerRadius={70}
                     paddingAngle={5}
                     dataKey="value"
                   >
@@ -513,17 +550,19 @@ function AdminFinance() {
             </div>
             <div className="mt-4 space-y-2">
               {paymentChartData.map((p) => (
-                <div key={p.name} className="flex items-center justify-between text-sm">
+                <div key={p.name} className="flex items-center justify-between text-xs">
                   <div className="flex items-center gap-2">
-                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: p.color }} />
+                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: p.color }} />
                     <span className="text-muted-foreground">{p.name}</span>
                   </div>
-                  <span className="font-bold">{p.value} pedidos</span>
+                  <span className="font-bold">{p.value}</span>
                 </div>
               ))}
             </div>
           </CardContent>
         </Card>
+
+        {/* You could add another small insight card here if needed */}
       </div>
 
       {/* RANKING TABLE */}
