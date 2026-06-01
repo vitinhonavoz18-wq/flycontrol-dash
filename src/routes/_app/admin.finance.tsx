@@ -603,7 +603,8 @@ function AdminFinance() {
               <TableHeader>
                 <TableRow className="bg-muted/50">
                   <TableHead className="w-[250px] font-bold">Restaurante</TableHead>
-                  <TableHead className="font-bold">Status</TableHead>
+                  <TableHead className="font-bold">Conta</TableHead>
+                  <TableHead className="font-bold">Operacional</TableHead>
                   <TableHead className="text-right font-bold">Pedidos</TableHead>
                   <TableHead className="text-right font-bold">Faturamento</TableHead>
                   <TableHead className="text-right font-bold">Ticket Médio</TableHead>
