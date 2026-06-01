@@ -123,6 +123,15 @@ function classify(name: string): "pizza" | "bebida" | "outro" {
   return "outro";
 }
 
+function normalizePaymentMethod(method: string | null): string {
+  if (!method) return "Outros";
+  const m = method.toLowerCase();
+  if (m.includes("pix")) return "PIX";
+  if (m.includes("cartão") || m.includes("cartao") || m.includes("crédito") || m.includes("débito")) return "Cartão";
+  if (m.includes("dinheiro")) return "Dinheiro";
+  return "Outros";
+}
+
 function Finance() {
   const { user, isSuperAdmin, loading: authLoading } = useAuth();
   const nav = useNavigate();
@@ -133,6 +142,8 @@ function Finance() {
   const [selectedPizzeriaId, setSelectedPizzeriaId] = useState<string>("all");
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [paymentFilter, setPaymentFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => setMounted(true), []);
 
@@ -141,53 +152,85 @@ function Finance() {
   }, [authLoading, user, nav, mounted]);
 
   const loadPizzerias = useCallback(async () => {
-    const { data, error } = await supabase
-      .from("pizzerias")
-      .select("id, name, owner_id, status")
-      .order("name");
+    if (!user) return;
+    let query = supabase.from("pizzerias").select("id, name, owner_id, status");
+    
+    // Only filter by owner_id if NOT a super admin
+    if (!isSuperAdmin) {
+      query = query.eq("owner_id", user.id);
+    }
+    
+    const { data, error } = await query.order("name");
+    
     if (error) {
       toast.error("Erro ao carregar pizzarias");
       return;
     }
+    
     setPizzerias(data || []);
-    if (!isSuperAdmin && data && data.length > 0 && selectedPizzeriaId === "all") {
-      setSelectedPizzeriaId(data[0].id);
+    
+    if (data && data.length > 0) {
+      // If the currently selected ID is "all" but the user is not a super admin, select the first one
+      if (!isSuperAdmin && (selectedPizzeriaId === "all" || !data.find(p => p.id === selectedPizzeriaId))) {
+        setSelectedPizzeriaId(data[0].id);
+      }
     }
-  }, [isSuperAdmin, selectedPizzeriaId]);
+  }, [isSuperAdmin, selectedPizzeriaId, user]);
 
   const loadOrders = useCallback(async () => {
     if (!user) return;
     setLoading(true);
     try {
-      // Pull last 60 days to cover all period filters + comparisons
-      const from = startOfDay(subDays(new Date(), 60)).toISOString();
+      // Pull last 90 days to cover comparison with "Mês passado"
+      const from = startOfDay(subDays(new Date(), 90)).toISOString();
       let q = supabase
         .from("orders")
-        .select("id, tenant_id, total, status, created_at, items")
+        .select("id, tenant_id, total, subtotal, delivery_fee, discount, status, payment_method, created_at, items, order_number, customer_name")
         .gte("created_at", from)
-        .neq("status", "cancelado")
+        .neq("status", "deleted") // Deleted is treated as cancelled
         .order("created_at", { ascending: false })
-        .limit(5000);
-      if (selectedPizzeriaId !== "all") q = q.eq("tenant_id", selectedPizzeriaId);
+        .limit(10000);
+
+      // If a pizzeria is selected, filter by it
+      if (selectedPizzeriaId !== "all") {
+        q = q.eq("tenant_id", selectedPizzeriaId);
+      } else if (!isSuperAdmin) {
+        // If "all" is selected but user is NOT super admin, we need to limit to their pizzerias
+        const myPizzeriaIds = pizzerias.map(p => p.id);
+        if (myPizzeriaIds.length > 0) {
+          q = q.in("tenant_id", myPizzeriaIds);
+        } else {
+          // No pizzerias owned
+          setOrders([]);
+          setLoading(false);
+          return;
+        }
+      }
+
       const { data, error } = await q;
       if (error) throw error;
-      setOrders((data || []) as OrderRow[]);
+      setOrders((data || []).map(o => ({
+        ...o,
+        total: Number(o.total || 0),
+        subtotal: Number(o.subtotal || 0),
+        delivery_fee: Number(o.delivery_fee || 0),
+        discount: Number(o.discount || 0)
+      })) as OrderRow[]);
     } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
       console.error("Finance load error:", e);
-      toast.error("Erro ao carregar dados: " + msg);
+      toast.error("Erro ao carregar dados financeiros");
     } finally {
       setLoading(false);
     }
-  }, [user, selectedPizzeriaId]);
+  }, [user, selectedPizzeriaId, isSuperAdmin, pizzerias]);
 
   useEffect(() => {
     if (mounted && !authLoading && user) loadPizzerias();
   }, [mounted, authLoading, user, loadPizzerias]);
 
   useEffect(() => {
-    if (mounted && !authLoading && user) loadOrders();
-  }, [mounted, authLoading, user, loadOrders]);
+    if (mounted && !authLoading && user && (isSuperAdmin || pizzerias.length > 0)) loadOrders();
+  }, [mounted, authLoading, user, loadOrders, isSuperAdmin, pizzerias.length]);
 
   // ============ Derived metrics ============
   const range = useMemo(() => getRange(period), [period]);
