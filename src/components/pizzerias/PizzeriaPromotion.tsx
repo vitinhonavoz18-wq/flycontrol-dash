@@ -1,5 +1,6 @@
 import { QRCodeSVG } from "qrcode.react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Copy, ExternalLink, Download, FileText, Share2 } from "lucide-react";
@@ -121,10 +122,10 @@ export function PizzeriaPromotion({ pizzeria }: PizzeriaPromotionProps) {
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground">Link Público</label>
             <div className="flex items-center gap-2">
-              <input 
+              <Input 
                 readOnly 
                 value={publicUrl} 
-                className="flex h-9 w-full rounded-md border border-input bg-muted px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                className="bg-muted text-xs"
               />
               <Button size="icon" variant="outline" onClick={copyToClipboard} title="Copiar Link">
                 <Copy className="h-4 w-4" />
