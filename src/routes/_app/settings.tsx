@@ -11,6 +11,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { FlyStatusSettings } from "@/components/flystatus/FlyStatusSettings";
 import { FiqonSettings } from "@/components/pizzerias/FiqonSettings";
+import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
 
@@ -400,6 +401,7 @@ function Settings() {
               pizzeria={p}
               onUpdated={(patch) => setPizzerias((prev) => prev.map((x) => x.id === p.id ? { ...x, ...patch } : x))}
             />
+            <PizzeriaPromotion pizzeria={p} />
           </div>
         ))}
         {!pizzerias.length && <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>}
