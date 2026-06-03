@@ -42,8 +42,8 @@ export default function MyStore() {
     try {
       let query = supabase.from("pizzerias").select("*").neq("status", "deleted");
       
-      if (!isSuperAdmin) {
-        query = query.eq("owner_id", user?.id);
+      if (!isSuperAdmin && user?.id) {
+        query = query.eq("owner_id", user.id);
       }
       
       const { data: pizzeriasData, error: pError } = await query.order("created_at").limit(1).maybeSingle();
@@ -349,7 +349,7 @@ export default function MyStore() {
                           onChange={e => {
                             const newMethods = e.target.checked 
                               ? [...methods, method]
-                              : methods.filter(m => m !== method);
+                              : methods.filter((m: string) => m !== method);
                             setPizzeria({...pizzeria, payment_methods: newMethods});
                           }}
                         />
