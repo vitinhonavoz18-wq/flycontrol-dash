@@ -36,7 +36,7 @@ export function PizzeriaPromotion({ pizzeria }: PizzeriaPromotionProps) {
     if (!qrRef.current) return;
     setLoading(true);
     try {
-      const dataUrl = await toPng(qrRef.current, { backgroundColor: "#ffffff", padding: 20 });
+      const dataUrl = await toPng(qrRef.current, { backgroundColor: "#ffffff" });
       const link = document.createElement("a");
       link.download = `qrcode-conectfly-${pizzeria.slug}.png`;
       link.href = dataUrl;
@@ -54,7 +54,7 @@ export function PizzeriaPromotion({ pizzeria }: PizzeriaPromotionProps) {
     if (!qrRef.current) return;
     setLoading(true);
     try {
-      const dataUrl = await toPng(qrRef.current, { backgroundColor: "#ffffff", padding: 20 });
+      const dataUrl = await toPng(qrRef.current, { backgroundColor: "#ffffff" });
       const pdf = new jsPDF();
       const imgProps = pdf.getImageProperties(dataUrl);
       const pdfWidth = pdf.internal.pageSize.getWidth();
