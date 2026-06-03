@@ -1,3 +1,4 @@
+import { createFileRoute } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -28,6 +29,8 @@ import {
   Package
 } from "lucide-react";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
+
+export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
 export default function MyStore() {
   const { user, isSuperAdmin } = useAuth();
