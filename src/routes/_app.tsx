@@ -103,6 +103,7 @@ function AppLayout() {
 
   const items = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/my-store", label: "Minha Loja", icon: Store },
     { to: "/menu", label: "Cardápio", icon: Menu },
     { to: "/combos", label: "Combos", icon: PieChart },
     { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },

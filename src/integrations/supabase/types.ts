@@ -650,20 +650,25 @@ export type Database = {
         Row: {
           address: string | null
           api_key: string
+          average_delivery_time: string | null
           created_at: string
           delivery_fee: number | null
           description: string | null
           fiqon_enabled: boolean | null
           fiqon_webhook_url: string | null
           id: string
+          instagram_url: string | null
           is_active: boolean | null
           logo_url: string | null
           name: string
+          neighborhood: string | null
           opening_hours: Json | null
           owner_id: string | null
+          payment_methods: Json | null
           phone: string | null
           primary_color: string | null
           print_auto: boolean
+          short_message: string | null
           slug: string
           sound_enabled: boolean
           status: string
@@ -679,20 +684,25 @@ export type Database = {
         Insert: {
           address?: string | null
           api_key: string
+          average_delivery_time?: string | null
           created_at?: string
           delivery_fee?: number | null
           description?: string | null
           fiqon_enabled?: boolean | null
           fiqon_webhook_url?: string | null
           id?: string
+          instagram_url?: string | null
           is_active?: boolean | null
           logo_url?: string | null
           name: string
+          neighborhood?: string | null
           opening_hours?: Json | null
           owner_id?: string | null
+          payment_methods?: Json | null
           phone?: string | null
           primary_color?: string | null
           print_auto?: boolean
+          short_message?: string | null
           slug: string
           sound_enabled?: boolean
           status?: string
@@ -708,20 +718,25 @@ export type Database = {
         Update: {
           address?: string | null
           api_key?: string
+          average_delivery_time?: string | null
           created_at?: string
           delivery_fee?: number | null
           description?: string | null
           fiqon_enabled?: boolean | null
           fiqon_webhook_url?: string | null
           id?: string
+          instagram_url?: string | null
           is_active?: boolean | null
           logo_url?: string | null
           name?: string
+          neighborhood?: string | null
           opening_hours?: Json | null
           owner_id?: string | null
+          payment_methods?: Json | null
           phone?: string | null
           primary_color?: string | null
           print_auto?: boolean
+          short_message?: string | null
           slug?: string
           sound_enabled?: boolean
           status?: string
