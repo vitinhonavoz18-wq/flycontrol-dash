@@ -346,13 +346,12 @@ export default function MyStore() {
                     const isChecked = methods.includes(method);
                     return (
                       <div key={method} className="flex items-center space-x-2 border rounded-md p-2">
-                        <input 
-                          type="checkbox" 
+                        <Switch 
                           checked={isChecked}
-                          onChange={e => {
-                            const newMethods = e.target.checked 
+                          onCheckedChange={checked => {
+                            const newMethods = checked 
                               ? [...methods, method]
-                              : methods.filter((m: string) => m !== method);
+                              : methods.filter((m: any) => m !== method);
                             setPizzeria({...pizzeria, payment_methods: newMethods});
                           }}
                         />
