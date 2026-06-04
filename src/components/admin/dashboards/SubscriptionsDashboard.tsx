@@ -1,0 +1,1 @@
+export const SubscriptionsDashboard = () => <div>Subscriptions Dashboard</div>;

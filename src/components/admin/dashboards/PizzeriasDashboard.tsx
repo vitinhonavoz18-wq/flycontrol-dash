@@ -1,0 +1,1 @@
+export const PizzeriasDashboard = () => <div>Pizzerias Dashboard</div>;
