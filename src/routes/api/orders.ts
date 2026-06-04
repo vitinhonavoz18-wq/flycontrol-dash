@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/orders")({
         console.log(`🔍 [API/Orders] Buscando pizzaria pela API Key...`);
         const { data: pz, error: pErr } = await supabaseAdmin
           .from("pizzerias")
-          .select("id, name, slug, status, is_active, is_open, fiqon_enabled, fiqon_webhook_url")
+          .select("id, name, slug, status, is_active, is_open, subscription_status, fiqon_enabled, fiqon_webhook_url")
           .eq("api_key", apiKey)
           .neq("status", "deleted")
           .maybeSingle();
@@ -90,6 +90,15 @@ export const Route = createFileRoute("/api/orders")({
 
         console.log(`✅ [API/Orders] Loja identificada: ${pz.name} (ID: ${pz.id}) | Aberta: ${pz.is_open}`);
         
+        // Verificação de assinatura suspensa
+        if (pz.subscription_status === "suspended" || pz.is_active === false) {
+          console.error(`❌ [API/Orders] Loja ${pz.name} está SUSPENSA. Bloqueando pedido.`);
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Esta loja está temporariamente suspensa. Entre em contato com o suporte." 
+          }), { status: 403, headers: cors });
+        }
+
         // Verificação de loja aberta
         if (pz.is_open === false) {
           console.error(`❌ [API/Orders] Loja ${pz.name} está FECHADA. Bloqueando pedido.`);
