@@ -29,6 +29,7 @@ import {
   Package
 } from "lucide-react";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
+import { syncToExternal } from "@/utils/menuSync";
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
@@ -104,6 +105,24 @@ export default function MyStore() {
 
       if (error) throw error;
       toast.success("Alterações salvas com sucesso!");
+
+      // Sync status to SiteCreatorFly
+      if (pizzeria.slug && pizzeria.api_key) {
+        console.log("Sincronizando status da loja com o SiteCreatorFly...");
+        syncToExternal({
+          type: 'restaurant',
+          action: 'update',
+          id: pizzeria.id,
+          pizzeriaSlug: pizzeria.slug,
+          pizzeriaApiKey: pizzeria.api_key,
+          data: {
+            name: pizzeria.name,
+            is_open: pizzeria.is_open,
+            status: pizzeria.status,
+            opening_hours: pizzeria.opening_hours
+          }
+        }).catch(err => console.error("Erro ao sincronizar status:", err));
+      }
     } catch (error: any) {
       toast.error("Erro ao salvar: " + error.message);
     } finally {

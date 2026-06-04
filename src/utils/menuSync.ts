@@ -2,7 +2,7 @@ import { toast } from "sonner";
 
 const DEFAULT_SYNC_ENDPOINT = "https://watjejwgtieqfkpebkfz.supabase.co/functions/v1/menu-sync";
 
-type MenuType = 'category' | 'product' | 'beverage' | 'border' | 'additional' | 'combo' | 'pizza_size';
+type MenuType = 'category' | 'product' | 'beverage' | 'border' | 'additional' | 'combo' | 'pizza_size' | 'restaurant';
 
 interface SyncParams {
   type: string;
@@ -28,6 +28,7 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
   else if (type === 'additional' || type === 'adicional') externalType = 'additional';
   else if (type === 'standard' || type === 'product' || type === 'flavor') externalType = 'product';
   else if (type === 'pizza_size') externalType = 'pizza_size';
+  else if (type === 'restaurant') externalType = 'restaurant';
 
   // Handle border/additional from 'extra' type
   if (type === 'extra' && data?.extra_type) {
@@ -192,6 +193,15 @@ function prepareDataForExternal(type: MenuType, data: any) {
       slices: data.slices,
       active: data.active !== undefined ? data.active : true,
       sort_order: data.sort_order
+    };
+  }
+
+  if (type === 'restaurant') {
+    return {
+      name: data.name,
+      is_open: data.is_open,
+      status: data.status,
+      opening_hours: data.opening_hours
     };
   }
 
