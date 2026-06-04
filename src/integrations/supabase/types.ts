@@ -659,6 +659,7 @@ export type Database = {
           id: string
           instagram_url: string | null
           is_active: boolean | null
+          is_open: boolean | null
           logo_url: string | null
           name: string
           neighborhood: string | null
@@ -693,6 +694,7 @@ export type Database = {
           id?: string
           instagram_url?: string | null
           is_active?: boolean | null
+          is_open?: boolean | null
           logo_url?: string | null
           name: string
           neighborhood?: string | null
@@ -727,6 +729,7 @@ export type Database = {
           id?: string
           instagram_url?: string | null
           is_active?: boolean | null
+          is_open?: boolean | null
           logo_url?: string | null
           name?: string
           neighborhood?: string | null

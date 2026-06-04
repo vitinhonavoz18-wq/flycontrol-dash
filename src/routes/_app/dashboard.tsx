@@ -32,6 +32,7 @@ type Pizzeria = {
   slug: string;
   api_key: string;
   status: string;
+  is_open?: boolean | null;
   sound_enabled: boolean;
   print_auto: boolean;
   status_art_preparando_url?: string | null;
@@ -509,6 +510,18 @@ function Dashboard() {
                 </option>
               ))}
             </select>
+          )}
+          {active && (
+            <Badge 
+              variant="outline" 
+              className={`ml-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                active.is_open 
+                  ? "bg-green-500/10 text-green-600 border-green-500/30" 
+                  : "bg-red-500/10 text-red-600 border-red-500/30"
+              }`}
+            >
+              {active.is_open ? "Loja Aberta" : "Loja Fechada"}
+            </Badge>
           )}
           {isSuperAdmin && (
             <Button variant="outline" size="sm" onClick={() => setShowNew((v) => !v)}>

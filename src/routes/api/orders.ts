@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/orders")({
         console.log(`🔍 [API/Orders] Buscando pizzaria pela API Key...`);
         const { data: pz, error: pErr } = await supabaseAdmin
           .from("pizzerias")
-          .select("id, name, slug, status, is_active, fiqon_enabled, fiqon_webhook_url")
+          .select("id, name, slug, status, is_active, is_open, fiqon_enabled, fiqon_webhook_url")
           .eq("api_key", apiKey)
           .neq("status", "deleted")
           .maybeSingle();
@@ -88,7 +88,16 @@ export const Route = createFileRoute("/api/orders")({
           }), { status: 403, headers: cors });
         }
 
-        console.log(`✅ [API/Orders] Loja identificada: ${pz.name} (ID: ${pz.id})`);
+        console.log(`✅ [API/Orders] Loja identificada: ${pz.name} (ID: ${pz.id}) | Aberta: ${pz.is_open}`);
+        
+        // Verificação de loja aberta
+        if (pz.is_open === false) {
+          console.error(`❌ [API/Orders] Loja ${pz.name} está FECHADA. Bloqueando pedido.`);
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "Loja fechada no momento. Os pedidos estão temporariamente indisponíveis." 
+          }), { status: 403, headers: cors });
+        }
 
         // 2. Tratar TESTE REAL (Item 5 e 6 do pedido do usuário)
         if (body.test === true || body.payload?.test === true) {

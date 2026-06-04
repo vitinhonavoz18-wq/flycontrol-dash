@@ -29,6 +29,7 @@ import {
   Package
 } from "lucide-react";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
+import { syncToExternal } from "@/utils/menuSync";
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
@@ -94,6 +95,7 @@ export default function MyStore() {
           neighborhood: pizzeria.neighborhood,
           opening_hours: pizzeria.opening_hours,
           status: pizzeria.status,
+          is_open: pizzeria.is_open,
           delivery_fee: pizzeria.delivery_fee,
           average_delivery_time: pizzeria.average_delivery_time,
           payment_methods: pizzeria.payment_methods,
@@ -103,6 +105,24 @@ export default function MyStore() {
 
       if (error) throw error;
       toast.success("Alterações salvas com sucesso!");
+
+      // Sync status to SiteCreatorFly
+      if (pizzeria.slug && pizzeria.api_key) {
+        console.log("Sincronizando status da loja com o SiteCreatorFly...");
+        syncToExternal({
+          type: 'restaurant',
+          action: 'update',
+          id: pizzeria.id,
+          pizzeriaSlug: pizzeria.slug,
+          pizzeriaApiKey: pizzeria.api_key,
+          data: {
+            name: pizzeria.name,
+            is_open: pizzeria.is_open,
+            status: pizzeria.status,
+            opening_hours: pizzeria.opening_hours
+          }
+        }).catch(err => console.error("Erro ao sincronizar status:", err));
+      }
     } catch (error: any) {
       toast.error("Erro ao salvar: " + error.message);
     } finally {
@@ -146,9 +166,41 @@ export default function MyStore() {
 
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8">
+      {/* Barra de Status Rápido */}
+      <Card className={`border-2 ${pizzeria.is_open ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'}`}>
+        <CardContent className="flex flex-col md:flex-row items-center justify-between p-4 gap-4">
+          <div className="flex items-center gap-4">
+            <div className={`h-12 w-12 rounded-full flex items-center justify-center ${pizzeria.is_open ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+              <Store className="h-6 w-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold">
+                Status da Loja: <span className={pizzeria.is_open ? 'text-green-600' : 'text-red-600'}>
+                  {pizzeria.is_open ? 'ABERTA' : 'FECHADA'}
+                </span>
+              </h3>
+              <p className="text-sm text-muted-foreground">
+                {pizzeria.is_open 
+                  ? "Sua loja está recebendo pedidos normalmente." 
+                  : "Clientes podem ver o cardápio, mas não conseguem finalizar pedidos."}
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-3 bg-background/50 p-2 rounded-lg border">
+            <Switch 
+              checked={pizzeria.is_open} 
+              onCheckedChange={checked => setPizzeria({...pizzeria, is_open: checked})}
+            />
+            <Label className="font-semibold cursor-pointer">
+              {pizzeria.is_open ? 'Fechar Loja Agora' : 'Abrir Loja Agora'}
+            </Label>
+          </div>
+        </CardContent>
+      </Card>
+
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Minha Loja</h1>
+          <h1 className="text-3xl font-bold">Configurações da Loja</h1>
           <p className="text-muted-foreground">Gerencie os dados operacionais e cardápio do seu delivery.</p>
         </div>
         <Button onClick={handleSaveStore} disabled={saving} className="gap-2">
@@ -264,15 +316,18 @@ export default function MyStore() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Status Atual da Loja</Label>
-                  <div className="flex items-center gap-4 pt-2">
+                  <Label>Disponibilidade no Cardápio</Label>
+                  <div className="flex flex-col gap-2 pt-2">
                     <div className="flex items-center space-x-2">
                       <Switch 
-                        checked={pizzeria.status === "active"} 
-                        onCheckedChange={checked => setPizzeria({...pizzeria, status: checked ? "active" : "paused"})}
+                        checked={pizzeria.is_open} 
+                        onCheckedChange={checked => setPizzeria({...pizzeria, is_open: checked})}
                       />
-                      <Label>{pizzeria.status === "active" ? "Aberto" : "Fechado"}</Label>
+                      <Label className="font-bold">{pizzeria.is_open ? "Aberta (Recebendo pedidos)" : "Fechada (Apenas visualização)"}</Label>
                     </div>
+                    <p className="text-[10px] text-muted-foreground">
+                      Quando fechado, o cardápio continua visível, mas os clientes não conseguem finalizar pedidos.
+                    </p>
                   </div>
                 </div>
               </div>
