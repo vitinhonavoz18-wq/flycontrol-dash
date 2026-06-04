@@ -25,6 +25,7 @@ import { Route as AppDocsRouteImport } from './routes/_app/docs'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCombosRouteImport } from './routes/_app/combos'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as AppAdminIndexRouteImport } from './routes/_app/admin.index'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
 import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
 import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
@@ -114,6 +115,11 @@ const AppAdminRoute = AppAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
+const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const ApiPublicCreatePizzeriaRoute = ApiPublicCreatePizzeriaRouteImport.update({
   id: '/api/public/create-pizzeria',
   path: '/api/public/create-pizzeria',
@@ -185,13 +191,13 @@ export interface FileRoutesByFullPath {
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
+  '/admin/': typeof AppAdminIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/presentation': typeof PresentationRoute
   '/signup': typeof SignupRoute
-  '/admin': typeof AppAdminRouteWithChildren
   '/combos': typeof AppCombosRoute
   '/dashboard': typeof AppDashboardRoute
   '/docs': typeof AppDocsRoute
@@ -211,6 +217,7 @@ export interface FileRoutesByTo {
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
+  '/admin': typeof AppAdminIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -239,6 +246,7 @@ export interface FileRoutesById {
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
+  '/_app/admin/': typeof AppAdminIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -267,13 +275,13 @@ export interface FileRouteTypes {
     | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
+    | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/login'
     | '/presentation'
     | '/signup'
-    | '/admin'
     | '/combos'
     | '/dashboard'
     | '/docs'
@@ -293,6 +301,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
+    | '/admin'
   id:
     | '__root__'
     | '/'
@@ -320,6 +329,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
+    | '/_app/admin/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -452,6 +462,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/admin/': {
+      id: '/_app/admin/'
+      path: '/'
+      fullPath: '/admin/'
+      preLoaderRoute: typeof AppAdminIndexRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/api/public/create-pizzeria': {
       id: '/api/public/create-pizzeria'
       path: '/api/public/create-pizzeria'
@@ -523,6 +540,7 @@ interface AppAdminRouteChildren {
   AppAdminFinanceRoute: typeof AppAdminFinanceRoute
   AppAdminSubscriptionsRoute: typeof AppAdminSubscriptionsRoute
   AppAdminUsersRoute: typeof AppAdminUsersRoute
+  AppAdminIndexRoute: typeof AppAdminIndexRoute
 }
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
@@ -530,6 +548,7 @@ const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminFinanceRoute: AppAdminFinanceRoute,
   AppAdminSubscriptionsRoute: AppAdminSubscriptionsRoute,
   AppAdminUsersRoute: AppAdminUsersRoute,
+  AppAdminIndexRoute: AppAdminIndexRoute,
 }
 
 const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
