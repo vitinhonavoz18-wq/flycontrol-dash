@@ -25,16 +25,17 @@ import { Route as AppDocsRouteImport } from './routes/_app/docs'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCombosRouteImport } from './routes/_app/combos'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
-import { Route as AppAdminIndexRouteImport } from './routes/_app/admin.index'
+import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
 import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
 import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
-import { Route as AppAdminUsersRouteImport } from './routes/_app/admin.users'
-import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin.subscriptions'
-import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin.finance'
-import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin.analytics'
+import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
+import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
+import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizzerias'
+import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin/finance'
+import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin/analytics'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -155,6 +156,11 @@ const AppAdminSubscriptionsRoute = AppAdminSubscriptionsRouteImport.update({
   path: '/subscriptions',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppAdminPizzeriasRoute = AppAdminPizzeriasRouteImport.update({
+  id: '/pizzerias',
+  path: '/pizzerias',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppAdminFinanceRoute = AppAdminFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -184,6 +190,7 @@ export interface FileRoutesByFullPath {
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
+  '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -210,6 +217,7 @@ export interface FileRoutesByTo {
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
+  '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -239,6 +247,7 @@ export interface FileRoutesById {
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/finance': typeof AppAdminFinanceRoute
+  '/_app/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -268,6 +277,7 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/finance'
+    | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
     | '/api/pizzerias/create'
@@ -294,6 +304,7 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/finance'
+    | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
     | '/api/pizzerias/create'
@@ -322,6 +333,7 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/_app/admin/analytics'
     | '/_app/admin/finance'
+    | '/_app/admin/pizzerias'
     | '/_app/admin/subscriptions'
     | '/_app/admin/users'
     | '/api/pizzerias/create'
@@ -518,6 +530,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminSubscriptionsRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/_app/admin/pizzerias': {
+      id: '/_app/admin/pizzerias'
+      path: '/pizzerias'
+      fullPath: '/admin/pizzerias'
+      preLoaderRoute: typeof AppAdminPizzeriasRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/admin/finance': {
       id: '/_app/admin/finance'
       path: '/finance'
@@ -538,6 +557,7 @@ declare module '@tanstack/react-router' {
 interface AppAdminRouteChildren {
   AppAdminAnalyticsRoute: typeof AppAdminAnalyticsRoute
   AppAdminFinanceRoute: typeof AppAdminFinanceRoute
+  AppAdminPizzeriasRoute: typeof AppAdminPizzeriasRoute
   AppAdminSubscriptionsRoute: typeof AppAdminSubscriptionsRoute
   AppAdminUsersRoute: typeof AppAdminUsersRoute
   AppAdminIndexRoute: typeof AppAdminIndexRoute
@@ -546,6 +566,7 @@ interface AppAdminRouteChildren {
 const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminAnalyticsRoute: AppAdminAnalyticsRoute,
   AppAdminFinanceRoute: AppAdminFinanceRoute,
+  AppAdminPizzeriasRoute: AppAdminPizzeriasRoute,
   AppAdminSubscriptionsRoute: AppAdminSubscriptionsRoute,
   AppAdminUsersRoute: AppAdminUsersRoute,
   AppAdminIndexRoute: AppAdminIndexRoute,
@@ -597,3 +618,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}

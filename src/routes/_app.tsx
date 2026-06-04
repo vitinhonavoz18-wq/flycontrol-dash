@@ -117,7 +117,7 @@ function AppLayout() {
   ];
 
   const adminItems = [
-    { to: "/admin", label: "FlyPizzarias", icon: Store },
+    { to: "/admin/pizzerias", label: "FlyPizzarias", icon: Store },
     { to: "/admin/analytics", label: "Insights Globais", icon: PieChart },
     { to: "/admin/finance", label: "Financeiro Global", icon: BarChart3 },
     { to: "/admin/users", label: "Usuários", icon: Users },
@@ -152,8 +152,9 @@ function AppLayout() {
               to={it.to}
               onClick={() => setIsMobileMenuOpen(false)}
               className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
-                path.startsWith(it.to) && (it.to !== "/admin" || path === "/admin") 
+                path.startsWith(it.to)
                   ? "bg-primary/20 text-primary shadow-sm" 
+
                   : "text-sidebar-foreground hover:bg-sidebar-accent hover:translate-x-1"
               }`}
             >
