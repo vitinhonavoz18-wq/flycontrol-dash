@@ -31,6 +31,7 @@ import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin.users'
+import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin.subscriptions'
 import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin.finance'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin.analytics'
 
@@ -143,6 +144,11 @@ const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppAdminSubscriptionsRoute = AppAdminSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppAdminFinanceRoute = AppAdminFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -172,6 +178,7 @@ export interface FileRoutesByFullPath {
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
+  '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -197,6 +204,7 @@ export interface FileRoutesByTo {
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
+  '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -224,6 +232,7 @@ export interface FileRoutesById {
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/finance': typeof AppAdminFinanceRoute
+  '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/finance'
+    | '/admin/subscriptions'
     | '/admin/users'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/finance'
+    | '/admin/subscriptions'
     | '/admin/users'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -302,6 +313,7 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/_app/admin/analytics'
     | '/_app/admin/finance'
+    | '/_app/admin/subscriptions'
     | '/_app/admin/users'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -482,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/_app/admin/subscriptions': {
+      id: '/_app/admin/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AppAdminSubscriptionsRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/admin/finance': {
       id: '/_app/admin/finance'
       path: '/finance'
@@ -502,12 +521,14 @@ declare module '@tanstack/react-router' {
 interface AppAdminRouteChildren {
   AppAdminAnalyticsRoute: typeof AppAdminAnalyticsRoute
   AppAdminFinanceRoute: typeof AppAdminFinanceRoute
+  AppAdminSubscriptionsRoute: typeof AppAdminSubscriptionsRoute
   AppAdminUsersRoute: typeof AppAdminUsersRoute
 }
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminAnalyticsRoute: AppAdminAnalyticsRoute,
   AppAdminFinanceRoute: AppAdminFinanceRoute,
+  AppAdminSubscriptionsRoute: AppAdminSubscriptionsRoute,
   AppAdminUsersRoute: AppAdminUsersRoute,
 }
 

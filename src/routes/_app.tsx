@@ -15,7 +15,8 @@ import {
   X,
   PieChart,
   Sun,
-  Moon
+  Moon,
+  CreditCard
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -31,7 +32,7 @@ function AppLayout() {
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [pizzeriaStatus, setPizzeriaStatus] = useState<{ is_active: boolean } | null>(null);
+  const [pizzeriaStatus, setPizzeriaStatus] = useState<{ is_active: boolean; subscription_status: string } | null>(null);
   const [checkingStatus, setCheckingStatus] = useState(false);
 
   useEffect(() => {
@@ -46,7 +47,7 @@ function AppLayout() {
       const params = new URLSearchParams(window.location.search);
       const pizzeriaId = params.get("pizzeriaId");
 
-      let query = supabase.from("pizzerias").select("is_active");
+      let query = supabase.from("pizzerias").select("is_active, subscription_status");
       
       if (pizzeriaId) {
         query = query.eq("id", pizzeriaId);
@@ -57,7 +58,10 @@ function AppLayout() {
       const { data, error } = await query.maybeSingle();
       
       if (!error && data) {
-        setPizzeriaStatus({ is_active: data.is_active ?? true });
+        setPizzeriaStatus({ 
+          is_active: data.is_active ?? true,
+          subscription_status: data.subscription_status ?? 'active'
+        });
       }
       setCheckingStatus(false);
     }
@@ -71,11 +75,12 @@ function AppLayout() {
 
   // Block access if inactive and not super admin
   const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
-  const isInactive = pizzeriaStatus && !pizzeriaStatus.is_active && !isSuperAdmin && !isHardcodedAdmin;
+  const isSuspended = pizzeriaStatus && (pizzeriaStatus.subscription_status === "suspended" || !pizzeriaStatus.is_active);
+  const isBlocked = isSuspended && !isSuperAdmin && !isHardcodedAdmin;
   const isPublicRoute = ["/docs", "/settings"].includes(path); // Settings is restricted but we might want them to see it? User said block main functions.
   
   // We block if inactive, not super admin, and trying to access anything other than docs or if explicitly blocked
-  const shouldBlock = isInactive && !path.startsWith("/admin") && path !== "/docs";
+  const shouldBlock = isBlocked && !path.startsWith("/admin") && path !== "/docs";
 
   if (shouldBlock) {
     return (
@@ -83,9 +88,9 @@ function AppLayout() {
         <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-destructive/10">
           <X className="h-10 w-10 text-destructive" />
         </div>
-        <h1 className="mb-2 text-2xl font-bold">Conta Inativa</h1>
+        <h1 className="mb-2 text-2xl font-bold">Loja Suspensa</h1>
         <p className="mb-8 max-w-md text-muted-foreground">
-          Sua conta está temporariamente inativa. Entre em contato com o suporte para regularizar o acesso.
+          Esta loja está temporariamente suspensa. Entre em contato com o suporte da Conectfly para regularizar o acesso.
         </p>
         <Button 
           variant="outline" 
@@ -116,6 +121,7 @@ function AppLayout() {
     { to: "/admin/analytics", label: "Insights Globais", icon: PieChart },
     { to: "/admin/finance", label: "Financeiro Global", icon: BarChart3 },
     { to: "/admin/users", label: "Usuários", icon: Users },
+    { to: "/admin/subscriptions", label: "Clientes e Planos", icon: CreditCard },
   ];
 
   const NavItems = ({ className = "" }: { className?: string }) => (
