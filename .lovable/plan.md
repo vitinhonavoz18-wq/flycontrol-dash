@@ -1,54 +1,46 @@
-Realizei uma auditoria completa na integração e identifiquei que o problema de pedidos não aparecerem era causado por uma rigidez excessiva na validação do `slug` da pizzaria no FlyControl, que agora foi corrigida para priorizar a `API Key` (que é única). Também implementei o acesso administrativo total para seu novo e-mail.
+# Implementação de Dashboards Administrativos Funcionais
 
-Como o **Site Creator Fly** é um projeto separado, preparei as correções necessárias para você aplicar lá (ou me conceder acesso direto a esse projeto se possível).
+Este plano substitui os placeholders nas abas do Painel Admin por dashboards conectados a dados reais do Supabase com suporte a atualizações em tempo real.
 
-### Alterações Realizadas no FlyControl (Este Projeto)
+## 1. Infraestrutura de Dados
+- Utilizar `useQuery` do `@tanstack/react-query` para busca de dados com cache e revalidação.
+- Implementar assinaturas do Supabase Realtime (`.on('postgres_changes')`) dentro de hooks customizados para cada dashboard, garantindo que o UI reflita mudanças no banco instantaneamente.
 
-1. **src/routes/api/orders.ts**:
-   - Removida a obrigatoriedade de o `slug` enviado pelo site ser idêntico ao do banco. Agora, se a `API Key` for válida e única, o pedido é aceito independentemente de pequenas variações no slug (ex: `cheirosa-pizzaria` vs `cheirosaa-pizzaria`).
-   - Adicionados logs extremamente detalhados que capturam o payload completo, o ID da pizzaria encontrada e o status de cada inserção (pedido e itens).
-   - Melhora nas mensagens de erro retornadas para o Site Creator Fly.
+## 2. Implementação das Abas (Dashboards)
 
-2. **Acesso Administrativo**:
-   - Atualizado o e-mail `vitinhonavoz18@gmail.com` como administrador global nos arquivos `_app.tsx`, `dashboard.tsx` e `admin.tsx`.
-   - Agora este e-mail visualiza todas as pizzarias e pedidos, ignorando travas de inatividade.
+### FlyPizzarias
+- Listagem completa com busca, filtragem por status, ordenação.
+- Ações rápidas: Acessar Painel, Cardápio, Ativar/Desativar, Suspender.
+- Métricas em tempo real: pedidos hoje, receita hoje.
 
----
+### Insights Globais
+- Cartões de resumo: Total lojas, ativas, inativas, pedidos hoje/7dias.
+- Gráficos com `recharts`: Pedidos diários, distribuição de pedidos por pizzaria, status de lojas.
 
-### Correções Necessárias no Site Creator Fly (Próximos Passos)
+### Financeiro Global
+- Resumo financeiro consolidado: Faturamento bruto, ticket médio, total de pedidos.
+- Tabela de ranking por pizzaria com filtros de período (Hoje, 7d, este mês).
+- Exclusão inteligente de pedidos demo/cancelados.
 
-Identifiquei que o "falso sucesso" ocorre porque o Proxy do Site Creator Fly retorna `success: true` mesmo quando a integração está desativada ou falha silenciosamente.
+### Usuários
+- Tabela de usuários com e-mail, função e vínculo.
+- Ações: Editar permissões, desativar/reativar conta.
 
-#### 1. Corrigir o Proxy de Envio (`src/routes/api/public/submit-order.ts`)
-O código atual retorna sucesso se a integração estiver marcada como desativada, o que confunde o frontend.
-**Alteração sugerida:**
-```typescript
-// No arquivo src/routes/api/public/submit-order.ts
-if (!r.flycontrol_enabled) {
-  return new Response(
-    JSON.stringify({ success: false, error: "Integração FlyControl desativada", skipped: true }),
-    { status: 403, headers }
-  );
-}
-```
+### Clientes e Planos
+- Controle comercial de assinaturas.
+- Exibição de plano, vencimento, dias para expirar.
+- Ações de suspensão/reativação.
 
-#### 2. Ajustar o Modal de Checkout (`src/components/site/SiteCartDrawer.tsx`)
-Garantir que a mensagem de "Pedido enviado" seja explícita e que erros do painel não sejam mascarados.
-**Alteração sugerida:**
-```typescript
-// No arquivo src/components/site/SiteCartDrawer.tsx
-try {
-  await sendOrderToFlycontrol(restaurant, payload, { signal: controller.signal });
-  painelRegistrado = true;
-  toast.success("✅ Pedido enviado com sucesso ao FlyControl!");
-} catch (err: any) {
-  console.error("Erro no envio:", err);
-  toast.error("⚠️ Pedido NÃO chegou ao FlyControl, mas seguirá via WhatsApp.");
-}
-```
+## 3. Qualidade e Segurança
+- Implementação de estados de `loading` (Skeleton screens) e estados vazios amigáveis.
+- Verificação de acesso (`admin_only`) em todas as rotas/componentes administrativos.
+- Garantia de não contaminação de dados (pedidos teste/demo filtrados no financeiro por padrão).
+- Reuso de componentes de UI (`Table`, `Card`, `Button`, `Badge`) para consistência.
 
-### Como testar se voltou a funcionar:
-1. Faça um pedido real em qualquer site criado pelo **Site Creator Fly**.
-2. O site deve exibir "Pedido enviado com sucesso ao FlyControl!".
-3. Verifique no painel do FlyControl se o pedido apareceu instantaneamente (o alerta sonoro deve tocar).
-4. Se não aparecer, posso agora verificar os novos logs detalhados que implementei no endpoint `/api/orders`.
+## Cronograma
+1. Criar hooks de dados e subscrições realtime.
+2. Implementar `FlyPizzarias`.
+3. Implementar `Insights`.
+4. Implementar `Financeiro`.
+5. Implementar `Usuários` e `Assinaturas`.
+6. Validação e testes de estados vazios/erro/loading.
