@@ -523,6 +523,18 @@ function Dashboard() {
               {active.is_open ? "Loja Aberta" : "Loja Fechada"}
             </Badge>
           )}
+          {active && (
+            <Badge 
+              variant="outline" 
+              className={`ml-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
+                active.is_open 
+                  ? "bg-green-500/10 text-green-600 border-green-500/30" 
+                  : "bg-red-500/10 text-red-600 border-red-500/30"
+              }`}
+            >
+              {active.is_open ? "Loja Aberta" : "Loja Fechada"}
+            </Badge>
+          )}
           {isSuperAdmin && (
             <Button variant="outline" size="sm" onClick={() => setShowNew((v) => !v)}>
               <Plus className="h-4 w-4" /> Gerenciar Pizzarias
