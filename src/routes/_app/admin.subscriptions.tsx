@@ -48,7 +48,9 @@ import {
   FileText,
   DollarSign,
   TrendingUp,
-  Clock
+  Clock,
+  Package,
+  LayoutDashboard
 } from "lucide-react";
 import { format, differenceInDays, isToday, isBefore, addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";

@@ -15,7 +15,8 @@ import {
   X,
   PieChart,
   Sun,
-  Moon
+  Moon,
+  CreditCard
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";

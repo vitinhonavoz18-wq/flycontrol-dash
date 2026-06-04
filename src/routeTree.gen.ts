@@ -31,9 +31,9 @@ import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin.users'
+import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin.subscriptions'
 import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin.finance'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin.analytics'
-import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin.subscriptions'
 
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
@@ -144,6 +144,11 @@ const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppAdminSubscriptionsRoute = AppAdminSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppAdminFinanceRoute = AppAdminFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -152,11 +157,6 @@ const AppAdminFinanceRoute = AppAdminFinanceRouteImport.update({
 const AppAdminAnalyticsRoute = AppAdminAnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
-  getParentRoute: () => AppAdminRoute,
-} as any)
-const AppAdminSubscriptionsRoute = AppAdminSubscriptionsRouteImport.update({
-  id: '/subscriptions',
-  path: '/subscriptions',
   getParentRoute: () => AppAdminRoute,
 } as any)
 
@@ -178,8 +178,8 @@ export interface FileRoutesByFullPath {
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
-  '/admin/users': typeof AppAdminUsersRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -204,8 +204,8 @@ export interface FileRoutesByTo {
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
-  '/admin/users': typeof AppAdminUsersRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
+  '/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -232,8 +232,8 @@ export interface FileRoutesById {
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/finance': typeof AppAdminFinanceRoute
-  '/_app/admin/users': typeof AppAdminUsersRoute
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
+  '/_app/admin/users': typeof AppAdminUsersRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -260,8 +260,8 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/finance'
-    | '/admin/users'
     | '/admin/subscriptions'
+    | '/admin/users'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -286,8 +286,8 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/finance'
-    | '/admin/users'
     | '/admin/subscriptions'
+    | '/admin/users'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -313,8 +313,8 @@ export interface FileRouteTypes {
     | '/print/$orderId'
     | '/_app/admin/analytics'
     | '/_app/admin/finance'
-    | '/_app/admin/users'
     | '/_app/admin/subscriptions'
+    | '/_app/admin/users'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -494,6 +494,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/_app/admin/subscriptions': {
+      id: '/_app/admin/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AppAdminSubscriptionsRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/admin/finance': {
       id: '/_app/admin/finance'
       path: '/finance'
@@ -508,25 +515,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminAnalyticsRouteImport
       parentRoute: typeof AppAdminRoute
     }
-    '/_app/admin/subscriptions': {
-      id: '/_app/admin/subscriptions'
-      path: '/subscriptions'
-      fullPath: '/admin/subscriptions'
-      preLoaderRoute: typeof AppAdminSubscriptionsRouteImport
-      parentRoute: typeof AppAdminRoute
-    }
   }
 }
 
 interface AppAdminRouteChildren {
   AppAdminAnalyticsRoute: typeof AppAdminAnalyticsRoute
   AppAdminFinanceRoute: typeof AppAdminFinanceRoute
+  AppAdminSubscriptionsRoute: typeof AppAdminSubscriptionsRoute
   AppAdminUsersRoute: typeof AppAdminUsersRoute
 }
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminAnalyticsRoute: AppAdminAnalyticsRoute,
   AppAdminFinanceRoute: AppAdminFinanceRoute,
+  AppAdminSubscriptionsRoute: AppAdminSubscriptionsRoute,
   AppAdminUsersRoute: AppAdminUsersRoute,
 }
 
