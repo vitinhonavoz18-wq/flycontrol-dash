@@ -1,0 +1,1 @@
+export const AnalyticsDashboard = () => <div>Analytics Dashboard</div>;
