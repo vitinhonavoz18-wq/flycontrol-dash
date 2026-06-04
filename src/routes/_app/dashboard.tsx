@@ -32,6 +32,7 @@ type Pizzeria = {
   slug: string;
   api_key: string;
   status: string;
+  is_open?: boolean;
   sound_enabled: boolean;
   print_auto: boolean;
   status_art_preparando_url?: string | null;
