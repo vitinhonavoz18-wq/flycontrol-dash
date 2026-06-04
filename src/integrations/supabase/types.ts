@@ -658,6 +658,7 @@ export type Database = {
           fiqon_webhook_url: string | null
           id: string
           instagram_url: string | null
+          internal_notes: string | null
           is_active: boolean | null
           is_open: boolean | null
           logo_url: string | null
@@ -679,6 +680,10 @@ export type Database = {
           status_text_entregue: string | null
           status_text_preparando: string | null
           status_text_saiu: string | null
+          subscription_expires_at: string | null
+          subscription_plan: string | null
+          subscription_price: number | null
+          subscription_status: string | null
           sync_endpoint: string | null
           updated_at: string
         }
@@ -693,6 +698,7 @@ export type Database = {
           fiqon_webhook_url?: string | null
           id?: string
           instagram_url?: string | null
+          internal_notes?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
           logo_url?: string | null
@@ -714,6 +720,10 @@ export type Database = {
           status_text_entregue?: string | null
           status_text_preparando?: string | null
           status_text_saiu?: string | null
+          subscription_expires_at?: string | null
+          subscription_plan?: string | null
+          subscription_price?: number | null
+          subscription_status?: string | null
           sync_endpoint?: string | null
           updated_at?: string
         }
@@ -728,6 +738,7 @@ export type Database = {
           fiqon_webhook_url?: string | null
           id?: string
           instagram_url?: string | null
+          internal_notes?: string | null
           is_active?: boolean | null
           is_open?: boolean | null
           logo_url?: string | null
@@ -749,6 +760,10 @@ export type Database = {
           status_text_entregue?: string | null
           status_text_preparando?: string | null
           status_text_saiu?: string | null
+          subscription_expires_at?: string | null
+          subscription_plan?: string | null
+          subscription_price?: number | null
+          subscription_status?: string | null
           sync_endpoint?: string | null
           updated_at?: string
         }
