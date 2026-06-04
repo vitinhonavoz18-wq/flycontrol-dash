@@ -117,7 +117,7 @@ function AppLayout() {
   ];
 
   const adminItems = [
-    { to: "/admin", label: "FlyPizzarias", icon: Store },
+    { to: "/admin/pizzerias", label: "FlyPizzarias", icon: Store },
     { to: "/admin/analytics", label: "Insights Globais", icon: PieChart },
     { to: "/admin/finance", label: "Financeiro Global", icon: BarChart3 },
     { to: "/admin/users", label: "Usuários", icon: Users },
