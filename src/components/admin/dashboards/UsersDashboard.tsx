@@ -8,18 +8,22 @@ export const UsersDashboard = () => {
   const { data: users, isLoading } = useQuery({
     queryKey: ["admin-users"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data: profiles, error: pError } = await supabase
         .from("profiles")
-        .select(`
-          id,
-          full_name,
-          phone,
-          created_at,
-          user_roles (role)
-        `);
-      if (error) throw error;
-      return data;
+        .select("*");
+      if (pError) throw pError;
+
+      const { data: roles, error: rError } = await supabase
+        .from("user_roles")
+        .select("*");
+      if (rError) throw rError;
+
+      return profiles.map(p => ({
+        ...p,
+        roles: roles.filter(r => r.user_id === p.id).map(r => r.role)
+      }));
     },
+
   });
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
@@ -42,14 +46,15 @@ export const UsersDashboard = () => {
               <TableRow key={u.id}>
                 <TableCell className="font-medium">{u.full_name || "N/A"}</TableCell>
                 <TableCell>
-                  <div className="flex gap-1">
-                    {u.user_roles?.map((r: any, i: number) => (
-                      <Badge key={i} variant={r.role === "super_admin" ? "default" : "secondary"}>
-                        {r.role}
+                  <div className="flex gap-1 flex-wrap">
+                    {u.roles?.map((role: string, i: number) => (
+                      <Badge key={i} variant={role === "super_admin" ? "default" : "secondary"}>
+                        {role}
                       </Badge>
                     ))}
                   </div>
                 </TableCell>
+
                 <TableCell>{u.phone || "N/A"}</TableCell>
                 <TableCell>{new Date(u.created_at).toLocaleDateString()}</TableCell>
               </TableRow>
