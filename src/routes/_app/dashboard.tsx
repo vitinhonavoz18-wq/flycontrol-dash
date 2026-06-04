@@ -16,6 +16,10 @@ import {
   Copy,
   Check,
   Trash2,
+  Volume2,
+  VolumeX,
+  Play,
+  Eye,
 } from "lucide-react";
 import {
   FlyStatusModal,
@@ -58,6 +62,7 @@ type Order = {
   notes: string | null;
   status: string;
   created_at: string;
+  is_seen?: boolean;
 };
 
 type OrderItem = {
@@ -139,15 +144,41 @@ function Dashboard() {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
   const [filter, setFilter] = useState<string>("ativos");
-  const [soundOn, setSoundOn] = useState(true);
+  const [soundOn, setSoundOn] = useState(() => {
+    const saved = localStorage.getItem("flycontrol_sound_on");
+    return saved !== null ? saved === "true" : true;
+  });
   const [showNew, setShowNew] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const initialLoad = useRef(true);
   const soundOnRef = useRef(soundOn);
 
   useEffect(() => {
     soundOnRef.current = soundOn;
+    localStorage.setItem("flycontrol_sound_on", String(soundOn));
   }, [soundOn]);
+
+  useEffect(() => {
+    if ("Notification" in window) {
+      setBrowserNotificationsEnabled(Notification.permission === "granted");
+    }
+  }, []);
+
+  const newOrdersCount = useMemo(() => {
+    return orders.filter(o => o.status === "novo" && !o.is_seen).length;
+  }, [orders]);
+
+  useEffect(() => {
+    if (newOrdersCount > 0) {
+      document.title = `(${newOrdersCount}) Novo pedido - FlyControl`;
+    } else {
+      document.title = "FlyControl - Painel de Pedidos";
+    }
+    return () => {
+      document.title = "FlyControl";
+    };
+  }, [newOrdersCount]);
 
   useEffect(() => {
     setMounted(true);
@@ -224,6 +255,33 @@ function Dashboard() {
     initialLoad.current = false;
   }
 
+  const requestNotificationPermission = async () => {
+    if ("Notification" in window) {
+      const permission = await Notification.requestPermission();
+      setBrowserNotificationsEnabled(permission === "granted");
+      if (permission === "granted") {
+        toast.success("Notificações do navegador ativadas!");
+      }
+    }
+  };
+
+  const showNotification = (order: Order) => {
+    if ("Notification" in window && Notification.permission === "granted") {
+      const n = new Notification(`Novo Pedido #${order.order_number}`, {
+        body: `${order.customer_name} - R$ ${Number(order.total).toFixed(2)}`,
+        icon: "/favicon.ico",
+      });
+      n.onclick = () => {
+        window.focus();
+        markAsSeen(order);
+      };
+    }
+  };
+
+  const markAsSeen = (order: Order) => {
+    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, is_seen: true } : o));
+  };
+
   function subscribeToOrders(pizzeriaId: string) {
     return supabase
       .channel(`orders-${pizzeriaId}`)
@@ -237,9 +295,17 @@ function Dashboard() {
         },
         (p) => {
           const o = p.new as Order;
-          setOrders((prev) => (prev.some((x) => x.id === o.id) ? prev : [o, ...prev]));
-          if (soundOnRef.current) playBeep();
-          toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
+          // Não processar se o pedido já foi processado (evitar duplicatas no canal)
+          setOrders((prev) => {
+            if (prev.some((x) => x.id === o.id)) return prev;
+            
+            if (!initialLoad.current) {
+              if (soundOnRef.current) playBeep();
+              toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
+              showNotification(o);
+            }
+            return [o, ...prev];
+          });
         },
       )
       .on(
@@ -319,7 +385,7 @@ function Dashboard() {
       toast.error(error.message);
       return;
     }
-    setOrders((prev) => prev.map((x) => (x.id === o.id ? { ...x, status } : x)));
+    setOrders((prev) => prev.map((x) => (x.id === o.id ? { ...x, status, is_seen: true } : x)));
     openStatusArtModal({ ...o, status }, status);
   }
 
@@ -529,14 +595,35 @@ function Dashboard() {
             </Button>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant={soundOn ? "default" : "outline"}
             size="sm"
             onClick={() => setSoundOn((v) => !v)}
+            title={soundOn ? "Desativar som" : "Ativar som"}
           >
-            {soundOn ? <Bell className="h-4 w-4" /> : <BellOff className="h-4 w-4" />}
-            Som {soundOn ? "ligado" : "desligado"}
+            {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+            <span className="hidden sm:inline ml-2">{soundOn ? "Som ligado" : "Som desligado"}</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={playBeep}
+            title="Testar som"
+          >
+            <Play className="h-4 w-4" />
+            <span className="hidden sm:inline ml-2">Testar som</span>
+          </Button>
+
+          <Button
+            variant={browserNotificationsEnabled ? "default" : "outline"}
+            size="sm"
+            onClick={requestNotificationPermission}
+            title="Notificações do navegador"
+          >
+            <Bell className="h-4 w-4" />
+            <span className="hidden sm:inline ml-2">Notificações</span>
           </Button>
         </div>
       </div>
@@ -612,7 +699,7 @@ function Dashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((o) => (
-          <OrderCard key={o.id} o={o} onChange={changeStatus} onDelete={deleteOrder} />
+          <OrderCard key={o.id} o={o} onChange={changeStatus} onDelete={deleteOrder} onSee={markAsSeen} />
         ))}
         {!filtered.length && (
           <div className="col-span-full grid place-items-center rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
@@ -647,11 +734,14 @@ function OrderCard({
   o,
   onChange,
   onDelete,
+  onSee,
 }: {
   o: Order;
   onChange: (o: Order, s: string) => void;
   onDelete: (o: Order) => void;
+  onSee: (o: Order) => void;
 }) {
+  const isNew = o.status === "novo" && !o.is_seen;
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
   const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
 
@@ -670,7 +760,20 @@ function OrderCard({
   };
 
   return (
-    <div className="rounded-xl border border-border bg-card p-5 transition-all duration-300 hover:border-primary/50 hover:shadow-lg group">
+    <div 
+      className={`rounded-xl border bg-card p-5 transition-all duration-300 group relative overflow-hidden ${
+        isNew 
+          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.2)] animate-pulse hover:animate-none scale-[1.02]" 
+          : "border-border hover:border-primary/50 hover:shadow-lg"
+      }`}
+    >
+      {isNew && (
+        <div className="absolute top-0 right-0">
+          <Badge className="rounded-none rounded-bl-lg bg-primary text-white font-black px-4 py-1 animate-bounce">
+            NOVO
+          </Badge>
+        </div>
+      )}
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1">
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
@@ -738,6 +841,15 @@ function OrderCard({
         </div>
       )}
       <div className="mt-3 flex flex-wrap gap-2">
+        {isNew && (
+          <Button
+            size="sm"
+            className="bg-primary text-white hover:bg-primary/90 font-bold gap-2"
+            onClick={() => onSee(o)}
+          >
+            <Eye className="h-4 w-4" /> Ver Pedido
+          </Button>
+        )}
         <select
           className="rounded-md border border-input bg-background px-2 py-1.5 text-xs"
           value={o.status}
