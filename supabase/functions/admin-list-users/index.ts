@@ -65,10 +65,17 @@ serve(async (req) => {
       .select('*')
     if (rolesError) throw rolesError
 
+    // Fetch restaurant associations (if any)
+    // We'll check restaurant_tables just in case there's a link there, 
+    // but usually it's in a config or restaurant_users table.
+    // Based on previous context, there might be 'pizzerias' or 'restaurant_configs'
+    const { data: configs } = await supabaseAdmin.from('restaurant_configs').select('user_id, restaurant_name').throwOnError();
+
     // Combine data
     const combinedUsers = authUsers.map(authUser => {
       const profile = profiles.find(p => p.id === authUser.id)
       const userRoles = roles.filter(r => r.user_id === authUser.id).map(r => r.role)
+      const config = configs?.find(c => c.user_id === authUser.id)
       
       return {
         id: authUser.id,
@@ -79,8 +86,7 @@ serve(async (req) => {
         status: authUser.email_confirmed_at ? 'active' : 'pending',
         created_at: authUser.created_at,
         last_sign_in_at: authUser.last_sign_in_at,
-        // Since we don't have a clear restaurant link table yet, we leave it for now or check configs
-        restaurant_name: 'N/A' 
+        restaurant_name: config?.restaurant_name || 'N/A' 
       }
     })
 
