@@ -370,6 +370,10 @@ export default function MyStore() {
             </CardContent>
           </Card>
         </TabsContent>
+        
+        <TabsContent value="tables" className="space-y-6">
+          <TablesManagement tenantId={pizzeria.id} restaurantSlug={pizzeria.slug} />
+        </TabsContent>
 
         <TabsContent value="delivery" className="space-y-6">
           <Card>
