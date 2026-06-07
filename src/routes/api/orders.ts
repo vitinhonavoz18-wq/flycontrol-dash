@@ -339,6 +339,10 @@ export const Route = createFileRoute("/api/orders")({
             
             if (linkError) throw linkError;
 
+            // Log informativo
+            console.log("TABLE_ORDER_REAL_RECEIVED:", order.id);
+            console.log("TABLE_ORDER_LINKED_TO_SESSION:", session.id);
+
             const orderIds = (linkedOrders || []).map(lo => lo.order_id);
             console.log("SYNC_ORDER_ID_LIST:", orderIds);
             

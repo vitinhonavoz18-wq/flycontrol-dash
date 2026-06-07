@@ -409,6 +409,14 @@ function Dashboard() {
   const filtered = useMemo(() => {
     let base = orders.filter((o) => o.status !== "deleted");
 
+    // Filtrar "pedidos fantasmas" que são apenas eventos de abertura de mesa
+    base = base.filter((o) => {
+      const isGhost = (Number(o.total) === 0 || o.total === null) && 
+                      (o.customer_name === "Cliente Site" || !o.customer_name) &&
+                      (!o.items || (Array.isArray(o.items) && o.items.length === 0));
+      return !isGhost;
+    });
+
     if (filter === "ativos") {
       base = base.filter((o) => !["entregue", "cancelado"].includes(o.status));
     } else if (filter !== "todos") {
@@ -420,12 +428,9 @@ function Dashboard() {
       else if (["delivery", "pickup", "table"].includes(filter)) {
         base = base.filter((o) => {
           const type = normalizeOrderType(o);
-          console.log(`ORDER_TAB_FILTER_DEBUG: Pedido #${o.order_number || o.id}, tipo: ${type}, aba: ${filter}, aparece: ${type === filter}`);
           return type === filter;
-
         });
       }
-
     }
     return base;
   }, [orders, filter]);

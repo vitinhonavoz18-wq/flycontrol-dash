@@ -143,7 +143,7 @@ export const Route = createFileRoute("/api/public/open-table-session")({
                 customer_name: customer_name || null,
                 opened_at: new Date().toISOString()
               })
-              .select("id, restaurant_id, table_id, table_number, status, subtotal_amount, service_fee_amount, total_amount")
+              .select("id, table_number, status, subtotal_amount, total_amount")
               .single();
 
             if (iErr) {
@@ -152,7 +152,7 @@ export const Route = createFileRoute("/api/public/open-table-session")({
                 console.warn("⚠️ OPEN_TABLE_SESSION_DUPLICATE_PREVENTED (Race Condition)");
                 const { data: raceSession } = await supabaseAdmin
                   .from("table_sessions")
-                  .select("id, table_number, status")
+                  .select("id, table_number, status, subtotal_amount, total_amount")
                   .eq("restaurant_id", pz.id)
                   .eq("table_number", String(table_number))
                   .eq("status", "open")
@@ -170,7 +170,8 @@ export const Route = createFileRoute("/api/public/open-table-session")({
               throw iErr;
             }
 
-            console.log("OPEN_TABLE_SESSION_CREATED:", newSession.id);
+            console.log("OPEN_TABLE_SESSION_CREATED_ONLY_SESSION:", newSession.id);
+            console.log("OPEN_TABLE_SESSION_DID_NOT_CREATE_ORDER: true");
             
             const responseBody = {
               success: true,
@@ -178,7 +179,6 @@ export const Route = createFileRoute("/api/public/open-table-session")({
               table_session: newSession
             };
             
-            console.log("OPEN_TABLE_SESSION_RESPONSE:", JSON.stringify(responseBody));
             return new Response(JSON.stringify(responseBody), { status: 201, headers: cors });
 
           } catch (insertError: any) {

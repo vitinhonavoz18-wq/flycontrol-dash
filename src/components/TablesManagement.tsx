@@ -224,7 +224,13 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     if (!printWindow) return;
 
     // Recalcular totais reais dos pedidos válidos
-    const validOrders = orders.filter(o => o && (o.items || Number(o.total) > 0));
+    const validOrders = orders.filter(o => {
+      if (!o) return false;
+      const isGhost = (Number(o.total) === 0 || o.total === null) && 
+                      (o.customer_name === "Cliente Site" || !o.customer_name) &&
+                      (!o.items || (Array.isArray(o.items) && o.items.length === 0));
+      return !isGhost;
+    });
     const subtotal = validOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
     const feeAmount = session.service_fee_enabled ? subtotal * (session.service_fee_percent / 100) : 0;
     const total = subtotal + feeAmount;
@@ -701,7 +707,14 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
         </div>
       )}
       {selectedSession && !showPrintModal && (() => {
-        const validOrders = sessionOrders.filter(o => o && (Array.isArray(o.items) || Number(o.total) > 0));
+        const validOrders = sessionOrders.filter(o => {
+          if (!o) return false;
+          // Ignorar pedidos fantasmas (total 0, sem itens, nome genérico)
+          const isGhost = (Number(o.total) === 0 || o.total === null) && 
+                          (o.customer_name === "Cliente Site" || !o.customer_name) &&
+                          (!o.items || (Array.isArray(o.items) && o.items.length === 0));
+          return !isGhost;
+        });
         const subtotal = validOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
         const feeAmount = selectedSession.service_fee_enabled ? subtotal * (selectedSession.service_fee_percent / 100) : 0;
         const total = subtotal + feeAmount;
@@ -810,7 +823,13 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
       })()}
 
       {showPrintModal && selectedSession && (() => {
-        const validOrders = sessionOrders.filter(o => o && (Array.isArray(o.items) || Number(o.total) > 0));
+        const validOrders = sessionOrders.filter(o => {
+          if (!o) return false;
+          const isGhost = (Number(o.total) === 0 || o.total === null) && 
+                          (o.customer_name === "Cliente Site" || !o.customer_name) &&
+                          (!o.items || (Array.isArray(o.items) && o.items.length === 0));
+          return !isGhost;
+        });
         const subtotal = validOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
         const feeAmount = selectedSession.service_fee_enabled ? subtotal * (selectedSession.service_fee_percent / 100) : 0;
         const total = subtotal + feeAmount;
