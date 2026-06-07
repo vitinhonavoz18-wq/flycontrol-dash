@@ -508,7 +508,7 @@ function Finance() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
-                  <Package className="h-4 w-4" />
+                  <LayoutGrid className="h-4 w-4" />
                   Tipo: {typeFilter === "all" ? "Todos" : (typeFilter === "delivery" ? "Delivery" : typeFilter === "pickup" ? "Retirada" : "Mesa")}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
