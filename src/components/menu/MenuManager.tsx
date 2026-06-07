@@ -9,6 +9,7 @@ import { ProductList } from "./ProductList";
 import { ExtraList } from "./ExtraList";
 import { PizzaSizeList } from "./PizzaSizeList";
 import { PizzeriaConfig } from "./PizzeriaConfig";
+import { MenuSyncSection } from "./MenuSyncSection";
 
 interface MenuManagerProps {
   pizzeriaId: string;
@@ -230,6 +231,11 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
   return (
     <div className="space-y-4">
+      <MenuSyncSection 
+        pizzeriaId={pizzeriaId} 
+        onSyncSuccess={loadCategories}
+      />
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
           <TabsList className="grid w-full grid-cols-2 lg:w-[900px] lg:grid-cols-6 bg-muted/50 p-1">
