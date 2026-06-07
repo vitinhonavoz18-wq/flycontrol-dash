@@ -8,6 +8,7 @@ export type RestaurantTable = {
   table_number: string;
   table_name: string | null;
   public_token: string;
+  qr_code_url: string | null;
   is_active: boolean;
   created_at: string;
 };
@@ -47,7 +48,7 @@ export function useTables(tenantId: string | null) {
   async function addTable(tableNumber: string, tableName?: string) {
     if (!tenantId) return;
     
-    // Auto-generate a secure public token
+    // Auto-generate a secure public token (the trigger will also handle this, but it's good practice)
     const publicToken = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
     
     const { data, error } = await supabase
@@ -67,8 +68,10 @@ export function useTables(tenantId: string | null) {
       toast.error("Erro ao adicionar mesa: " + error.message);
       return null;
     }
-    setTables(prev => [...prev, data as RestaurantTable].sort((a, b) => a.table_number.localeCompare(b.table_number, undefined, { numeric: true })));
-    return data as RestaurantTable;
+    
+    const newTable = data as RestaurantTable;
+    setTables(prev => [...prev, newTable].sort((a, b) => a.table_number.localeCompare(b.table_number, undefined, { numeric: true })));
+    return newTable;
   }
 
   async function updateTable(id: string, updates: Partial<RestaurantTable>) {
@@ -82,7 +85,8 @@ export function useTables(tenantId: string | null) {
       return false;
     }
     
-    setTables(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    // Reload to get the updated qr_code_url from trigger if it changed
+    await loadTables();
     toast.success("Mesa atualizada com sucesso!");
     return true;
   }
@@ -110,11 +114,14 @@ export function useTables(tenantId: string | null) {
       toast.error("Erro ao excluir mesa: " + error.message);
     } else {
       setTables(prev => prev.filter(t => t.id !== id));
+      toast.success("Mesa excluída com sucesso!");
     }
   }
 
   useEffect(() => {
-    if (tenantId) loadTables();
+    if (tenantId) {
+      loadTables();
+    }
   }, [tenantId]);
 
   return { tables, loading, loadTables, addTable, updateTable, toggleTable, deleteTable };
