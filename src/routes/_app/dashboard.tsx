@@ -63,11 +63,18 @@ type Order = {
   status: string;
   created_at: string;
   is_seen?: boolean;
-  order_type?: "delivery" | "pickup" | "table" | null;
-  service_mode?: "delivery" | "retirada" | "mesa" | null;
+  order_type?: string | null;
+  service_mode?: string | null;
+  fulfillment_type?: string | null;
+  delivery_type?: string | null;
   table_number?: string | null;
+  tableNumber?: string | null;
+  mesa?: string | null;
   ticket_number?: string | null;
   payment_status?: string | null;
+  delivery_address?: string | null;
+  location?: string | null;
+  address?: string | null;
 };
 
 type OrderItem = {
@@ -117,37 +124,55 @@ const STATUSES = [
 ];
 
 export function normalizeOrderType(o: any) {
-  const type = (o.order_type || "").toLowerCase();
-  const mode = (o.service_mode || "").toLowerCase();
-  const fulfillment = (o.fulfillment_type || "").toLowerCase();
-  const deliveryType = (o.delivery_type || "").toLowerCase();
-  const address = (o.customer_address || o.address || "").toLowerCase();
-  const deliveryAddress = (o.delivery_address || "").toLowerCase();
+  const type = String(o.order_type || "").toLowerCase();
+  const serviceMode = String(o.service_mode || "").toLowerCase();
+  const fulfillmentType = String(o.fulfillment_type || "").toLowerCase();
+  const deliveryType = String(o.delivery_type || "").toLowerCase();
+  const address = String(o.customer_address || o.address || o.delivery_address || o.location || "").toLowerCase();
+
+  const tableNumber = o.table_number || o.tableNumber || o.mesa;
 
   // PRIORIDADE 1: Mesa / Consumo no local
   if (
-    ["table", "mesa"].includes(type) || 
-    ["table", "mesa"].includes(mode) || 
-    o.table_number
+    type === "table" ||
+    type === "mesa" ||
+    serviceMode === "table" ||
+    serviceMode === "mesa" ||
+    fulfillmentType === "table" ||
+    fulfillmentType === "mesa" ||
+    deliveryType === "table" ||
+    deliveryType === "mesa" ||
+    tableNumber ||
+    address.includes("mesa")
   ) {
     return "table";
   }
 
   // PRIORIDADE 2: Retirada / Balcão
   if (
-    ["pickup", "retirada"].includes(type) || 
-    ["pickup", "retirada"].includes(mode) ||
-    ["pickup", "retirada"].includes(fulfillment) ||
-    ["pickup", "retirada"].includes(deliveryType) ||
+    type === "pickup" ||
+    type === "retirada" ||
+    serviceMode === "pickup" ||
+    serviceMode === "retirada" ||
+    fulfillmentType === "pickup" ||
+    fulfillmentType === "retirada" ||
+    deliveryType === "pickup" ||
+    deliveryType === "retirada" ||
     o.ticket_number ||
     address.includes("retirada") ||
-    deliveryAddress.includes("retirada")
+    address.includes("balcão") ||
+    address.includes("balcao")
   ) {
     return "pickup";
   }
 
   // PRIORIDADE 3: Delivery
-  if (type === "delivery" || mode === "delivery") {
+  if (
+    type === "delivery" ||
+    serviceMode === "delivery" ||
+    fulfillmentType === "delivery" ||
+    deliveryType === "delivery"
+  ) {
     return "delivery";
   }
 
@@ -280,7 +305,7 @@ function Dashboard() {
     const load = () =>
       supabase
         .from("orders")
-        .select("*")
+        .select("id, tenant_id, total, delivery_fee, status, created_at, order_number, customer_name, customer_phone, customer_address, neighborhood, items, payment_method, change_for, notes, order_type, service_mode, table_number, ticket_number, payment_status")
         .eq("tenant_id", pizzeriaId)
         .neq("status", "deleted")
         .order("created_at", { ascending: false })
@@ -858,7 +883,7 @@ function OrderCard({
 
   if (isRecentNew) {
     const normType = normalizeOrderType(o);
-    console.log(`ORDER_RAW_TYPE_DEBUG: id=${o.id}, order_num=${o.order_number}, order_type=${o.order_type}, service_mode=${o.service_mode}, address=${o.customer_address}, normalized=${normType}`);
+    console.log(`ORDER_TABLE_DEBUG: id=${o.id}, order_type=${o.order_type}, service_mode=${o.service_mode}, fulfillment_type=${o.fulfillment_type}, delivery_type=${o.delivery_type}, table_number=${o.table_number}, tableNumber=${o.tableNumber}, mesa=${o.mesa}, address=${o.customer_address}, normalized_type=${normType}`);
   }
 
 
@@ -914,8 +939,10 @@ function OrderCard({
             {orderType === "pickup" && o.ticket_number && (
               <span className="text-sm font-bold text-blue-600">Ficha: {o.ticket_number}</span>
             )}
-            {orderType === "table" && o.table_number && (
-              <span className="text-sm font-bold text-purple-600">Mesa: {o.table_number}</span>
+            {orderType === "table" && (
+              <span className="text-sm font-bold text-purple-600">
+                {o.table_number || o.tableNumber || o.mesa ? `Mesa: ${o.table_number || o.tableNumber || o.mesa}` : "Mesa não identificada"}
+              </span>
             )}
           </div>
         </div>
@@ -954,7 +981,7 @@ function OrderCard({
         {orderType === "table" && (
           <div className="flex items-center gap-2 text-purple-600 bg-purple-50/50 p-2 rounded-lg text-xs font-bold">
             <Clock className="h-3.5 w-3.5" />
-            Consumo no local / Mesa {o.table_number || ""}
+            Consumo no local / {o.table_number || o.tableNumber || o.mesa ? `Mesa ${o.table_number || o.tableNumber || o.mesa}` : "Mesa não identificada"}
           </div>
         )}
         <div className="flex items-center gap-1 text-xs text-muted-foreground">

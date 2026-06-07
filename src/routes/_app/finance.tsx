@@ -88,7 +88,17 @@ type OrderRow = {
   items: Array<{ name?: string; qty?: number; price?: number; notes?: string }> | null;
   order_number: number;
   customer_name: string | null;
-  order_type?: "delivery" | "pickup" | "table" | null;
+  order_type?: string | null;
+  service_mode?: string | null;
+  table_number?: string | null;
+  tableNumber?: string | null;
+  mesa?: string | null;
+  fulfillment_type?: string | null;
+  delivery_type?: string | null;
+  customer_address?: string | null;
+  address?: string | null;
+  delivery_address?: string | null;
+  location?: string | null;
 };
 
 const periodLabel = (p: Period) =>
@@ -189,7 +199,7 @@ function Finance() {
       const from = startOfDay(subDays(new Date(), 90)).toISOString();
       let q = supabase
         .from("orders")
-        .select("id, tenant_id, total, subtotal, delivery_fee, discount, status, payment_method, created_at, items, order_number, customer_name, order_type")
+        .select("id, tenant_id, total, subtotal, delivery_fee, discount, status, payment_method, created_at, items, order_number, customer_name, order_type, service_mode, table_number, customer_address")
         .gte("created_at", from)
         .neq("status", "deleted") // Deleted is treated as cancelled
         .order("created_at", { ascending: false })
