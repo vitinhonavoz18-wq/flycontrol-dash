@@ -104,17 +104,30 @@ export function useTableSessions(tenantId: string | null) {
   async function loadSessions() {
     if (!tenantId) return;
     setLoading(true);
+    // Note: The database schema might use restaurant_id instead of tenant_id for table_sessions
+    // based on previous migration attempts and existing tables.
     const { data, error } = await supabase
       .from("table_sessions")
       .select("*")
-      .eq("tenant_id", tenantId)
+      .or(`tenant_id.eq.${tenantId},restaurant_id.eq.${tenantId}`)
       .eq("status", "open")
       .order("opened_at", { ascending: false });
 
     if (error) {
       toast.error("Erro ao carregar sessões: " + error.message);
     } else {
-      setSessions(data as TableSession[]);
+      // Map potential database field names to our type
+      const mappedData = (data as any[]).map(s => ({
+        id: s.id,
+        tenant_id: s.tenant_id || s.restaurant_id,
+        table_id: s.table_id,
+        table_number: s.table_number,
+        status: s.status,
+        opened_at: s.opened_at,
+        closed_at: s.closed_at,
+        total_amount: Number(s.total_amount || 0)
+      })) as TableSession[];
+      setSessions(mappedData);
     }
     setLoading(false);
   }
@@ -122,7 +135,7 @@ export function useTableSessions(tenantId: string | null) {
   async function closeSession(sessionId: string) {
     const { error } = await supabase
       .from("table_sessions")
-      .update({ status: "closed", closed_at: new Date().toISOString() })
+      .update({ status: "closed", closed_at: new Date().toISOString() } as any)
       .eq("id", sessionId);
 
     if (error) {
