@@ -62,15 +62,6 @@ serve(async (req) => {
         })
       }
 
-      // Check table by token alone first for debug
-      const { data: tableAny, error: tableAnyError } = await supabase
-        .from('restaurant_tables')
-        .select('*')
-        .eq('public_token', table_token)
-        .maybeSingle()
-      
-      console.log(`VALIDATE_TABLE_DEBUG: table_found_by_token_any_restaurant=${!!tableAny}`)
-
       const { data: table, error: tableError } = await supabase
         .from('restaurant_tables')
         .select('*')
