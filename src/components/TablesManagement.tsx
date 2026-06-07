@@ -328,7 +328,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
               ${(item.notes || item.observations) ? `<div class="item-notes">Obs: ${item.notes || item.observations}</div>` : ''}
             `).join('') : `
               <div class="item">
-                <span class="name">Pedido via Site</span>
+                <span class="name">Detalhes do Pedido #${order.order_number}</span>
                 <span class="price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}</span>
               </div>
             `}
@@ -860,7 +860,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                           </div>
                         )}
                         <div className="flex justify-end pt-2 font-bold border-t">
-                          Subtotal do Pedido: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}
+                          Total do Pedido: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}
                         </div>
                       </div>
                     );
