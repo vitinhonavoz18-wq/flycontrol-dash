@@ -225,13 +225,14 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       }
 
       if (!contentType || !contentType.includes("application/json")) {
+        console.log("MENU_SYNC_JSON_RESPONSE", "Error: Not JSON content type");
         throw new Error("Resposta inválida: Esperado JSON, recebido " + (contentType || "vazio"));
       }
 
       let externalMenu;
       try {
         externalMenu = JSON.parse(text);
-        console.log("MENU_SYNC_JSON_RESPONSE", !!externalMenu);
+        console.log("MENU_SYNC_JSON_RESPONSE", externalMenu);
       } catch (e) {
         console.log("MENU_SYNC_JSON_ERROR", e);
         throw new Error("O link respondeu, mas não retornou um cardápio válido.");
