@@ -305,7 +305,7 @@ function Dashboard() {
     const load = () =>
       supabase
         .from("orders")
-        .select("*")
+        .select("id, tenant_id, total, delivery_fee, status, created_at, order_number, customer_name, customer_phone, customer_address, neighborhood, items, payment_method, change_for, notes, order_type, service_mode, table_number, ticket_number, payment_status")
         .eq("tenant_id", pizzeriaId)
         .neq("status", "deleted")
         .order("created_at", { ascending: false })
