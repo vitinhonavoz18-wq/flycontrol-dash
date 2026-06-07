@@ -814,6 +814,54 @@ export type Database = {
         }
         Relationships: []
       }
+      restaurant_tables: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          public_token: string
+          table_name: string | null
+          table_number: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          public_token?: string
+          table_name?: string | null
+          table_number: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          public_token?: string
+          table_name?: string | null
+          table_number?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "restaurant_tables_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "restaurant_tables_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       table_session_orders: {
         Row: {
           created_at: string | null
@@ -859,6 +907,7 @@ export type Database = {
           opened_at: string | null
           restaurant_id: string
           status: string
+          table_id: string | null
           table_number: string
           total_amount: number | null
           updated_at: string | null
@@ -871,6 +920,7 @@ export type Database = {
           opened_at?: string | null
           restaurant_id: string
           status?: string
+          table_id?: string | null
           table_number: string
           total_amount?: number | null
           updated_at?: string | null
@@ -883,6 +933,7 @@ export type Database = {
           opened_at?: string | null
           restaurant_id?: string
           status?: string
+          table_id?: string | null
           table_number?: string
           total_amount?: number | null
           updated_at?: string | null
@@ -900,6 +951,13 @@ export type Database = {
             columns: ["restaurant_id"]
             isOneToOne: false
             referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_sessions_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_tables"
             referencedColumns: ["id"]
           },
         ]
