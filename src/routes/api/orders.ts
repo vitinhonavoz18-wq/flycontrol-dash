@@ -414,6 +414,8 @@ export const Route = createFileRoute("/api/orders")({
           })();
         }
 
+        console.log("ORDER_RESPONSE_SENT: success");
+
         return new Response(JSON.stringify({ 
           success: true, 
           order_id: order.id, 
