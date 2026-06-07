@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTables, useTableSessions, type RestaurantTable, type TableSession } from "@/hooks/useTables";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,7 +32,11 @@ interface TablesManagementProps {
 
 export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementProps) {
   const { tables, loading: tablesLoading, addTable, updateTable, toggleTable, deleteTable, loadTables } = useTables(tenantId);
-  const { sessions, loading: sessionsLoading, closeSession, loadSessions } = useTableSessions(tenantId);
+  const { sessions, loading: sessionsLoading, closeSession, loadSessions, toggleServiceFee } = useTableSessions(tenantId);
+  const [selectedSession, setSelectedSession] = useState<TableSession | null>(null);
+  const [sessionOrders, setSessionOrders] = useState<any[]>([]);
+  const [loadingOrders, setLoadingOrders] = useState(false);
+  const [showPrintModal, setShowPrintModal] = useState(false);
   
   const [newTableNumber, setNewTableNumber] = useState("");
   const [newTableName, setNewTableName] = useState("");
@@ -184,6 +189,113 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
               height: 256
             });
             setTimeout(() => { if(!window.location.search.includes('noprint')) window.print(); }, 500);
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
+  }
+
+  async function loadSessionOrders(sessionId: string) {
+    setLoadingOrders(true);
+    const { data, error } = await supabase
+      .from("table_session_orders")
+      .select(`
+        order_id,
+        orders (*)
+      `)
+      .eq("table_session_id", sessionId);
+
+    if (error) {
+      toast.error("Erro ao carregar pedidos: " + error.message);
+    } else {
+      setSessionOrders((data || []).map((d: any) => d.orders));
+    }
+    setLoadingOrders(false);
+  }
+
+  function handlePrintComanda(session: TableSession, orders: any[]) {
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const itemsHtml = orders.map(order => `
+      <div class="order-block">
+        <div class="order-header">Pedido #${order.id.substring(0, 8)} - ${new Date(order.created_at).toLocaleTimeString()}</div>
+        <div class="customer">${order.customer_name || 'Cliente'}</div>
+        <div class="items">
+          ${(order.items || []).map((item: any) => `
+            <div class="item">
+              <span class="qty">${item.quantity}x</span>
+              <span class="name">${item.product_name || item.name}</span>
+              <span class="price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total_price || (item.quantity * (item.unit_price || item.price || 0)))}</span>
+            </div>
+          `).join('')}
+        </div>
+        ${order.notes ? `<div class="notes">Obs: ${order.notes}</div>` : ''}
+      </div>
+    `).join('<hr/>');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Comanda Mesa ${session.table_number}</title>
+          <style>
+            body { font-family: 'Courier New', Courier, monospace; width: 300px; padding: 10px; font-size: 12px; }
+            .header { text-align: center; margin-bottom: 20px; border-bottom: 1px dashed #000; padding-bottom: 10px; }
+            .restaurant { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
+            .title { font-size: 14px; font-weight: bold; }
+            .order-block { margin-bottom: 10px; }
+            .order-header { font-weight: bold; margin-bottom: 3px; }
+            .customer { font-style: italic; margin-bottom: 5px; }
+            .item { display: flex; justify-content: space-between; margin-bottom: 2px; }
+            .qty { width: 30px; }
+            .name { flex: 1; }
+            .price { width: 70px; text-align: right; }
+            .notes { font-size: 10px; color: #555; margin-top: 3px; }
+            .summary { margin-top: 20px; border-top: 1px dashed #000; pt-5; }
+            .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
+            .total-row { font-weight: bold; font-size: 18px; border-top: 1px solid #000; padding-top: 5px; }
+            .footer { text-align: center; margin-top: 30px; border-top: 1px dashed #000; padding-top: 10px; font-weight: bold; }
+            hr { border: none; border-top: 1px dotted #ccc; margin: 10px 0; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="header">
+            <div class="restaurant">${restaurantSlug.toUpperCase()}</div>
+            <div class="title">MESA ${session.table_number}</div>
+            <div>Sessão: ${session.id.substring(0, 8)}</div>
+            <div>Abertura: ${new Date(session.opened_at).toLocaleString()}</div>
+            ${session.status === 'closed' ? `<div>Fechamento: ${new Date().toLocaleString()}</div>` : ''}
+          </div>
+          
+          <div class="content">
+            ${itemsHtml}
+          </div>
+
+          <div class="summary">
+            <div class="summary-row">
+              <span>Subtotal:</span>
+              <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.subtotal_amount)}</span>
+            </div>
+            ${session.service_fee_enabled ? `
+              <div class="summary-row">
+                <span>Taxa Garçom (15%):</span>
+                <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.service_fee_amount)}</span>
+              </div>
+              <div style="font-size: 9px; text-align: right; margin-bottom: 5px;">Taxa de garçom de 15% aplicada ao total.</div>
+            ` : ''}
+            <div class="summary-row total-row">
+              <span>TOTAL FINAL:</span>
+              <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.total_amount)}</span>
+            </div>
+          </div>
+
+          <div class="footer">
+            Obrigado pela preferência!
+          </div>
+          <script>
+            setTimeout(() => { window.print(); window.close(); }, 500);
           </script>
         </body>
       </html>
@@ -362,25 +474,57 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                   </div>
                 </CardHeader>
                 <CardContent className="p-5 space-y-4">
-                  <div className="flex justify-between items-end border-b pb-3">
-                    <div className="text-sm font-medium text-muted-foreground uppercase">Total Acumulado</div>
+                  <div className="space-y-2 text-sm border-b pb-3">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Subtotal:</span>
+                      <span className="font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.subtotal_amount)}</span>
+                    </div>
+                    {session.service_fee_enabled && (
+                      <div className="flex justify-between text-orange-600">
+                        <span>Taxa Garçom (15%):</span>
+                        <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.service_fee_amount)}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex justify-between items-end pb-3">
+                    <div className="text-sm font-bold uppercase">Total Final</div>
                     <div className="text-2xl font-black text-primary">
                       {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.total_amount)}
                     </div>
                   </div>
                   
-                  <div className="grid grid-cols-1 gap-2">
-                    <Button variant="default" size="sm" className="w-full gap-2" onClick={() => {
-                      toast.info("Em breve: Visualização detalhada de pedidos da comanda.");
-                    }}>
-                      <ExternalLink className="h-4 w-4" /> Ver Comanda Detalhada
+                  <div className="grid grid-cols-2 gap-2">
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className={`col-span-2 gap-2 ${session.service_fee_enabled ? 'text-destructive border-destructive/20' : 'text-orange-600 border-orange-200'}`} 
+                      onClick={() => toggleServiceFee(session.id, !session.service_fee_enabled)}
+                    >
+                      <Receipt className="h-4 w-4" /> 
+                      {session.service_fee_enabled ? "Remover 15%" : "Adicionar 15%"}
                     </Button>
-                    <Button variant="outline" size="sm" className="w-full gap-2 text-green-600 border-green-200 hover:bg-green-50" onClick={() => {
-                      if(confirm(`Deseja fechar a comanda da Mesa ${session.table_number}?`)) {
-                        closeSession(session.id);
-                      }
+                    <Button variant="default" size="sm" className="gap-2" onClick={() => {
+                      setSelectedSession(session);
+                      loadSessionOrders(session.id);
                     }}>
-                      <CheckCircle2 className="h-4 w-4" /> Fechar Mesa / Comanda
+                      <ExternalLink className="h-4 w-4" /> Ver Comanda
+                    </Button>
+                    <Button variant="outline" size="sm" className="gap-2" onClick={async () => {
+                      const { data: ordersData } = await supabase
+                        .from("table_session_orders")
+                        .select("orders (*)")
+                        .eq("table_session_id", session.id);
+                      handlePrintComanda(session, (ordersData || []).map((d: any) => d.orders) || []);
+                    }}>
+                      <Printer className="h-4 w-4" /> Imprimir Prévia
+                    </Button>
+                    <Button variant="outline" size="sm" className="col-span-2 gap-2 text-green-600 border-green-200 hover:bg-green-50" onClick={() => {
+                      setSelectedSession(session);
+                      setShowPrintModal(true);
+                      loadSessionOrders(session.id);
+                    }}>
+                      <CheckCircle2 className="h-4 w-4" /> Fechar Mesa
                     </Button>
                   </div>
                 </CardContent>
@@ -418,6 +562,130 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                 <Button onClick={handleRename}>Salvar</Button>
               </div>
             </CardContent>
+          </Card>
+        </div>
+      )}
+      {selectedSession && !showPrintModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+            <CardHeader className="border-b">
+              <div className="flex justify-between items-center">
+                <CardTitle>Comanda Mesa {selectedSession.table_number}</CardTitle>
+                <Button variant="ghost" size="sm" onClick={() => setSelectedSession(null)}>Fechar</Button>
+              </div>
+            </CardHeader>
+            <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
+              {loadingOrders ? (
+                <div className="flex justify-center py-10"><RefreshCw className="animate-spin h-8 w-8 text-primary" /></div>
+              ) : sessionOrders.length === 0 ? (
+                <p className="text-center py-10 text-muted-foreground">Nenhum pedido vinculado a esta sessão.</p>
+              ) : (
+                sessionOrders.map((order, idx) => (
+                  <div key={order.id} className="border rounded-lg p-4 space-y-3">
+                    <div className="flex justify-between items-start border-b pb-2">
+                      <div>
+                        <span className="font-bold text-lg">Pedido #{order.id.substring(0, 8)}</span>
+                        <div className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleString()}</div>
+                      </div>
+                      <Badge variant="outline">{order.customer_name}</Badge>
+                    </div>
+                    <div className="space-y-2">
+                      {(order.items || []).map((item: any, i: number) => (
+                        <div key={i} className="flex justify-between text-sm">
+                          <span>{item.quantity}x {item.product_name || item.name}</span>
+                          <span className="font-mono">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total_price || (item.quantity * (item.unit_price || item.price || 0)))}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                    {order.notes && <div className="text-xs italic bg-muted p-2 rounded">Obs: {order.notes}</div>}
+                    <div className="flex justify-end pt-2 font-bold border-t">
+                      Total: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}
+                    </div>
+                  </div>
+                ))
+              )}
+            </CardContent>
+            <div className="border-t p-4 bg-muted/20 space-y-3">
+              <div className="flex justify-between text-sm">
+                <span>Subtotal:</span>
+                <span className="font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.subtotal_amount)}</span>
+              </div>
+              {selectedSession.service_fee_enabled && (
+                <div className="flex justify-between text-sm text-orange-600">
+                  <span>Taxa Garçom (15%):</span>
+                  <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.service_fee_amount)}</span>
+                </div>
+              )}
+              <div className="flex justify-between text-xl font-black text-primary pt-2 border-t">
+                <span>TOTAL FINAL:</span>
+                <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.total_amount)}</span>
+              </div>
+              <div className="flex gap-2 pt-2">
+                <Button variant="outline" className="flex-1" onClick={() => handlePrintComanda(selectedSession, sessionOrders)}>
+                  <Printer className="h-4 w-4 mr-2" /> Imprimir
+                </Button>
+                <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => {
+                  setShowPrintModal(true);
+                }}>
+                  <CheckCircle2 className="h-4 w-4 mr-2" /> Fechar Mesa
+                </Button>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {showPrintModal && selectedSession && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Fechar Mesa {selectedSession.table_number}</CardTitle>
+              <CardDescription>Confira o resumo final antes de fechar a comanda.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 py-4">
+              <div className="space-y-2 border-b pb-4">
+                <div className="flex justify-between text-sm">
+                  <span>Mesa:</span>
+                  <span className="font-bold">{selectedSession.table_number}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Pedidos:</span>
+                  <span className="font-bold">{sessionOrders.length}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span>Subtotal:</span>
+                  <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.subtotal_amount)}</span>
+                </div>
+                {selectedSession.service_fee_enabled && (
+                  <div className="flex justify-between text-sm text-orange-600">
+                    <span>Taxa Garçom (15%):</span>
+                    <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.service_fee_amount)}</span>
+                  </div>
+                )}
+              </div>
+              <div className="flex justify-between text-2xl font-black text-primary py-2">
+                <span>TOTAL:</span>
+                <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.total_amount)}</span>
+              </div>
+              {selectedSession.service_fee_enabled && (
+                <p className="text-[10px] text-center text-muted-foreground">
+                  Taxa de garçom de 15% aplicada ao total da comanda.
+                </p>
+              )}
+            </CardContent>
+            <div className="p-4 bg-muted/20 border-t flex flex-col gap-2">
+              <Button className="w-full h-12 text-lg font-bold" onClick={() => {
+                handlePrintComanda(selectedSession, sessionOrders);
+                closeSession(selectedSession.id);
+                setSelectedSession(null);
+                setShowPrintModal(false);
+              }}>
+                Confirmar e Imprimir
+              </Button>
+              <Button variant="ghost" onClick={() => setShowPrintModal(false)}>Cancelar</Button>
+            </div>
           </Card>
         </div>
       )}

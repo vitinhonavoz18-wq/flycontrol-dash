@@ -921,7 +921,7 @@ export type Database = {
           {
             foreignKeyName: "table_session_orders_order_id_fkey"
             columns: ["order_id"]
-            isOneToOne: false
+            isOneToOne: true
             referencedRelation: "orders"
             referencedColumns: ["id"]
           },
@@ -942,7 +942,11 @@ export type Database = {
           id: string
           opened_at: string | null
           restaurant_id: string
+          service_fee_amount: number | null
+          service_fee_enabled: boolean | null
+          service_fee_percent: number | null
           status: string
+          subtotal_amount: number | null
           table_id: string | null
           table_name: string | null
           table_number: string
@@ -956,7 +960,11 @@ export type Database = {
           id?: string
           opened_at?: string | null
           restaurant_id: string
+          service_fee_amount?: number | null
+          service_fee_enabled?: boolean | null
+          service_fee_percent?: number | null
           status?: string
+          subtotal_amount?: number | null
           table_id?: string | null
           table_name?: string | null
           table_number: string
@@ -970,7 +978,11 @@ export type Database = {
           id?: string
           opened_at?: string | null
           restaurant_id?: string
+          service_fee_amount?: number | null
+          service_fee_enabled?: boolean | null
+          service_fee_percent?: number | null
           status?: string
+          subtotal_amount?: number | null
           table_id?: string | null
           table_name?: string | null
           table_number?: string
