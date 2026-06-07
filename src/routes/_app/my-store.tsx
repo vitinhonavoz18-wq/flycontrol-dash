@@ -17,7 +17,7 @@ import {
   Share2, 
   Save, 
   Loader2, 
-  Instagram, 
+  Camera, 
   Phone, 
   MapPin, 
   Clock, 
@@ -26,7 +26,8 @@ import {
   XCircle,
   Plus,
   Trash2,
-  Package
+  Package,
+  LayoutGrid
 } from "lucide-react";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 import { syncToExternal } from "@/utils/menuSync";
