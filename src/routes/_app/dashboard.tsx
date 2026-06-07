@@ -919,9 +919,11 @@ function OrderCard({
             )}
           </div>
         </div>
-        <Badge className={`${status.color} font-bold px-3 py-1`} variant="outline">
-          {status.label}
-        </Badge>
+        {status.value !== "novo" && (
+          <Badge className={`${status.color} font-bold px-3 py-1`} variant="outline">
+            {status.label}
+          </Badge>
+        )}
       </div>
       <div className="mt-4 space-y-3 text-sm">
         <div className="flex items-center gap-2">
