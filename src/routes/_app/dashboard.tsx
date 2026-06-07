@@ -762,8 +762,16 @@ function Dashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((o) => (
-          <OrderCard key={o.id} o={o} onChange={changeStatus} onDelete={deleteOrder} onSee={markAsSeen} />
+          <OrderCard 
+            key={o.id} 
+            o={o} 
+            onChange={changeStatus} 
+            onDelete={deleteOrder} 
+            onSee={markAsSeen} 
+            isRecentNew={recentNewOrderIds.includes(o.id)}
+          />
         ))}
+
         {!filtered.length && (
           <div className="col-span-full grid place-items-center rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
             Nenhum pedido aqui. Aguardando…
