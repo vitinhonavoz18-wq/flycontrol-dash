@@ -876,7 +876,7 @@ function OrderCard({
 
   if (isRecentNew) {
     const normType = normalizeOrderType(o);
-    console.log(`ORDER_RAW_TYPE_DEBUG: id=${o.id}, order_num=${o.order_number}, order_type=${o.order_type}, service_mode=${o.service_mode}, address=${o.customer_address}, normalized=${normType}`);
+    console.log(`ORDER_TABLE_DEBUG: id=${o.id}, order_type=${o.order_type}, service_mode=${o.service_mode}, fulfillment_type=${o.fulfillment_type}, delivery_type=${o.delivery_type}, table_number=${o.table_number}, tableNumber=${(o as any).tableNumber}, mesa=${(o as any).mesa}, address=${o.customer_address}, normalized_type=${normType}`);
   }
 
 
