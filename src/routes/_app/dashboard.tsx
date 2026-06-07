@@ -355,22 +355,34 @@ function Dashboard() {
             if (prev.some((x) => x.id === o.id)) return prev;
             
             if (!initialLoad.current) {
-              if (soundOnRef.current) playBeep();
-              toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
-              showNotification(o);
+              // DETECÇÃO DE NOVO PEDIDO (FRONT-END ONLY)
+              setKnownOrderIds(prevKnown => {
+                if (!prevKnown.has(o.id)) {
+                  // É realmente novo para esta sessão
+                  if (soundOnRef.current) playBeep();
+                  toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
+                  showNotification(o);
 
-              // Adicionar log de debug
-              console.log(`NEW_ORDER_BADGE_ADDED: ${o.id}`);
-              setRecentNewOrderIds(prevIds => [...prevIds, o.id]);
-              setTimeout(() => {
-                setRecentNewOrderIds(prevIds => {
-                  console.log(`NEW_ORDER_BADGE_REMOVED: ${o.id}`);
-                  return prevIds.filter(id => id !== o.id);
-                });
-              }, 5000);
+                  console.log(`NEW_BADGE_DEBUG: Pedido #${o.order_number} (${o.id}) detectado como novo. Adicionando badge.`);
+                  setRecentNewOrderIds(prevIds => [...prevIds, o.id]);
+                  
+                  setTimeout(() => {
+                    setRecentNewOrderIds(prevIds => {
+                      console.log(`NEW_BADGE_DEBUG: Removendo badge do pedido ${o.id} após 5s.`);
+                      return prevIds.filter(id => id !== o.id);
+                    });
+                  }, 5000);
+
+                  const next = new Set(prevKnown);
+                  next.add(o.id);
+                  return next;
+                }
+                return prevKnown;
+              });
             }
             return [o, ...prev];
           });
+
 
         },
       )
