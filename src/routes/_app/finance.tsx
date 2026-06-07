@@ -584,6 +584,58 @@ function Finance() {
             />
           </section>
 
+          {/* ========== TABLE KPI ========== */}
+          <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+             <Card className="border-border/60 shadow-sm bg-purple-500/5">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-purple-500 text-white shadow-lg shadow-purple-500/20">
+                      <LayoutGrid className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Vendas em Mesas</p>
+                      <h3 className="text-2xl font-black">{fmtBRL(ordersInPeriod.filter(o => normalizeOrderType(o) === 'table').reduce((acc, o) => acc + o.total, 0))}</h3>
+                      <p className="text-[10px] text-purple-600 font-bold uppercase tracking-wider mt-0.5">
+                        {ordersInPeriod.filter(o => normalizeOrderType(o) === 'table').length} pedidos
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+             </Card>
+             <Card className="border-border/60 shadow-sm bg-blue-500/5">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-blue-500 text-white shadow-lg shadow-blue-500/20">
+                      <ShoppingBag className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Vendas Retirada</p>
+                      <h3 className="text-2xl font-black">{fmtBRL(ordersInPeriod.filter(o => normalizeOrderType(o) === 'pickup').reduce((acc, o) => acc + o.total, 0))}</h3>
+                      <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider mt-0.5">
+                        {ordersInPeriod.filter(o => normalizeOrderType(o) === 'pickup').length} pedidos
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+             </Card>
+             <Card className="border-border/60 shadow-sm bg-orange-500/5">
+                <CardContent className="p-6">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-500/20">
+                      <Truck className="h-6 w-6" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-muted-foreground">Vendas Delivery</p>
+                      <h3 className="text-2xl font-black">{fmtBRL(ordersInPeriod.filter(o => normalizeOrderType(o) === 'delivery').reduce((acc, o) => acc + o.total, 0))}</h3>
+                      <p className="text-[10px] text-orange-600 font-bold uppercase tracking-wider mt-0.5">
+                        {ordersInPeriod.filter(o => normalizeOrderType(o) === 'delivery').length} pedidos
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+             </Card>
+          </section>
+
           {/* ========== CHARTS SECTION ========== */}
           <section className="grid gap-6 lg:grid-cols-3">
             <Card className="lg:col-span-2 border-border/60 shadow-sm overflow-hidden bg-card/50 backdrop-blur-sm">
