@@ -520,7 +520,10 @@ export type Database = {
           source: string | null
           status: string
           subtotal: number | null
+          table_id: string | null
+          table_name: string | null
           table_number: string | null
+          table_token: string | null
           tenant_id: string
           ticket_number: string | null
           total: number
@@ -550,7 +553,10 @@ export type Database = {
           source?: string | null
           status?: string
           subtotal?: number | null
+          table_id?: string | null
+          table_name?: string | null
           table_number?: string | null
+          table_token?: string | null
           tenant_id: string
           ticket_number?: string | null
           total?: number
@@ -580,7 +586,10 @@ export type Database = {
           source?: string | null
           status?: string
           subtotal?: number | null
+          table_id?: string | null
+          table_name?: string | null
           table_number?: string | null
+          table_token?: string | null
           tenant_id?: string
           ticket_number?: string | null
           total?: number
@@ -588,6 +597,13 @@ export type Database = {
           whatsapp_message?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_table_id_fkey"
+            columns: ["table_id"]
+            isOneToOne: false
+            referencedRelation: "restaurant_tables"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_tenant_id_fkey"
             columns: ["tenant_id"]
@@ -928,6 +944,7 @@ export type Database = {
           restaurant_id: string
           status: string
           table_id: string | null
+          table_name: string | null
           table_number: string
           total_amount: number | null
           updated_at: string | null
@@ -941,6 +958,7 @@ export type Database = {
           restaurant_id: string
           status?: string
           table_id?: string | null
+          table_name?: string | null
           table_number: string
           total_amount?: number | null
           updated_at?: string | null
@@ -954,6 +972,7 @@ export type Database = {
           restaurant_id?: string
           status?: string
           table_id?: string | null
+          table_name?: string | null
           table_number?: string
           total_amount?: number | null
           updated_at?: string | null
