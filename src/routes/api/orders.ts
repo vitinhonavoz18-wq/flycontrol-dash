@@ -53,7 +53,7 @@ export const Route = createFileRoute("/api/orders")({
         const getOrCreateTableSession = async (restaurantId: string, tableId: string, tableNumber: string) => {
           const { data: session, error: sError } = await supabaseAdmin
             .from("table_sessions")
-            .select("id, total_amount")
+            .select("id, total_amount, customer_name")
             .eq("restaurant_id", restaurantId)
             .eq("table_id", tableId)
             .eq("status", "open")
@@ -78,7 +78,7 @@ export const Route = createFileRoute("/api/orders")({
               status: "open",
               total_amount: 0
             })
-            .select("id, total_amount")
+            .select("id, total_amount, customer_name")
             .single();
 
           if (iError) {
