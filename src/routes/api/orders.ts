@@ -88,7 +88,6 @@ export const Route = createFileRoute("/api/orders")({
 
           return newSession;
         };
-        const cors = getCorsHeaders(request);
         const origin = request.headers.get("origin") || "N/A";
         
         console.log("📥 [API/Orders] Requisição POST recebida");
