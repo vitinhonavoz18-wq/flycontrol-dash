@@ -386,7 +386,7 @@ function Dashboard() {
     const { data: sessionData } = await supabase
       .from('table_sessions')
       .select('id, total_amount')
-      .eq('tenant_id', order.tenant_id)
+      .or(`tenant_id.eq.${order.tenant_id},restaurant_id.eq.${order.tenant_id}`)
       .eq('table_id', tableId)
       .eq('status', 'open')
       .maybeSingle();
@@ -398,6 +398,7 @@ function Dashboard() {
       const { data: newSession, error: sessionError } = await supabase
         .from('table_sessions')
         .insert({
+          restaurant_id: order.tenant_id,
           tenant_id: order.tenant_id,
           table_id: tableId,
           table_number: order.table_number || '?',
