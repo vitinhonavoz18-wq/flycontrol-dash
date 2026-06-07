@@ -95,7 +95,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
             <CategoryList 
               pizzeriaId={pizzeriaId} 
               categories={categories} 
-              onRefresh={handleSync} 
+              onRefresh={handleLocalRefresh} 
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}
@@ -111,7 +111,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}
-              onRefresh={handleSync}
+              onRefresh={handleLocalRefresh}
             />
           </TabsContent>
 
@@ -121,7 +121,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}
-              onRefresh={handleSync}
+              onRefresh={handleLocalRefresh}
             />
           </TabsContent>
 
@@ -135,7 +135,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}
-              onRefresh={handleSync}
+              onRefresh={handleLocalRefresh}
             />
           </TabsContent>
 
@@ -145,7 +145,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}
-              onRefresh={handleSync}
+              onRefresh={handleLocalRefresh}
             />
           </TabsContent>
 
