@@ -98,8 +98,7 @@ export const Route = createFileRoute("/api/orders")({
           const bodyText = await request.clone().text();
           body = JSON.parse(bodyText);
           
-          // Log detalhado do payload
-          console.log("📦 Payload bruto recebido:", JSON.stringify(body));
+          console.log("ORDER_RECEIVED_RAW_PAYLOAD:", JSON.stringify(body));
         } catch (err) {
           console.error("❌ [API/Orders] JSON inválido");
           return new Response(JSON.stringify({ 
