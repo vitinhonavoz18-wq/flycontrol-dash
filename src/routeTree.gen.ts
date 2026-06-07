@@ -17,6 +17,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as AppTablesRouteImport } from './routes/_app/tables'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppMyStoreRouteImport } from './routes/_app/my-store'
 import { Route as AppMenuRouteImport } from './routes/_app/menu'
@@ -75,6 +76,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppTablesRoute = AppTablesRouteImport.update({
+  id: '/tables',
+  path: '/tables',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
@@ -185,6 +191,7 @@ export interface FileRoutesByFullPath {
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
   '/settings': typeof AppSettingsRoute
+  '/tables': typeof AppTablesRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
@@ -212,6 +219,7 @@ export interface FileRoutesByTo {
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
   '/settings': typeof AppSettingsRoute
+  '/tables': typeof AppTablesRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
@@ -242,6 +250,7 @@ export interface FileRoutesById {
   '/_app/menu': typeof AppMenuRoute
   '/_app/my-store': typeof AppMyStoreRoute
   '/_app/settings': typeof AppSettingsRoute
+  '/_app/tables': typeof AppTablesRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/print/$orderId': typeof PrintOrderIdRoute
@@ -272,6 +281,7 @@ export interface FileRouteTypes {
     | '/menu'
     | '/my-store'
     | '/settings'
+    | '/tables'
     | '/api/health'
     | '/api/orders'
     | '/print/$orderId'
@@ -299,6 +309,7 @@ export interface FileRouteTypes {
     | '/menu'
     | '/my-store'
     | '/settings'
+    | '/tables'
     | '/api/health'
     | '/api/orders'
     | '/print/$orderId'
@@ -328,6 +339,7 @@ export interface FileRouteTypes {
     | '/_app/menu'
     | '/_app/my-store'
     | '/_app/settings'
+    | '/_app/tables'
     | '/api/health'
     | '/api/orders'
     | '/print/$orderId'
@@ -417,6 +429,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/tables': {
+      id: '/_app/tables'
+      path: '/tables'
+      fullPath: '/tables'
+      preLoaderRoute: typeof AppTablesRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/settings': {
       id: '/_app/settings'
@@ -585,6 +604,7 @@ interface AppRouteChildren {
   AppMenuRoute: typeof AppMenuRoute
   AppMyStoreRoute: typeof AppMyStoreRoute
   AppSettingsRoute: typeof AppSettingsRoute
+  AppTablesRoute: typeof AppTablesRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -596,6 +616,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppMenuRoute: AppMenuRoute,
   AppMyStoreRoute: AppMyStoreRoute,
   AppSettingsRoute: AppSettingsRoute,
+  AppTablesRoute: AppTablesRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)

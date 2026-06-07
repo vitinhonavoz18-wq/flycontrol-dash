@@ -30,12 +30,36 @@ interface TablesManagementProps {
 }
 
 export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementProps) {
-  const { tables, loading: tablesLoading, addTable, toggleTable, deleteTable, loadTables } = useTables(tenantId);
+  const { tables, loading: tablesLoading, addTable, updateTable, toggleTable, deleteTable, loadTables } = useTables(tenantId);
   const { sessions, loading: sessionsLoading, closeSession, loadSessions } = useTableSessions(tenantId);
   
   const [newTableNumber, setNewTableNumber] = useState("");
   const [newTableName, setNewTableName] = useState("");
   const [isAdding, setIsAdding] = useState(false);
+  const [editingTable, setEditingTable] = useState<RestaurantTable | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editNumber, setEditNumber] = useState("");
+
+  useEffect(() => {
+    if (tables.length > 0 && !newTableNumber) {
+      // Find highest table number that is numeric
+      const numericTables = tables
+        .map(t => parseInt(t.table_number))
+        .filter(n => !isNaN(n));
+      
+      if (numericTables.length > 0) {
+        const nextNumber = Math.max(...numericTables) + 1;
+        setNewTableNumber(nextNumber.toString().padStart(2, '0'));
+        setNewTableName(`Mesa ${nextNumber.toString().padStart(2, '0')}`);
+      } else {
+        setNewTableNumber((tables.length + 1).toString().padStart(2, '0'));
+        setNewTableName(`Mesa ${(tables.length + 1).toString().padStart(2, '0')}`);
+      }
+    } else if (tables.length === 0 && !newTableNumber) {
+      setNewTableNumber("01");
+      setNewTableName("Mesa 01");
+    }
+  }, [tables.length]);
 
   async function handleAddTable() {
     if (!newTableNumber) {
@@ -54,9 +78,77 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
   }
 
   function getQRCodeUrl(token: string) {
-    // URL scheme defined in requirements: https://conectfly.com.br/{{restaurant_slug}}?mode=table&table_token={{public_token}}
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://conectfly.com.br";
+    // Requirements: https://conectfly.com.br/{{restaurant_slug}}?mode=table&table_token={{public_token}}
+    const baseUrl = "https://conectfly.com.br";
     return `${baseUrl}/${restaurantSlug}?mode=table&table_token=${token}`;
+  }
+
+  async function handleRename() {
+    if (!editingTable) return;
+    const success = await updateTable(editingTable.id, { 
+      table_name: editName,
+      table_number: editNumber 
+    });
+    if (success) {
+      setEditingTable(null);
+    }
+  }
+
+  function downloadAllQRCodes() {
+    // Note: In a real app, this would generate a PDF. 
+    // Here we'll trigger a print of a special view containing all QRCodes.
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    const qrCodesHtml = tables.filter(t => t.is_active).map(table => `
+      <div class="qr-container">
+        <div class="restaurant-name">${restaurantSlug.toUpperCase()}</div>
+        <div class="table-title">MESA ${table.table_number}</div>
+        <div id="qrcode-${table.id}" class="qrcode-placeholder"></div>
+        <div class="footer">Escaneie para fazer seu pedido</div>
+      </div>
+    `).join('');
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Todos os QR Codes - ${restaurantSlug}</title>
+          <style>
+            body { font-family: sans-serif; margin: 0; padding: 20px; }
+            .grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 40px; }
+            .qr-container { 
+              border: 2px solid #eee; 
+              padding: 30px; 
+              border-radius: 15px; 
+              text-align: center; 
+              break-inside: avoid;
+              display: flex;
+              flex-direction: column;
+              align-items: center;
+            }
+            .restaurant-name { font-weight: bold; color: #666; margin-bottom: 5px; font-size: 14px; }
+            .table-title { font-size: 28px; font-weight: 900; margin-bottom: 20px; }
+            .footer { margin-top: 20px; font-weight: 600; font-size: 14px; color: #444; }
+            @media print { .no-print { display: none; } }
+          </style>
+        </head>
+        <body>
+          <div class="grid">${qrCodesHtml}</div>
+          <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+          <script>
+            ${tables.filter(t => t.is_active).map(table => `
+              new QRCode(document.getElementById("qrcode-${table.id}"), {
+                text: "${getQRCodeUrl(table.public_token)}",
+                width: 200,
+                height: 200
+              });
+            `).join('\n')}
+            setTimeout(() => { window.print(); }, 1000);
+          </script>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   }
 
   function printQRCode(table: RestaurantTable) {
@@ -113,6 +205,10 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           </p>
         </div>
         <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={downloadAllQRCodes} disabled={tables.length === 0}>
+            <Printer className="h-4 w-4 mr-2" />
+            Baixar todos os QR Codes
+          </Button>
           <Button variant="outline" size="sm" onClick={() => { loadTables(); loadSessions(); }} disabled={tablesLoading || sessionsLoading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${tablesLoading || sessionsLoading ? 'animate-spin' : ''}`} />
             Atualizar
@@ -198,6 +294,18 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                     <Button 
                       variant="outline" 
                       size="sm" 
+                      className="gap-1 text-xs"
+                      onClick={() => {
+                        setEditingTable(table);
+                        setEditName(table.table_name || "");
+                        setEditNumber(table.table_number);
+                      }}
+                    >
+                      Renomear
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
                       className={`gap-1 text-xs ${table.is_active ? 'text-orange-600' : 'text-green-600'}`}
                       onClick={() => toggleTable(table.id, !table.is_active)}
                     >
@@ -207,14 +315,14 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      className="gap-1 text-xs text-destructive col-span-2"
+                      className="gap-1 text-xs text-destructive"
                       onClick={() => {
                         if(confirm(`Tem certeza que deseja excluir a Mesa ${table.table_number}?`)) {
                           deleteTable(table.id);
                         }
                       }}
                     >
-                      <Trash2 className="h-3 w-3" /> Excluir Mesa
+                      <Trash2 className="h-3 w-3" /> Excluir
                     </Button>
                   </div>
                 </CardContent>
@@ -281,6 +389,30 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           </div>
         </TabsContent>
       </Tabs>
+
+      {editingTable && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <Card className="w-full max-w-md">
+            <CardHeader>
+              <CardTitle>Renomear Mesa {editingTable.table_number}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Número da Mesa</Label>
+                <Input value={editNumber} onChange={e => setEditNumber(e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Nome/Local</Label>
+                <Input value={editName} onChange={e => setEditName(e.target.value)} />
+              </div>
+              <div className="flex justify-end gap-2">
+                <Button variant="ghost" onClick={() => setEditingTable(null)}>Cancelar</Button>
+                <Button onClick={handleRename}>Salvar</Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }
