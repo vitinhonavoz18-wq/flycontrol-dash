@@ -160,22 +160,21 @@ export function useTableSessions(tenantId: string | null) {
   async function loadSessions() {
     if (!tenantId) return;
     setLoading(true);
-    // Note: The database schema might use restaurant_id instead of tenant_id for table_sessions
-    // based on previous migration attempts and existing tables.
+    
+    // Using restaurant_id as confirmed by database schema
     const { data, error } = await supabase
       .from("table_sessions")
       .select("*")
-      .or(`tenant_id.eq.${tenantId},restaurant_id.eq.${tenantId}`)
+      .eq("restaurant_id", tenantId)
       .eq("status", "open")
       .order("opened_at", { ascending: false });
 
     if (error) {
       toast.error("Erro ao carregar sessões: " + error.message);
     } else {
-      // Map potential database field names to our type
       const mappedData = (data as any[]).map(s => ({
         id: s.id,
-        tenant_id: s.tenant_id || s.restaurant_id,
+        tenant_id: s.restaurant_id,
         table_id: s.table_id,
         table_number: s.table_number,
         status: s.status,
