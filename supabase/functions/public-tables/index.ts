@@ -20,11 +20,12 @@ serve(async (req) => {
     const restaurant_slug = url.searchParams.get('restaurant_slug')
     const table_token = url.searchParams.get('table_token')
 
-    console.log(`TABLE_VALIDATE_REQUEST: action=${action}, restaurant_slug=${restaurant_slug}, table_token=${table_token}`)
+    console.log(`VALIDATE_TABLE_REQUEST: restaurant_slug=${restaurant_slug}, table_token=${table_token}`)
 
     if (!restaurant_slug) {
+      console.log(`VALIDATE_TABLE_RESULT: valid=false, reason=missing_slug`)
       return new Response(JSON.stringify({ valid: false, reason: 'missing_slug' }), {
-        status: 400,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -39,22 +40,21 @@ serve(async (req) => {
       .from('pizzerias')
       .select('id, slug, name')
       .eq('slug', restaurant_slug)
-      .single()
+      .maybeSingle()
 
     if (restaurantError || !restaurant) {
-      console.log(`TABLE_VALIDATE_RESULT: valid=false, reason=restaurant_not_found`)
+      console.log(`VALIDATE_TABLE_RESULT: valid=false, reason=restaurant_not_found`)
       return new Response(JSON.stringify({ valid: false, reason: 'restaurant_not_found' }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    console.log(`TABLE_VALIDATE_RESTAURANT_FOUND: restaurant_id=${restaurant.id}, restaurant_slug=${restaurant.slug}`)
-
     // Handle validate-table
     if (action === 'validate-table') {
       if (!table_token) {
-        return new Response(JSON.stringify({ valid: false, reason: 'missing_token' }), {
+        console.log(`VALIDATE_TABLE_RESULT: valid=false, reason=missing_token`)
+        return new Response(JSON.stringify({ valid: false, reason: 'invalid_token' }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
@@ -68,7 +68,7 @@ serve(async (req) => {
         .maybeSingle()
 
       if (tableError || !table) {
-        console.log(`TABLE_VALIDATE_RESULT: valid=false, reason=invalid_token`)
+        console.log(`VALIDATE_TABLE_RESULT: valid=false, reason=invalid_token`)
         return new Response(JSON.stringify({ valid: false, reason: 'invalid_token' }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
@@ -76,15 +76,14 @@ serve(async (req) => {
       }
 
       if (!table.is_active) {
-        console.log(`TABLE_VALIDATE_RESULT: valid=false, table_number=${table.table_number}, reason=inactive_table`)
+        console.log(`VALIDATE_TABLE_RESULT: valid=false, table_number=${table.table_number}, reason=inactive_table`)
         return new Response(JSON.stringify({ valid: false, reason: 'inactive_table' }), {
           status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
 
-
-      console.log(`TABLE_VALIDATE_RESULT: valid=true, table_number=${table.table_number}`)
+      console.log(`VALIDATE_TABLE_RESULT: valid=true, table_number=${table.table_number}`)
       return new Response(JSON.stringify({
         valid: true,
         table: {
@@ -94,8 +93,7 @@ serve(async (req) => {
           table_number: table.table_number,
           table_name: table.table_name,
           public_token: table.public_token,
-          is_active: table.is_active,
-          qr_code_url: table.qr_code_url
+          is_active: table.is_active
         }
       }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
