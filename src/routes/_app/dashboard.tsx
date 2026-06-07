@@ -879,8 +879,9 @@ function OrderCard({
   return (
     <div 
       className={`rounded-xl border bg-card p-5 transition-all duration-300 group relative overflow-hidden ${
-        isNew 
-          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.2)] scale-[1.02]" 
+        isRecentNew 
+          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.3)] scale-[1.02]" 
+
           : "border-border hover:border-primary/50 hover:shadow-lg"
       }`}
     >
