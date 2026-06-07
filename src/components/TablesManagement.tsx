@@ -77,10 +77,13 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     setIsAdding(false);
   }
 
-  function getQRCodeUrl(token: string) {
-    // Requirements: https://conectfly.com.br/{{restaurant_slug}}?mode=table&table_token={{public_token}}
+  function getQRCodeUrl(table: RestaurantTable) {
+    // Priority: use the URL from the database
+    if (table.qr_code_url) return table.qr_code_url;
+
+    // Fallback if not set (should be rare due to trigger)
     const baseUrl = "https://conectfly.com.br";
-    return `${baseUrl}/${restaurantSlug}?mode=table&table_token=${token}`;
+    return `${baseUrl}/${restaurantSlug}?mode=table&table_token=${table.public_token}`;
   }
 
   async function handleRename() {
