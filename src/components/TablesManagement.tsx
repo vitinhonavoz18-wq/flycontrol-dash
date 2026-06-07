@@ -201,22 +201,97 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     printWindow.document.close();
   }
 
-  async function loadSessionOrders(sessionId: string) {
-    setLoadingOrders(true);
-    const { data, error } = await supabase
-      .from("table_session_orders")
-      .select(`
-        order_id,
-        orders (*)
-      `)
-      .eq("table_session_id", sessionId);
-
-    if (error) {
-      toast.error("Erro ao carregar pedidos: " + error.message);
-    } else {
-      setSessionOrders((data || []).map((d: any) => d.orders));
+  const normalizeTableValue = (val: any): string => {
+    if (val === undefined || val === null) return "";
+    const str = String(val).trim().toLowerCase();
+    // Remove prefix "mesa" se existir
+    const cleaned = str.replace(/^mesa\s*/, "");
+    // Pad com zero se for puramente numérico e tiver apenas 1 dígito
+    if (/^\d$/.test(cleaned)) {
+      return cleaned.padStart(2, "0");
     }
-    setLoadingOrders(false);
+    return cleaned;
+  };
+
+  async function loadSessionOrders(session: TableSession) {
+    setLoadingOrders(true);
+    console.log(`🔍 [Comanda/Load] Carregando pedidos para Mesa ${session.table_number} (ID: ${session.id})`);
+    
+    try {
+      // 1. Buscar pedidos vinculados formalmente
+      const { data: linkedData, error: linkedError } = await supabase
+        .from("table_session_orders")
+        .select(`
+          order_id,
+          orders (*)
+        `)
+        .eq("table_session_id", session.id);
+
+      if (linkedError) throw linkedError;
+
+      const linkedOrders = (linkedData || []).map((d: any) => d.orders).filter(Boolean);
+      const linkedIds = new Set(linkedOrders.map(o => o.id));
+
+      // 2. Buscar pedidos em tempo real baseados em critérios (fallback e sincronização automática)
+      const normalizedSessionTable = normalizeTableValue(session.table_number);
+      
+      const { data: directOrders, error: directError } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("tenant_id", tenantId)
+        .neq("status", "deleted")
+        .neq("status", "cancelado")
+        .gte("created_at", session.opened_at);
+
+      if (directError) throw directError;
+
+      // Filtrar no JS para suportar a normalização do número da mesa
+      const matchingOrders = (directOrders || []).filter(order => {
+        const orderType = normalizeOrderType(order);
+        if (orderType !== 'table') return false;
+        
+        const normalizedOrderTable = normalizeTableValue(order.table_number || (order as any).tableNumber || (order as any).mesa);
+        return normalizedOrderTable === normalizedSessionTable;
+      });
+
+      console.log(`📊 [Comanda/Sync] Encontrados ${matchingOrders.length} pedidos em orders. ${linkedOrders.length} já vinculados.`);
+
+      // 3. Vincular pedidos novos automaticamente se encontrados
+      for (const order of matchingOrders) {
+        if (!linkedIds.has(order.id)) {
+          console.log(`🔗 [Comanda/Sync] Vinculando pedido ${order.id} não vinculado à sessão ${session.id}`);
+          await supabase
+            .from("table_session_orders")
+            .insert({
+              table_session_id: session.id,
+              order_id: order.id
+            });
+          linkedOrders.push(order);
+          linkedIds.add(order.id);
+        }
+      }
+
+      // Filtrar pedidos fantasmas e atualizar estado local
+      const filteredOrders = linkedOrders.filter(o => {
+        const isGhost = (Number(o.total) === 0 || o.total === null) && 
+                        (o.customer_name === "Cliente Site" || !o.customer_name) &&
+                        (!o.items || (Array.isArray(o.items) && o.items.length === 0));
+        return !isGhost;
+      });
+
+      setSessionOrders(filteredOrders);
+      
+      // 4. Se a lista mudou, disparar recálculo de totais na sessão (opcional mas bom para consistência)
+      const subtotal = filteredOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
+      if (subtotal !== session.subtotal_amount) {
+        handleSyncTables(); // Reutiliza a lógica de sync global para atualizar o subtotal da sessão
+      }
+
+    } catch (error: any) {
+      toast.error("Erro ao carregar pedidos: " + error.message);
+    } finally {
+      setLoadingOrders(false);
+    }
   }
 
   function handlePrintComanda(session: TableSession, orders: any[]) {
@@ -340,7 +415,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
       // 1. Buscar todas as sessões abertas
       const { data: activeSessions } = await supabase
         .from("table_sessions")
-        .select("id, table_number")
+        .select("id, table_number, opened_at, subtotal_amount, service_fee_enabled, service_fee_percent")
         .eq("restaurant_id", tenantId)
         .eq("status", "open");
       
@@ -353,22 +428,28 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
       console.log(`[Debug/Sync] Sincronizando ${activeSessions.length} mesas...`);
 
       for (const session of activeSessions) {
-        // 2. Buscar pedidos do tipo mesa deste restaurante que correspondam a este número de mesa
-        // e que ainda NÃO estejam vinculados a NENHUMA sessão (backfill)
-        const { data: unlinkedOrders } = await supabase
+        const normalizedSessionTable = normalizeTableValue(session.table_number);
+        
+        // 2. Buscar pedidos do tipo mesa deste restaurante a partir da abertura da sessão
+        const { data: allOrders } = await supabase
           .from("orders")
-          .select("id, total, items, table_number, order_type, service_mode")
+          .select("*")
           .eq("tenant_id", tenantId)
-          .eq("table_number", session.table_number)
-          .neq("status", "deleted");
+          .neq("status", "deleted")
+          .neq("status", "cancelado")
+          .gte("created_at", session.opened_at);
 
-        if (!unlinkedOrders) continue;
+        if (!allOrders) continue;
 
-        for (const order of unlinkedOrders) {
-          // Só processar se for realmente de mesa
+        const matchingOrders = allOrders.filter(order => {
           const orderType = normalizeOrderType(order);
-          if (orderType !== 'table') continue;
+          if (orderType !== 'table') return false;
+          
+          const normalizedOrderTable = normalizeTableValue(order.table_number || (order as any).tableNumber || (order as any).mesa);
+          return normalizedOrderTable === normalizedSessionTable;
+        });
 
+        for (const order of matchingOrders) {
           // Verificar se já existe vínculo
           const { data: existingLink } = await supabase
             .from("table_session_orders")
@@ -387,42 +468,37 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           }
         }
 
-        // 3. Recalcular totais da sessão
+        // 3. Recalcular totais da sessão a partir dos vínculos atuais (garantindo dados reais)
         const { data: links } = await supabase
           .from("table_session_orders")
-          .select("order_id")
+          .select("orders(total, items, customer_name)")
           .eq("table_session_id", session.id);
         
-        const orderIds = (links || []).map(l => l.order_id);
-        if (orderIds.length > 0) {
-          const { data: ords } = await supabase
-            .from("orders")
-            .select("total")
-            .in("id", orderIds);
-          
-          const subtotal = (ords || []).reduce((sum, o) => sum + (Number(o.total) || 0), 0);
-          
-          // Buscar info da sessão para ver se tem taxa
-          const { data: sessInfo } = await supabase
-            .from("table_sessions")
-            .select("service_fee_enabled, service_fee_percent")
-            .eq("id", session.id)
-            .single();
-          
-          let fee = 0;
-          if (sessInfo?.service_fee_enabled) {
-            fee = subtotal * (Number(sessInfo.service_fee_percent || 15) / 100);
-          }
+        const orders = (links || []).map((l: any) => l.orders).filter(Boolean);
+        
+        // Filtrar pedidos fantasmas
+        const validOrders = orders.filter((o: any) => {
+          const isGhost = (Number(o.total) === 0 || o.total === null) && 
+                          (o.customer_name === "Cliente Site" || !o.customer_name) &&
+                          (!o.items || (Array.isArray(o.items) && o.items.length === 0));
+          return !isGhost;
+        });
 
-          await supabase
-            .from("table_sessions")
-            .update({
-              subtotal_amount: subtotal,
-              service_fee_amount: fee,
-              total_amount: subtotal + fee
-            })
-            .eq("id", session.id);
+        const subtotal = validOrders.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
+        
+        let fee = 0;
+        if (session.service_fee_enabled) {
+          fee = subtotal * (Number(session.service_fee_percent || 15) / 100);
         }
+
+        await supabase
+          .from("table_sessions")
+          .update({
+            subtotal_amount: subtotal,
+            service_fee_amount: fee,
+            total_amount: subtotal + fee
+          })
+          .eq("id", session.id);
       }
 
       toast.dismiss(loadingToast);
@@ -647,7 +723,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                     </Button>
                     <Button variant="default" size="sm" className="gap-2" onClick={() => {
                       setSelectedSession(session);
-                      loadSessionOrders(session.id);
+                      loadSessionOrders(session);
                     }}>
                       <ExternalLink className="h-4 w-4" /> Ver Comanda
                     </Button>
@@ -663,7 +739,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                     <Button variant="outline" size="sm" className="col-span-2 gap-2 text-green-600 border-green-200 hover:bg-green-50" onClick={() => {
                       setSelectedSession(session);
                       setShowPrintModal(true);
-                      loadSessionOrders(session.id);
+                      loadSessionOrders(session);
                     }}>
                       <CheckCircle2 className="h-4 w-4" /> Fechar Mesa
                     </Button>
