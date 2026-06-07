@@ -246,7 +246,7 @@ export default function MyStore() {
                 <div className="space-y-2">
                   <Label htmlFor="instagram">Instagram (URL)</Label>
                   <div className="flex items-center gap-2">
-                    <Instagram className="h-4 w-4 text-muted-foreground" />
+                    <Heart className="h-4 w-4 text-muted-foreground" />
                     <Input 
                       id="instagram" 
                       placeholder="https://instagram.com/sualoja"
