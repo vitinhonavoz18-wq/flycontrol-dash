@@ -213,6 +213,66 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     return cleaned;
   };
 
+  async function syncOrderToSession(order: any, session: TableSession) {
+    const normalizedSessionTable = normalizeTableValue(session.table_number);
+    const orderType = normalizeOrderType(order);
+    const normalizedOrderTable = normalizeTableValue(order.table_number || order.tableNumber || order.mesa);
+
+    if (orderType !== 'table' || normalizedOrderTable !== normalizedSessionTable) return false;
+
+    // Verificar se já existe vínculo
+    const { data: existingLink } = await supabase
+      .from("table_session_orders")
+      .select("id")
+      .eq("order_id", order.id)
+      .maybeSingle();
+    
+    if (existingLink) return false;
+
+    console.log(`🔗 [AUTO_SYNC] Vinculando pedido ${order.id} à sessão ${session.id} (Mesa ${session.table_number})`);
+    
+    const { error: linkError } = await supabase
+      .from("table_session_orders")
+      .insert({
+        table_session_id: session.id,
+        order_id: order.id
+      });
+
+    if (linkError) {
+      console.error("Erro ao vincular pedido:", linkError);
+      return false;
+    }
+
+    // Recalcular totais da sessão
+    const { data: links } = await supabase
+      .from("table_session_orders")
+      .select("orders(total, items, customer_name)")
+      .eq("table_session_id", session.id);
+    
+    const orders = (links || []).map((l: any) => l.orders).filter(Boolean);
+    const validOrders = orders.filter((o: any) => {
+      const isGhost = (Number(o.total) === 0 || o.total === null) && 
+                      (o.customer_name === "Cliente Site" || !o.customer_name) &&
+                      (!o.items || (Array.isArray(o.items) && o.items.length === 0));
+      return !isGhost;
+    });
+
+    const subtotal = validOrders.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
+    const fee = session.service_fee_enabled ? subtotal * (Number(session.service_fee_percent || 15) / 100) : 0;
+
+    await supabase
+      .from("table_sessions")
+      .update({
+        subtotal_amount: subtotal,
+        service_fee_amount: fee,
+        total_amount: subtotal + fee
+      })
+      .eq("id", session.id);
+
+    console.log(`✅ [AUTO_SYNC] Sessão ${session.id} recalculada. Subtotal: ${subtotal}`);
+    return true;
+  }
+
   async function loadSessionOrders(session: TableSession) {
     setLoadingOrders(true);
     console.log(`🔍 [Comanda/Load] Carregando pedidos para Mesa ${session.table_number} (ID: ${session.id})`);
@@ -510,6 +570,57 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
       toast.error("Erro ao sincronizar pedidos.");
     }
   }
+
+  useEffect(() => {
+    if (!tenantId) return;
+
+    console.log("📡 [Realtime] Iniciando subscription para sincronização automática de comandas...");
+    
+    const channel = supabase
+      .channel('table-sync-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'orders',
+          filter: `tenant_id=eq.${tenantId}`
+        },
+        async (payload) => {
+          const newOrder = payload.new;
+          const orderType = normalizeOrderType(newOrder);
+          
+          if (orderType === 'table') {
+            console.log(`🆕 [NEW_ORDER_RECEIVED_FOR_TABLE_SYNC] Pedido #${newOrder.order_number} recebido.`);
+            
+            // Buscar sessões abertas atuais
+            const { data: activeSessions } = await supabase
+              .from("table_sessions")
+              .select("*")
+              .eq("restaurant_id", tenantId)
+              .eq("status", "open");
+
+            if (activeSessions && activeSessions.length > 0) {
+              let synced = false;
+              for (const session of activeSessions) {
+                const wasSynced = await syncOrderToSession(newOrder, session as any);
+                if (wasSynced) synced = true;
+              }
+              
+              if (synced) {
+                console.log("🔄 [OPEN_TABLE_SESSIONS_REFRESHED] Recarregando sessões para atualizar interface...");
+                loadSessions();
+              }
+            }
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [tenantId]);
 
   return (
     <div className="space-y-6">

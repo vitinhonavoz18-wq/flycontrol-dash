@@ -350,8 +350,9 @@ function Dashboard() {
         (p) => {
           const o = p.new as Order;
           
-          // Process Table/Comanda logic
-          handleTableOrder(o);
+          // O processamento de Table/Comanda agora é feito de forma centralizada 
+          // via TablesManagement ou via trigger no banco para garantir consistência.
+          // handleTableOrder(o);
 
           // Não processar se o pedido já foi processado (evitar duplicatas no canal)
           setOrders((prev) => {
