@@ -198,6 +198,8 @@ function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [recentNewOrderIds, setRecentNewOrderIds] = useState<string[]>([]);
+  const [knownOrderIds, setKnownOrderIds] = useState<Set<string>>(new Set());
+
   const initialLoad = useRef(true);
   const soundOnRef = useRef(soundOn);
 
