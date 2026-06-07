@@ -494,6 +494,22 @@ function Finance() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
+                  <Package className="h-4 w-4" />
+                  Tipo: {typeFilter === "all" ? "Todos" : (typeFilter === "delivery" ? "Delivery" : typeFilter === "pickup" ? "Retirada" : "Mesa")}
+                  <ChevronDown className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setTypeFilter("all")}>Todos os Tipos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("delivery")}>Delivery</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("pickup")}>Retirada</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("table")}>Mesa</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
                   <History className="h-4 w-4" />
                   {periodLabel(period)}
                   <ChevronDown className="h-4 w-4" />
