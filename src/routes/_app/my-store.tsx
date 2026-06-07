@@ -27,7 +27,8 @@ import {
   Plus,
   Trash2,
   Package,
-  LayoutGrid
+  LayoutGrid,
+  Heart
 } from "lucide-react";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 import { syncToExternal } from "@/utils/menuSync";
