@@ -50,8 +50,8 @@ export const Route = createFileRoute("/api/orders")({
           return { valid: true, table };
         };
 
-        const getOrCreateTableSession = async (restaurantId: string, tableId: string, tableNumber: string) => {
-          console.log(`🔍 [API/Orders] Buscando sessão aberta para Mesa ${tableNumber} (Restaurant: ${restaurantId})`);
+        const getOrCreateTableSession = async (restaurantId: string, tableId: string, tableNumber: string, tableName?: string) => {
+          console.log(`🔍 [API/Orders] TABLE_ORDER_SESSION_LOOKUP para Mesa ${tableNumber} (Restaurant: ${restaurantId})`);
           const { data: session, error: sError } = await supabaseAdmin
             .from("table_sessions")
             .select("id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent")
@@ -66,7 +66,7 @@ export const Route = createFileRoute("/api/orders")({
           }
 
           if (session) {
-            console.log(`✅ [API/Orders] TABLE_SESSION_FOUND: ${session.id}`);
+            console.log(`✅ [API/Orders] TABLE_ORDER_LINKED_TO_SESSION: ${session.id}`);
             return session;
           }
 
@@ -77,9 +77,13 @@ export const Route = createFileRoute("/api/orders")({
               restaurant_id: restaurantId,
               table_id: tableId,
               table_number: tableNumber,
+              table_name: tableName || `Mesa ${tableNumber}`,
               status: "open",
-              total_amount: 0,
               subtotal_amount: 0,
+              service_fee_enabled: false,
+              service_fee_percent: 15,
+              service_fee_amount: 0,
+              total_amount: 0,
               opened_at: new Date().toISOString()
             })
             .select("id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent")
@@ -297,7 +301,7 @@ export const Route = createFileRoute("/api/orders")({
             
             console.log("TABLE_SESSION_CREATE_OR_UPDATE:", { tableId: validatedTableId, tableNumber: validatedTableNumber });
             
-            const session = await getOrCreateTableSession(pz.id, validatedTableId, String(validatedTableNumber));
+            const session = await getOrCreateTableSession(pz.id, validatedTableId, String(validatedTableNumber), validatedTableName);
             
             // Atualizar nome do cliente e table_name na sessão se necessário
             const updateData: any = {};
