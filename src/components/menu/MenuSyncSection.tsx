@@ -71,8 +71,13 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
   };
 
   async function handleSaveLink() {
-    if (syncEndpoint && !validateLink(syncEndpoint)) {
-      toast.error("Link de sincronização inválido. Verifique o link gerado no SiteCreatorFly.");
+    const validation = validateLink(syncEndpoint);
+    if (syncEndpoint && !validation.valid) {
+      if (validation.old) {
+        toast.error("Este é o formato antigo do link. Copie novamente o link de sincronização no SiteCreatorFly.");
+      } else {
+        toast.error("Link de sincronização inválido. Verifique o link gerado no SiteCreatorFly.");
+      }
       return;
     }
 
