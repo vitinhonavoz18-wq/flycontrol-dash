@@ -44,7 +44,7 @@ serve(async (req) => {
     if (restaurantError || !restaurant) {
       console.log(`TABLE_VALIDATE_RESULT: valid=false, reason=restaurant_not_found`)
       return new Response(JSON.stringify({ valid: false, reason: 'restaurant_not_found' }), {
-        status: 404,
+        status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
@@ -55,7 +55,7 @@ serve(async (req) => {
     if (action === 'validate-table') {
       if (!table_token) {
         return new Response(JSON.stringify({ valid: false, reason: 'missing_token' }), {
-          status: 400,
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
@@ -70,7 +70,7 @@ serve(async (req) => {
       if (tableError || !table) {
         console.log(`TABLE_VALIDATE_RESULT: valid=false, reason=invalid_token`)
         return new Response(JSON.stringify({ valid: false, reason: 'invalid_token' }), {
-          status: 404,
+          status: 200,
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
@@ -82,6 +82,7 @@ serve(async (req) => {
           headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         })
       }
+
 
       console.log(`TABLE_VALIDATE_RESULT: valid=true, table_number=${table.table_number}`)
       return new Response(JSON.stringify({
