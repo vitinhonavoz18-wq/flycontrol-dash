@@ -17,10 +17,10 @@ serve(async (req) => {
     const pathParts = url.pathname.split('/').filter(Boolean)
     const action = pathParts[pathParts.length - 1]
     
-    const restaurant_slug = url.searchParams.get('restaurant_slug')
-    const table_token = url.searchParams.get('table_token')
+    const restaurant_slug = url.searchParams.get('restaurant_slug')?.trim()
+    const table_token = url.searchParams.get('table_token')?.trim()
 
-    console.log(`VALIDATE_TABLE_REQUEST: restaurant_slug=${restaurant_slug}, table_token=${table_token}`)
+    console.log(`VALIDATE_TABLE_DEBUG: restaurant_slug_received=${restaurant_slug}, table_token_received=${table_token}`)
 
     if (!restaurant_slug) {
       console.log(`VALIDATE_TABLE_RESULT: valid=false, reason=missing_slug`)
@@ -39,8 +39,10 @@ serve(async (req) => {
     const { data: restaurant, error: restaurantError } = await supabase
       .from('pizzerias')
       .select('id, slug, name')
-      .eq('slug', restaurant_slug)
+      .ilike('slug', restaurant_slug)
       .maybeSingle()
+
+    console.log(`VALIDATE_TABLE_DEBUG: restaurant_found=${!!restaurant}, restaurant_id_found=${restaurant?.id}`)
 
     if (restaurantError || !restaurant) {
       console.log(`VALIDATE_TABLE_RESULT: valid=false, reason=restaurant_not_found`)
@@ -67,6 +69,8 @@ serve(async (req) => {
         .eq('public_token', table_token)
         .maybeSingle()
 
+      console.log(`VALIDATE_TABLE_DEBUG: table_found_by_restaurant_and_token=${!!table}`)
+
       if (tableError || !table) {
         console.log(`VALIDATE_TABLE_RESULT: valid=false, reason=invalid_token`)
         return new Response(JSON.stringify({ valid: false, reason: 'invalid_token' }), {
@@ -75,7 +79,9 @@ serve(async (req) => {
         })
       }
 
-      if (!table.is_active) {
+      console.log(`VALIDATE_TABLE_DEBUG: table_is_active=${table.is_active}`)
+
+      if (table.is_active !== true) {
         console.log(`VALIDATE_TABLE_RESULT: valid=false, table_number=${table.table_number}, reason=inactive_table`)
         return new Response(JSON.stringify({ valid: false, reason: 'inactive_table' }), {
           status: 200,
