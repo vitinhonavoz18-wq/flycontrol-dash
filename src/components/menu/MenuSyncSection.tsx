@@ -93,13 +93,23 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       return;
     }
 
+    // Validação de token conforme solicitado
+    const hasToken = syncEndpoint.includes("sync_token=") || syncEndpoint.includes("token=");
+    if (!hasToken) {
+      toast.error("O link não contém token de sincronização. Copie novamente no SiteCreatorFly.");
+      return;
+    }
+
     setSyncing(true);
     const toastId = toast.loading("Testando conexão...");
     
     try {
       const testUrl = syncEndpoint;
       
-      console.log("MENU_SYNC_URL_TESTED", testUrl);
+      // Logs obrigatórios solicitados
+      console.log("MENU_SYNC_SAVED_URL", syncEndpoint);
+      console.log("MENU_SYNC_FETCH_URL_FINAL", testUrl);
+      console.log("MENU_SYNC_HAS_SYNC_TOKEN", hasToken);
       
       const response = await fetch(testUrl, { method: 'GET', headers: { 'Accept': 'application/json' } });
       
@@ -112,9 +122,14 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         console.log("MENU_SYNC_RAW_RESPONSE", text.substring(0, 500));
 
         if (response.status === 401) {
-          toast.error("Erro de autorização. Verifique se o link copiado do SiteCreatorFly contém o token de sincronização.", { id: toastId });
+          let detail = "Token inválido ou expirado.";
+          try {
+            const errorJson = JSON.parse(text);
+            detail = errorJson.error || errorJson.message || detail;
+          } catch {}
+          toast.error(`Erro de autorização (401): ${detail}`, { id: toastId });
         } else if (response.status === 404) {
-          toast.error("Link de sincronização não encontrado.", { id: toastId });
+          toast.error("Link de sincronização não encontrado (404).", { id: toastId });
         } else {
           toast.error(`Falha na conexão. Status: ${response.status}.`, { id: toastId });
         }
