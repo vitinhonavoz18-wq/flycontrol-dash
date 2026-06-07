@@ -12,12 +12,46 @@ serve(async (req) => {
   }
 
   try {
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    )
+
+    const {
+      data: { user },
+    } = await supabaseClient.auth.getUser()
+
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 401,
+      })
+    }
+
+    // Check if the requester is a super_admin
+    const { data: roleData, error: roleError } = await supabaseClient
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', user.id)
+      .eq('role', 'super_admin')
+      .maybeSingle()
+
+    if (roleError || !roleData) {
+      return new Response(JSON.stringify({ error: 'Forbidden: Only super admins can reset passwords' }), {
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        status: 403,
+      })
+    }
+
+
     const supabaseAdmin = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
 
     const { userId, newPassword, confirmReset } = await req.json()
+
 
     if (!userId || !newPassword) {
       return new Response(JSON.stringify({ error: 'userId and newPassword are required' }), {
