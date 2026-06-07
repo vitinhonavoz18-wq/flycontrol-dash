@@ -97,18 +97,30 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     const toastId = toast.loading("Testando conexão...");
     
     try {
-      const separator = syncEndpoint.includes("?") ? "&" : "?";
-      const testUrl = `${syncEndpoint}${separator}test=true&slug=${pizzeria?.slug || ''}`;
+      const testUrl = syncEndpoint;
+      
+      console.log("MENU_SYNC_URL_TESTED", testUrl);
       
       const response = await fetch(testUrl, { method: 'GET', headers: { 'Accept': 'application/json' } });
       
+      console.log("MENU_SYNC_HTTP_STATUS", response.status);
+
       if (response.ok) {
         toast.success("Conexão estabelecida com sucesso!", { id: toastId });
       } else {
         const text = await response.text();
-        toast.error(`Falha na conexão. Status: ${response.status}. ${text.substring(0, 50)}`, { id: toastId });
+        console.log("MENU_SYNC_RAW_RESPONSE", text.substring(0, 500));
+
+        if (response.status === 401) {
+          toast.error("Erro de autorização. Verifique se o link copiado do SiteCreatorFly contém o token de sincronização.", { id: toastId });
+        } else if (response.status === 404) {
+          toast.error("Link de sincronização não encontrado.", { id: toastId });
+        } else {
+          toast.error(`Falha na conexão. Status: ${response.status}.`, { id: toastId });
+        }
       }
     } catch (error: any) {
+      console.error("MENU_SYNC_ERROR", error);
       toast.error(`Erro de conexão: ${error.message}`, { id: toastId });
     } finally {
       setSyncing(false);
@@ -130,8 +142,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     setSyncStatus({ ...syncStatus, status: undefined });
     const toastId = toast.loading("Sincronizando cardápio...");
     
-    const separator = syncEndpoint.includes("?") ? "&" : "?";
-    const endpoint = `${syncEndpoint}${separator}slug=${pizzeria.slug}`;
+    const endpoint = syncEndpoint;
     
     console.log("MENU_SYNC_STARTED", { pizzeriaId, slug: pizzeria.slug });
     console.log("MENU_SYNC_URL_USED", endpoint);
@@ -154,6 +165,12 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       console.log("MENU_SYNC_RAW_RESPONSE", text.substring(0, 500));
 
       if (response.status !== 200) {
+        if (response.status === 401) {
+          throw new Error("Erro de autorização. Verifique se o link copiado do SiteCreatorFly contém o token de sincronização.");
+        }
+        if (response.status === 404) {
+          throw new Error("Link de sincronização não encontrado.");
+        }
         throw new Error(`Erro HTTP ${response.status}: ${text.substring(0, 100)}`);
       }
 
@@ -166,7 +183,8 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         externalMenu = JSON.parse(text);
         console.log("MENU_SYNC_JSON_PARSED", !!externalMenu);
       } catch (e) {
-        throw new Error("Erro ao processar JSON da resposta.");
+        console.log("MENU_SYNC_JSON_ERROR", e);
+        throw new Error("O link respondeu, mas não retornou um cardápio válido.");
       }
 
       if (externalMenu.success === false) {
