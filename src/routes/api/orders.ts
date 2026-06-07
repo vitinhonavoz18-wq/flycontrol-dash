@@ -400,6 +400,9 @@ export const Route = createFileRoute("/api/orders")({
         return new Response(JSON.stringify({ 
           success: true, 
           order_id: order.id, 
+          order_type: orderToInsert.delivery_type,
+          service_mode: orderToInsert.delivery_type === "table" ? "mesa" : orderToInsert.delivery_type,
+          table_number: orderToInsert.table_number,
           message: "Pedido recebido pelo FlyControl" 
         }), { status: 200, headers: cors });
       },
