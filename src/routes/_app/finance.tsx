@@ -88,7 +88,17 @@ type OrderRow = {
   items: Array<{ name?: string; qty?: number; price?: number; notes?: string }> | null;
   order_number: number;
   customer_name: string | null;
-  order_type?: "delivery" | "pickup" | "table" | null;
+  order_type?: string | null;
+  service_mode?: string | null;
+  table_number?: string | null;
+  tableNumber?: string | null;
+  mesa?: string | null;
+  fulfillment_type?: string | null;
+  delivery_type?: string | null;
+  customer_address?: string | null;
+  address?: string | null;
+  delivery_address?: string | null;
+  location?: string | null;
 };
 
 const periodLabel = (p: Period) =>
