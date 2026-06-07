@@ -514,7 +514,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                         .from("table_session_orders")
                         .select("orders (*)")
                         .eq("table_session_id", session.id);
-                      handlePrintComanda(session, ordersData?.map(d => d.orders) || []);
+                      handlePrintComanda(session, (ordersData || []).map((d: any) => d.orders) || []);
                     }}>
                       <Printer className="h-4 w-4" /> Imprimir Prévia
                     </Button>
