@@ -855,10 +855,11 @@ function OrderCard({
   const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
   const orderType = normalizeOrderType(o);
 
-  if (isNew) {
-    console.log(`ORDER_RECEIVED_RAW_PAYLOAD: Pedido #${o.order_number || o.id}, status: ${o.status}, is_seen: ${o.is_seen}`);
-    console.log(`ORDER_NORMALIZED_TYPE: Pedido #${o.order_number || o.id}, tipo: ${orderType}`);
+  if (isRecentNew) {
+    const normType = normalizeOrderType(o);
+    console.log(`ORDER_RAW_TYPE_DEBUG: id=${o.id}, order_num=${o.order_number}, order_type=${o.order_type}, service_mode=${o.service_mode}, address=${o.customer_address}, normalized=${normType}`);
   }
+
 
 
   const formatItemName = (it: OrderItem) => {
