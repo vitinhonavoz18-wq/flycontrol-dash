@@ -336,9 +336,20 @@ function Dashboard() {
               if (soundOnRef.current) playBeep();
               toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
               showNotification(o);
+
+              // Adicionar log de debug
+              console.log(`NEW_ORDER_BADGE_ADDED: ${o.id}`);
+              setRecentNewOrderIds(prevIds => [...prevIds, o.id]);
+              setTimeout(() => {
+                setRecentNewOrderIds(prevIds => {
+                  console.log(`NEW_ORDER_BADGE_REMOVED: ${o.id}`);
+                  return prevIds.filter(id => id !== o.id);
+                });
+              }, 5000);
             }
             return [o, ...prev];
           });
+
         },
       )
       .on(
