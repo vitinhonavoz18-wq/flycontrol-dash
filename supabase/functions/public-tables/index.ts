@@ -20,7 +20,7 @@ serve(async (req) => {
     const restaurant_slug = url.searchParams.get('restaurant_slug')
     const table_token = url.searchParams.get('table_token')
 
-    console.log(`VALIDATE_TABLE_REQUEST: restaurant_slug=${restaurant_slug}, table_token=${table_token}`)
+    console.log(`VALIDATE_TABLE_DEBUG: restaurant_slug_received=${restaurant_slug}, table_token_received=${table_token}`)
 
     if (!restaurant_slug) {
       console.log(`VALIDATE_TABLE_RESULT: valid=false, reason=missing_slug`)
@@ -42,6 +42,8 @@ serve(async (req) => {
       .eq('slug', restaurant_slug)
       .maybeSingle()
 
+    console.log(`VALIDATE_TABLE_DEBUG: restaurant_found=${!!restaurant}, restaurant_id_found=${restaurant?.id}`)
+
     if (restaurantError || !restaurant) {
       console.log(`VALIDATE_TABLE_RESULT: valid=false, reason=restaurant_not_found`)
       return new Response(JSON.stringify({ valid: false, reason: 'restaurant_not_found' }), {
@@ -60,12 +62,23 @@ serve(async (req) => {
         })
       }
 
+      // Check table by token alone first for debug
+      const { data: tableAny, error: tableAnyError } = await supabase
+        .from('restaurant_tables')
+        .select('*')
+        .eq('public_token', table_token)
+        .maybeSingle()
+      
+      console.log(`VALIDATE_TABLE_DEBUG: table_found_by_token_any_restaurant=${!!tableAny}`)
+
       const { data: table, error: tableError } = await supabase
         .from('restaurant_tables')
         .select('*')
         .eq('restaurant_id', restaurant.id)
         .eq('public_token', table_token)
         .maybeSingle()
+
+      console.log(`VALIDATE_TABLE_DEBUG: table_found_by_restaurant_and_token=${!!table}`)
 
       if (tableError || !table) {
         console.log(`VALIDATE_TABLE_RESULT: valid=false, reason=invalid_token`)
@@ -75,7 +88,9 @@ serve(async (req) => {
         })
       }
 
-      if (!table.is_active) {
+      console.log(`VALIDATE_TABLE_DEBUG: table_is_active=${table.is_active}`)
+
+      if (table.is_active !== true) {
         console.log(`VALIDATE_TABLE_RESULT: valid=false, table_number=${table.table_number}, reason=inactive_table`)
         return new Response(JSON.stringify({ valid: false, reason: 'inactive_table' }), {
           status: 200,
