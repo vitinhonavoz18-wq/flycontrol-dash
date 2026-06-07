@@ -116,6 +116,32 @@ const STATUSES = [
   },
 ];
 
+export function normalizeOrderType(o: any) {
+  const type = o.order_type || "";
+  const mode = o.service_mode || "";
+
+  if (["pickup", "retirada"].includes(type) || ["pickup", "retirada"].includes(mode)) {
+    return "pickup";
+  }
+
+  if (["table", "mesa"].includes(type) || ["table", "mesa"].includes(mode)) {
+    return "table";
+  }
+
+  if (type === "delivery" || mode === "delivery") {
+    return "delivery";
+  }
+
+  // Fallback visual/conteúdo (conforme pedido: ticket_number -> pickup)
+  if (!type && !mode) {
+    if (o.ticket_number) return "pickup";
+    if (o.table_number) return "table";
+  }
+
+  return "delivery";
+}
+
+
 function playBeep() {
   try {
     const AC =
@@ -156,8 +182,10 @@ function Dashboard() {
   const [showNew, setShowNew] = useState(false);
   const [copied, setCopied] = useState(false);
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
+  const [recentNewOrderIds, setRecentNewOrderIds] = useState<string[]>([]);
   const initialLoad = useRef(true);
   const soundOnRef = useRef(soundOn);
+
 
   useEffect(() => {
     soundOnRef.current = soundOn;
@@ -308,9 +336,20 @@ function Dashboard() {
               if (soundOnRef.current) playBeep();
               toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
               showNotification(o);
+
+              // Adicionar log de debug
+              console.log(`NEW_ORDER_BADGE_ADDED: ${o.id}`);
+              setRecentNewOrderIds(prevIds => [...prevIds, o.id]);
+              setTimeout(() => {
+                setRecentNewOrderIds(prevIds => {
+                  console.log(`NEW_ORDER_BADGE_REMOVED: ${o.id}`);
+                  return prevIds.filter(id => id !== o.id);
+                });
+              }, 5000);
             }
             return [o, ...prev];
           });
+
         },
       )
       .on(
@@ -343,10 +382,12 @@ function Dashboard() {
       // Se o filtro for um tipo de atendimento (order_type)
       else if (["delivery", "pickup", "table"].includes(filter)) {
         base = base.filter((o) => {
-          const type = o.order_type || "delivery";
+          const type = normalizeOrderType(o);
+          console.log(`ORDER_RENDERED_IN_TAB: Pedido #${o.order_number || o.id}, tipo normalizado: ${type}, aba: ${filter}`);
           return type === filter;
         });
       }
+
     }
     return base;
   }, [orders, filter]);
@@ -721,8 +762,16 @@ function Dashboard() {
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         {filtered.map((o) => (
-          <OrderCard key={o.id} o={o} onChange={changeStatus} onDelete={deleteOrder} onSee={markAsSeen} />
+          <OrderCard 
+            key={o.id} 
+            o={o} 
+            onChange={changeStatus} 
+            onDelete={deleteOrder} 
+            onSee={markAsSeen} 
+            isRecentNew={recentNewOrderIds.includes(o.id)}
+          />
         ))}
+
         {!filtered.length && (
           <div className="col-span-full grid place-items-center rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
             Nenhum pedido aqui. Aguardando…
@@ -757,16 +806,24 @@ function OrderCard({
   onChange,
   onDelete,
   onSee,
+  isRecentNew,
 }: {
   o: Order;
   onChange: (o: Order, s: string) => void;
   onDelete: (o: Order) => void;
   onSee: (o: Order) => void;
+  isRecentNew: boolean;
 }) {
   const isNew = o.status === "novo" && !o.is_seen;
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
   const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
-  const orderType = o.order_type || "delivery";
+  const orderType = normalizeOrderType(o);
+
+  if (isNew) {
+    console.log(`ORDER_RECEIVED_RAW_PAYLOAD: Pedido #${o.order_number || o.id}, status: ${o.status}, is_seen: ${o.is_seen}`);
+    console.log(`ORDER_NORMALIZED_TYPE: Pedido #${o.order_number || o.id}, tipo: ${orderType}`);
+  }
+
 
   const formatItemName = (it: OrderItem) => {
     if (it.name) return it.name;
@@ -786,17 +843,18 @@ function OrderCard({
     <div 
       className={`rounded-xl border bg-card p-5 transition-all duration-300 group relative overflow-hidden ${
         isNew 
-          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.2)] animate-pulse hover:animate-none scale-[1.02]" 
+          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.2)] scale-[1.02]" 
           : "border-border hover:border-primary/50 hover:shadow-lg"
       }`}
     >
-      {isNew && (
+      {isRecentNew && (
         <div className="absolute top-0 right-0">
           <Badge className="rounded-none rounded-bl-lg bg-primary text-white font-black px-4 py-1 animate-bounce">
             NOVO
           </Badge>
         </div>
       )}
+
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1">
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">

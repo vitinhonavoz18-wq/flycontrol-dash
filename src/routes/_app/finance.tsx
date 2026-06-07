@@ -1,6 +1,8 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { normalizeOrderType } from "./dashboard";
 import { useAuth } from "@/lib/auth";
+
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import {
@@ -251,10 +253,11 @@ function Finance() {
     return orders.filter(o => {
       const matchesPayment = paymentFilter === "all" || normalizePaymentMethod(o.payment_method) === paymentFilter;
       const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-      const matchesType = typeFilter === "all" || (o.order_type || "delivery") === typeFilter;
+      const matchesType = typeFilter === "all" || normalizeOrderType(o) === typeFilter;
       return matchesPayment && matchesStatus && matchesType;
     });
   }, [orders, paymentFilter, statusFilter, typeFilter]);
+
 
   const ordersInPeriod = useMemo(() => filteredOrders.filter((o) => inRange(o, range)), [filteredOrders, range]);
   const ordersPrev = useMemo(() => filteredOrders.filter((o) => inRange(o, prevRange)), [filteredOrders, prevRange]);

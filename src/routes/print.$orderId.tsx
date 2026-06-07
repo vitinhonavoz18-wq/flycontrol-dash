@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { normalizeOrderType } from "./_app/dashboard";
+
 
 export const Route = createFileRoute("/print/$orderId")({ component: Print });
 
@@ -33,11 +35,13 @@ function Print() {
   if (!o) return <div className="p-6 text-center text-sm">Carregando pedido...</div>;
 
   const items = Array.isArray(o.items) ? o.items : [];
+  const orderType = normalizeOrderType(o);
 
   const formatCurrency = (value: any) => {
     const num = Number(value || 0);
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
+
 
   return (
     <div className="print-area">
@@ -75,25 +79,24 @@ function Print() {
             <span className="text-base">{o.neighborhood}</span>
           </div>
         )}
-        {o.order_type && (
-          <div className="mt-1 inline-block bg-black px-2 py-0.5 text-xs font-bold uppercase text-white">
-            Tipo: {
-              o.order_type === "delivery" ? "Entrega" : 
-              o.order_type === "pickup" ? "Retirada" : 
-              o.order_type === "table" ? "Mesa" : "Pedido"
-            }
-          </div>
-        )}
-        {o.order_type === "pickup" && o.ticket_number && (
+        <div className="mt-1 inline-block bg-black px-2 py-0.5 text-xs font-bold uppercase text-white">
+          Tipo: {
+            orderType === "delivery" ? "Entrega" : 
+            orderType === "pickup" ? "Retirada" : 
+            orderType === "table" ? "Mesa" : "Pedido"
+          }
+        </div>
+        {orderType === "pickup" && o.ticket_number && (
           <div className="mt-1 text-lg font-black uppercase">
             FICHA: {o.ticket_number}
           </div>
         )}
-        {o.order_type === "table" && o.table_number && (
+        {orderType === "table" && o.table_number && (
           <div className="mt-1 text-lg font-black uppercase">
             MESA: {o.table_number}
           </div>
         )}
+
       </div>
 
       <div className="my-3 border-t-2 border-dashed border-black"></div>
