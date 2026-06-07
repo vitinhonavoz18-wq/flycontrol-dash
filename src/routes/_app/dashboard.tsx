@@ -382,10 +382,12 @@ function Dashboard() {
       // Se o filtro for um tipo de atendimento (order_type)
       else if (["delivery", "pickup", "table"].includes(filter)) {
         base = base.filter((o) => {
-          const type = o.order_type || "delivery";
+          const type = normalizeOrderType(o);
+          console.log(`ORDER_RENDERED_IN_TAB: Pedido #${o.order_number || o.id}, tipo normalizado: ${type}, aba: ${filter}`);
           return type === filter;
         });
       }
+
     }
     return base;
   }, [orders, filter]);
