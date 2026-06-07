@@ -75,9 +75,23 @@ function Print() {
             <span className="text-base">{o.neighborhood}</span>
           </div>
         )}
-        {o.delivery_type && (
+        {o.order_type && (
           <div className="mt-1 inline-block bg-black px-2 py-0.5 text-xs font-bold uppercase text-white">
-            Tipo: {o.delivery_type === "delivery" ? "Entrega" : "Retirada/Balcão"}
+            Tipo: {
+              o.order_type === "delivery" ? "Entrega" : 
+              o.order_type === "pickup" ? "Retirada" : 
+              o.order_type === "table" ? "Mesa" : "Pedido"
+            }
+          </div>
+        )}
+        {o.order_type === "pickup" && o.ticket_number && (
+          <div className="mt-1 text-lg font-black uppercase">
+            FICHA: {o.ticket_number}
+          </div>
+        )}
+        {o.order_type === "table" && o.table_number && (
+          <div className="mt-1 text-lg font-black uppercase">
+            MESA: {o.table_number}
           </div>
         )}
       </div>
