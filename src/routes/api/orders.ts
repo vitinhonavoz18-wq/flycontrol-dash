@@ -25,6 +25,70 @@ export const Route = createFileRoute("/api/orders")({
       },
       POST: async ({ request }) => {
         const cors = getCorsHeaders(request);
+
+        const validateTableForOrder = async (restaurantId: string, tableNumber: string, tableToken: string) => {
+          console.log(`🔍 [API/Orders] Validando mesa: #${tableNumber} com token ${tableToken}`);
+          const { data: table, error } = await supabaseAdmin
+            .from("restaurant_tables")
+            .select("id, table_number, public_token, is_active")
+            .eq("restaurant_id", restaurantId)
+            .eq("table_number", tableNumber)
+            .eq("public_token", tableToken)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (error) {
+            console.error("❌ [API/Orders] Erro ao buscar mesa:", error.message);
+            return { valid: false, reason: "db_error" };
+          }
+
+          if (!table) {
+            console.warn("⚠️ [API/Orders] Mesa não encontrada ou token inválido");
+            return { valid: false, reason: "invalid_table" };
+          }
+
+          return { valid: true, table };
+        };
+
+        const getOrCreateTableSession = async (restaurantId: string, tableId: string, tableNumber: string) => {
+          const { data: session, error: sError } = await supabaseAdmin
+            .from("table_sessions")
+            .select("id, total_amount")
+            .eq("restaurant_id", restaurantId)
+            .eq("table_id", tableId)
+            .eq("status", "open")
+            .maybeSingle();
+
+          if (sError) {
+            console.error("❌ [API/Orders] Erro ao buscar sessão:", sError.message);
+            throw sError;
+          }
+
+          if (session) {
+            return session;
+          }
+
+          console.log(`🆕 [API/Orders] Criando nova sessão para Mesa ${tableNumber}`);
+          const { data: newSession, error: iError } = await supabaseAdmin
+            .from("table_sessions")
+            .insert({
+              restaurant_id: restaurantId,
+              table_id: tableId,
+              table_number: tableNumber,
+              status: "open",
+              total_amount: 0
+            })
+            .select("id, total_amount")
+            .single();
+
+          if (iError) {
+            console.error("❌ [API/Orders] Erro ao criar sessão:", iError.message);
+            throw iError;
+          }
+
+          return newSession;
+        };
+        const cors = getCorsHeaders(request);
         const origin = request.headers.get("origin") || "N/A";
         
         console.log("📥 [API/Orders] Requisição POST recebida");
@@ -137,6 +201,36 @@ export const Route = createFileRoute("/api/orders")({
           return 0;
         };
 
+        // 3. Validação de Mesa (se aplicável)
+        const deliveryType = orderData.delivery_type || body.delivery_type || "delivery";
+        const isTableOrder = deliveryType === "table" || deliveryType === "mesa";
+        
+        if (isTableOrder) {
+          const tableNumber = body.table_number || orderData.table_number;
+          const tableToken = body.table_token || orderData.table_token;
+
+          if (!tableNumber || !tableToken) {
+            console.error("❌ [API/Orders] Pedido de mesa sem table_number ou table_token");
+            return new Response(JSON.stringify({ 
+              success: false, 
+              error: "invalid_table",
+              message: "Número da mesa ou token ausente" 
+            }), { status: 400, headers: cors });
+          }
+
+          const validation = await validateTableForOrder(pz.id, tableNumber, tableToken);
+          if (!validation.valid) {
+            return new Response(JSON.stringify({ 
+              success: false, 
+              error: "invalid_table",
+              message: "Mesa inválida ou inativa" 
+            }), { status: 400, headers: cors });
+          }
+          
+          // Anexar ID da mesa para o insert
+          (body as any).table_id = validation.table?.id;
+        }
+
         const orderToInsert = {
           tenant_id: pz.id,
           external_order_id: String(orderData.id || body.order_id || body.id || `ext_${Date.now()}`),
@@ -149,6 +243,8 @@ export const Route = createFileRoute("/api/orders")({
           delivery_fee: parseMoney(orderData.delivery_fee || body.delivery_fee || 0),
           payment_method: orderData.payment_method || body.payment_method || "Não informado",
           delivery_type: orderData.delivery_type || body.delivery_type || "delivery",
+          table_number: body.table_number || orderData.table_number || null,
+          table_id: (body as any).table_id || null,
           notes: orderData.notes || body.notes || "",
           status: "novo",
           source: body.source || "sitecreatorfly",
@@ -172,6 +268,31 @@ export const Route = createFileRoute("/api/orders")({
         }
         
         console.log(`✨ [API/Orders] Pedido salvo! ID: ${order.id}`);
+
+        // 5. Vincular à Comanda (se for pedido de mesa)
+        if (isTableOrder && (body as any).table_id) {
+          try {
+            const tableNumber = body.table_number || orderData.table_number;
+            const session = await getOrCreateTableSession(pz.id, (body as any).table_id, tableNumber);
+            
+            // Vincular pedido à sessão
+            await supabaseAdmin.from("table_session_orders").insert({
+              table_session_id: session.id,
+              order_id: order.id
+            });
+
+            // Atualizar total da sessão
+            const newTotal = (Number(session.total_amount) || 0) + orderToInsert.total;
+            await supabaseAdmin
+              .from("table_sessions")
+              .update({ total_amount: newTotal })
+              .eq("id", session.id);
+            
+            console.log(`🔗 [API/Orders] Pedido vinculado à sessão ${session.id}. Novo total: ${newTotal}`);
+          } catch (err) {
+            console.error("❌ [API/Orders] Erro ao processar sessão da mesa:", err);
+          }
+        }
 
         // Tenta salvar itens na tabela relacionada (não bloqueante)
         if (Array.isArray(items) && items.length > 0) {
