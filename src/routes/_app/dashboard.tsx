@@ -63,11 +63,18 @@ type Order = {
   status: string;
   created_at: string;
   is_seen?: boolean;
-  order_type?: "delivery" | "pickup" | "table" | null;
-  service_mode?: "delivery" | "retirada" | "mesa" | null;
+  order_type?: string | null;
+  service_mode?: string | null;
+  fulfillment_type?: string | null;
+  delivery_type?: string | null;
   table_number?: string | null;
+  tableNumber?: string | null;
+  mesa?: string | null;
   ticket_number?: string | null;
   payment_status?: string | null;
+  delivery_address?: string | null;
+  location?: string | null;
+  address?: string | null;
 };
 
 type OrderItem = {
