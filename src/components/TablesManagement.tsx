@@ -697,30 +697,21 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                   <span>TOTAL FINAL:</span>
                   <span className="text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span>
                 </div>
-              {selectedSession.service_fee_enabled && (
-                <div className="flex justify-between text-sm text-orange-600">
-                  <span>Taxa Garçom (15%):</span>
-                  <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.service_fee_amount)}</span>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" className="flex-1" onClick={() => handlePrintComanda(selectedSession, sessionOrders)}>
+                    <Printer className="h-4 w-4 mr-2" /> Imprimir
+                  </Button>
+                  <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => {
+                    setShowPrintModal(true);
+                  }}>
+                    <CheckCircle2 className="h-4 w-4 mr-2" /> Fechar Mesa
+                  </Button>
                 </div>
-              )}
-              <div className="flex justify-between text-xl font-black text-primary pt-2 border-t">
-                <span>TOTAL FINAL:</span>
-                <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.total_amount)}</span>
               </div>
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => handlePrintComanda(selectedSession, sessionOrders)}>
-                  <Printer className="h-4 w-4 mr-2" /> Imprimir
-                </Button>
-                <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => {
-                  setShowPrintModal(true);
-                }}>
-                  <CheckCircle2 className="h-4 w-4 mr-2" /> Fechar Mesa
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
+            </Card>
+          </div>
+        );
+      })()}
 
       {showPrintModal && selectedSession && (() => {
         const validOrders = sessionOrders.filter(o => o && (Array.isArray(o.items) || Number(o.total) > 0));
