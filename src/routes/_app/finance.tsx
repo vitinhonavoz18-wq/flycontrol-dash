@@ -199,7 +199,7 @@ function Finance() {
       const from = startOfDay(subDays(new Date(), 90)).toISOString();
       let q = supabase
         .from("orders")
-        .select("id, tenant_id, total, subtotal, delivery_fee, discount, status, payment_method, created_at, items, order_number, customer_name, order_type, service_mode, table_number, fulfillment_type, delivery_type, customer_address, address, delivery_address, location")
+        .select("id, tenant_id, total, subtotal, delivery_fee, discount, status, payment_method, created_at, items, order_number, customer_name, order_type, service_mode, table_number, customer_address")
         .gte("created_at", from)
         .neq("status", "deleted") // Deleted is treated as cancelled
         .order("created_at", { ascending: false })
