@@ -35,11 +35,13 @@ function Print() {
   if (!o) return <div className="p-6 text-center text-sm">Carregando pedido...</div>;
 
   const items = Array.isArray(o.items) ? o.items : [];
+  const orderType = normalizeOrderType(o);
 
   const formatCurrency = (value: any) => {
     const num = Number(value || 0);
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
+
 
   return (
     <div className="print-area">
