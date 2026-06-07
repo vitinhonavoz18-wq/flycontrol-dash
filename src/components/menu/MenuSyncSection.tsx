@@ -181,14 +181,14 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     setSyncStatus({ ...syncStatus, status: undefined });
     const toastId = toast.loading("Sincronizando cardápio...");
     
-    const endpoint = syncEndpoint;
-    console.log("MENU_SYNC_URL_USED", endpoint);
+    const proxyUrl = `/api/pizzerias/sync-menu?sync_url=${encodeURIComponent(syncEndpoint)}`;
+    console.log("MENU_SYNC_PROXY_URL", proxyUrl);
 
     try {
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 20000);
 
-      const response = await fetch(endpoint, { 
+      const response = await fetch(proxyUrl, { 
         method: 'GET',
         headers: { 'Accept': 'application/json' },
         signal: controller.signal 
