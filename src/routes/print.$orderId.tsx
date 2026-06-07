@@ -79,25 +79,24 @@ function Print() {
             <span className="text-base">{o.neighborhood}</span>
           </div>
         )}
-        {o.order_type && (
-          <div className="mt-1 inline-block bg-black px-2 py-0.5 text-xs font-bold uppercase text-white">
-            Tipo: {
-              o.order_type === "delivery" ? "Entrega" : 
-              o.order_type === "pickup" ? "Retirada" : 
-              o.order_type === "table" ? "Mesa" : "Pedido"
-            }
-          </div>
-        )}
-        {o.order_type === "pickup" && o.ticket_number && (
+        <div className="mt-1 inline-block bg-black px-2 py-0.5 text-xs font-bold uppercase text-white">
+          Tipo: {
+            orderType === "delivery" ? "Entrega" : 
+            orderType === "pickup" ? "Retirada" : 
+            orderType === "table" ? "Mesa" : "Pedido"
+          }
+        </div>
+        {orderType === "pickup" && o.ticket_number && (
           <div className="mt-1 text-lg font-black uppercase">
             FICHA: {o.ticket_number}
           </div>
         )}
-        {o.order_type === "table" && o.table_number && (
+        {orderType === "table" && o.table_number && (
           <div className="mt-1 text-lg font-black uppercase">
             MESA: {o.table_number}
           </div>
         )}
+
       </div>
 
       <div className="my-3 border-t-2 border-dashed border-black"></div>
