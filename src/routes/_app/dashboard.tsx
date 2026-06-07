@@ -806,16 +806,24 @@ function OrderCard({
   onChange,
   onDelete,
   onSee,
+  isRecentNew,
 }: {
   o: Order;
   onChange: (o: Order, s: string) => void;
   onDelete: (o: Order) => void;
   onSee: (o: Order) => void;
+  isRecentNew: boolean;
 }) {
   const isNew = o.status === "novo" && !o.is_seen;
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
   const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
-  const orderType = o.order_type || "delivery";
+  const orderType = normalizeOrderType(o);
+
+  if (isNew) {
+    console.log(`ORDER_RECEIVED_RAW_PAYLOAD: Pedido #${o.order_number || o.id}, status: ${o.status}, is_seen: ${o.is_seen}`);
+    console.log(`ORDER_NORMALIZED_TYPE: Pedido #${o.order_number || o.id}, tipo: ${orderType}`);
+  }
+
 
   const formatItemName = (it: OrderItem) => {
     if (it.name) return it.name;
