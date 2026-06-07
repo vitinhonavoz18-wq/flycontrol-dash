@@ -41,12 +41,12 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             }), { status: 400, headers: cors });
           }
 
-          // 1. Validar restaurant_slug
+          // 1. Validar restaurante
           const { data: pz, error: pErr } = await supabaseAdmin
             .from("pizzerias")
-            .select("id, name, slug")
+            .select("id, name, slug, is_active, subscription_status")
             .eq("slug", restaurant_slug)
-            .eq("is_active", true)
+            .neq("status", "deleted")
             .maybeSingle();
 
           if (pErr) {
@@ -59,8 +59,17 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             return new Response(JSON.stringify({ 
               success: false, 
               error: "invalid_restaurant",
-              message: "Restaurante não encontrado ou inativo" 
+              message: "Restaurante não encontrado" 
             }), { status: 404, headers: cors });
+          }
+
+          if (pz.is_active === false || pz.subscription_status === "suspended") {
+            console.warn("⚠️ OPEN_TABLE_SESSION_INACTIVE_RESTAURANT:", restaurant_slug);
+            return new Response(JSON.stringify({ 
+              success: false, 
+              error: "inactive_restaurant",
+              message: "Este restaurante está temporariamente inativo" 
+            }), { status: 403, headers: cors });
           }
 
           // 2. Validar mesa
