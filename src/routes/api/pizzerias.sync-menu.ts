@@ -13,6 +13,38 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
   server: {
     handlers: {
       OPTIONS: async () => new Response(JSON.stringify({ success: true }), { status: 200, headers: cors }),
+      
+      GET: async ({ request }) => {
+        const url = new URL(request.url);
+        const syncUrl = url.searchParams.get("sync_url");
+        
+        if (!syncUrl) {
+          return new Response(JSON.stringify({ error: "sync_url é obrigatório" }), { status: 400, headers: cors });
+        }
+
+        try {
+          console.log(`🌐 [Proxy Sync] Fazendo fetch server-side: ${syncUrl}`);
+          const response = await fetch(syncUrl, {
+            method: 'GET',
+            headers: { 'Accept': 'application/json' }
+          });
+
+          const text = await response.text();
+          console.log(`📡 [Proxy Sync] Status: ${response.status}`);
+
+          return new Response(text, { 
+            status: response.status, 
+            headers: cors 
+          });
+        } catch (error: any) {
+          console.error(`❌ [Proxy Sync] Erro no fetch:`, error);
+          return new Response(JSON.stringify({ error: `Erro ao buscar cardápio: ${error.message}` }), { 
+            status: 500, 
+            headers: cors 
+          });
+        }
+      },
+
       POST: async ({ request }) => {
         let body: any;
         try { body = await request.json(); } catch {
@@ -21,13 +53,12 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
 
         const apiKey = (request.headers.get("x-api-key") || body?.api_key || "").trim();
         const pizzeriaId = body?.pizzeria_id;
-        const menuData = body?.menu; // { categories: [], products: [], beverages: [], extras: [], combos: [] }
+        const menuData = body?.menu; 
 
         if (!apiKey || !pizzeriaId || !menuData) {
           return new Response(JSON.stringify({ error: "API Key, pizzeria_id e menu são obrigatórios" }), { status: 400, headers: cors });
         }
 
-        // Validar API Key e encontrar pizzaria
         console.log(`🔍 [Sync] Iniciando sincronização para pizzeria_id: ${pizzeriaId}`);
         const { data: pz, error: pzErr } = await supabaseAdmin
           .from("pizzerias")
@@ -42,7 +73,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
         }
 
         if (!pz) {
-          console.error(`❌ [Sync] Credenciais inválidas ou pizzaria não encontrada para ID ${pizzeriaId} e Key ${apiKey.substring(0, 5)}...`);
+          console.error(`❌ [Sync] Credenciais inválidas ou pizzaria não encontrada`);
           return new Response(JSON.stringify({ error: "Credenciais inválidas ou pizzaria não encontrada" }), { status: 403, headers: cors });
         }
 
@@ -57,8 +88,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           pizza_sizes: 0
         };
 
-        // 1. Sync Categories
-        const categoriesMap: Record<string, string> = {}; // external_id -> internal_id
+        const categoriesMap: Record<string, string> = {}; 
         if (Array.isArray(menuData.categories)) {
           for (const cat of menuData.categories) {
             const externalId = cat.id?.toString();
@@ -104,7 +134,6 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           }
         }
 
-        // 2. Sync Products (including flavors)
         if (Array.isArray(menuData.products)) {
           for (const prod of menuData.products) {
             const externalId = prod.id?.toString();
@@ -123,7 +152,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             }
 
             if (catId) {
-              query.eq("category_id", catId);
+              query = query.eq("category_id", catId);
             }
 
             const { data: existing } = await query.maybeSingle();
@@ -152,7 +181,6 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           }
         }
 
-        // 3. Sync Beverages
         if (Array.isArray(menuData.beverages)) {
           for (const bev of menuData.beverages) {
             const externalId = bev.id?.toString();
@@ -194,7 +222,6 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           }
         }
 
-        // 4. Sync Extras (Bordas/Adicionais)
         if (Array.isArray(menuData.extras)) {
           for (const ext of menuData.extras) {
             const externalId = ext.id?.toString();
@@ -233,7 +260,6 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           }
         }
 
-        // 5. Sync Combos
         if (Array.isArray(menuData.combos)) {
           for (const cb of menuData.combos) {
             const externalId = cb.id?.toString();
@@ -281,7 +307,6 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
               }
             }
 
-            // Sync Combo Items if provided
             if (comboId && Array.isArray(cb.items)) {
               await supabaseAdmin.from("combo_items").delete().eq("combo_id", comboId);
               for (const item of cb.items) {
@@ -296,7 +321,6 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           }
         }
 
-        // 6. Sync Pizza Sizes
         if (Array.isArray(menuData.pizza_sizes)) {
           for (const size of menuData.pizza_sizes) {
             const externalId = size.id?.toString();
