@@ -280,8 +280,19 @@ export const Route = createFileRoute("/api/orders")({
         if (isTableOrder && (body as any).table_id) {
           try {
             const tableNumber = body.table_number || orderData.table_number;
+            const customerName = orderToInsert.customer_name;
+            
             const session = await getOrCreateTableSession(pz.id, (body as any).table_id, String(tableNumber));
             
+            // Atualizar nome do cliente na sessão se não houver um
+            if (customerName && customerName !== "Cliente Site") {
+              await supabaseAdmin
+                .from("table_sessions")
+                .update({ customer_name: customerName })
+                .eq("id", session.id)
+                .is("customer_name", null);
+            }
+
             // Vincular pedido à sessão
             await supabaseAdmin.from("table_session_orders").insert({
               table_session_id: session.id,
@@ -309,7 +320,8 @@ export const Route = createFileRoute("/api/orders")({
               pizzeria_id: pz.id,
               product_name: it.product_name || it.name || "Item",
               quantity: Number(it.quantity || 1),
-              unit_price: parseMoney(it.unit_price || it.price || 0)
+              unit_price: parseMoney(it.unit_price || it.price || 0),
+              total_price: Number(it.quantity || 1) * parseMoney(it.unit_price || it.price || 0)
             }));
             await (supabaseAdmin.from("order_items") as any).insert(orderItemsToInsert);
           } catch (err) {
