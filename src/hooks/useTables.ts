@@ -28,6 +28,7 @@ export type TableSession = {
   service_fee_amount: number;
   customer_name: string | null;
   table_name: string | null;
+  order_count?: number;
 };
 
 export function useTables(tenantId: string | null) {
@@ -170,7 +171,10 @@ export function useTableSessions(tenantId: string | null) {
     // Using restaurant_id as confirmed by database schema
     const { data, error } = await supabase
       .from("table_sessions")
-      .select("*")
+      .select(`
+        *,
+        table_session_orders(count)
+      `)
       .eq("restaurant_id", tenantId)
       .eq("status", "open")
       .order("opened_at", { ascending: false });
@@ -192,7 +196,8 @@ export function useTableSessions(tenantId: string | null) {
         service_fee_percent: Number(s.service_fee_percent || 15),
         service_fee_amount: Number(s.service_fee_amount || 0),
         customer_name: s.customer_name,
-        table_name: s.table_name
+        table_name: s.table_name,
+        order_count: s.table_session_orders?.[0]?.count || 0
       })) as TableSession[];
       setSessions(mappedData);
     }
