@@ -474,6 +474,10 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                   </div>
                 </CardHeader>
                 <CardContent className="p-5 space-y-4">
+                  <div className="flex justify-between text-sm font-medium">
+                    <span className="text-muted-foreground">Pedidos:</span>
+                    <Badge variant="outline" className="font-bold">{session.order_count || 0}</Badge>
+                  </div>
                   <div className="space-y-2 text-sm border-b pb-3">
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Subtotal:</span>

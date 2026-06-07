@@ -27,6 +27,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCombosRouteImport } from './routes/_app/combos'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
+import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/public/open-table-session'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
 import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
 import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
@@ -127,6 +128,12 @@ const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const ApiPublicOpenTableSessionRoute =
+  ApiPublicOpenTableSessionRouteImport.update({
+    id: '/api/public/open-table-session',
+    path: '/api/public/open-table-session',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicCreatePizzeriaRoute = ApiPublicCreatePizzeriaRouteImport.update({
   id: '/api/public/create-pizzeria',
   path: '/api/public/create-pizzeria',
@@ -205,6 +212,7 @@ export interface FileRoutesByFullPath {
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
+  '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/admin/': typeof AppAdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -233,6 +241,7 @@ export interface FileRoutesByTo {
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
+  '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/admin': typeof AppAdminIndexRoute
 }
 export interface FileRoutesById {
@@ -264,6 +273,7 @@ export interface FileRoutesById {
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
+  '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/_app/admin/': typeof AppAdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -295,6 +305,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
+    | '/api/public/open-table-session'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -323,6 +334,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
+    | '/api/public/open-table-session'
     | '/admin'
   id:
     | '__root__'
@@ -353,6 +365,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/sync-menu'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
+    | '/api/public/open-table-session'
     | '/_app/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -370,6 +383,7 @@ export interface RootRouteChildren {
   ApiPizzeriasSyncMenuRoute: typeof ApiPizzeriasSyncMenuRoute
   ApiPublicCreateOrderRoute: typeof ApiPublicCreateOrderRoute
   ApiPublicCreatePizzeriaRoute: typeof ApiPublicCreatePizzeriaRoute
+  ApiPublicOpenTableSessionRoute: typeof ApiPublicOpenTableSessionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -499,6 +513,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AppAdminIndexRouteImport
       parentRoute: typeof AppAdminRoute
+    }
+    '/api/public/open-table-session': {
+      id: '/api/public/open-table-session'
+      path: '/api/public/open-table-session'
+      fullPath: '/api/public/open-table-session'
+      preLoaderRoute: typeof ApiPublicOpenTableSessionRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/create-pizzeria': {
       id: '/api/public/create-pizzeria'
@@ -635,17 +656,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPizzeriasSyncMenuRoute: ApiPizzeriasSyncMenuRoute,
   ApiPublicCreateOrderRoute: ApiPublicCreateOrderRoute,
   ApiPublicCreatePizzeriaRoute: ApiPublicCreatePizzeriaRoute,
+  ApiPublicOpenTableSessionRoute: ApiPublicOpenTableSessionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
