@@ -409,7 +409,7 @@ function Dashboard() {
         .single();
       
       if (!sessionError) sessionId = newSession.id;
-    } else {
+    } else if (sessionData) {
       // Update session amount
       await supabase
         .from('table_sessions')
