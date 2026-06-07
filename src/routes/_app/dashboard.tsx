@@ -843,17 +843,18 @@ function OrderCard({
     <div 
       className={`rounded-xl border bg-card p-5 transition-all duration-300 group relative overflow-hidden ${
         isNew 
-          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.2)] animate-pulse hover:animate-none scale-[1.02]" 
+          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.2)] scale-[1.02]" 
           : "border-border hover:border-primary/50 hover:shadow-lg"
       }`}
     >
-      {isNew && (
+      {isRecentNew && (
         <div className="absolute top-0 right-0">
           <Badge className="rounded-none rounded-bl-lg bg-primary text-white font-black px-4 py-1 animate-bounce">
             NOVO
           </Badge>
         </div>
       )}
+
       <div className="flex items-start justify-between gap-2">
         <div className="space-y-1">
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
