@@ -155,7 +155,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
   }
 
   function printQRCode(table: RestaurantTable) {
-    const url = getQRCodeUrl(table.public_token);
+    const url = getQRCodeUrl(table);
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
