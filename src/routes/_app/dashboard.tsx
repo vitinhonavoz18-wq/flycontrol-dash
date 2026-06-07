@@ -849,6 +849,8 @@ function OrderCard({
   isRecentNew: boolean;
 }) {
   const isNew = o.status === "novo" && !o.is_seen;
+  // A etiqueta visual de novo agora é controlada EXCLUSIVAMENTE por isRecentNew, vindo de setRecentNewOrderIds
+
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
   const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
   const orderType = normalizeOrderType(o);
