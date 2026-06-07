@@ -981,7 +981,7 @@ function OrderCard({
         {orderType === "table" && (
           <div className="flex items-center gap-2 text-purple-600 bg-purple-50/50 p-2 rounded-lg text-xs font-bold">
             <Clock className="h-3.5 w-3.5" />
-            Consumo no local / Mesa {o.table_number || ""}
+            Consumo no local / {o.table_number || o.tableNumber || o.mesa ? `Mesa ${o.table_number || o.tableNumber || o.mesa}` : "Mesa não identificada"}
           </div>
         )}
         <div className="flex items-center gap-1 text-xs text-muted-foreground">
