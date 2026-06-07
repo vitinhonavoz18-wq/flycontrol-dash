@@ -141,7 +141,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           <script>
             ${tables.filter(t => t.is_active).map(table => `
               new QRCode(document.getElementById("qrcode-${table.id}"), {
-                text: "${getQRCodeUrl(table.public_token)}",
+                text: "${getQRCodeUrl(table)}",
                 width: 200,
                 height: 200
               });
