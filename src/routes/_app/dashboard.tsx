@@ -63,6 +63,11 @@ type Order = {
   status: string;
   created_at: string;
   is_seen?: boolean;
+  order_type?: "delivery" | "pickup" | "table" | null;
+  service_mode?: "delivery" | "retirada" | "mesa" | null;
+  table_number?: string | null;
+  ticket_number?: string | null;
+  payment_status?: string | null;
 };
 
 type OrderItem = {
@@ -326,10 +331,24 @@ function Dashboard() {
 
   const active = pizzerias.find((p) => p.id === activeId);
   const filtered = useMemo(() => {
-    if (filter === "ativos")
-      return orders.filter((o) => !["entregue", "cancelado", "deleted"].includes(o.status));
-    if (filter === "todos") return orders.filter((o) => o.status !== "deleted");
-    return orders.filter((o) => o.status === filter);
+    let base = orders.filter((o) => o.status !== "deleted");
+
+    if (filter === "ativos") {
+      base = base.filter((o) => !["entregue", "cancelado"].includes(o.status));
+    } else if (filter !== "todos") {
+      // Se o filtro for um status específico
+      if (STATUSES.some(s => s.value === filter)) {
+        base = base.filter((o) => o.status === filter);
+      }
+      // Se o filtro for um tipo de atendimento (order_type)
+      else if (["delivery", "pickup", "table"].includes(filter)) {
+        base = base.filter((o) => {
+          const type = o.order_type || "delivery";
+          return type === filter;
+        });
+      }
+    }
+    return base;
   }, [orders, filter]);
 
   async function deleteOrder(o: Order) {
