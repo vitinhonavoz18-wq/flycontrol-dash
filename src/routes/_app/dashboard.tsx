@@ -117,37 +117,55 @@ const STATUSES = [
 ];
 
 export function normalizeOrderType(o: any) {
-  const type = (o.order_type || "").toLowerCase();
-  const mode = (o.service_mode || "").toLowerCase();
-  const fulfillment = (o.fulfillment_type || "").toLowerCase();
-  const deliveryType = (o.delivery_type || "").toLowerCase();
-  const address = (o.customer_address || o.address || "").toLowerCase();
-  const deliveryAddress = (o.delivery_address || "").toLowerCase();
+  const type = String(o.order_type || "").toLowerCase();
+  const serviceMode = String(o.service_mode || "").toLowerCase();
+  const fulfillmentType = String(o.fulfillment_type || "").toLowerCase();
+  const deliveryType = String(o.delivery_type || "").toLowerCase();
+  const address = String(o.customer_address || o.address || o.delivery_address || o.location || "").toLowerCase();
+
+  const tableNumber = o.table_number || o.tableNumber || o.mesa;
 
   // PRIORIDADE 1: Mesa / Consumo no local
   if (
-    ["table", "mesa"].includes(type) || 
-    ["table", "mesa"].includes(mode) || 
-    o.table_number
+    type === "table" ||
+    type === "mesa" ||
+    serviceMode === "table" ||
+    serviceMode === "mesa" ||
+    fulfillmentType === "table" ||
+    fulfillmentType === "mesa" ||
+    deliveryType === "table" ||
+    deliveryType === "mesa" ||
+    tableNumber ||
+    address.includes("mesa")
   ) {
     return "table";
   }
 
   // PRIORIDADE 2: Retirada / Balcão
   if (
-    ["pickup", "retirada"].includes(type) || 
-    ["pickup", "retirada"].includes(mode) ||
-    ["pickup", "retirada"].includes(fulfillment) ||
-    ["pickup", "retirada"].includes(deliveryType) ||
+    type === "pickup" ||
+    type === "retirada" ||
+    serviceMode === "pickup" ||
+    serviceMode === "retirada" ||
+    fulfillmentType === "pickup" ||
+    fulfillmentType === "retirada" ||
+    deliveryType === "pickup" ||
+    deliveryType === "retirada" ||
     o.ticket_number ||
     address.includes("retirada") ||
-    deliveryAddress.includes("retirada")
+    address.includes("balcão") ||
+    address.includes("balcao")
   ) {
     return "pickup";
   }
 
   // PRIORIDADE 3: Delivery
-  if (type === "delivery" || mode === "delivery") {
+  if (
+    type === "delivery" ||
+    serviceMode === "delivery" ||
+    fulfillmentType === "delivery" ||
+    deliveryType === "delivery"
+  ) {
     return "delivery";
   }
 
