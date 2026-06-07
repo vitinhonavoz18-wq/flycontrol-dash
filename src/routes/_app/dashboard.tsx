@@ -300,8 +300,13 @@ function Dashboard() {
     } else if (error) {
       toast.error(error.message);
     } else {
-      setOrders((data ?? []) as Order[]);
+      const ordersData = (data ?? []) as Order[];
+      setOrders(ordersData);
+      
+      // Initialize knownOrderIds with currently loaded orders
+      setKnownOrderIds(new Set(ordersData.map(o => o.id)));
     }
+
     initialLoad.current = false;
   }
 
