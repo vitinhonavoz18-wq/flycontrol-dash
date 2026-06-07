@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeOrderType } from "./_app/dashboard";
+import { normalizeOrderType } from "@/utils/order-utils";
+
 
 
 export const Route = createFileRoute("/print/$orderId")({ component: Print });

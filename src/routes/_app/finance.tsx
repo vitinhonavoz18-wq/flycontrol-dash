@@ -1,10 +1,11 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { normalizeOrderType } from "./dashboard";
+import { normalizeOrderType } from "@/utils/order-utils";
 import { useAuth } from "@/lib/auth";
 
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+
 import {
   TrendingUp,
   TrendingDown,

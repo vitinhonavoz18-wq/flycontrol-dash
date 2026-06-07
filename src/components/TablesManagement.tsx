@@ -27,20 +27,8 @@ import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
 // Helpers para processamento de pedidos (compatível com Dashboard.tsx)
-const formatItemName = (it: any) => {
-  if (it.product_name) return it.product_name;
-  if (it.name) return it.name;
-  if (it.title) return it.title;
-  if (it.type === "pizza" && it.flavors) {
-    return `Pizza ${it.size || ""} (${it.flavors.join(" / ")})`;
-  }
-  if (it.type === "beverage") return it.name || "Bebida";
-  return "Item";
-};
+import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-utils";
 
-const getItemPrice = (it: any) => {
-  return it.total_price ?? it.price ?? it.unit_price ?? 0;
-};
 
 interface TablesManagementProps {
   tenantId: string;
@@ -338,6 +326,109 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     printWindow.document.close();
   }
 
+  async function handleSyncTables() {
+    if (!tenantId) return;
+    const loadingToast = toast.loading("Sincronizando pedidos da mesa...");
+    
+    try {
+      // 1. Buscar todas as sessões abertas
+      const { data: activeSessions } = await supabase
+        .from("table_sessions")
+        .select("id, table_number")
+        .eq("restaurant_id", tenantId)
+        .eq("status", "open");
+      
+      if (!activeSessions || activeSessions.length === 0) {
+        toast.dismiss(loadingToast);
+        toast.info("Nenhuma mesa aberta para sincronizar.");
+        return;
+      }
+
+      console.log(`[Debug/Sync] Sincronizando ${activeSessions.length} mesas...`);
+
+      for (const session of activeSessions) {
+        // 2. Buscar pedidos do tipo mesa deste restaurante que correspondam a este número de mesa
+        // e que ainda NÃO estejam vinculados a NENHUMA sessão (backfill)
+        const { data: unlinkedOrders } = await supabase
+          .from("orders")
+          .select("id, total, items, table_number, order_type, service_mode")
+          .eq("tenant_id", tenantId)
+          .eq("table_number", session.table_number)
+          .neq("status", "deleted");
+
+        if (!unlinkedOrders) continue;
+
+        for (const order of unlinkedOrders) {
+          // Só processar se for realmente de mesa
+          const orderType = normalizeOrderType(order);
+          if (orderType !== 'table') continue;
+
+          // Verificar se já existe vínculo
+          const { data: existingLink } = await supabase
+            .from("table_session_orders")
+            .select("id")
+            .eq("order_id", order.id)
+            .maybeSingle();
+          
+          if (!existingLink) {
+            console.log(`[Debug/Sync] Vinculando pedido ${order.id} à sessão ${session.id} (Mesa ${session.table_number})`);
+            await supabase
+              .from("table_session_orders")
+              .insert({
+                table_session_id: session.id,
+                order_id: order.id
+              });
+          }
+        }
+
+        // 3. Recalcular totais da sessão
+        const { data: links } = await supabase
+          .from("table_session_orders")
+          .select("order_id")
+          .eq("table_session_id", session.id);
+        
+        const orderIds = (links || []).map(l => l.order_id);
+        if (orderIds.length > 0) {
+          const { data: ords } = await supabase
+            .from("orders")
+            .select("total")
+            .in("id", orderIds);
+          
+          const subtotal = (ords || []).reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+          
+          // Buscar info da sessão para ver se tem taxa
+          const { data: sessInfo } = await supabase
+            .from("table_sessions")
+            .select("service_fee_enabled, service_fee_percent")
+            .eq("id", session.id)
+            .single();
+          
+          let fee = 0;
+          if (sessInfo?.service_fee_enabled) {
+            fee = subtotal * (Number(sessInfo.service_fee_percent || 15) / 100);
+          }
+
+          await supabase
+            .from("table_sessions")
+            .update({
+              subtotal_amount: subtotal,
+              service_fee_amount: fee,
+              total_amount: subtotal + fee
+            })
+            .eq("id", session.id);
+        }
+      }
+
+      toast.dismiss(loadingToast);
+      toast.success("Pedidos sincronizados com sucesso!");
+      loadSessions();
+    } catch (err) {
+      console.error(err);
+      toast.dismiss(loadingToast);
+      toast.error("Erro ao sincronizar pedidos.");
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -350,7 +441,11 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
             Gerencie as mesas do seu estabelecimento e gere QR Codes para pedidos locais.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" size="sm" onClick={handleSyncTables}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            Sincronizar Pedidos
+          </Button>
           <Button variant="outline" size="sm" onClick={downloadAllQRCodes} disabled={tables.length === 0}>
             <Printer className="h-4 w-4 mr-2" />
             Baixar todos os QR Codes
@@ -361,6 +456,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           </Button>
         </div>
       </div>
+
 
       <Tabs defaultValue="tables" className="w-full">
         <TabsList className="grid w-full max-w-md grid-cols-2">

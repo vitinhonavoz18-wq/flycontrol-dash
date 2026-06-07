@@ -2,6 +2,9 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-utils";
+import { Order, OrderItem } from "@/types/order";
+
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
@@ -46,50 +49,7 @@ type Pizzeria = {
   status_text_saiu?: string | null;
   status_text_entregue?: string | null;
 };
-type Order = {
-  id: string;
-  order_number: number;
-  tenant_id: string;
-  customer_name: string;
-  customer_phone: string;
-  customer_address: string | null;
-  neighborhood: string | null;
-  items: OrderItem[] | unknown;
-  total: number;
-  delivery_fee: number;
-  payment_method: string | null;
-  change_for: number | null;
-  notes: string | null;
-  status: string;
-  created_at: string;
-  is_seen?: boolean;
-  order_type?: string | null;
-  service_mode?: string | null;
-  fulfillment_type?: string | null;
-  delivery_type?: string | null;
-  table_number?: string | null;
-  tableNumber?: string | null;
-  mesa?: string | null;
-  ticket_number?: string | null;
-  payment_status?: string | null;
-  delivery_address?: string | null;
-  location?: string | null;
-  address?: string | null;
-};
 
-type OrderItem = {
-  name?: string;
-  title?: string;
-  type?: string;
-  flavors?: string[];
-  size?: string;
-  price?: number | string;
-  total_price?: number | string;
-  unit_price?: number | string;
-  qty?: number;
-  quantity?: number;
-  notes?: string;
-};
 
 type PizzeriaForm = {
   name: string;
@@ -123,62 +83,8 @@ const STATUSES = [
   },
 ];
 
-export function normalizeOrderType(o: any) {
-  const type = String(o.order_type || "").toLowerCase();
-  const serviceMode = String(o.service_mode || "").toLowerCase();
-  const fulfillmentType = String(o.fulfillment_type || "").toLowerCase();
-  const deliveryType = String(o.delivery_type || "").toLowerCase();
-  const address = String(o.customer_address || o.address || o.delivery_address || o.location || "").toLowerCase();
+// normalizeOrderType agora é importado de @/utils/order-utils
 
-  const tableNumber = o.table_number || o.tableNumber || o.mesa;
-
-  // PRIORIDADE 1: Mesa / Consumo no local
-  if (
-    type === "table" ||
-    type === "mesa" ||
-    serviceMode === "table" ||
-    serviceMode === "mesa" ||
-    fulfillmentType === "table" ||
-    fulfillmentType === "mesa" ||
-    deliveryType === "table" ||
-    deliveryType === "mesa" ||
-    tableNumber ||
-    address.includes("mesa")
-  ) {
-    return "table";
-  }
-
-  // PRIORIDADE 2: Retirada / Balcão
-  if (
-    type === "pickup" ||
-    type === "retirada" ||
-    serviceMode === "pickup" ||
-    serviceMode === "retirada" ||
-    fulfillmentType === "pickup" ||
-    fulfillmentType === "retirada" ||
-    deliveryType === "pickup" ||
-    deliveryType === "retirada" ||
-    o.ticket_number ||
-    address.includes("retirada") ||
-    address.includes("balcão") ||
-    address.includes("balcao")
-  ) {
-    return "pickup";
-  }
-
-  // PRIORIDADE 3: Delivery
-  if (
-    type === "delivery" ||
-    serviceMode === "delivery" ||
-    fulfillmentType === "delivery" ||
-    deliveryType === "delivery"
-  ) {
-    return "delivery";
-  }
-
-  // Fallback
-  return "delivery";
-}
 
 
 
@@ -960,19 +866,8 @@ function OrderCard({
 
 
 
-  const formatItemName = (it: OrderItem) => {
-    if (it.name) return it.name;
-    if (it.title) return it.title;
-    if (it.type === "pizza" && it.flavors) {
-      return `Pizza ${it.size || ""} (${it.flavors.join(" / ")})`;
-    }
-    if (it.type === "beverage") return it.name || "Bebida";
-    return "Item";
-  };
+  // formatItemName e getItemPrice agora são importados de @/utils/order-utils
 
-  const getItemPrice = (it: OrderItem) => {
-    return it.price ?? it.total_price ?? it.unit_price ?? 0;
-  };
 
   return (
     <div 
