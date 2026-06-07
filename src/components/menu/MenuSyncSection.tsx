@@ -50,12 +50,23 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
   }
 
   const validateLink = (url: string) => {
-    if (!url) return false;
+    if (!url) return { valid: false };
     try {
       const parsed = new URL(url);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return { valid: false };
+      
+      // Novo formato: https://conectfly.com.br/api/public/menu-sync/{{slug}}/{{sync_token}}
+      // Antigo: /api/public/pizzarias/{{slug}}/menu-sync
+      const isOldFormat = url.includes("/api/public/pizzarias/") && url.includes("/menu-sync");
+      const isNewFormat = url.includes("/api/public/menu-sync/");
+
+      if (isOldFormat) {
+        return { valid: false, old: true };
+      }
+
+      return { valid: true };
     } catch {
-      return false;
+      return { valid: false };
     }
   };
 
