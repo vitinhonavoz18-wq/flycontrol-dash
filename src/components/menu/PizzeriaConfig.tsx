@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Clock, Truck, FileText } from "lucide-react";
+import { Loader2, Clock, Truck, FileText, Globe, Key } from "lucide-react";
 
 interface PizzeriaConfigProps {
   pizzeriaId: string;
@@ -131,6 +131,47 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
               defaultValue={pizzeria?.description || ""}
               onBlur={(e) => handleUpdate('description', e.target.value)}
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <Globe className="h-4 w-4 text-primary" /> Identificação do Site
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="slug">Slug do Site (identificador único)</Label>
+            <Input 
+              id="slug"
+              placeholder="ex: pizzaria-do-joao" 
+              defaultValue={pizzeria?.slug || ""}
+              onBlur={(e) => handleUpdate('slug', e.target.value)}
+            />
+            <p className="text-[10px] text-muted-foreground">O slug deve ser idêntico ao configurado no SiteCreatorFly.</p>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <Key className="h-4 w-4 text-primary" /> Acesso à API
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="api_key">Chave de API (x-api-key)</Label>
+            <Input 
+              id="api_key"
+              type="password"
+              placeholder="Sua chave de API" 
+              defaultValue={pizzeria?.api_key || ""}
+              onBlur={(e) => handleUpdate('api_key', e.target.value)}
+            />
+            <p className="text-[10px] text-muted-foreground">Necessária para validar a sincronização segura dos dados.</p>
           </div>
         </CardContent>
       </Card>
