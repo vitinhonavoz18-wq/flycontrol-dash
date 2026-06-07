@@ -22,6 +22,12 @@ export type TableSession = {
   opened_at: string;
   closed_at: string | null;
   total_amount: number;
+  subtotal_amount: number;
+  service_fee_enabled: boolean;
+  service_fee_percent: number;
+  service_fee_amount: number;
+  customer_name: string | null;
+  table_name: string | null;
 };
 
 export function useTables(tenantId: string | null) {
@@ -180,7 +186,13 @@ export function useTableSessions(tenantId: string | null) {
         status: s.status,
         opened_at: s.opened_at,
         closed_at: s.closed_at,
-        total_amount: Number(s.total_amount || 0)
+        total_amount: Number(s.total_amount || 0),
+        subtotal_amount: Number(s.subtotal_amount || 0),
+        service_fee_enabled: s.service_fee_enabled,
+        service_fee_percent: Number(s.service_fee_percent || 15),
+        service_fee_amount: Number(s.service_fee_amount || 0),
+        customer_name: s.customer_name,
+        table_name: s.table_name
       })) as TableSession[];
       setSessions(mappedData);
     }
@@ -205,5 +217,36 @@ export function useTableSessions(tenantId: string | null) {
     if (tenantId) loadSessions();
   }, [tenantId]);
 
-  return { sessions, loading, loadSessions, closeSession };
+  async function toggleServiceFee(sessionId: string, enabled: boolean) {
+    const session = sessions.find(s => s.id === sessionId);
+    if (!session) return;
+
+    const subtotal = Number(session.subtotal_amount) || 0;
+    const percent = Number(session.service_fee_percent) || 15;
+    const feeAmount = enabled ? subtotal * (percent / 100) : 0;
+    const total = subtotal + feeAmount;
+
+    const { error } = await supabase
+      .from("table_sessions")
+      .update({ 
+        service_fee_enabled: enabled,
+        service_fee_amount: feeAmount,
+        total_amount: total
+      })
+      .eq("id", sessionId);
+
+    if (error) {
+      toast.error("Erro ao atualizar taxa de serviço: " + error.message);
+    } else {
+      setSessions(prev => prev.map(s => s.id === sessionId ? { 
+        ...s, 
+        service_fee_enabled: enabled, 
+        service_fee_amount: feeAmount, 
+        total_amount: total 
+      } : s));
+      toast.success(enabled ? "Taxa de 15% adicionada!" : "Taxa de serviço removida.");
+    }
+  }
+
+  return { sessions, loading, loadSessions, closeSession, toggleServiceFee };
 }
