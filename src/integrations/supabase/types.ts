@@ -820,6 +820,7 @@ export type Database = {
           id: string
           is_active: boolean
           public_token: string
+          restaurant_id: string | null
           table_name: string | null
           table_number: string
           tenant_id: string
@@ -830,6 +831,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           public_token?: string
+          restaurant_id?: string | null
           table_name?: string | null
           table_number: string
           tenant_id: string
@@ -840,12 +842,27 @@ export type Database = {
           id?: string
           is_active?: boolean
           public_token?: string
+          restaurant_id?: string | null
           table_name?: string | null
           table_number?: string
           tenant_id?: string
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "restaurant_tables_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "restaurant_tables_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "restaurant_tables_tenant_id_fkey"
             columns: ["tenant_id"]

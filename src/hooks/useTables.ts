@@ -46,12 +46,19 @@ export function useTables(tenantId: string | null) {
 
   async function addTable(tableNumber: string, tableName?: string) {
     if (!tenantId) return;
+    
+    // Auto-generate a secure public token
+    const publicToken = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
+    
     const { data, error } = await supabase
       .from("restaurant_tables")
       .insert({
         tenant_id: tenantId,
+        restaurant_id: tenantId,
         table_number: tableNumber,
-        table_name: tableName || null,
+        table_name: tableName || `Mesa ${tableNumber}`,
+        public_token: publicToken,
+        is_active: true
       })
       .select()
       .single();
@@ -62,6 +69,22 @@ export function useTables(tenantId: string | null) {
     }
     setTables(prev => [...prev, data as RestaurantTable].sort((a, b) => a.table_number.localeCompare(b.table_number, undefined, { numeric: true })));
     return data as RestaurantTable;
+  }
+
+  async function updateTable(id: string, updates: Partial<RestaurantTable>) {
+    const { error } = await supabase
+      .from("restaurant_tables")
+      .update(updates)
+      .eq("id", id);
+
+    if (error) {
+      toast.error("Erro ao atualizar mesa: " + error.message);
+      return false;
+    }
+    
+    setTables(prev => prev.map(t => t.id === id ? { ...t, ...updates } : t));
+    toast.success("Mesa atualizada com sucesso!");
+    return true;
   }
 
   async function toggleTable(id: string, isActive: boolean) {
@@ -94,7 +117,7 @@ export function useTables(tenantId: string | null) {
     if (tenantId) loadTables();
   }, [tenantId]);
 
-  return { tables, loading, loadTables, addTable, toggleTable, deleteTable };
+  return { tables, loading, loadTables, addTable, updateTable, toggleTable, deleteTable };
 }
 
 export function useTableSessions(tenantId: string | null) {
