@@ -849,7 +849,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                             ))
                           ) : (
                             <div className="flex justify-between text-sm italic text-muted-foreground">
-                              <span>Detalhes via Site</span>
+                              <span>Detalhes do Pedido #{order.order_number}</span>
                               <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}</span>
                             </div>
                           )}
