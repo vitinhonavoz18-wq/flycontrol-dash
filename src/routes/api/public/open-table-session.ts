@@ -124,43 +124,84 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             }), { status: 200, headers: cors });
           }
 
-          // 4. Criar nova sessão
+          // 4. Criar nova sessão (com proteção contra concorrência via UNIQUE INDEX)
           console.log("OPEN_TABLE_SESSION_CREATING for table:", table_number);
-          const { data: newSession, error: iErr } = await supabaseAdmin
-            .from("table_sessions")
-            .insert({
-              restaurant_id: pz.id,
-              table_id: table.id,
-              table_number: String(table_number),
-              table_name: table.table_name || `Mesa ${table_number}`,
-              status: "open",
-              subtotal_amount: 0,
-              service_fee_enabled: false,
-              service_fee_percent: 15,
-              service_fee_amount: 0,
-              total_amount: 0,
-              customer_name: customer_name || null,
-              opened_at: new Date().toISOString()
-            })
-            .select("id, restaurant_id, table_id, table_number, status, subtotal_amount, service_fee_amount, total_amount")
-            .single();
+          try {
+            const { data: newSession, error: iErr } = await supabaseAdmin
+              .from("table_sessions")
+              .insert({
+                restaurant_id: pz.id,
+                table_id: table.id,
+                table_number: String(table_number),
+                table_name: table.table_name || `Mesa ${table_number}`,
+                status: "open",
+                subtotal_amount: 0,
+                service_fee_enabled: false,
+                service_fee_percent: 15,
+                service_fee_amount: 0,
+                total_amount: 0,
+                customer_name: customer_name || null,
+                opened_at: new Date().toISOString()
+              })
+              .select("id, restaurant_id, table_id, table_number, status, subtotal_amount, service_fee_amount, total_amount")
+              .single();
 
-          if (iErr) {
-            console.error("❌ OPEN_TABLE_SESSION_INSERT_ERROR:", iErr.message);
-            throw iErr;
+            if (iErr) {
+              // Se falhou por conflito de unicidade, buscar a sessão que acabou de ser criada ou já existia
+              if (iErr.code === '23505') {
+                console.warn("⚠️ OPEN_TABLE_SESSION_DUPLICATE_PREVENTED (Race Condition)");
+                const { data: raceSession } = await supabaseAdmin
+                  .from("table_sessions")
+                  .select("id, table_number, status")
+                  .eq("restaurant_id", pz.id)
+                  .eq("table_number", String(table_number))
+                  .eq("status", "open")
+                  .maybeSingle();
+
+                if (raceSession) {
+                  return new Response(JSON.stringify({
+                    success: true,
+                    status: "already_open",
+                    table_session: raceSession
+                  }), { status: 200, headers: cors });
+                }
+              }
+              console.error("❌ OPEN_TABLE_SESSION_INSERT_ERROR:", iErr.message);
+              throw iErr;
+            }
+
+            console.log("OPEN_TABLE_SESSION_CREATED:", newSession.id);
+            
+            const responseBody = {
+              success: true,
+              status: "created",
+              table_session: newSession
+            };
+            
+            console.log("OPEN_TABLE_SESSION_RESPONSE:", JSON.stringify(responseBody));
+            return new Response(JSON.stringify(responseBody), { status: 201, headers: cors });
+
+          } catch (insertError: any) {
+            // Tratamento extra para erros de concorrência
+            if (insertError.code === '23505') {
+              const { data: finalSession } = await supabaseAdmin
+                .from("table_sessions")
+                .select("id, table_number, status")
+                .eq("restaurant_id", pz.id)
+                .eq("table_number", String(table_number))
+                .eq("status", "open")
+                .maybeSingle();
+
+              if (finalSession) {
+                return new Response(JSON.stringify({
+                  success: true,
+                  status: "already_open",
+                  table_session: finalSession
+                }), { status: 200, headers: cors });
+              }
+            }
+            throw insertError;
           }
-
-          console.log("OPEN_TABLE_SESSION_CREATED:", newSession.id);
-          
-          const responseBody = {
-            success: true,
-            status: "created",
-            table_session: newSession
-          };
-          
-          console.log("OPEN_TABLE_SESSION_RESPONSE:", JSON.stringify(responseBody));
-          
-          return new Response(JSON.stringify(responseBody), { status: 201, headers: cors });
 
         } catch (error: any) {
           console.error("❌ OPEN_TABLE_SESSION_UNHANDLED_ERROR:", error.message);
