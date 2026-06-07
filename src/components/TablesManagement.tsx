@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useTables, useTableSessions, type RestaurantTable, type TableSession } from "@/hooks/useTables";
+import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -208,7 +209,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     if (error) {
       toast.error("Erro ao carregar pedidos: " + error.message);
     } else {
-      setSessionOrders(data.map(d => d.orders));
+      setSessionOrders((data || []).map((d: any) => d.orders));
     }
     setLoadingOrders(false);
   }
