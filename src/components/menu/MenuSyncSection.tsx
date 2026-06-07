@@ -120,6 +120,13 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       } else {
         const text = await response.text();
         console.log("MENU_SYNC_RAW_RESPONSE", text.substring(0, 500));
+        
+        try {
+          const json = JSON.parse(text);
+          console.log("MENU_SYNC_JSON_RESPONSE", json);
+        } catch {
+          console.log("MENU_SYNC_JSON_RESPONSE", "Invalid JSON or empty");
+        }
 
         if (response.status === 401) {
           let detail = "Token inválido ou expirado.";
