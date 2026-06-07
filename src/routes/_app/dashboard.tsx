@@ -117,29 +117,44 @@ const STATUSES = [
 ];
 
 export function normalizeOrderType(o: any) {
-  const type = o.order_type || "";
-  const mode = o.service_mode || "";
+  const type = (o.order_type || "").toLowerCase();
+  const mode = (o.service_mode || "").toLowerCase();
+  const fulfillment = (o.fulfillment_type || "").toLowerCase();
+  const deliveryType = (o.delivery_type || "").toLowerCase();
+  const address = (o.customer_address || o.address || "").toLowerCase();
+  const deliveryAddress = (o.delivery_address || "").toLowerCase();
 
-  if (["pickup", "retirada"].includes(type) || ["pickup", "retirada"].includes(mode)) {
-    return "pickup";
-  }
-
-  if (["table", "mesa"].includes(type) || ["table", "mesa"].includes(mode)) {
+  // PRIORIDADE 1: Mesa / Consumo no local
+  if (
+    ["table", "mesa"].includes(type) || 
+    ["table", "mesa"].includes(mode) || 
+    o.table_number
+  ) {
     return "table";
   }
 
+  // PRIORIDADE 2: Retirada / Balcão
+  if (
+    ["pickup", "retirada"].includes(type) || 
+    ["pickup", "retirada"].includes(mode) ||
+    ["pickup", "retirada"].includes(fulfillment) ||
+    ["pickup", "retirada"].includes(deliveryType) ||
+    o.ticket_number ||
+    address.includes("retirada") ||
+    deliveryAddress.includes("retirada")
+  ) {
+    return "pickup";
+  }
+
+  // PRIORIDADE 3: Delivery
   if (type === "delivery" || mode === "delivery") {
     return "delivery";
   }
 
-  // Fallback visual/conteúdo (conforme pedido: ticket_number -> pickup)
-  if (!type && !mode) {
-    if (o.ticket_number) return "pickup";
-    if (o.table_number) return "table";
-  }
-
+  // Fallback
   return "delivery";
 }
+
 
 
 function playBeep() {
@@ -183,6 +198,8 @@ function Dashboard() {
   const [copied, setCopied] = useState(false);
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [recentNewOrderIds, setRecentNewOrderIds] = useState<string[]>([]);
+  const [knownOrderIds, setKnownOrderIds] = useState<Set<string>>(new Set());
+
   const initialLoad = useRef(true);
   const soundOnRef = useRef(soundOn);
 
@@ -283,8 +300,13 @@ function Dashboard() {
     } else if (error) {
       toast.error(error.message);
     } else {
-      setOrders((data ?? []) as Order[]);
+      const ordersData = (data ?? []) as Order[];
+      setOrders(ordersData);
+      
+      // Initialize knownOrderIds with currently loaded orders
+      setKnownOrderIds(new Set(ordersData.map(o => o.id)));
     }
+
     initialLoad.current = false;
   }
 
@@ -333,22 +355,34 @@ function Dashboard() {
             if (prev.some((x) => x.id === o.id)) return prev;
             
             if (!initialLoad.current) {
-              if (soundOnRef.current) playBeep();
-              toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
-              showNotification(o);
+              // DETECÇÃO DE NOVO PEDIDO (FRONT-END ONLY)
+              setKnownOrderIds(prevKnown => {
+                if (!prevKnown.has(o.id)) {
+                  // É realmente novo para esta sessão
+                  if (soundOnRef.current) playBeep();
+                  toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
+                  showNotification(o);
 
-              // Adicionar log de debug
-              console.log(`NEW_ORDER_BADGE_ADDED: ${o.id}`);
-              setRecentNewOrderIds(prevIds => [...prevIds, o.id]);
-              setTimeout(() => {
-                setRecentNewOrderIds(prevIds => {
-                  console.log(`NEW_ORDER_BADGE_REMOVED: ${o.id}`);
-                  return prevIds.filter(id => id !== o.id);
-                });
-              }, 5000);
+                  console.log(`NEW_BADGE_DEBUG: Pedido #${o.order_number} (${o.id}) detectado como novo. Adicionando badge.`);
+                  setRecentNewOrderIds(prevIds => [...prevIds, o.id]);
+                  
+                  setTimeout(() => {
+                    setRecentNewOrderIds(prevIds => {
+                      console.log(`NEW_BADGE_DEBUG: Removendo badge do pedido ${o.id} após 5s.`);
+                      return prevIds.filter(id => id !== o.id);
+                    });
+                  }, 5000);
+
+                  const next = new Set(prevKnown);
+                  next.add(o.id);
+                  return next;
+                }
+                return prevKnown;
+              });
             }
             return [o, ...prev];
           });
+
 
         },
       )
@@ -383,8 +417,9 @@ function Dashboard() {
       else if (["delivery", "pickup", "table"].includes(filter)) {
         base = base.filter((o) => {
           const type = normalizeOrderType(o);
-          console.log(`ORDER_RENDERED_IN_TAB: Pedido #${o.order_number || o.id}, tipo normalizado: ${type}, aba: ${filter}`);
+          console.log(`ORDER_TAB_FILTER_DEBUG: Pedido #${o.order_number || o.id}, tipo: ${type}, aba: ${filter}, aparece: ${type === filter}`);
           return type === filter;
+
         });
       }
 
@@ -815,14 +850,17 @@ function OrderCard({
   isRecentNew: boolean;
 }) {
   const isNew = o.status === "novo" && !o.is_seen;
+  // A etiqueta visual de novo agora é controlada EXCLUSIVAMENTE por isRecentNew, vindo de setRecentNewOrderIds
+
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
   const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
   const orderType = normalizeOrderType(o);
 
-  if (isNew) {
-    console.log(`ORDER_RECEIVED_RAW_PAYLOAD: Pedido #${o.order_number || o.id}, status: ${o.status}, is_seen: ${o.is_seen}`);
-    console.log(`ORDER_NORMALIZED_TYPE: Pedido #${o.order_number || o.id}, tipo: ${orderType}`);
+  if (isRecentNew) {
+    const normType = normalizeOrderType(o);
+    console.log(`ORDER_RAW_TYPE_DEBUG: id=${o.id}, order_num=${o.order_number}, order_type=${o.order_type}, service_mode=${o.service_mode}, address=${o.customer_address}, normalized=${normType}`);
   }
+
 
 
   const formatItemName = (it: OrderItem) => {
@@ -842,16 +880,18 @@ function OrderCard({
   return (
     <div 
       className={`rounded-xl border bg-card p-5 transition-all duration-300 group relative overflow-hidden ${
-        isNew 
-          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.2)] scale-[1.02]" 
+        isRecentNew 
+          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.3)] scale-[1.02]" 
+
           : "border-border hover:border-primary/50 hover:shadow-lg"
       }`}
     >
       {isRecentNew && (
         <div className="absolute top-0 right-0">
-          <Badge className="rounded-none rounded-bl-lg bg-primary text-white font-black px-4 py-1 animate-bounce">
+          <Badge className="rounded-none rounded-bl-lg bg-primary text-white font-black px-4 py-1 animate-pulse">
             NOVO
           </Badge>
+
         </div>
       )}
 
