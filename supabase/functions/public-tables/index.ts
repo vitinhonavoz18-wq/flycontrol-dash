@@ -18,28 +18,28 @@ serve(async (req) => {
 
   try {
     const url = new URL(req.url)
+    const path = url.pathname.replace(/\/$/, '')
     const restaurant_slug = url.searchParams.get('restaurant_slug')?.trim()
     const table_token = url.searchParams.get('table_token')?.trim()
-
-    // Log the incoming request
-    console.log(`VALIDATE_TABLE_REQUEST: restaurant_slug=${restaurant_slug}, table_token=${table_token}`)
-
-    if (!restaurant_slug || !table_token) {
-      const response = { 
-        valid: false, 
-        reason: !restaurant_slug ? 'restaurant_not_found' : 'table_not_found' 
-      }
-      console.log(`VALIDATE_TABLE_RESPONSE: status=200, valid=false, reason=${response.reason}`)
-      return new Response(JSON.stringify(response), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL') ?? '',
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     )
+
+    // Log the incoming request
+    console.log(`PUBLIC_API_REQUEST: path=${path}, restaurant_slug=${restaurant_slug}, table_token=${table_token}`)
+
+    if (!restaurant_slug) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        valid: false,
+        reason: 'restaurant_not_found' 
+      }), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
     // 1. Find restaurant by slug
     const { data: restaurant, error: restaurantError } = await supabase
@@ -48,75 +48,121 @@ serve(async (req) => {
       .ilike('slug', restaurant_slug)
       .maybeSingle()
 
-    console.log(`VALIDATE_TABLE_RESTAURANT_QUERY: restaurant_found=${!!restaurant}, restaurant_id=${restaurant?.id}`)
+    console.log(`PUBLIC_API_RESTAURANT_LOOKUP: restaurant_found=${!!restaurant}, restaurant_id=${restaurant?.id}, slug_received=${restaurant_slug}`)
 
     if (restaurantError || !restaurant) {
-      const response = { valid: false, reason: 'restaurant_not_found' }
-      console.log(`VALIDATE_TABLE_RESPONSE: status=200, valid=false, reason=restaurant_not_found`)
-      return new Response(JSON.stringify(response), {
+      return new Response(JSON.stringify({ 
+        success: false,
+        valid: false, 
+        reason: 'restaurant_not_found' 
+      }), {
         status: 200,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    // 2. Find table by restaurant_id and public_token
-    const { data: table, error: tableError } = await supabase
-      .from('restaurant_tables')
-      .select('*')
-      .eq('restaurant_id', restaurant.id)
-      .eq('public_token', table_token)
-      .maybeSingle()
+    // We decide which behavior based on the presence of table_token
+    // If table_token is present, it's a VALIDATION request
+    // If table_token is NOT present, it's a LIST request
+    
+    if (table_token) {
+      // VALIDATE TABLE
+      console.log(`VALIDATE_TABLE_REQUEST: slug=${restaurant_slug}, token=${table_token}`)
+      
+      const { data: table, error: tableError } = await supabase
+        .from('restaurant_tables')
+        .select('*')
+        .eq('restaurant_id', restaurant.id)
+        .eq('public_token', table_token)
+        .maybeSingle()
 
-    console.log(`VALIDATE_TABLE_TABLE_QUERY: token_received=${table_token}, table_found=${!!table}, table_id=${table?.id}, table_number=${table?.table_number}, is_active=${table?.is_active}`)
+      console.log(`VALIDATE_TABLE_TOKEN_LOOKUP: token_found=${!!table}, table_id=${table?.id}, is_active=${table?.is_active}`)
 
-    if (tableError || !table) {
-      const response = { valid: false, reason: 'table_not_found' }
-      console.log(`VALIDATE_TABLE_RESPONSE: status=200, valid=false, reason=table_not_found`)
-      return new Response(JSON.stringify(response), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // 3. Check if table is active
-    if (table.is_active !== true) {
-      const response = { valid: false, reason: 'inactive_table' }
-      console.log(`VALIDATE_TABLE_RESPONSE: status=200, valid=false, reason=inactive_table`)
-      return new Response(JSON.stringify(response), {
-        status: 200,
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      })
-    }
-
-    // Success response
-    const successResponse = {
-      valid: true,
-      table: {
-        id: table.id,
-        restaurant_id: table.restaurant_id,
-        restaurant_slug: restaurant.slug,
-        table_number: table.table_number,
-        table_name: table.table_name,
-        public_token: table.public_token,
-        is_active: table.is_active
+      if (tableError || !table) {
+        return new Response(JSON.stringify({ valid: false, reason: 'table_not_found' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
       }
-    }
 
-    console.log(`VALIDATE_TABLE_RESPONSE: status=200, valid=true`)
-    return new Response(JSON.stringify(successResponse), {
-      status: 200,
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-    })
+      if (table.is_active !== true) {
+        return new Response(JSON.stringify({ valid: false, reason: 'inactive_table' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const response = {
+        valid: true,
+        table: {
+          id: table.id,
+          restaurant_id: table.restaurant_id,
+          restaurant_slug: restaurant.slug,
+          table_number: table.table_number,
+          table_name: table.table_name,
+          public_token: table.public_token,
+          is_active: table.is_active
+        }
+      }
+      
+      console.log(`VALIDATE_TABLE_RESPONSE: valid=true, table_number=${table.table_number}`)
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+
+    } else {
+      // LIST TABLES
+      console.log(`PUBLIC_TABLES_REQUEST: slug=${restaurant_slug}`)
+      
+      const { data: tables, error: tablesError } = await supabase
+        .from('restaurant_tables')
+        .select('*')
+        .eq('restaurant_id', restaurant.id)
+        .eq('is_active', true)
+        .order('table_number', { ascending: true })
+
+      if (tablesError) {
+        console.error(`PUBLIC_TABLES_ERROR: ${tablesError.message}`)
+        return new Response(JSON.stringify({ success: false, reason: 'server_error' }), {
+          status: 200,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        })
+      }
+
+      const response = {
+        success: true,
+        restaurant: {
+          id: restaurant.id,
+          slug: restaurant.slug,
+          name: restaurant.name
+        },
+        tables: tables.map(t => ({
+          id: t.id,
+          restaurant_id: t.restaurant_id,
+          table_number: t.table_number,
+          table_name: t.table_name,
+          public_token: t.public_token,
+          qr_code_url: t.qr_code_url,
+          is_active: t.is_active
+        }))
+      }
+
+      console.log(`PUBLIC_TABLES_RESULT: tables_count=${tables.length}`)
+      return new Response(JSON.stringify(response), {
+        status: 200,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      })
+    }
 
   } catch (error) {
-    const errorResponse = { 
+    console.error(`PUBLIC_API_CRITICAL_ERROR: ${error.message}`)
+    return new Response(JSON.stringify({ 
+      success: false, 
       valid: false, 
       reason: 'server_error', 
       message: error.message 
-    }
-    console.error(`VALIDATE_TABLE_ERROR: ${error.message}`)
-    console.log(`VALIDATE_TABLE_RESPONSE: status=500, valid=false, reason=server_error`)
-    return new Response(JSON.stringify(errorResponse), {
+    }), {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
