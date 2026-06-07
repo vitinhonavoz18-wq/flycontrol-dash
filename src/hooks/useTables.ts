@@ -39,6 +39,32 @@ export function useTables(tenantId: string | null) {
 
     if (error) {
       toast.error("Erro ao carregar mesas: " + error.message);
+      setLoading(false);
+      return;
+    }
+
+    if (data.length === 0) {
+      // If no tables, call the RPC to generate defaults
+      const { error: rpcError } = await supabase.rpc('generate_default_restaurant_tables', {
+        p_restaurant_id: tenantId
+      });
+
+      if (rpcError) {
+        console.error("Error generating default tables:", rpcError);
+        // Fallback: manually insert if RPC fails for some reason (e.g. not created yet)
+        setTables([]);
+      } else {
+        // Reload tables after generation
+        const { data: newData, error: newError } = await supabase
+          .from("restaurant_tables")
+          .select("*")
+          .eq("tenant_id", tenantId)
+          .order("table_number");
+        
+        if (!newError && newData) {
+          setTables(newData as RestaurantTable[]);
+        }
+      }
     } else {
       setTables(data as RestaurantTable[]);
     }
