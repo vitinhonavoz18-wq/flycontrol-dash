@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useTables, useTableSessions, type RestaurantTable, type TableSession } from "@/hooks/useTables";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -20,10 +20,27 @@ import {
   Clock, 
   CheckCircle2,
   RefreshCw,
-  ExternalLink
+  ExternalLink,
+  Phone
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
+
+// Helpers para processamento de pedidos (compatível com Dashboard.tsx)
+const formatItemName = (it: any) => {
+  if (it.product_name) return it.product_name;
+  if (it.name) return it.name;
+  if (it.title) return it.title;
+  if (it.type === "pizza" && it.flavors) {
+    return `Pizza ${it.size || ""} (${it.flavors.join(" / ")})`;
+  }
+  if (it.type === "beverage") return it.name || "Bebida";
+  return "Item";
+};
+
+const getItemPrice = (it: any) => {
+  return it.total_price ?? it.price ?? it.unit_price ?? 0;
+};
 
 interface TablesManagementProps {
   tenantId: string;
@@ -218,8 +235,16 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const itemsHtml = orders.filter(o => o && (o.items || o.total > 0)).map(order => {
-      const orderItems = order.items || [];
+    // Recalcular totais reais dos pedidos válidos
+    const validOrders = orders.filter(o => o && (o.items || Number(o.total) > 0));
+    const subtotal = validOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
+    const feeAmount = session.service_fee_enabled ? subtotal * (session.service_fee_percent / 100) : 0;
+    const total = subtotal + feeAmount;
+
+    console.log(`🖨️ [Comanda/Print] Recalculado: Orders: ${validOrders.length}, Subtotal: ${subtotal}, Fee: ${feeAmount}, Total: ${total}`);
+
+    const itemsHtml = validOrders.map(order => {
+      const orderItems = Array.isArray(order.items) ? order.items : [];
       return `
         <div class="order-block">
           <div class="order-header">Pedido #${order.order_number || order.id.substring(0, 8)} - ${new Date(order.created_at).toLocaleTimeString()}</div>
@@ -227,11 +252,11 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           <div class="items">
             ${orderItems.length > 0 ? orderItems.map((item: any) => `
               <div class="item">
-                <span class="qty">${item.quantity}x</span>
-                <span class="name">${item.product_name || item.name}</span>
-                <span class="price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total_price || (item.quantity * (item.unit_price || item.price || 0)))}</span>
+                <span class="qty">${item.qty ?? item.quantity ?? 1}x</span>
+                <span class="name">${formatItemName(item)}</span>
+                <span class="price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getItemPrice(item))}</span>
               </div>
-              ${item.observations || item.notes ? `<div class="item-notes">Obs: ${item.observations || item.notes}</div>` : ''}
+              ${(item.notes || item.observations) ? `<div class="item-notes">Obs: ${item.notes || item.observations}</div>` : ''}
             `).join('') : `
               <div class="item">
                 <span class="name">Pedido via Site</span>
@@ -286,18 +311,18 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           <div class="summary">
             <div class="summary-row">
               <span>Subtotal:</span>
-              <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.subtotal_amount)}</span>
+              <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(subtotal)}</span>
             </div>
             ${session.service_fee_enabled ? `
               <div class="summary-row">
                 <span>Taxa Garçom (15%):</span>
-                <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.service_fee_amount)}</span>
+                <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(feeAmount)}</span>
               </div>
               <div style="font-size: 9px; text-align: right; margin-bottom: 5px;">Taxa de garçom de 15% aplicada ao total.</div>
             ` : ''}
             <div class="summary-row total-row">
               <span>TOTAL FINAL:</span>
-              <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.total_amount)}</span>
+              <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span>
             </div>
           </div>
 
@@ -579,144 +604,174 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           </Card>
         </div>
       )}
-      {selectedSession && !showPrintModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <CardHeader className="border-b">
-              <div className="flex justify-between items-center">
-                <CardTitle>Comanda Mesa {selectedSession.table_number}</CardTitle>
-                <Button variant="ghost" size="sm" onClick={() => setSelectedSession(null)}>Fechar</Button>
-              </div>
-            </CardHeader>
-            <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
-              {loadingOrders ? (
-                <div className="flex justify-center py-10"><RefreshCw className="animate-spin h-8 w-8 text-primary" /></div>
-              ) : sessionOrders.filter(o => o && (o.items || o.total > 0)).length === 0 ? (
-                <p className="text-center py-10 text-muted-foreground">Nenhum pedido real vinculado a esta sessão.</p>
-              ) : (
-                sessionOrders.filter(o => o && (o.items || o.total > 0)).map((order, idx) => (
-                  <div key={order.id} className="border rounded-lg p-4 space-y-3">
-                    <div className="flex justify-between items-start border-b pb-2">
-                      <div>
-                        <span className="font-bold text-lg">Pedido #{order.order_number || order.id.substring(0, 8)}</span>
-                        <div className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleString()}</div>
-                      </div>
-                      <Badge variant="outline">{order.customer_name}</Badge>
-                    </div>
-                    <div className="space-y-2">
-                      {order.items && order.items.length > 0 ? (
-                        order.items.map((item: any, i: number) => (
-                          <div key={i} className="space-y-1">
-                            <div className="flex justify-between text-sm">
-                              <span>{item.quantity}x {item.product_name || item.name}</span>
-                              <span className="font-mono">
-                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total_price || (item.quantity * (item.unit_price || item.price || 0)))}
-                              </span>
+      {selectedSession && !showPrintModal && (() => {
+        const validOrders = sessionOrders.filter(o => o && (Array.isArray(o.items) || Number(o.total) > 0));
+        const subtotal = validOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
+        const feeAmount = selectedSession.service_fee_enabled ? subtotal * (selectedSession.service_fee_percent / 100) : 0;
+        const total = subtotal + feeAmount;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <Card className="w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+              <CardHeader className="border-b">
+                <div className="flex justify-between items-center">
+                  <CardTitle>Comanda Mesa {selectedSession.table_number}</CardTitle>
+                  <Button variant="ghost" size="sm" onClick={() => setSelectedSession(null)}>Fechar</Button>
+                </div>
+              </CardHeader>
+              <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
+                {loadingOrders ? (
+                  <div className="flex justify-center py-10"><RefreshCw className="animate-spin h-8 w-8 text-primary" /></div>
+                ) : validOrders.length === 0 ? (
+                  <p className="text-center py-10 text-muted-foreground">Nenhum pedido real vinculado a esta sessão.</p>
+                ) : (
+                  validOrders.map((order, idx) => {
+                    const orderItems = Array.isArray(order.items) ? order.items : [];
+                    return (
+                      <div key={order.id} className="border rounded-lg p-4 space-y-3 bg-card shadow-sm">
+                        <div className="flex justify-between items-start border-b pb-2">
+                          <div className="space-y-1">
+                            <span className="font-bold text-lg">Pedido #{order.order_number || order.id.substring(0, 8)}</span>
+                            <div className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Clock className="h-3 w-3" /> {new Date(order.created_at).toLocaleString()}
                             </div>
-                            {(item.observations || item.notes) && (
-                              <div className="text-[10px] text-muted-foreground pl-4">
-                                Obs: {item.observations || item.notes}
+                          </div>
+                          <div className="flex flex-col items-end gap-1">
+                            <Badge variant="outline">{order.customer_name || 'Cliente'}</Badge>
+                            {order.customer_phone && (
+                              <div className="text-[10px] text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-2.5 w-2.5" /> {order.customer_phone}
                               </div>
                             )}
                           </div>
-                        ))
-                      ) : (
-                        <div className="flex justify-between text-sm italic text-muted-foreground">
-                          <span>Detalhes não disponíveis (Pedido via Site)</span>
-                          <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}</span>
                         </div>
-                      )}
-                    </div>
-                    {order.notes && <div className="text-xs italic bg-muted p-2 rounded">Geral: {order.notes}</div>}
-                    <div className="flex justify-end pt-2 font-bold border-t">
-                      Total do Pedido: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}
-                    </div>
-                  </div>
-                ))
-              )}
-            </CardContent>
-            <div className="border-t p-4 bg-muted/20 space-y-3">
-              <div className="flex justify-between text-sm">
-                <span>Subtotal:</span>
-                <span className="font-medium">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.subtotal_amount)}</span>
-              </div>
-              {selectedSession.service_fee_enabled && (
-                <div className="flex justify-between text-sm text-orange-600">
-                  <span>Taxa Garçom (15%):</span>
-                  <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.service_fee_amount)}</span>
-                </div>
-              )}
-              <div className="flex justify-between text-xl font-black text-primary pt-2 border-t">
-                <span>TOTAL FINAL:</span>
-                <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.total_amount)}</span>
-              </div>
-              <div className="flex gap-2 pt-2">
-                <Button variant="outline" className="flex-1" onClick={() => handlePrintComanda(selectedSession, sessionOrders)}>
-                  <Printer className="h-4 w-4 mr-2" /> Imprimir
-                </Button>
-                <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => {
-                  setShowPrintModal(true);
-                }}>
-                  <CheckCircle2 className="h-4 w-4 mr-2" /> Fechar Mesa
-                </Button>
-              </div>
-            </div>
-          </Card>
-        </div>
-      )}
-
-      {showPrintModal && selectedSession && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-          <Card className="w-full max-w-md">
-            <CardHeader>
-              <CardTitle>Fechar Mesa {selectedSession.table_number}</CardTitle>
-              <CardDescription>Confira o resumo final antes de fechar a comanda.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4 py-4">
-              <div className="space-y-2 border-b pb-4">
+                        <div className="space-y-2">
+                          {orderItems.length > 0 ? (
+                            orderItems.map((item: any, i: number) => (
+                              <div key={i} className="space-y-1 border-b border-dashed border-border/50 pb-1 last:border-0 last:pb-0">
+                                <div className="flex justify-between text-sm">
+                                  <span className="font-medium">{item.qty ?? item.quantity ?? 1}x {formatItemName(item)}</span>
+                                  <span className="font-mono">
+                                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(getItemPrice(item))}
+                                  </span>
+                                </div>
+                                {(item.notes || item.observations) && (
+                                  <div className="text-[10px] text-muted-foreground pl-4 italic bg-muted/30 p-1 rounded">
+                                    Obs: {item.notes || item.observations}
+                                  </div>
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <div className="flex justify-between text-sm italic text-muted-foreground">
+                              <span>Detalhes via Site</span>
+                              <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}</span>
+                            </div>
+                          )}
+                        </div>
+                        {order.notes && (
+                          <div className="text-[10px] italic bg-muted/50 p-2 rounded">
+                            <strong>Geral:</strong> {order.notes}
+                          </div>
+                        )}
+                        <div className="flex justify-end pt-2 font-bold border-t">
+                          Subtotal do Pedido: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </CardContent>
+              <div className="border-t p-4 bg-muted/20 space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span>Mesa:</span>
-                  <span className="font-bold">{selectedSession.table_number}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Pedidos:</span>
-                  <span className="font-bold">{sessionOrders.length}</span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>Subtotal:</span>
-                  <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.subtotal_amount)}</span>
+                  <span>Subtotal da Mesa ({validOrders.length} pedidos):</span>
+                  <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(subtotal)}</span>
                 </div>
                 {selectedSession.service_fee_enabled && (
                   <div className="flex justify-between text-sm text-orange-600">
                     <span>Taxa Garçom (15%):</span>
-                    <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.service_fee_amount)}</span>
+                    <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(feeAmount)}</span>
                   </div>
                 )}
+                <div className="flex justify-between text-xl font-black text-primary pt-2 border-t">
+                  <span>TOTAL FINAL:</span>
+                  <span className="text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button variant="outline" className="flex-1" onClick={() => handlePrintComanda(selectedSession, sessionOrders)}>
+                    <Printer className="h-4 w-4 mr-2" /> Imprimir
+                  </Button>
+                  <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => {
+                    setShowPrintModal(true);
+                  }}>
+                    <CheckCircle2 className="h-4 w-4 mr-2" /> Fechar Mesa
+                  </Button>
+                </div>
               </div>
-              <div className="flex justify-between text-2xl font-black text-primary py-2">
-                <span>TOTAL:</span>
-                <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(selectedSession.total_amount)}</span>
+            </Card>
+          </div>
+        );
+      })()}
+
+      {showPrintModal && selectedSession && (() => {
+        const validOrders = sessionOrders.filter(o => o && (Array.isArray(o.items) || Number(o.total) > 0));
+        const subtotal = validOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
+        const feeAmount = selectedSession.service_fee_enabled ? subtotal * (selectedSession.service_fee_percent / 100) : 0;
+        const total = subtotal + feeAmount;
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <Card className="w-full max-w-md">
+              <CardHeader>
+                <CardTitle>Fechar Mesa {selectedSession.table_number}</CardTitle>
+                <CardDescription>Confira o resumo final antes de fechar a comanda.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4 py-4">
+                <div className="space-y-2 border-b pb-4">
+                  <div className="flex justify-between text-sm">
+                    <span>Mesa:</span>
+                    <span className="font-bold">{selectedSession.table_number}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Pedidos:</span>
+                    <span className="font-bold">{validOrders.length}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span>Subtotal:</span>
+                    <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(subtotal)}</span>
+                  </div>
+                  {selectedSession.service_fee_enabled && (
+                    <div className="flex justify-between text-sm text-orange-600">
+                      <span>Taxa Garçom (15%):</span>
+                      <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(feeAmount)}</span>
+                    </div>
+                  )}
+                </div>
+                <div className="flex justify-between text-2xl font-black text-primary py-2">
+                  <span>TOTAL:</span>
+                  <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span>
+                </div>
+                {selectedSession.service_fee_enabled && (
+                  <p className="text-[10px] text-center text-muted-foreground">
+                    Taxa de garçom de 15% aplicada ao total da comanda.
+                  </p>
+                )}
+              </CardContent>
+              <div className="p-4 bg-muted/20 border-t flex flex-col gap-2">
+                <Button className="w-full h-12 text-lg font-bold" onClick={() => {
+                  handlePrintComanda(selectedSession, sessionOrders);
+                  closeSession(selectedSession.id);
+                  setSelectedSession(null);
+                  setShowPrintModal(false);
+                }}>
+                  Confirmar e Imprimir
+                </Button>
+                <Button variant="ghost" onClick={() => setShowPrintModal(false)}>Cancelar</Button>
               </div>
-              {selectedSession.service_fee_enabled && (
-                <p className="text-[10px] text-center text-muted-foreground">
-                  Taxa de garçom de 15% aplicada ao total da comanda.
-                </p>
-              )}
-            </CardContent>
-            <div className="p-4 bg-muted/20 border-t flex flex-col gap-2">
-              <Button className="w-full h-12 text-lg font-bold" onClick={() => {
-                handlePrintComanda(selectedSession, sessionOrders);
-                closeSession(selectedSession.id);
-                setSelectedSession(null);
-                setShowPrintModal(false);
-              }}>
-                Confirmar e Imprimir
-              </Button>
-              <Button variant="ghost" onClick={() => setShowPrintModal(false)}>Cancelar</Button>
-            </div>
-          </Card>
-        </div>
-      )}
+            </Card>
+          </div>
+        );
+      })()}
     </div>
   );
 }
