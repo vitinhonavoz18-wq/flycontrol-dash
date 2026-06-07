@@ -371,8 +371,6 @@ function Dashboard() {
           event: "INSERT",
           schema: "public",
           table: "orders",
-          // Select only known columns to avoid errors with future/removed columns
-          select: "id, tenant_id, total, delivery_fee, status, created_at, order_number, customer_name, customer_phone, customer_address, neighborhood, items, payment_method, change_for, notes, order_type, service_mode, table_number, ticket_number, payment_status",
           filter: `tenant_id=eq.${pizzeriaId}`,
         },
         (p) => {
