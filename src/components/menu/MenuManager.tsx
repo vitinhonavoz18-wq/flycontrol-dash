@@ -247,16 +247,6 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
             <TabsTrigger value="config" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-primary font-semibold">Config.</TabsTrigger>
           </TabsList>
 
-          <Button 
-            variant="outline" 
-            size="sm" 
-            onClick={handleSync} 
-            disabled={syncing}
-            className="gap-2 border-primary/20 text-primary hover:bg-primary/5 shrink-0"
-          >
-            {syncing ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
-            Sincronizar cardápio existente
-          </Button>
         </div>
 
         <div className="mt-6">
