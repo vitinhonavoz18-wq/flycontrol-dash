@@ -887,9 +887,10 @@ function OrderCard({
     >
       {isRecentNew && (
         <div className="absolute top-0 right-0">
-          <Badge className="rounded-none rounded-bl-lg bg-primary text-white font-black px-4 py-1 animate-bounce">
+          <Badge className="rounded-none rounded-bl-lg bg-primary text-white font-black px-4 py-1 animate-pulse">
             NOVO
           </Badge>
+
         </div>
       )}
 
