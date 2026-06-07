@@ -117,29 +117,44 @@ const STATUSES = [
 ];
 
 export function normalizeOrderType(o: any) {
-  const type = o.order_type || "";
-  const mode = o.service_mode || "";
+  const type = (o.order_type || "").toLowerCase();
+  const mode = (o.service_mode || "").toLowerCase();
+  const fulfillment = (o.fulfillment_type || "").toLowerCase();
+  const deliveryType = (o.delivery_type || "").toLowerCase();
+  const address = (o.customer_address || o.address || "").toLowerCase();
+  const deliveryAddress = (o.delivery_address || "").toLowerCase();
 
-  if (["pickup", "retirada"].includes(type) || ["pickup", "retirada"].includes(mode)) {
-    return "pickup";
-  }
-
-  if (["table", "mesa"].includes(type) || ["table", "mesa"].includes(mode)) {
+  // PRIORIDADE 1: Mesa / Consumo no local
+  if (
+    ["table", "mesa"].includes(type) || 
+    ["table", "mesa"].includes(mode) || 
+    o.table_number
+  ) {
     return "table";
   }
 
+  // PRIORIDADE 2: Retirada / Balcão
+  if (
+    ["pickup", "retirada"].includes(type) || 
+    ["pickup", "retirada"].includes(mode) ||
+    ["pickup", "retirada"].includes(fulfillment) ||
+    ["pickup", "retirada"].includes(deliveryType) ||
+    o.ticket_number ||
+    address.includes("retirada") ||
+    deliveryAddress.includes("retirada")
+  ) {
+    return "pickup";
+  }
+
+  // PRIORIDADE 3: Delivery
   if (type === "delivery" || mode === "delivery") {
     return "delivery";
   }
 
-  // Fallback visual/conteúdo (conforme pedido: ticket_number -> pickup)
-  if (!type && !mode) {
-    if (o.ticket_number) return "pickup";
-    if (o.table_number) return "table";
-  }
-
+  // Fallback
   return "delivery";
 }
+
 
 
 function playBeep() {
