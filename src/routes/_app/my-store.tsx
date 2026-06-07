@@ -213,15 +213,18 @@ export default function MyStore() {
       </div>
 
       <Tabs defaultValue="identity" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 md:grid-cols-4 mb-8">
+        <TabsList className="grid w-full grid-cols-2 md:grid-cols-5 mb-8">
           <TabsTrigger value="identity" className="gap-2">
             <Store className="h-4 w-4" /> Identidade
           </TabsTrigger>
           <TabsTrigger value="service" className="gap-2">
             <Clock className="h-4 w-4" /> Atendimento
           </TabsTrigger>
+          <TabsTrigger value="tables" className="gap-2">
+            <LayoutGrid className="h-4 w-4" /> Mesas
+          </TabsTrigger>
           <TabsTrigger value="delivery" className="gap-2">
-            <CreditCard className="h-4 w-4" /> Entrega e Pagamento
+            <CreditCard className="h-4 w-4" /> Entrega
           </TabsTrigger>
           <TabsTrigger value="menu" className="gap-2">
             <Package className="h-4 w-4" /> Cardápio
