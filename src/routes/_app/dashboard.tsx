@@ -116,6 +116,32 @@ const STATUSES = [
   },
 ];
 
+export function normalizeOrderType(o: any) {
+  const type = o.order_type || "";
+  const mode = o.service_mode || "";
+
+  if (["pickup", "retirada"].includes(type) || ["pickup", "retirada"].includes(mode)) {
+    return "pickup";
+  }
+
+  if (["table", "mesa"].includes(type) || ["table", "mesa"].includes(mode)) {
+    return "table";
+  }
+
+  if (type === "delivery" || mode === "delivery") {
+    return "delivery";
+  }
+
+  // Fallback visual/conteúdo (conforme pedido: ticket_number -> pickup)
+  if (!type && !mode) {
+    if (o.ticket_number) return "pickup";
+    if (o.table_number) return "table";
+  }
+
+  return "delivery";
+}
+
+
 function playBeep() {
   try {
     const AC =
