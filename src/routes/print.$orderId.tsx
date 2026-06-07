@@ -91,9 +91,9 @@ function Print() {
             FICHA: {o.ticket_number}
           </div>
         )}
-        {orderType === "table" && o.table_number && (
+        {orderType === "table" && (
           <div className="mt-1 text-lg font-black uppercase">
-            MESA: {o.table_number}
+            {o.table_number || o.tableNumber || o.mesa ? `MESA: ${o.table_number || o.tableNumber || o.mesa}` : "MESA NÃO IDENTIFICADA"}
           </div>
         )}
 
