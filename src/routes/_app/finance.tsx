@@ -86,6 +86,7 @@ type OrderRow = {
   items: Array<{ name?: string; qty?: number; price?: number; notes?: string }> | null;
   order_number: number;
   customer_name: string | null;
+  order_type?: "delivery" | "pickup" | "table" | null;
 };
 
 const periodLabel = (p: Period) =>
@@ -144,6 +145,7 @@ function Finance() {
   const [loading, setLoading] = useState(false);
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [typeFilter, setTypeFilter] = useState<string>("all");
 
   useEffect(() => setMounted(true), []);
 
@@ -185,7 +187,7 @@ function Finance() {
       const from = startOfDay(subDays(new Date(), 90)).toISOString();
       let q = supabase
         .from("orders")
-        .select("id, tenant_id, total, subtotal, delivery_fee, discount, status, payment_method, created_at, items, order_number, customer_name")
+        .select("id, tenant_id, total, subtotal, delivery_fee, discount, status, payment_method, created_at, items, order_number, customer_name, order_type")
         .gte("created_at", from)
         .neq("status", "deleted") // Deleted is treated as cancelled
         .order("created_at", { ascending: false })
@@ -249,9 +251,10 @@ function Finance() {
     return orders.filter(o => {
       const matchesPayment = paymentFilter === "all" || normalizePaymentMethod(o.payment_method) === paymentFilter;
       const matchesStatus = statusFilter === "all" || o.status === statusFilter;
-      return matchesPayment && matchesStatus;
+      const matchesType = typeFilter === "all" || (o.order_type || "delivery") === typeFilter;
+      return matchesPayment && matchesStatus && matchesType;
     });
-  }, [orders, paymentFilter, statusFilter]);
+  }, [orders, paymentFilter, statusFilter, typeFilter]);
 
   const ordersInPeriod = useMemo(() => filteredOrders.filter((o) => inRange(o, range)), [filteredOrders, range]);
   const ordersPrev = useMemo(() => filteredOrders.filter((o) => inRange(o, prevRange)), [filteredOrders, prevRange]);
