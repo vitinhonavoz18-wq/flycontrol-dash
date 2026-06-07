@@ -330,9 +330,8 @@ export const Route = createFileRoute("/api/orders")({
             });
 
             // RECALCULAR TOTAIS DA SESSÃO USANDO DADOS REAIS DOS PEDIDOS
-            console.log(`🔄 [API/Orders] TABLE_SESSION_RECALCULATING: Session ${session.id}`);
+            console.log(`🔄 [API/Orders] SYNC_ORDER_TO_TABLE_SESSION_STARTED: Session ${session.id}`);
             
-            // Buscar todos os IDs de pedidos vinculados a esta sessão
             const { data: linkedOrders, error: linkError } = await supabaseAdmin
               .from("table_session_orders")
               .select("order_id")
@@ -341,32 +340,30 @@ export const Route = createFileRoute("/api/orders")({
             if (linkError) throw linkError;
 
             const orderIds = (linkedOrders || []).map(lo => lo.order_id);
-            console.log("TABLE_SESSION_ORDERS_LINKS_FOUND:", orderIds.length);
+            console.log("SYNC_ORDER_ID_LIST:", orderIds);
             
             if (orderIds.length > 0) {
-              // Buscar os totais reais desses pedidos
               const { data: ordersInfo, error: ordersError } = await supabaseAdmin
                 .from("orders")
-                .select("id, total")
+                .select("id, total, items")
                 .in("id", orderIds);
               
               if (ordersError) throw ordersError;
 
               const subtotal = (ordersInfo || []).reduce((sum, o) => {
                 const orderTotal = Number(o.total) || 0;
-                console.log(`[API/Orders] TABLE_SESSION_ORDER_FETCHED: id=${o.id}, total=${orderTotal}`);
+                console.log(`[API/Orders] SYNC_ORDER_ID=${o.id} SYNC_ORDER_TOTAL_FROM_DASHBOARD_PARSER=${orderTotal}`);
                 return sum + orderTotal;
               }, 0);
               
               let serviceFeeAmount = 0;
               let finalTotal = subtotal;
 
-              // Usar a configuração atual da sessão
               if (session.service_fee_enabled) {
                 const percent = Number(session.service_fee_percent) || 15;
                 serviceFeeAmount = subtotal * (percent / 100);
                 finalTotal = subtotal + serviceFeeAmount;
-                console.log(`[API/Orders] TABLE_SESSION_SERVICE_FEE_CALCULATED: ${serviceFeeAmount} (${percent}%)`);
+                console.log(`[API/Orders] SYNC_SESSION_TOTAL_RECALCULATED: ${finalTotal}`);
               }
 
               const { error: updateSessionError } = await supabaseAdmin
@@ -380,11 +377,12 @@ export const Route = createFileRoute("/api/orders")({
                 .eq("id", session.id);
               
               if (updateSessionError) {
-                console.error("❌ [API/Orders] TABLE_SESSION_RECALCULATE_ERROR:", updateSessionError.message);
+                console.error("❌ [API/Orders] SYNC_SESSION_SUBTOTAL_RECALCULATE_ERROR:", updateSessionError.message);
               } else {
-                console.log(`📊 [API/Orders] TABLE_SESSION_TOTAL_UPDATED: Subtotal: ${subtotal}, Total: ${finalTotal}`);
+                console.log(`📊 [API/Orders] SYNC_SESSION_SUBTOTAL_RECALCULATED: ${subtotal}`);
               }
             }
+
           } catch (err) {
             console.error("❌ [API/Orders] Erro ao processar sessão da mesa:", err);
           }
