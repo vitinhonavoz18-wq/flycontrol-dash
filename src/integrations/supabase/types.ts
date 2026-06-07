@@ -523,6 +523,7 @@ export type Database = {
           table_id: string | null
           table_name: string | null
           table_number: string | null
+          table_token: string | null
           tenant_id: string
           ticket_number: string | null
           total: number
@@ -555,6 +556,7 @@ export type Database = {
           table_id?: string | null
           table_name?: string | null
           table_number?: string | null
+          table_token?: string | null
           tenant_id: string
           ticket_number?: string | null
           total?: number
@@ -587,6 +589,7 @@ export type Database = {
           table_id?: string | null
           table_name?: string | null
           table_number?: string | null
+          table_token?: string | null
           tenant_id?: string
           ticket_number?: string | null
           total?: number
