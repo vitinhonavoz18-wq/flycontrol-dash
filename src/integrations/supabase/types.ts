@@ -820,6 +820,7 @@ export type Database = {
           id: string
           is_active: boolean
           public_token: string
+          qr_code_url: string | null
           restaurant_id: string | null
           table_name: string | null
           table_number: string
@@ -831,6 +832,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           public_token?: string
+          qr_code_url?: string | null
           restaurant_id?: string | null
           table_name?: string | null
           table_number: string
@@ -842,6 +844,7 @@ export type Database = {
           id?: string
           is_active?: boolean
           public_token?: string
+          qr_code_url?: string | null
           restaurant_id?: string | null
           table_name?: string | null
           table_number?: string
@@ -1032,6 +1035,10 @@ export type Database = {
       }
     }
     Functions: {
+      generate_default_restaurant_tables: {
+        Args: { p_restaurant_id: string }
+        Returns: undefined
+      }
       get_admin_global_metrics: {
         Args: never
         Returns: {

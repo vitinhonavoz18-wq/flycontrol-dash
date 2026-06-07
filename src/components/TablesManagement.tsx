@@ -77,10 +77,13 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     setIsAdding(false);
   }
 
-  function getQRCodeUrl(token: string) {
-    // Requirements: https://conectfly.com.br/{{restaurant_slug}}?mode=table&table_token={{public_token}}
+  function getQRCodeUrl(table: RestaurantTable) {
+    // Priority: use the URL from the database
+    if (table.qr_code_url) return table.qr_code_url;
+
+    // Fallback if not set (should be rare due to trigger)
     const baseUrl = "https://conectfly.com.br";
-    return `${baseUrl}/${restaurantSlug}?mode=table&table_token=${token}`;
+    return `${baseUrl}/${restaurantSlug}?mode=table&table_token=${table.public_token}`;
   }
 
   async function handleRename() {
@@ -138,7 +141,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           <script>
             ${tables.filter(t => t.is_active).map(table => `
               new QRCode(document.getElementById("qrcode-${table.id}"), {
-                text: "${getQRCodeUrl(table.public_token)}",
+                text: "${getQRCodeUrl(table)}",
                 width: 200,
                 height: 200
               });
@@ -152,7 +155,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
   }
 
   function printQRCode(table: RestaurantTable) {
-    const url = getQRCodeUrl(table.public_token);
+    const url = getQRCodeUrl(table);
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
@@ -275,7 +278,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                 </div>
                 <CardContent className="p-4 space-y-4">
                   <div className="flex flex-col items-center justify-center py-4 bg-white rounded-lg border">
-                    <QRCodeSVG value={getQRCodeUrl(table.public_token)} size={120} />
+                    <QRCodeSVG value={getQRCodeUrl(table)} size={120} />
                     <div className="mt-4 w-full space-y-1 px-2">
                       <div className="flex justify-between text-[10px] text-muted-foreground border-b pb-1">
                         <span className="font-bold">Token:</span>
@@ -284,7 +287,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                       <div className="flex flex-col text-[9px] text-muted-foreground pt-1 overflow-hidden">
                         <span className="font-bold">URL do QR Code:</span>
                         <span className="font-mono break-all leading-tight bg-muted/50 p-1 rounded mt-1">
-                          {getQRCodeUrl(table.public_token)}
+                          {getQRCodeUrl(table)}
                         </span>
                       </div>
                     </div>
