@@ -30,7 +30,7 @@ export const Route = createFileRoute("/api/orders")({
           console.log(`🔍 [API/Orders] Validando mesa: #${tableNumber} com token ${tableToken}`);
           const { data: table, error } = await supabaseAdmin
             .from("restaurant_tables")
-            .select("id, table_number, public_token, is_active")
+            .select("id, table_number, table_name, public_token, is_active")
             .eq("restaurant_id", restaurantId)
             .eq("table_number", tableNumber)
             .eq("public_token", tableToken)
@@ -203,14 +203,17 @@ export const Route = createFileRoute("/api/orders")({
         const deliveryType = (orderData.delivery_type || body.delivery_type || body.service_mode || "delivery").toLowerCase();
         const isTableOrder = deliveryType === "table" || deliveryType === "mesa";
         
-        console.log(`ORDER_TYPE_DETECTED: ${deliveryType} (isTableOrder: ${isTableOrder})`);
+        console.log("ORDER_TYPE_DETECTED:", deliveryType, `(isTableOrder: ${isTableOrder})`);
+
+        let validatedTableId = null;
+        let validatedTableNumber = body.table_number || orderData.table_number || "";
+        let validatedTableName = body.table_name || orderData.table_name || "";
 
         if (isTableOrder) {
           const tableNumber = body.table_number || orderData.table_number;
           const tableToken = body.table_token || orderData.table_token;
 
-          console.log(`TABLE_ORDER_VALIDATION_STARTED: Table ${tableNumber}`);
-          console.log(`TABLE_ORDER_TABLE_TOKEN: ${tableToken ? "Present" : "Missing"}`);
+          console.log("TABLE_ORDER_DATA:", { tableNumber, tableToken });
 
           if (!tableNumber || !tableToken) {
             console.error("❌ [API/Orders] Pedido de mesa sem table_number ou table_token");
@@ -222,7 +225,7 @@ export const Route = createFileRoute("/api/orders")({
           }
 
           const validation = await validateTableForOrder(pz.id, String(tableNumber), tableToken);
-          console.log(`TABLE_ORDER_VALIDATION_RESULT: ${validation.valid ? "Valid" : "Invalid"} (${validation.reason || "ok"})`);
+          console.log("TABLE_ORDER_VALIDATION_RESULT:", validation.valid ? "Valid" : "Invalid", validation.reason || "");
 
           if (!validation.valid) {
             return new Response(JSON.stringify({ 
@@ -232,11 +235,12 @@ export const Route = createFileRoute("/api/orders")({
             }), { status: 400, headers: cors });
           }
           
-          // Anexar ID da mesa para o insert
-          (body as any).table_id = validation.table?.id;
+          validatedTableId = validation.table?.id;
+          validatedTableNumber = validation.table?.table_number || validatedTableNumber;
+          validatedTableName = validation.table?.table_name || validatedTableName;
         }
 
-        const orderToInsert = {
+        const orderToInsert: any = {
           tenant_id: pz.id,
           external_order_id: String(orderData.id || body.order_id || body.id || `ext_${Date.now()}`),
           customer_name: customer.name || customer.customer_name || body.customer_name || "Cliente Site",
@@ -248,27 +252,32 @@ export const Route = createFileRoute("/api/orders")({
           delivery_fee: isTableOrder ? 0 : parseMoney(orderData.delivery_fee || body.delivery_fee || 0),
           payment_method: orderData.payment_method || body.payment_method || "Não informado",
           delivery_type: isTableOrder ? "table" : deliveryType,
-          table_number: String(body.table_number || orderData.table_number || ""),
-          table_id: (body as any).table_id || null,
+          order_type: isTableOrder ? "table" : deliveryType,
+          service_mode: isTableOrder ? "mesa" : deliveryType,
+          table_number: String(validatedTableNumber),
+          table_id: validatedTableId,
+          table_name: validatedTableName,
           notes: orderData.notes || body.notes || "",
           status: "novo",
           source: body.source || "sitecreatorfly",
           items: items,
         };
 
-        console.log("💾 [API/Orders] Tentando salvar pedido real no banco...");
+        console.log("ORDER_INSERT_PAYLOAD:", JSON.stringify(orderToInsert));
+        console.log("ORDER_INSERT_TABLE: orders");
+
         const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
           .insert(orderToInsert)
           .select("id")
           .single();
 
         if (orderError) {
-          console.error("❌ [API/Orders] Erro ao salvar pedido:", orderError.message);
-          console.log("ORDER_SAVE_RESULT: error");
+          console.error("ORDER_INSERT_ERROR:", orderError.message);
           await logExternalOrder(apiKey, body, 500, `Erro insert: ${orderError.message}`);
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "Erro ao salvar pedido no FlyControl",
+            error: "database_schema_error",
+            message: "Erro ao salvar pedido no FlyControl",
             details: orderError.message 
           }), { status: 500, headers: cors });
         }
@@ -277,20 +286,28 @@ export const Route = createFileRoute("/api/orders")({
         console.log("ORDER_SAVE_RESULT: success");
 
         // 5. Vincular à Comanda (se for pedido de mesa)
-        if (isTableOrder && (body as any).table_id) {
+        if (isTableOrder && validatedTableId) {
           try {
-            const tableNumber = body.table_number || orderData.table_number;
             const customerName = orderToInsert.customer_name;
             
-            const session = await getOrCreateTableSession(pz.id, (body as any).table_id, String(tableNumber));
+            console.log("TABLE_SESSION_CREATE_OR_UPDATE:", { tableId: validatedTableId, tableNumber: validatedTableNumber });
             
-            // Atualizar nome do cliente na sessão se não houver um
-            if (customerName && customerName !== "Cliente Site") {
+            const session = await getOrCreateTableSession(pz.id, validatedTableId, String(validatedTableNumber));
+            
+            // Atualizar nome do cliente e table_name na sessão se necessário
+            const updateData: any = {};
+            if (customerName && customerName !== "Cliente Site" && !session.customer_name) {
+              updateData.customer_name = customerName;
+            }
+            if (validatedTableName) {
+              updateData.table_name = validatedTableName;
+            }
+
+            if (Object.keys(updateData).length > 0) {
               await supabaseAdmin
                 .from("table_sessions")
-                .update({ customer_name: customerName })
-                .eq("id", session.id)
-                .is("customer_name", null);
+                .update(updateData)
+                .eq("id", session.id);
             }
 
             // Vincular pedido à sessão
