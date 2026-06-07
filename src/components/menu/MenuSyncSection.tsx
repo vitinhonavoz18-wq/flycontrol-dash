@@ -50,18 +50,30 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
   }
 
   const validateLink = (url: string) => {
-    if (!url) return false;
+    if (!url) return { valid: false };
     try {
       const parsed = new URL(url);
-      return parsed.protocol === "http:" || parsed.protocol === "https:";
+      if (parsed.protocol !== "http:" && parsed.protocol !== "https:") return { valid: false };
+      
+      const isOldFormat = url.includes("/api/public/pizzarias/") && url.includes("/menu-sync");
+      if (isOldFormat) {
+        return { valid: false, old: true };
+      }
+
+      return { valid: true };
     } catch {
-      return false;
+      return { valid: false };
     }
   };
 
   async function handleSaveLink() {
-    if (syncEndpoint && !validateLink(syncEndpoint)) {
-      toast.error("Link de sincronização inválido. Verifique o link gerado no SiteCreatorFly.");
+    const validation = validateLink(syncEndpoint);
+    if (syncEndpoint && !validation.valid) {
+      if (validation.old) {
+        toast.error("Este é o formato antigo do link. Copie novamente o link de sincronização no SiteCreatorFly.");
+      } else {
+        toast.error("Link de sincronização inválido. Verifique o link gerado no SiteCreatorFly.");
+      }
       return;
     }
 
@@ -88,15 +100,13 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       return;
     }
 
-    if (!validateLink(syncEndpoint)) {
-      toast.error("Link de sincronização inválido.");
-      return;
-    }
-
-    // Validação de token conforme solicitado
-    const hasToken = syncEndpoint.includes("sync_token=") || syncEndpoint.includes("token=");
-    if (!hasToken) {
-      toast.error("O link não contém token de sincronização. Copie novamente no SiteCreatorFly.");
+    const validation = validateLink(syncEndpoint);
+    if (!validation.valid) {
+      if (validation.old) {
+        toast.error("Este é o formato antigo do link. Copie novamente o link de sincronização no SiteCreatorFly.");
+      } else {
+        toast.error("Link de sincronização inválido.");
+      }
       return;
     }
 
@@ -105,40 +115,37 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     
     try {
       const testUrl = syncEndpoint;
-      
-      // Logs obrigatórios solicitados
-      console.log("MENU_SYNC_SAVED_URL", syncEndpoint);
-      console.log("MENU_SYNC_FETCH_URL_FINAL", testUrl);
-      console.log("MENU_SYNC_HAS_SYNC_TOKEN", hasToken);
+      console.log("MENU_SYNC_URL_USED", syncEndpoint);
       
       const response = await fetch(testUrl, { method: 'GET', headers: { 'Accept': 'application/json' } });
-      
       console.log("MENU_SYNC_HTTP_STATUS", response.status);
 
-      if (response.ok) {
-        toast.success("Conexão estabelecida com sucesso!", { id: toastId });
-      } else {
-        const text = await response.text();
-        console.log("MENU_SYNC_RAW_RESPONSE", text.substring(0, 500));
-        
-        try {
-          const json = JSON.parse(text);
-          console.log("MENU_SYNC_JSON_RESPONSE", json);
-        } catch {
-          console.log("MENU_SYNC_JSON_RESPONSE", "Invalid JSON or empty");
-        }
+      const text = await response.text();
+      console.log("MENU_SYNC_RAW_RESPONSE", text.substring(0, 1000));
+      
+      let jsonResponse = null;
+      try {
+        jsonResponse = JSON.parse(text);
+        console.log("MENU_SYNC_JSON_RESPONSE", jsonResponse);
+      } catch {
+        console.log("MENU_SYNC_JSON_RESPONSE", "Invalid JSON or empty");
+      }
 
+      if (response.ok && jsonResponse?.success) {
+        const counts = {
+          categories: jsonResponse.categories?.length || 0,
+          products: (jsonResponse.products?.length || 0) + (jsonResponse.beverages?.length || 0),
+          extras: (jsonResponse.borders?.length || 0) + (jsonResponse.additionals?.length || 0)
+        };
+        
+        console.log("MENU_SYNC_SUCCESS", true);
+        toast.success(`Conexão OK! Encontrado: ${counts.categories} categorias, ${counts.products} produtos/bebidas e ${counts.extras} bordas/adicionais.`, { id: toastId });
+      } else {
+        console.log("MENU_SYNC_SUCCESS", false);
         if (response.status === 401) {
-          let detail = "Token inválido ou expirado.";
-          try {
-            const errorJson = JSON.parse(text);
-            detail = errorJson.error || errorJson.message || detail;
-          } catch {}
-          toast.error(`Erro de autorização (401): ${detail}`, { id: toastId });
-        } else if (response.status === 404) {
-          toast.error("Link de sincronização não encontrado (404).", { id: toastId });
+          toast.error(`Erro de autorização (401): ${jsonResponse?.error || jsonResponse?.message || "Token inválido"}`, { id: toastId });
         } else {
-          toast.error(`Falha na conexão. Status: ${response.status}.`, { id: toastId });
+          toast.error(`Falha na conexão. Status: ${response.status}. Success: ${jsonResponse?.success}`, { id: toastId });
         }
       }
     } catch (error: any) {
@@ -155,10 +162,13 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       return;
     }
 
-    // Validação de token conforme solicitado
-    const hasToken = syncEndpoint.includes("sync_token=") || syncEndpoint.includes("token=");
-    if (!hasToken) {
-      toast.error("O link não contém token de sincronização. Copie novamente no SiteCreatorFly.");
+    const validation = validateLink(syncEndpoint);
+    if (!validation.valid) {
+      if (validation.old) {
+        toast.error("Este é o formato antigo do link. Copie novamente o link de sincronização no SiteCreatorFly.");
+      } else {
+        toast.error("Link de sincronização inválido.");
+      }
       return;
     }
 
@@ -171,20 +181,8 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     setSyncStatus({ ...syncStatus, status: undefined });
     const toastId = toast.loading("Sincronizando cardápio...");
     
-    // Garantir que a URL seja usada exatamente como salva, preservando query string inteira
     const endpoint = syncEndpoint;
-    
-    // Logs obrigatórios solicitados
-    console.log("MENU_SYNC_SAVED_URL", syncEndpoint);
-    console.log("MENU_SYNC_FETCH_URL_FINAL", endpoint);
-    console.log("MENU_SYNC_HAS_SYNC_TOKEN", hasToken);
-    
-    // Preview do token para debug (primeiros 10 caracteres)
-    const tokenMatch = endpoint.match(/[?&](?:sync_token|token)=([^&]+)/);
-    const tokenValue = tokenMatch ? tokenMatch[1] : "not_found";
-    console.log("MENU_SYNC_TOKEN_PREVIEW", tokenValue.substring(0, 10) + "...");
-
-    console.log("MENU_SYNC_STARTED", { pizzeriaId, slug: pizzeria.slug });
+    console.log("MENU_SYNC_URL_USED", endpoint);
 
     try {
       const controller = new AbortController();
@@ -199,34 +197,20 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       
       console.log("MENU_SYNC_HTTP_STATUS", response.status);
       
-      const contentType = response.headers.get("content-type");
       const text = await response.text();
-      console.log("MENU_SYNC_RAW_RESPONSE", text.substring(0, 500));
+      console.log("MENU_SYNC_RAW_RESPONSE", text.substring(0, 1000));
 
       if (response.status !== 200) {
         let errorMsg = `Erro HTTP ${response.status}`;
-        
         if (response.status === 401) {
-          // Tentar parsear a resposta para ver o motivo real (missing_sync_token, invalid_sync_token, etc)
           try {
             const errorJson = JSON.parse(text);
-            const detail = errorJson.error || errorJson.message || "api_key_required";
-            errorMsg = `Erro de autorização (401): ${detail}`;
+            errorMsg = `Erro de autorização (401): ${errorJson.error || errorJson.message || "Token inválido"}`;
           } catch {
             errorMsg = "Erro de autorização (401): Token inválido ou expirado.";
           }
-        } else if (response.status === 404) {
-          errorMsg = "Link de sincronização não encontrado (404). Verifique o slug no link.";
-        } else {
-          errorMsg = `Falha na sincronização (Status ${response.status}).`;
         }
-        
         throw new Error(errorMsg);
-      }
-
-      if (!contentType || !contentType.includes("application/json")) {
-        console.log("MENU_SYNC_JSON_RESPONSE", "Error: Not JSON content type");
-        throw new Error("Resposta inválida: Esperado JSON, recebido " + (contentType || "vazio"));
       }
 
       let externalMenu;
@@ -234,8 +218,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         externalMenu = JSON.parse(text);
         console.log("MENU_SYNC_JSON_RESPONSE", externalMenu);
       } catch (e) {
-        console.log("MENU_SYNC_JSON_ERROR", e);
-        throw new Error("O link respondeu, mas não retornou um cardápio válido.");
+        throw new Error("O link respondeu, mas não retornou um JSON válido.");
       }
 
       if (externalMenu.success === false) {
@@ -245,14 +228,10 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       const categoriesCount = externalMenu.categories?.length || 0;
       const productsCount = (externalMenu.products?.length || 0) + (externalMenu.beverages?.length || 0);
       
-      console.log("MENU_SYNC_CATEGORIES_FOUND", categoriesCount);
-      console.log("MENU_SYNC_PRODUCTS_FOUND", productsCount);
-
       if (categoriesCount === 0 && productsCount === 0) {
         throw new Error("O link respondeu, mas nenhum produto ou categoria foi encontrado.");
       }
 
-      // 2. Local Sync
       const syncResponse = await fetch("/api/pizzerias/sync-menu", {
         method: "POST",
         headers: {
@@ -275,7 +254,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       const syncResult = await syncResponse.json();
       
       if (syncResult.success) {
-        console.log("MENU_SYNC_SUCCESS", syncResult.results);
+        console.log("MENU_SYNC_SUCCESS", true);
         setSyncStatus({
           lastSync: new Date().toLocaleString('pt-BR'),
           status: 'success',
@@ -290,7 +269,8 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         throw new Error(syncResult.error || "Erro no processamento interno do FlyControl");
       }
     } catch (error: any) {
-      console.error("MENU_SYNC_ERROR", error);
+      console.log("MENU_SYNC_SUCCESS", false);
+      console.error("MENU_SYNC_ERROR", error.message);
       const errorMsg = error.message || "Erro desconhecido";
       setSyncStatus({
         lastSync: new Date().toLocaleString('pt-BR'),
