@@ -201,12 +201,17 @@ export const Route = createFileRoute("/api/orders")({
         };
 
         // 3. Validação de Mesa (se aplicável)
-        const deliveryType = orderData.delivery_type || body.delivery_type || "delivery";
+        const deliveryType = (orderData.delivery_type || body.delivery_type || body.service_mode || "delivery").toLowerCase();
         const isTableOrder = deliveryType === "table" || deliveryType === "mesa";
         
+        console.log(`ORDER_TYPE_DETECTED: ${deliveryType} (isTableOrder: ${isTableOrder})`);
+
         if (isTableOrder) {
           const tableNumber = body.table_number || orderData.table_number;
           const tableToken = body.table_token || orderData.table_token;
+
+          console.log(`TABLE_ORDER_VALIDATION_STARTED: Table ${tableNumber}`);
+          console.log(`TABLE_ORDER_TABLE_TOKEN: ${tableToken ? "Present" : "Missing"}`);
 
           if (!tableNumber || !tableToken) {
             console.error("❌ [API/Orders] Pedido de mesa sem table_number ou table_token");
@@ -217,7 +222,9 @@ export const Route = createFileRoute("/api/orders")({
             }), { status: 400, headers: cors });
           }
 
-          const validation = await validateTableForOrder(pz.id, tableNumber, tableToken);
+          const validation = await validateTableForOrder(pz.id, String(tableNumber), tableToken);
+          console.log(`TABLE_ORDER_VALIDATION_RESULT: ${validation.valid ? "Valid" : "Invalid"} (${validation.reason || "ok"})`);
+
           if (!validation.valid) {
             return new Response(JSON.stringify({ 
               success: false, 
@@ -235,19 +242,19 @@ export const Route = createFileRoute("/api/orders")({
           external_order_id: String(orderData.id || body.order_id || body.id || `ext_${Date.now()}`),
           customer_name: customer.name || customer.customer_name || body.customer_name || "Cliente Site",
           customer_phone: customer.phone || customer.customer_phone || body.customer_phone || "",
-          customer_address: customer.address || customer.customer_address || body.customer_address || "Não informado",
-          neighborhood: customer.neighborhood || body.neighborhood || null,
+          customer_address: isTableOrder ? "Consumo no Local" : (customer.address || customer.customer_address || body.customer_address || "Não informado"),
+          neighborhood: isTableOrder ? "Mesa" : (customer.neighborhood || body.neighborhood || null),
           total: parseMoney(orderData.total || body.total || 0),
           subtotal: parseMoney(orderData.subtotal || body.subtotal || 0),
-          delivery_fee: parseMoney(orderData.delivery_fee || body.delivery_fee || 0),
+          delivery_fee: isTableOrder ? 0 : parseMoney(orderData.delivery_fee || body.delivery_fee || 0),
           payment_method: orderData.payment_method || body.payment_method || "Não informado",
-          delivery_type: orderData.delivery_type || body.delivery_type || "delivery",
-          table_number: body.table_number || orderData.table_number || null,
+          delivery_type: isTableOrder ? "table" : deliveryType,
+          table_number: String(body.table_number || orderData.table_number || ""),
           table_id: (body as any).table_id || null,
           notes: orderData.notes || body.notes || "",
           status: "novo",
           source: body.source || "sitecreatorfly",
-          items: items, // Mantemos o JSON bruto no campo items se o banco suportar
+          items: items,
         };
 
         console.log("💾 [API/Orders] Tentando salvar pedido real no banco...");
@@ -258,6 +265,7 @@ export const Route = createFileRoute("/api/orders")({
 
         if (orderError) {
           console.error("❌ [API/Orders] Erro ao salvar pedido:", orderError.message);
+          console.log("ORDER_SAVE_RESULT: error");
           await logExternalOrder(apiKey, body, 500, `Erro insert: ${orderError.message}`);
           return new Response(JSON.stringify({ 
             success: false, 
@@ -267,12 +275,13 @@ export const Route = createFileRoute("/api/orders")({
         }
         
         console.log(`✨ [API/Orders] Pedido salvo! ID: ${order.id}`);
+        console.log("ORDER_SAVE_RESULT: success");
 
         // 5. Vincular à Comanda (se for pedido de mesa)
         if (isTableOrder && (body as any).table_id) {
           try {
             const tableNumber = body.table_number || orderData.table_number;
-            const session = await getOrCreateTableSession(pz.id, (body as any).table_id, tableNumber);
+            const session = await getOrCreateTableSession(pz.id, (body as any).table_id, String(tableNumber));
             
             // Vincular pedido à sessão
             await supabaseAdmin.from("table_session_orders").insert({
@@ -310,6 +319,7 @@ export const Route = createFileRoute("/api/orders")({
         }
 
         await logExternalOrder(apiKey, body, 200);
+        console.log("ORDER_RESPONSE_SENT: success");
 
         // 4. Integração FIQON (Assíncrona/Não-bloqueante para o cliente)
         if (pz.fiqon_enabled && pz.fiqon_webhook_url) {
