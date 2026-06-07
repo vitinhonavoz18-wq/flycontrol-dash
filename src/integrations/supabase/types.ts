@@ -513,11 +513,16 @@ export type Database = {
           neighborhood: string | null
           notes: string | null
           order_number: number
+          order_type: string | null
           payment_method: string | null
+          payment_status: string | null
+          service_mode: string | null
           source: string | null
           status: string
           subtotal: number | null
+          table_number: string | null
           tenant_id: string
+          ticket_number: string | null
           total: number
           updated_at: string
           whatsapp_message: string | null
@@ -538,11 +543,16 @@ export type Database = {
           neighborhood?: string | null
           notes?: string | null
           order_number?: number
+          order_type?: string | null
           payment_method?: string | null
+          payment_status?: string | null
+          service_mode?: string | null
           source?: string | null
           status?: string
           subtotal?: number | null
+          table_number?: string | null
           tenant_id: string
+          ticket_number?: string | null
           total?: number
           updated_at?: string
           whatsapp_message?: string | null
@@ -563,11 +573,16 @@ export type Database = {
           neighborhood?: string | null
           notes?: string | null
           order_number?: number
+          order_type?: string | null
           payment_method?: string | null
+          payment_status?: string | null
+          service_mode?: string | null
           source?: string | null
           status?: string
           subtotal?: number | null
+          table_number?: string | null
           tenant_id?: string
+          ticket_number?: string | null
           total?: number
           updated_at?: string
           whatsapp_message?: string | null
@@ -798,6 +813,96 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      table_session_orders: {
+        Row: {
+          created_at: string | null
+          id: string
+          order_id: string
+          table_session_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          order_id: string
+          table_session_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          order_id?: string
+          table_session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_session_orders_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "table_session_orders_table_session_id_fkey"
+            columns: ["table_session_id"]
+            isOneToOne: false
+            referencedRelation: "table_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      table_sessions: {
+        Row: {
+          closed_at: string | null
+          created_at: string | null
+          customer_name: string | null
+          id: string
+          opened_at: string | null
+          restaurant_id: string
+          status: string
+          table_number: string
+          total_amount: number | null
+          updated_at: string | null
+        }
+        Insert: {
+          closed_at?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          id?: string
+          opened_at?: string | null
+          restaurant_id: string
+          status?: string
+          table_number: string
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Update: {
+          closed_at?: string | null
+          created_at?: string | null
+          customer_name?: string | null
+          id?: string
+          opened_at?: string | null
+          restaurant_id?: string
+          status?: string
+          table_number?: string
+          total_amount?: number | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "table_sessions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "table_sessions_restaurant_id_fkey"
+            columns: ["restaurant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {
