@@ -939,8 +939,10 @@ function OrderCard({
             {orderType === "pickup" && o.ticket_number && (
               <span className="text-sm font-bold text-blue-600">Ficha: {o.ticket_number}</span>
             )}
-            {orderType === "table" && o.table_number && (
-              <span className="text-sm font-bold text-purple-600">Mesa: {o.table_number}</span>
+            {orderType === "table" && (
+              <span className="text-sm font-bold text-purple-600">
+                {o.table_number || o.tableNumber || o.mesa ? `Mesa: ${o.table_number || o.tableNumber || o.mesa}` : "Mesa não identificada"}
+              </span>
             )}
           </div>
         </div>
