@@ -61,15 +61,11 @@ serve(async (req) => {
       })
     }
 
-    // Route based on path (Edge Function path usually includes the function name)
-    // Local: /public-tables, Deployed: /functions/v1/public-tables
-    // We'll also handle the specific sub-paths if requested, but for now we'll switch based on query params or path suffixes if we had them.
-    // Since we only have one function name 'public-tables', we'll use a param or subpath.
+    // We decide which behavior based on the presence of table_token
+    // If table_token is present, it's a VALIDATION request
+    // If table_token is NOT present, it's a LIST request
     
-    const isValidatePath = path.endsWith('/validate-table') || !!table_token
-    const isListPath = path.endsWith('/restaurant-tables') || (!table_token && !path.endsWith('/validate-table'))
-
-    if (isValidatePath && table_token) {
+    if (table_token) {
       // VALIDATE TABLE
       console.log(`VALIDATE_TABLE_REQUEST: slug=${restaurant_slug}, token=${table_token}`)
       
