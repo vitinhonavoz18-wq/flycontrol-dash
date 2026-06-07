@@ -133,6 +133,13 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       return;
     }
 
+    // Validação de token conforme solicitado
+    const hasToken = syncEndpoint.includes("sync_token=") || syncEndpoint.includes("token=");
+    if (!hasToken) {
+      toast.error("O link não contém token de sincronização. Copie novamente no SiteCreatorFly.");
+      return;
+    }
+
     if (!pizzeria?.slug) {
       toast.error("Slug da pizzaria não encontrado.");
       return;
@@ -142,10 +149,20 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     setSyncStatus({ ...syncStatus, status: undefined });
     const toastId = toast.loading("Sincronizando cardápio...");
     
+    // Garantir que a URL seja usada exatamente como salva, preservando query string inteira
     const endpoint = syncEndpoint;
     
+    // Logs obrigatórios solicitados
+    console.log("MENU_SYNC_SAVED_URL", syncEndpoint);
+    console.log("MENU_SYNC_FETCH_URL_FINAL", endpoint);
+    console.log("MENU_SYNC_HAS_SYNC_TOKEN", hasToken);
+    
+    // Preview do token para debug (primeiros 10 caracteres)
+    const tokenMatch = endpoint.match(/[?&](?:sync_token|token)=([^&]+)/);
+    const tokenValue = tokenMatch ? tokenMatch[1] : "not_found";
+    console.log("MENU_SYNC_TOKEN_PREVIEW", tokenValue.substring(0, 10) + "...");
+
     console.log("MENU_SYNC_STARTED", { pizzeriaId, slug: pizzeria.slug });
-    console.log("MENU_SYNC_URL_USED", endpoint);
 
     try {
       const controller = new AbortController();
@@ -165,13 +182,24 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       console.log("MENU_SYNC_RAW_RESPONSE", text.substring(0, 500));
 
       if (response.status !== 200) {
+        let errorMsg = `Erro HTTP ${response.status}`;
+        
         if (response.status === 401) {
-          throw new Error("Erro de autorização. Verifique se o link copiado do SiteCreatorFly contém o token de sincronização.");
+          // Tentar parsear a resposta para ver o motivo real (missing_sync_token, invalid_sync_token, etc)
+          try {
+            const errorJson = JSON.parse(text);
+            const detail = errorJson.error || errorJson.message || "api_key_required";
+            errorMsg = `Erro de autorização (401): ${detail}`;
+          } catch {
+            errorMsg = "Erro de autorização (401): Token inválido ou expirado.";
+          }
+        } else if (response.status === 404) {
+          errorMsg = "Link de sincronização não encontrado (404). Verifique o slug no link.";
+        } else {
+          errorMsg = `Falha na sincronização (Status ${response.status}).`;
         }
-        if (response.status === 404) {
-          throw new Error("Link de sincronização não encontrado.");
-        }
-        throw new Error(`Erro HTTP ${response.status}: ${text.substring(0, 100)}`);
+        
+        throw new Error(errorMsg);
       }
 
       if (!contentType || !contentType.includes("application/json")) {
@@ -181,7 +209,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       let externalMenu;
       try {
         externalMenu = JSON.parse(text);
-        console.log("MENU_SYNC_JSON_PARSED", !!externalMenu);
+        console.log("MENU_SYNC_JSON_RESPONSE", !!externalMenu);
       } catch (e) {
         console.log("MENU_SYNC_JSON_ERROR", e);
         throw new Error("O link respondeu, mas não retornou um cardápio válido.");
@@ -246,7 +274,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         status: 'error',
         errorDetails: errorMsg
       });
-      toast.error("Não foi possível sincronizar o cardápio. Verifique o link.", { id: toastId });
+      toast.error(errorMsg, { id: toastId });
     } finally {
       setSyncing(false);
     }
