@@ -326,28 +326,52 @@ export const Route = createFileRoute("/api/orders")({
               order_id: order.id
             });
 
-            // Recalcular totais da sessão
-            const currentSubtotal = (Number(session.subtotal_amount) || 0) + orderToInsert.total;
-            let serviceFeeAmount = 0;
-            let finalTotal = currentSubtotal;
-
-            if (session.service_fee_enabled) {
-              const percent = Number(session.service_fee_percent) || 15;
-              serviceFeeAmount = currentSubtotal * (percent / 100);
-              finalTotal = currentSubtotal + serviceFeeAmount;
-            }
-
-            await supabaseAdmin
-              .from("table_sessions")
-              .update({ 
-                subtotal_amount: currentSubtotal,
-                service_fee_amount: serviceFeeAmount,
-                total_amount: finalTotal,
-                updated_at: new Date().toISOString()
-              })
-              .eq("id", session.id);
+            // RECALCULAR TOTAIS DA SESSÃO USANDO DADOS REAIS DOS PEDIDOS
+            console.log(`🔄 [API/Orders] TABLE_SESSION_RECALCULATING: Session ${session.id}`);
             
-            console.log(`📊 [API/Orders] TABLE_SESSION_RECALCULATED: Subtotal: ${currentSubtotal}, Fee: ${serviceFeeAmount}, Total: ${finalTotal}`);
+            // Buscar todos os IDs de pedidos vinculados a esta sessão
+            const { data: linkedOrders, error: linkError } = await supabaseAdmin
+              .from("table_session_orders")
+              .select("order_id")
+              .eq("table_session_id", session.id);
+            
+            if (linkError) throw linkError;
+
+            const orderIds = (linkedOrders || []).map(lo => lo.order_id);
+            
+            if (orderIds.length > 0) {
+              // Buscar os totais reais desses pedidos
+              const { data: ordersInfo, error: ordersError } = await supabaseAdmin
+                .from("orders")
+                .select("total")
+                .in("id", orderIds);
+              
+              if (ordersError) throw ordersError;
+
+              const subtotal = (ordersInfo || []).reduce((sum, o) => sum + (Number(o.total) || 0), 0);
+              
+              let serviceFeeAmount = 0;
+              let finalTotal = subtotal;
+
+              // Usar a configuração atual da sessão
+              if (session.service_fee_enabled) {
+                const percent = Number(session.service_fee_percent) || 15;
+                serviceFeeAmount = subtotal * (percent / 100);
+                finalTotal = subtotal + serviceFeeAmount;
+              }
+
+              await supabaseAdmin
+                .from("table_sessions")
+                .update({ 
+                  subtotal_amount: subtotal,
+                  service_fee_amount: serviceFeeAmount,
+                  total_amount: finalTotal,
+                  updated_at: new Date().toISOString()
+                })
+                .eq("id", session.id);
+              
+              console.log(`📊 [API/Orders] TABLE_SESSION_RECALCULATED: Orders: ${orderIds.length}, Subtotal: ${subtotal}, Fee: ${serviceFeeAmount}, Total: ${finalTotal}`);
+            }
           } catch (err) {
             console.error("❌ [API/Orders] Erro ao processar sessão da mesa:", err);
           }

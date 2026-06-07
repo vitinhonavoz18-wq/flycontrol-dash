@@ -218,22 +218,31 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
-    const itemsHtml = orders.map(order => `
-      <div class="order-block">
-        <div class="order-header">Pedido #${order.id.substring(0, 8)} - ${new Date(order.created_at).toLocaleTimeString()}</div>
-        <div class="customer">${order.customer_name || 'Cliente'}</div>
-        <div class="items">
-          ${(order.items || []).map((item: any) => `
-            <div class="item">
-              <span class="qty">${item.quantity}x</span>
-              <span class="name">${item.product_name || item.name}</span>
-              <span class="price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total_price || (item.quantity * (item.unit_price || item.price || 0)))}</span>
-            </div>
-          `).join('')}
+    const itemsHtml = orders.filter(o => o && (o.items || o.total > 0)).map(order => {
+      const orderItems = order.items || [];
+      return `
+        <div class="order-block">
+          <div class="order-header">Pedido #${order.order_number || order.id.substring(0, 8)} - ${new Date(order.created_at).toLocaleTimeString()}</div>
+          <div class="customer">${order.customer_name || 'Cliente'}</div>
+          <div class="items">
+            ${orderItems.length > 0 ? orderItems.map((item: any) => `
+              <div class="item">
+                <span class="qty">${item.quantity}x</span>
+                <span class="name">${item.product_name || item.name}</span>
+                <span class="price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total_price || (item.quantity * (item.unit_price || item.price || 0)))}</span>
+              </div>
+              ${item.observations || item.notes ? `<div class="item-notes">Obs: ${item.observations || item.notes}</div>` : ''}
+            `).join('') : `
+              <div class="item">
+                <span class="name">Pedido via Site</span>
+                <span class="price">${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}</span>
+              </div>
+            `}
+          </div>
+          ${order.notes ? `<div class="notes">Geral: ${order.notes}</div>` : ''}
         </div>
-        ${order.notes ? `<div class="notes">Obs: ${order.notes}</div>` : ''}
-      </div>
-    `).join('<hr/>');
+      `;
+    }).join('<hr/>');
 
     printWindow.document.write(`
       <html>
@@ -251,6 +260,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
             .qty { width: 30px; }
             .name { flex: 1; }
             .price { width: 70px; text-align: right; }
+            .item-notes { font-size: 9px; color: #666; margin-left: 30px; margin-bottom: 5px; }
             .notes { font-size: 10px; color: #555; margin-top: 3px; }
             .summary { margin-top: 20px; border-top: 1px dashed #000; pt-5; }
             .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
@@ -581,31 +591,45 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
             <CardContent className="flex-1 overflow-y-auto p-4 space-y-6">
               {loadingOrders ? (
                 <div className="flex justify-center py-10"><RefreshCw className="animate-spin h-8 w-8 text-primary" /></div>
-              ) : sessionOrders.length === 0 ? (
-                <p className="text-center py-10 text-muted-foreground">Nenhum pedido vinculado a esta sessão.</p>
+              ) : sessionOrders.filter(o => o && (o.items || o.total > 0)).length === 0 ? (
+                <p className="text-center py-10 text-muted-foreground">Nenhum pedido real vinculado a esta sessão.</p>
               ) : (
-                sessionOrders.map((order, idx) => (
+                sessionOrders.filter(o => o && (o.items || o.total > 0)).map((order, idx) => (
                   <div key={order.id} className="border rounded-lg p-4 space-y-3">
                     <div className="flex justify-between items-start border-b pb-2">
                       <div>
-                        <span className="font-bold text-lg">Pedido #{order.id.substring(0, 8)}</span>
+                        <span className="font-bold text-lg">Pedido #{order.order_number || order.id.substring(0, 8)}</span>
                         <div className="text-xs text-muted-foreground">{new Date(order.created_at).toLocaleString()}</div>
                       </div>
                       <Badge variant="outline">{order.customer_name}</Badge>
                     </div>
                     <div className="space-y-2">
-                      {(order.items || []).map((item: any, i: number) => (
-                        <div key={i} className="flex justify-between text-sm">
-                          <span>{item.quantity}x {item.product_name || item.name}</span>
-                          <span className="font-mono">
-                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total_price || (item.quantity * (item.unit_price || item.price || 0)))}
-                          </span>
+                      {order.items && order.items.length > 0 ? (
+                        order.items.map((item: any, i: number) => (
+                          <div key={i} className="space-y-1">
+                            <div className="flex justify-between text-sm">
+                              <span>{item.quantity}x {item.product_name || item.name}</span>
+                              <span className="font-mono">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.total_price || (item.quantity * (item.unit_price || item.price || 0)))}
+                              </span>
+                            </div>
+                            {(item.observations || item.notes) && (
+                              <div className="text-[10px] text-muted-foreground pl-4">
+                                Obs: {item.observations || item.notes}
+                              </div>
+                            )}
+                          </div>
+                        ))
+                      ) : (
+                        <div className="flex justify-between text-sm italic text-muted-foreground">
+                          <span>Detalhes não disponíveis (Pedido via Site)</span>
+                          <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}</span>
                         </div>
-                      ))}
+                      )}
                     </div>
-                    {order.notes && <div className="text-xs italic bg-muted p-2 rounded">Obs: {order.notes}</div>}
+                    {order.notes && <div className="text-xs italic bg-muted p-2 rounded">Geral: {order.notes}</div>}
                     <div className="flex justify-end pt-2 font-bold border-t">
-                      Total: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}
+                      Total do Pedido: {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(order.total)}
                     </div>
                   </div>
                 ))
