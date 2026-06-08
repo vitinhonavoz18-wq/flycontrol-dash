@@ -88,17 +88,18 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           pizza_sizes: 0,
           products_updated: 0,
           products_created: 0,
-          categories_created: 0
+          categories_created: 0,
+          imported_from_normalized: 0
         };
 
-        console.log(`FL_MENU_SYNC_JSON_RECEIVED: ${JSON.stringify(menuData).substring(0, 500)}...`);
+        console.log(`FL_SYNC_JSON_RECEIVED: ${JSON.stringify(menuData).substring(0, 500)}...`);
         
         const normalizedProducts = menuData.normalized_products || [];
         const traditionalProducts = menuData.products || [];
         const traditionalDrinks = menuData.beverages || menuData.drinks || [];
         const traditionalCombos = menuData.combos || [];
         
-        console.log(`FL_MENU_SYNC_NORMALIZED_PRODUCTS_COUNT: ${normalizedProducts.length}`);
+        console.log(`FL_SYNC_NORMALIZED_PRODUCTS_COUNT: ${normalizedProducts.length}`);
         console.log(`FL_MENU_SYNC_PRODUCTS_COUNT: ${traditionalProducts.length}`);
         console.log(`FL_MENU_SYNC_DRINKS_COUNT: ${traditionalDrinks.length}`);
 
@@ -205,7 +206,10 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
               if (productType === "beverage") results.beverages++;
               else results.products++;
             }
+            results.imported_from_normalized++;
           }
+          console.log(`FL_SYNC_PRODUCTS_IMPORTED: ${results.imported_from_normalized}`);
+          console.log(`FL_SYNC_CATEGORIES_IMPORTED: ${results.categories}`);
         } else {
           console.log("⚠️ [Sync] normalized_products vazio, tentando fontes tradicionais");
           
@@ -453,20 +457,17 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           }
         }
 
-        console.log(`FL_MENU_SYNC_CATEGORIES_CREATED: ${results.categories_created}`);
-        console.log(`FL_MENU_SYNC_PRODUCTS_CREATED: ${results.products_created}`);
-        console.log(`FL_MENU_SYNC_PRODUCTS_UPDATED: ${results.products_updated}`);
+        console.log(`FL_SYNC_CATEGORIES_CREATED: ${results.categories_created}`);
+        console.log(`FL_SYNC_PRODUCTS_CREATED: ${results.products_created}`);
+        console.log(`FL_SYNC_PRODUCTS_UPDATED: ${results.products_updated}`);
 
-        if (results.products_created === 0 && results.products_updated === 0 && results.beverages === 0 && results.combos === 0) {
-          console.log(`FL_MENU_SYNC_NO_ITEMS_REASON: Nenhum item novo ou atualizado foi processado.`);
+        const totalItems = results.products + results.beverages + results.combos + results.extras + results.pizza_sizes;
+        if (totalItems === 0) {
+          console.log("FL_MENU_SYNC_NO_ITEMS_REASON: Todos os arrays de produtos e categorias estavam vazios no JSON.");
         }
 
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: "Cardápio sincronizado com sucesso",
-          results
-        }), { status: 200, headers: cors });
-      },
-    },
-  },
+        return new Response(JSON.stringify({ success: true, results }), { status: 200, headers: cors });
+      }
+    }
+  }
 });
