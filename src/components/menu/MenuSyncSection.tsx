@@ -152,8 +152,8 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
 
       if (response.ok && jsonResponse?.success) {
         const counts = {
-          categories: jsonResponse.categories?.length || 0,
-          products: (jsonResponse.products?.length || 0) + (jsonResponse.beverages?.length || 0),
+          categories: (jsonResponse.categories?.length || 0) + (jsonResponse.normalized_products?.reduce((acc: any, p: any) => p.category_name ? acc.add(p.category_name) : acc, new Set()).size || 0),
+          products: (jsonResponse.products?.length || 0) + (jsonResponse.beverages?.length || 0) + (jsonResponse.normalized_products?.length || 0),
           extras: (jsonResponse.borders?.length || 0) + (jsonResponse.additionals?.length || 0)
         };
         
