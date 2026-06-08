@@ -85,70 +85,93 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           beverages: 0,
           extras: 0,
           combos: 0,
-          pizza_sizes: 0
+          pizza_sizes: 0,
+          products_updated: 0,
+          categories_created: 0
         };
 
+        console.log(`FL_MENU_SYNC_JSON_RECEIVED: ${JSON.stringify(menuData).substring(0, 500)}...`);
+        
+        const normalizedProducts = menuData.normalized_products || [];
+        const traditionalProducts = menuData.products || [];
+        const traditionalDrinks = menuData.beverages || menuData.drinks || [];
+        const traditionalCombos = menuData.combos || [];
+        
+        console.log(`FL_MENU_SYNC_NORMALIZED_PRODUCTS_COUNT: ${normalizedProducts.length}`);
+        console.log(`FL_MENU_SYNC_PRODUCTS_COUNT: ${traditionalProducts.length}`);
+        console.log(`FL_MENU_SYNC_DRINKS_COUNT: ${traditionalDrinks.length}`);
+
         const categoriesMap: Record<string, string> = {}; 
-        if (Array.isArray(menuData.categories)) {
-          for (const cat of menuData.categories) {
-            const externalId = cat.id?.toString();
-            
-            let query = supabaseAdmin
+
+        // Helper function to get or create category by name
+        const getOrCreateCategory = async (catName: string, externalId?: string) => {
+          if (categoriesMap[catName]) return categoriesMap[catName];
+          if (externalId && categoriesMap[externalId]) return categoriesMap[externalId];
+
+          let query = supabaseAdmin
+            .from("menu_categories")
+            .select("id")
+            .eq("pizzeria_id", pizzeriaId);
+          
+          if (externalId) {
+            query = query.or(`external_id.eq.${externalId},name.eq."${catName}"`);
+          } else {
+            query = query.eq("name", catName);
+          }
+
+          const { data: existing } = await query.maybeSingle();
+
+          const payload = {
+            pizzeria_id: pizzeriaId,
+            name: catName,
+            active: true,
+            order_index: 0,
+            external_id: externalId || null,
+            external_source: "sitecreatorfly",
+            last_synced_at: new Date().toISOString()
+          };
+
+          if (existing) {
+            await supabaseAdmin.from("menu_categories").update(payload).eq("id", existing.id);
+            categoriesMap[catName] = existing.id;
+            if (externalId) categoriesMap[externalId] = existing.id;
+            return existing.id;
+          } else {
+            const { data: inserted } = await supabaseAdmin
               .from("menu_categories")
+              .insert(payload)
               .select("id")
-              .eq("pizzeria_id", pizzeriaId);
-            
-            if (externalId) {
-              query = query.or(`external_id.eq.${externalId},name.eq."${cat.name}"`);
-            } else {
-              query = query.eq("name", cat.name);
-            }
-
-            const { data: existing } = await query.maybeSingle();
-
-            const payload = {
-              pizzeria_id: pizzeriaId,
-              name: cat.name,
-              description: cat.description || null,
-              active: cat.active !== undefined ? cat.active : true,
-              order_index: cat.order_index ?? 0,
-              external_id: externalId,
-              external_source: "sitecreatorfly",
-              last_synced_at: new Date().toISOString()
-            };
-
-            if (existing) {
-              categoriesMap[externalId || cat.name] = existing.id;
-              await supabaseAdmin.from("menu_categories").update(payload).eq("id", existing.id);
-            } else {
-              const { data: inserted } = await supabaseAdmin
-                .from("menu_categories")
-                .insert(payload)
-                .select("id")
-                .single();
-              if (inserted) {
-                categoriesMap[externalId || cat.name] = inserted.id;
-                results.categories++;
-              }
+              .single();
+            if (inserted) {
+              categoriesMap[catName] = inserted.id;
+              if (externalId) categoriesMap[externalId] = inserted.id;
+              results.categories_created++;
+              results.categories++;
+              return inserted.id;
             }
           }
-        }
+          return null;
+        };
 
-        if (Array.isArray(menuData.products)) {
-          for (const prod of menuData.products) {
-            const externalId = prod.id?.toString();
-            const catId = prod.category_id ? (categoriesMap[prod.category_id] || prod.category_id) : null;
+        if (normalizedProducts.length > 0) {
+          console.log("🚀 [Sync] Usando normalized_products como fonte principal");
+          for (const item of normalizedProducts) {
+            const catName = item.category_name || "Geral";
+            const catId = await getOrCreateCategory(catName);
             
+            const externalId = item.external_id?.toString();
+            const productType = item.type === "drink" ? "beverage" : (item.type || "standard");
+
             let query = supabaseAdmin
               .from("menu_products")
               .select("id")
               .eq("pizzeria_id", pizzeriaId)
-              .eq("product_type", prod.product_type || "standard");
+              .eq("product_type", productType);
             
             if (externalId) {
-              query = query.or(`external_id.eq.${externalId},name.eq."${prod.name}"`);
+              query = query.or(`external_id.eq.${externalId},name.eq."${item.name}"`);
             } else {
-              query = query.eq("name", prod.name);
+              query = query.eq("name", item.name);
             }
 
             if (catId) {
@@ -159,13 +182,13 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
 
             const payload = {
               pizzeria_id: pizzeriaId,
-              name: prod.name,
-              description: prod.description || null,
-              price: prod.price || 0,
-              image_url: prod.image_url || null,
-              active: prod.active !== undefined ? prod.active : true,
-              available: prod.available !== undefined ? prod.available : true,
-              product_type: prod.product_type || "standard",
+              name: item.name,
+              description: item.description || null,
+              price: item.price || 0,
+              image_url: item.image_url || null,
+              active: item.is_active !== undefined ? item.is_active : true,
+              available: item.is_active !== undefined ? item.is_active : true,
+              product_type: productType,
               category_id: catId,
               external_id: externalId,
               external_source: "sitecreatorfly",
@@ -174,54 +197,124 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
 
             if (existing) {
               await supabaseAdmin.from("menu_products").update(payload).eq("id", existing.id);
+              results.products_updated++;
             } else {
               await supabaseAdmin.from("menu_products").insert(payload);
-              results.products++;
+              results.products_created++;
+              if (productType === "beverage") results.beverages++;
+              else results.products++;
+            }
+          }
+        } else {
+          console.log("⚠️ [Sync] normalized_products vazio, tentando fontes tradicionais");
+          
+          // Original logic for categories
+          if (Array.isArray(menuData.categories)) {
+            for (const cat of menuData.categories) {
+              const externalId = cat.id?.toString();
+              const catId = await getOrCreateCategory(cat.name, externalId);
+              if (catId) {
+                // Category update already handled in getOrCreateCategory payload for existing
+              }
+            }
+          }
+
+          // Original logic for products
+          if (Array.isArray(traditionalProducts)) {
+            for (const prod of traditionalProducts) {
+              const externalId = prod.id?.toString();
+              const catId = prod.category_id ? (categoriesMap[prod.category_id] || prod.category_id) : null;
+              
+              let query = supabaseAdmin
+                .from("menu_products")
+                .select("id")
+                .eq("pizzeria_id", pizzeriaId)
+                .eq("product_type", prod.product_type || "standard");
+              
+              if (externalId) {
+                query = query.or(`external_id.eq.${externalId},name.eq."${prod.name}"`);
+              } else {
+                query = query.eq("name", prod.name);
+              }
+
+              if (catId) {
+                query = query.eq("category_id", catId);
+              }
+
+              const { data: existing } = await query.maybeSingle();
+
+              const payload = {
+                pizzeria_id: pizzeriaId,
+                name: prod.name,
+                description: prod.description || null,
+                price: prod.price || 0,
+                image_url: prod.image_url || null,
+                active: prod.active !== undefined ? prod.active : true,
+                available: prod.available !== undefined ? prod.available : true,
+                product_type: prod.product_type || "standard",
+                category_id: catId,
+                external_id: externalId,
+                external_source: "sitecreatorfly",
+                last_synced_at: new Date().toISOString()
+              };
+
+              if (existing) {
+                await supabaseAdmin.from("menu_products").update(payload).eq("id", existing.id);
+                results.products_updated++;
+              } else {
+                await supabaseAdmin.from("menu_products").insert(payload);
+                results.products_created++;
+                results.products++;
+              }
+            }
+          }
+
+          // Original logic for beverages
+          if (Array.isArray(traditionalDrinks)) {
+            for (const bev of traditionalDrinks) {
+              const externalId = bev.id?.toString();
+              
+              let query = supabaseAdmin
+                .from("menu_products")
+                .select("id")
+                .eq("pizzeria_id", pizzeriaId)
+                .eq("product_type", "beverage");
+
+              if (externalId) {
+                query = query.or(`external_id.eq.${externalId},name.eq."${bev.name}"`);
+              } else {
+                query = query.eq("name", bev.name);
+              }
+
+              const { data: existing } = await query.maybeSingle();
+
+              const payload = {
+                pizzeria_id: pizzeriaId,
+                name: bev.name,
+                description: bev.description || null,
+                price: bev.price || 0,
+                image_url: bev.image_url || null,
+                active: bev.active !== undefined ? bev.active : true,
+                available: bev.available !== undefined ? bev.available : true,
+                product_type: "beverage",
+                external_id: externalId,
+                external_source: "sitecreatorfly",
+                last_synced_at: new Date().toISOString()
+              };
+
+              if (existing) {
+                await supabaseAdmin.from("menu_products").update(payload).eq("id", existing.id);
+                results.products_updated++;
+              } else {
+                await supabaseAdmin.from("menu_products").insert(payload);
+                results.products_created++;
+                results.beverages++;
+              }
             }
           }
         }
 
-        if (Array.isArray(menuData.beverages)) {
-          for (const bev of menuData.beverages) {
-            const externalId = bev.id?.toString();
-            
-            let query = supabaseAdmin
-              .from("menu_products")
-              .select("id")
-              .eq("pizzeria_id", pizzeriaId)
-              .eq("product_type", "beverage");
-
-            if (externalId) {
-              query = query.or(`external_id.eq.${externalId},name.eq."${bev.name}"`);
-            } else {
-              query = query.eq("name", bev.name);
-            }
-
-            const { data: existing } = await query.maybeSingle();
-
-            const payload = {
-              pizzeria_id: pizzeriaId,
-              name: bev.name,
-              description: bev.description || null,
-              price: bev.price || 0,
-              image_url: bev.image_url || null,
-              active: bev.active !== undefined ? bev.active : true,
-              available: bev.available !== undefined ? bev.available : true,
-              product_type: "beverage",
-              external_id: externalId,
-              external_source: "sitecreatorfly",
-              last_synced_at: new Date().toISOString()
-            };
-
-            if (existing) {
-              await supabaseAdmin.from("menu_products").update(payload).eq("id", existing.id);
-            } else {
-              await supabaseAdmin.from("menu_products").insert(payload);
-              results.beverages++;
-            }
-          }
-        }
-
+        // Always sync extras, combos and sizes if present
         if (Array.isArray(menuData.extras)) {
           for (const ext of menuData.extras) {
             const externalId = ext.id?.toString();
@@ -260,8 +353,8 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           }
         }
 
-        if (Array.isArray(menuData.combos)) {
-          for (const cb of menuData.combos) {
+        if (Array.isArray(traditionalCombos)) {
+          for (const cb of traditionalCombos) {
             const externalId = cb.id?.toString();
             
             let query = supabaseAdmin
@@ -359,11 +452,23 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           }
         }
 
+        console.log(`FL_MENU_SYNC_CATEGORIES_CREATED: ${results.categories_created}`);
+        console.log(`FL_MENU_SYNC_PRODUCTS_CREATED: ${results.products_created}`);
+        console.log(`FL_MENU_SYNC_PRODUCTS_UPDATED: ${results.products_updated}`);
+
+        if (results.products_created === 0 && results.products_updated === 0 && results.beverages === 0 && results.combos === 0) {
+          console.log(`FL_MENU_SYNC_NO_ITEMS_REASON: Nenhum item novo ou atualizado foi processado.`);
+        }
+
         return new Response(JSON.stringify({ 
           success: true, 
           message: "Cardápio sincronizado com sucesso",
           results
         }), { status: 200, headers: cors });
+      },
+    },
+  },
+});
       },
     },
   },
