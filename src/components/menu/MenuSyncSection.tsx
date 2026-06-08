@@ -250,10 +250,10 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         throw new Error(externalMenu.message || externalMenu.error || "Erro retornado pela API do SiteCreatorFly");
       }
 
-      const categoriesCount = externalMenu.categories?.length || 0;
-      const productsCount = (externalMenu.products?.length || 0) + (externalMenu.beverages?.length || 0);
+      const categoriesCount = (externalMenu.categories?.length || 0) + (externalMenu.normalized_products?.filter((p: any) => p.category_name)?.length || 0);
+      const productsCount = (externalMenu.products?.length || 0) + (externalMenu.beverages?.length || 0) + (externalMenu.normalized_products?.length || 0);
       
-      if (categoriesCount === 0 && productsCount === 0) {
+      if (categoriesCount === 0 && productsCount === 0 && (externalMenu.combos?.length || 0) === 0) {
         throw new Error("O link respondeu, mas nenhum produto ou categoria foi encontrado.");
       }
 
