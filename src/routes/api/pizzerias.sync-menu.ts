@@ -469,7 +469,3 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
     },
   },
 });
-      },
-    },
-  },
-});
