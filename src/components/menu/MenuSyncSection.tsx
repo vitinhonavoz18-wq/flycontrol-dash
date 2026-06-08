@@ -151,13 +151,17 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       }
 
       if (response.ok && jsonResponse?.success) {
-        const counts = {
-          categories: (jsonResponse.categories?.length || 0) + (jsonResponse.normalized_products?.reduce((acc: any, p: any) => p.category_name ? acc.add(p.category_name) : acc, new Set()).size || 0),
-          products: (jsonResponse.products?.length || 0) + (jsonResponse.beverages?.length || 0) + (jsonResponse.normalized_products?.length || 0),
-          extras: (jsonResponse.borders?.length || 0) + (jsonResponse.additionals?.length || 0)
-        };
+        const categoriesCount = (jsonResponse.categories?.length || 0) + 
+          (jsonResponse.normalized_products?.reduce((acc: any, p: any) => p.category_name ? acc.add(p.category_name) : acc, new Set()).size || 0);
         
-        toast.success(`Conexão OK! Encontrado: ${counts.categories} categorias, ${counts.products} produtos/bebidas e ${counts.extras} bordas/adicionais.`, { id: toastId });
+        const productsCount = (jsonResponse.products?.length || 0) + 
+          (jsonResponse.beverages?.length || 0) + 
+          (jsonResponse.drinks?.length || 0) +
+          (jsonResponse.normalized_products?.length || 0);
+
+        const extrasCount = (jsonResponse.borders?.length || 0) + (jsonResponse.additionals?.length || 0);
+        
+        toast.success(`Conexão OK! Encontrado: ${categoriesCount} categorias, ${productsCount} produtos/bebidas e ${extrasCount} bordas/adicionais.`, { id: toastId });
       } else {
         if (response.status === 401 || (jsonResponse && !jsonResponse.success && (jsonResponse.error === "invalid_sync_token" || jsonResponse.message === "invalid_sync_token"))) {
           toast.error("Token inválido. Copie novamente o link no SiteCreatorFly ou regenere o token.", { id: toastId, duration: 5000 });
@@ -250,10 +254,16 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         throw new Error(externalMenu.message || externalMenu.error || "Erro retornado pela API do SiteCreatorFly");
       }
 
-      const categoriesCount = (externalMenu.categories?.length || 0) + (externalMenu.normalized_products?.filter((p: any) => p.category_name)?.length || 0);
-      const productsCount = (externalMenu.products?.length || 0) + (externalMenu.beverages?.length || 0) + (externalMenu.normalized_products?.length || 0);
+      const categoriesCount = (externalMenu.categories?.length || 0) + 
+        (externalMenu.normalized_products?.reduce((acc: any, p: any) => p.category_name ? acc.add(p.category_name) : acc, new Set()).size || 0);
       
-      if (categoriesCount === 0 && productsCount === 0 && (externalMenu.combos?.length || 0) === 0) {
+      const productsCount = (externalMenu.products?.length || 0) + 
+        (externalMenu.beverages?.length || 0) + 
+        (externalMenu.drinks?.length || 0) +
+        (externalMenu.combos?.length || 0) +
+        (externalMenu.normalized_products?.length || 0);
+      
+      if (categoriesCount === 0 && productsCount === 0) {
         throw new Error("O link respondeu, mas nenhum produto ou categoria foi encontrado.");
       }
 
