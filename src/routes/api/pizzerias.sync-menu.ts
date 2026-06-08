@@ -87,6 +87,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           combos: 0,
           pizza_sizes: 0,
           products_updated: 0,
+          products_created: 0,
           categories_created: 0
         };
 
