@@ -483,17 +483,3 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
     }
   }
 });
-
-        if (results.products_created === 0 && results.products_updated === 0 && results.beverages === 0 && results.combos === 0) {
-          console.log(`FL_MENU_SYNC_NO_ITEMS_REASON: Nenhum item novo ou atualizado foi processado.`);
-        }
-
-        return new Response(JSON.stringify({ 
-          success: true, 
-          message: "Cardápio sincronizado com sucesso",
-          results
-        }), { status: 200, headers: cors });
-      },
-    },
-  },
-});
