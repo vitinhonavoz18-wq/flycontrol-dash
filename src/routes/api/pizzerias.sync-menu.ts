@@ -88,18 +88,6 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           pizza_sizes: 0,
           products_updated: 0,
           products_created: 0,
-          categories_created: 0
-        };
-
-        const results = {
-          categories: 0,
-          products: 0,
-          beverages: 0,
-          extras: 0,
-          combos: 0,
-          pizza_sizes: 0,
-          products_updated: 0,
-          products_created: 0,
           categories_created: 0,
           imported_from_normalized: 0
         };
