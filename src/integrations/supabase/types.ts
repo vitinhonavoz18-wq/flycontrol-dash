@@ -1175,6 +1175,14 @@ export type Database = {
         Args: { _pizzeria_id: string; _user_id: string }
         Returns: boolean
       }
+      recalculate_table_session_totals: {
+        Args: { p_session_id: string }
+        Returns: undefined
+      }
+      sync_order_to_table_session_logic: {
+        Args: { p_order_id: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "super_admin" | "owner"
