@@ -96,6 +96,7 @@ export const Route = createFileRoute("/api/orders")({
 
           return newSession;
         };
+        console.log("ORDER_RECEIVE_STARTED");
         const origin = request.headers.get("origin") || "N/A";
         
         console.log("📥 [API/Orders] Requisição POST recebida");
@@ -106,12 +107,14 @@ export const Route = createFileRoute("/api/orders")({
           const bodyText = await request.clone().text();
           body = JSON.parse(bodyText);
           
-          console.log("ORDER_RECEIVED_RAW_PAYLOAD:", JSON.stringify(body));
+          console.log("ORDER_RAW_PAYLOAD:", JSON.stringify(body));
         } catch (err) {
           console.error("❌ [API/Orders] JSON inválido");
+          console.log("ORDER_RESPONSE_SENT: error (invalid_json)");
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "JSON inválido" 
+            error: "invalid_json",
+            message: "JSON inválido" 
           }), { status: 400, headers: cors });
         }
 
@@ -126,9 +129,11 @@ export const Route = createFileRoute("/api/orders")({
 
         if (!apiKey) {
           console.error("❌ [API/Orders] Erro: API Key ausente");
+          console.log("ORDER_RESPONSE_SENT: error (api_key_missing)");
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "API Key ausente" 
+            error: "api_key_missing",
+            message: "API Key ausente" 
           }), { status: 401, headers: cors });
         }
 
@@ -143,38 +148,48 @@ export const Route = createFileRoute("/api/orders")({
 
         if (pErr) {
           console.error("❌ [API/Orders] Erro no banco:", pErr.message);
+          console.log("ORDER_RESPONSE_SENT: error (db_error)");
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "Erro de banco de dados",
+            error: "db_error",
+            message: "Erro de banco de dados interno",
             details: pErr.message
           }), { status: 500, headers: cors });
         }
 
         if (!pz) {
           console.error("❌ [API/Orders] Pizzaria não encontrada para esta API Key");
+          console.log("ORDER_RESTAURANT_FOUND: false");
+          console.log("ORDER_RESPONSE_SENT: error (restaurant_not_found)");
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "Pizzaria não encontrada ou API Key inválida" 
-          }), { status: 403, headers: cors });
+            error: "restaurant_not_found",
+            message: "Pizzaria não encontrada ou API Key inválida" 
+          }), { status: 404, headers: cors });
         }
 
+        console.log("ORDER_RESTAURANT_FOUND: true");
         console.log(`✅ [API/Orders] Loja identificada: ${pz.name} (ID: ${pz.id}) | Aberta: ${pz.is_open}`);
         
         // Verificação de assinatura suspensa
         if (pz.subscription_status === "suspended" || pz.is_active === false) {
           console.error(`❌ [API/Orders] Loja ${pz.name} está SUSPENSA. Bloqueando pedido.`);
+          console.log("ORDER_RESPONSE_SENT: error (store_suspended)");
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "Esta loja está temporariamente suspensa. Entre em contato com o suporte." 
+            error: "store_suspended",
+            message: "Esta loja está temporariamente suspensa. Entre em contato com o suporte." 
           }), { status: 403, headers: cors });
         }
 
         // Verificação de loja aberta
         if (pz.is_open === false) {
           console.error(`❌ [API/Orders] Loja ${pz.name} está FECHADA. Bloqueando pedido.`);
+          console.log("ORDER_RESPONSE_SENT: error (store_closed)");
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "Loja fechada no momento. Os pedidos estão temporariamente indisponíveis." 
+            error: "store_closed",
+            message: "Loja fechada no momento. Os pedidos estão temporariamente indisponíveis." 
           }), { status: 403, headers: cors });
         }
 
@@ -207,11 +222,36 @@ export const Route = createFileRoute("/api/orders")({
           return 0;
         };
 
+        const totalValue = parseMoney(orderData.total || body.total || 0);
+        console.log("ORDER_ITEMS_COUNT:", items.length);
+        console.log("ORDER_TOTAL:", totalValue);
+
+        // Validações básicas de pedido
+        if (!Array.isArray(items) || items.length === 0) {
+          console.error("❌ [API/Orders] Itens vazios");
+          console.log("ORDER_RESPONSE_SENT: error (empty_items)");
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "empty_items",
+            message: "O pedido deve conter pelo menos um item" 
+          }), { status: 400, headers: cors });
+        }
+
+        if (totalValue <= 0) {
+          console.error("❌ [API/Orders] Total inválido");
+          console.log("ORDER_RESPONSE_SENT: error (invalid_total)");
+          return new Response(JSON.stringify({ 
+            success: false, 
+            error: "invalid_total",
+            message: "O valor total do pedido deve ser maior que zero" 
+          }), { status: 400, headers: cors });
+        }
+
         // 3. Validação de Mesa (se aplicável)
         const deliveryType = (orderData.delivery_type || body.delivery_type || body.service_mode || "delivery").toLowerCase();
         const isTableOrder = deliveryType === "table" || deliveryType === "mesa";
         
-        console.log("ORDER_TYPE_DETECTED:", deliveryType, `(isTableOrder: ${isTableOrder})`);
+        console.log("ORDER_TYPE_DETECTED:", isTableOrder ? "table" : deliveryType);
 
         let validatedTableId = null;
         let validatedTableNumber = body.table_number || orderData.table_number || "";
@@ -225,10 +265,11 @@ export const Route = createFileRoute("/api/orders")({
 
           if (!tableNumber || !tableToken) {
             console.error("❌ [API/Orders] Pedido de mesa sem table_number ou table_token");
+            console.log("ORDER_RESPONSE_SENT: error (invalid_table_data)");
             return new Response(JSON.stringify({ 
               success: false, 
-              error: "invalid_table",
-              message: "Número da mesa ou token ausente" 
+              error: "invalid_table_data",
+              message: "Número da mesa ou token ausente para pedido do tipo mesa" 
             }), { status: 400, headers: cors });
           }
 
@@ -236,10 +277,11 @@ export const Route = createFileRoute("/api/orders")({
           console.log("TABLE_ORDER_VALIDATION_RESULT:", validation.valid ? "Valid" : "Invalid", validation.reason || "");
 
           if (!validation.valid) {
+            console.log("ORDER_RESPONSE_SENT: error (invalid_table)");
             return new Response(JSON.stringify({ 
               success: false, 
               error: "invalid_table",
-              message: "Mesa inválida ou inativa" 
+              message: "Mesa inválida, inativa ou token incorreto" 
             }), { status: 400, headers: cors });
           }
           
@@ -255,7 +297,7 @@ export const Route = createFileRoute("/api/orders")({
           customer_phone: customer.phone || customer.customer_phone || body.customer_phone || "",
           customer_address: isTableOrder ? "Consumo no Local" : (customer.address || customer.customer_address || body.customer_address || "Não informado"),
           neighborhood: isTableOrder ? "Mesa" : (customer.neighborhood || body.neighborhood || null),
-          total: parseMoney(orderData.total || body.total || 0),
+          total: totalValue,
           subtotal: parseMoney(orderData.subtotal || body.subtotal || 0),
           delivery_fee: isTableOrder ? 0 : parseMoney(orderData.delivery_fee || body.delivery_fee || 0),
           payment_method: orderData.payment_method || body.payment_method || "Não informado",
@@ -272,27 +314,29 @@ export const Route = createFileRoute("/api/orders")({
           items: items,
         };
 
+        console.log("ORDER_SAVE_STARTED");
         console.log("ORDER_INSERT_PAYLOAD:", JSON.stringify(orderToInsert));
-        console.log("ORDER_INSERT_TABLE: orders");
 
         const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
           .insert(orderToInsert)
-          .select("id")
+          .select("id, order_number")
           .single();
 
         if (orderError) {
           console.error("ORDER_INSERT_ERROR:", orderError.message);
+          console.log("ORDER_SAVE_ERROR:", orderError.message);
+          console.log("ORDER_RESPONSE_SENT: error (save_error)");
           await logExternalOrder(apiKey, body, 500, `Erro insert: ${orderError.message}`);
           return new Response(JSON.stringify({ 
             success: false, 
-            error: "database_schema_error",
+            error: "save_error",
             message: "Erro ao salvar pedido no FlyControl",
             details: orderError.message 
           }), { status: 500, headers: cors });
         }
         
+        console.log("ORDER_SAVE_SUCCESS");
         console.log(`✨ [API/Orders] Pedido salvo! ID: ${order.id}`);
-        console.log("ORDER_SAVE_RESULT: success");
 
         // 5. Vincular à Comanda (se for pedido de mesa)
         if (isTableOrder && validatedTableId) {
@@ -482,11 +526,12 @@ export const Route = createFileRoute("/api/orders")({
         return new Response(JSON.stringify({ 
           success: true, 
           order_id: order.id, 
+          order_number: order.order_number,
           order_type: orderToInsert.delivery_type,
           service_mode: orderToInsert.delivery_type === "table" ? "mesa" : orderToInsert.delivery_type,
           table_number: orderToInsert.table_number,
-          message: "Pedido recebido pelo FlyControl" 
-        }), { status: 200, headers: cors });
+          message: "Pedido recebido com sucesso" 
+        }), { status: 201, headers: cors });
       },
     },
   },
