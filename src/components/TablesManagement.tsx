@@ -213,72 +213,14 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     return cleaned;
   };
 
-  async function syncOrderToSession(order: any, session: TableSession) {
-    const normalizedSessionTable = normalizeTableValue(session.table_number);
-    const orderType = normalizeOrderType(order);
-    const normalizedOrderTable = normalizeTableValue(order.table_number || order.tableNumber || order.mesa);
-
-    if (orderType !== 'table' || normalizedOrderTable !== normalizedSessionTable) return false;
-
-    // Verificar se já existe vínculo
-    const { data: existingLink } = await supabase
-      .from("table_session_orders")
-      .select("id")
-      .eq("order_id", order.id)
-      .maybeSingle();
-    
-    if (existingLink) return false;
-
-    console.log(`🔗 [AUTO_SYNC] Vinculando pedido ${order.id} à sessão ${session.id} (Mesa ${session.table_number})`);
-    
-    const { error: linkError } = await supabase
-      .from("table_session_orders")
-      .insert({
-        table_session_id: session.id,
-        order_id: order.id
-      });
-
-    if (linkError) {
-      console.error("Erro ao vincular pedido:", linkError);
-      return false;
-    }
-
-    // Recalcular totais da sessão
-    const { data: links } = await supabase
-      .from("table_session_orders")
-      .select("orders(total, items, customer_name)")
-      .eq("table_session_id", session.id);
-    
-    const orders = (links || []).map((l: any) => l.orders).filter(Boolean);
-    const validOrders = orders.filter((o: any) => {
-      const isGhost = (Number(o.total) === 0 || o.total === null) && 
-                      (o.customer_name === "Cliente Site" || !o.customer_name) &&
-                      (!o.items || (Array.isArray(o.items) && o.items.length === 0));
-      return !isGhost;
-    });
-
-    const subtotal = validOrders.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
-    const fee = session.service_fee_enabled ? subtotal * (Number(session.service_fee_percent || 15) / 100) : 0;
-
-    await supabase
-      .from("table_sessions")
-      .update({
-        subtotal_amount: subtotal,
-        service_fee_amount: fee,
-        total_amount: subtotal + fee
-      })
-      .eq("id", session.id);
-
-    console.log(`✅ [AUTO_SYNC] Sessão ${session.id} recalculada. Subtotal: ${subtotal}`);
-    return true;
-  }
+  // A lógica de sincronização foi movida para o backend (triggers SQL).
+  // Mantemos apenas funções de recarregamento e exibição de dados.
 
   async function loadSessionOrders(session: TableSession) {
     setLoadingOrders(true);
     console.log(`🔍 [Comanda/Load] Carregando pedidos para Mesa ${session.table_number} (ID: ${session.id})`);
     
     try {
-      // 1. Buscar pedidos vinculados formalmente
       const { data: linkedData, error: linkedError } = await supabase
         .from("table_session_orders")
         .select(`
@@ -290,47 +232,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
       if (linkedError) throw linkedError;
 
       const linkedOrders = (linkedData || []).map((d: any) => d.orders).filter(Boolean);
-      const linkedIds = new Set(linkedOrders.map(o => o.id));
-
-      // 2. Buscar pedidos em tempo real baseados em critérios (fallback e sincronização automática)
-      const normalizedSessionTable = normalizeTableValue(session.table_number);
       
-      const { data: directOrders, error: directError } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("tenant_id", tenantId)
-        .neq("status", "deleted")
-        .neq("status", "cancelado")
-        .gte("created_at", session.opened_at);
-
-      if (directError) throw directError;
-
-      // Filtrar no JS para suportar a normalização do número da mesa
-      const matchingOrders = (directOrders || []).filter(order => {
-        const orderType = normalizeOrderType(order);
-        if (orderType !== 'table') return false;
-        
-        const normalizedOrderTable = normalizeTableValue(order.table_number || (order as any).tableNumber || (order as any).mesa);
-        return normalizedOrderTable === normalizedSessionTable;
-      });
-
-      console.log(`📊 [Comanda/Sync] Encontrados ${matchingOrders.length} pedidos em orders. ${linkedOrders.length} já vinculados.`);
-
-      // 3. Vincular pedidos novos automaticamente se encontrados
-      for (const order of matchingOrders) {
-        if (!linkedIds.has(order.id)) {
-          console.log(`🔗 [Comanda/Sync] Vinculando pedido ${order.id} não vinculado à sessão ${session.id}`);
-          await supabase
-            .from("table_session_orders")
-            .insert({
-              table_session_id: session.id,
-              order_id: order.id
-            });
-          linkedOrders.push(order);
-          linkedIds.add(order.id);
-        }
-      }
-
       // Filtrar pedidos fantasmas e atualizar estado local
       const filteredOrders = linkedOrders.filter(o => {
         const isGhost = (Number(o.total) === 0 || o.total === null) && 
@@ -340,13 +242,6 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
       });
 
       setSessionOrders(filteredOrders);
-      
-      // 4. Se a lista mudou, disparar recálculo de totais na sessão (opcional mas bom para consistência)
-      const subtotal = filteredOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-      if (subtotal !== session.subtotal_amount) {
-        handleSyncTables(); // Reutiliza a lógica de sync global para atualizar o subtotal da sessão
-      }
-
     } catch (error: any) {
       toast.error("Erro ao carregar pedidos: " + error.message);
     } finally {
@@ -472,98 +367,16 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     const loadingToast = toast.loading("Sincronizando pedidos da mesa...");
     
     try {
-      // 1. Buscar todas as sessões abertas
-      const { data: activeSessions } = await supabase
-        .from("table_sessions")
-        .select("id, table_number, opened_at, subtotal_amount, service_fee_enabled, service_fee_percent")
-        .eq("restaurant_id", tenantId)
-        .eq("status", "open");
+      // Como agora temos triggers no banco, a "sincronização" manual 
+      // pode apenas recarregar as sessões, mas para garantir que pedidos 
+      // que por algum motivo não entraram sejam processados, podemos 
+      // chamar uma função RPC se disponível, ou apenas recarregar.
       
-      if (!activeSessions || activeSessions.length === 0) {
-        toast.dismiss(loadingToast);
-        toast.info("Nenhuma mesa aberta para sincronizar.");
-        return;
-      }
-
-      console.log(`[Debug/Sync] Sincronizando ${activeSessions.length} mesas...`);
-
-      for (const session of activeSessions) {
-        const normalizedSessionTable = normalizeTableValue(session.table_number);
-        
-        // 2. Buscar pedidos do tipo mesa deste restaurante a partir da abertura da sessão
-        const { data: allOrders } = await supabase
-          .from("orders")
-          .select("*")
-          .eq("tenant_id", tenantId)
-          .neq("status", "deleted")
-          .neq("status", "cancelado")
-          .gte("created_at", session.opened_at);
-
-        if (!allOrders) continue;
-
-        const matchingOrders = allOrders.filter(order => {
-          const orderType = normalizeOrderType(order);
-          if (orderType !== 'table') return false;
-          
-          const normalizedOrderTable = normalizeTableValue(order.table_number || (order as any).tableNumber || (order as any).mesa);
-          return normalizedOrderTable === normalizedSessionTable;
-        });
-
-        for (const order of matchingOrders) {
-          // Verificar se já existe vínculo
-          const { data: existingLink } = await supabase
-            .from("table_session_orders")
-            .select("id")
-            .eq("order_id", order.id)
-            .maybeSingle();
-          
-          if (!existingLink) {
-            console.log(`[Debug/Sync] Vinculando pedido ${order.id} à sessão ${session.id} (Mesa ${session.table_number})`);
-            await supabase
-              .from("table_session_orders")
-              .insert({
-                table_session_id: session.id,
-                order_id: order.id
-              });
-          }
-        }
-
-        // 3. Recalcular totais da sessão a partir dos vínculos atuais (garantindo dados reais)
-        const { data: links } = await supabase
-          .from("table_session_orders")
-          .select("orders(total, items, customer_name)")
-          .eq("table_session_id", session.id);
-        
-        const orders = (links || []).map((l: any) => l.orders).filter(Boolean);
-        
-        // Filtrar pedidos fantasmas
-        const validOrders = orders.filter((o: any) => {
-          const isGhost = (Number(o.total) === 0 || o.total === null) && 
-                          (o.customer_name === "Cliente Site" || !o.customer_name) &&
-                          (!o.items || (Array.isArray(o.items) && o.items.length === 0));
-          return !isGhost;
-        });
-
-        const subtotal = validOrders.reduce((sum: number, o: any) => sum + (Number(o.total) || 0), 0);
-        
-        let fee = 0;
-        if (session.service_fee_enabled) {
-          fee = subtotal * (Number(session.service_fee_percent || 15) / 100);
-        }
-
-        await supabase
-          .from("table_sessions")
-          .update({
-            subtotal_amount: subtotal,
-            service_fee_amount: fee,
-            total_amount: subtotal + fee
-          })
-          .eq("id", session.id);
-      }
-
+      // O backfill já foi feito na migration, então loadSessions deve bastar.
+      await loadSessions();
+      
       toast.dismiss(loadingToast);
       toast.success("Pedidos sincronizados com sucesso!");
-      loadSessions();
     } catch (err) {
       console.error(err);
       toast.dismiss(loadingToast);
@@ -574,45 +387,35 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
   useEffect(() => {
     if (!tenantId) return;
 
-    console.log("📡 [Realtime] Iniciando subscription para sincronização automática de comandas...");
+    console.log("📡 [Realtime] Iniciando subscription para atualizações de comandas...");
     
+    // Agora ouvimos diretamente a tabela table_sessions pois o backend cuida de tudo
     const channel = supabase
-      .channel('table-sync-changes')
+      .channel('table-session-changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'table_sessions',
+          filter: `restaurant_id=eq.${tenantId}`
+        },
+        async (payload) => {
+          console.log("🔄 [Realtime] Mudança detectada em table_sessions, recarregando...");
+          loadSessions();
+        }
+      )
       .on(
         'postgres_changes',
         {
           event: 'INSERT',
           schema: 'public',
-          table: 'orders',
-          filter: `tenant_id=eq.${tenantId}`
+          table: 'table_session_orders'
         },
         async (payload) => {
-          const newOrder = payload.new;
-          const orderType = normalizeOrderType(newOrder);
-          
-          if (orderType === 'table') {
-            console.log(`🆕 [NEW_ORDER_RECEIVED_FOR_TABLE_SYNC] Pedido #${newOrder.order_number} recebido.`);
-            
-            // Buscar sessões abertas atuais
-            const { data: activeSessions } = await supabase
-              .from("table_sessions")
-              .select("*")
-              .eq("restaurant_id", tenantId)
-              .eq("status", "open");
-
-            if (activeSessions && activeSessions.length > 0) {
-              let synced = false;
-              for (const session of activeSessions) {
-                const wasSynced = await syncOrderToSession(newOrder, session as any);
-                if (wasSynced) synced = true;
-              }
-              
-              if (synced) {
-                console.log("🔄 [OPEN_TABLE_SESSIONS_REFRESHED] Recarregando sessões para atualizar interface...");
-                loadSessions();
-              }
-            }
-          }
+          // Como não temos restaurant_id em table_session_orders, 
+          // apenas recarregamos para garantir.
+          loadSessions();
         }
       )
       .subscribe();
