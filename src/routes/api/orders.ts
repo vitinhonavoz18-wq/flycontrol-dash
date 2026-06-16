@@ -50,7 +50,7 @@ export const Route = createFileRoute("/api/orders")({
           return { valid: true, table };
         };
 
-        const getOrCreateTableSession = async (restaurantId: string, tableId: string, tableNumber: string, tableName?: string) => {
+        const getOrCreateTableSession = async (restaurantId: string, tableId: string | null, tableNumber: string, tableName?: string) => {
           console.log(`🔍 [API/Orders] TABLE_ORDER_SESSION_LOOKUP para Mesa ${tableNumber} (Restaurant: ${restaurantId})`);
           const { data: session, error: sError } = await supabaseAdmin
             .from("table_sessions")
