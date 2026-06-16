@@ -347,7 +347,7 @@ export const Route = createFileRoute("/api/orders")({
         console.log(`✨ [API/Orders] Pedido salvo! ID: ${order.id}`);
 
         // 5. Vincular à Comanda (se for pedido de mesa)
-        if (isTableOrder && validatedTableId) {
+        if (isTableOrder) {
           try {
             const customerName = orderToInsert.customer_name;
             
