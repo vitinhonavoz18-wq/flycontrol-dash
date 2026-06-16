@@ -365,19 +365,25 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
   async function handleSyncTables() {
     if (!tenantId) return;
     const loadingToast = toast.loading("Sincronizando pedidos da mesa...");
-    
+
     try {
-      // Como agora temos triggers no banco, a "sincronização" manual 
-      // pode apenas recarregar as sessões, mas para garantir que pedidos 
-      // que por algum motivo não entraram sejam processados, podemos 
-      // chamar uma função RPC se disponível, ou apenas recarregar.
-      
-      // O backfill já foi feito na migration, então loadSessions deve bastar.
+      const res = await fetch("/api/sync-table-sessions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ tenant_id: tenantId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      console.log("SYNC_TABLE_SESSIONS_RESULT:", data);
+
       await loadSessions();
-      
+
       toast.dismiss(loadingToast);
-      toast.success("Pedidos sincronizados com sucesso!");
-    } catch (err) {
+      if (data?.success) {
+        toast.success(`Pedidos sincronizados! (${data.linked || 0} vinculados)`);
+      } else {
+        toast.error("Falha ao sincronizar: " + (data?.error || "erro desconhecido"));
+      }
+    } catch (err: any) {
       console.error(err);
       toast.dismiss(loadingToast);
       toast.error("Erro ao sincronizar pedidos.");
