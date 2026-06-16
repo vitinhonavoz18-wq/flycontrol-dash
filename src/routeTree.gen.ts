@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
+import { Route as ApiSyncTableSessionsRouteImport } from './routes/api/sync-table-sessions'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AppTablesRouteImport } from './routes/_app/tables'
@@ -66,6 +67,11 @@ const IndexRoute = IndexRouteImport.update({
 const PrintOrderIdRoute = PrintOrderIdRouteImport.update({
   id: '/print/$orderId',
   path: '/print/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSyncTableSessionsRoute = ApiSyncTableSessionsRouteImport.update({
+  id: '/api/sync-table-sessions',
+  path: '/api/sync-table-sessions',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiOrdersRoute = ApiOrdersRouteImport.update({
@@ -201,6 +207,7 @@ export interface FileRoutesByFullPath {
   '/tables': typeof AppTablesRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
+  '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
@@ -230,6 +237,7 @@ export interface FileRoutesByTo {
   '/tables': typeof AppTablesRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
+  '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
@@ -262,6 +270,7 @@ export interface FileRoutesById {
   '/_app/tables': typeof AppTablesRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
+  '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/finance': typeof AppAdminFinanceRoute
@@ -294,6 +303,7 @@ export interface FileRouteTypes {
     | '/tables'
     | '/api/health'
     | '/api/orders'
+    | '/api/sync-table-sessions'
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/finance'
@@ -323,6 +333,7 @@ export interface FileRouteTypes {
     | '/tables'
     | '/api/health'
     | '/api/orders'
+    | '/api/sync-table-sessions'
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/finance'
@@ -354,6 +365,7 @@ export interface FileRouteTypes {
     | '/_app/tables'
     | '/api/health'
     | '/api/orders'
+    | '/api/sync-table-sessions'
     | '/print/$orderId'
     | '/_app/admin/analytics'
     | '/_app/admin/finance'
@@ -377,6 +389,7 @@ export interface RootRouteChildren {
   SignupRoute: typeof SignupRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiOrdersRoute: typeof ApiOrdersRoute
+  ApiSyncTableSessionsRoute: typeof ApiSyncTableSessionsRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPizzeriasFiqonTestRoute: typeof ApiPizzeriasFiqonTestRoute
@@ -428,6 +441,13 @@ declare module '@tanstack/react-router' {
       path: '/print/$orderId'
       fullPath: '/print/$orderId'
       preLoaderRoute: typeof PrintOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sync-table-sessions': {
+      id: '/api/sync-table-sessions'
+      path: '/api/sync-table-sessions'
+      fullPath: '/api/sync-table-sessions'
+      preLoaderRoute: typeof ApiSyncTableSessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/orders': {
@@ -650,6 +670,7 @@ const rootRouteChildren: RootRouteChildren = {
   SignupRoute: SignupRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiOrdersRoute: ApiOrdersRoute,
+  ApiSyncTableSessionsRoute: ApiSyncTableSessionsRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPizzeriasFiqonTestRoute: ApiPizzeriasFiqonTestRoute,

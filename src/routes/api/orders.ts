@@ -50,7 +50,7 @@ export const Route = createFileRoute("/api/orders")({
           return { valid: true, table };
         };
 
-        const getOrCreateTableSession = async (restaurantId: string, tableId: string, tableNumber: string, tableName?: string) => {
+        const getOrCreateTableSession = async (restaurantId: string, tableId: string | null, tableNumber: string, tableName?: string) => {
           console.log(`🔍 [API/Orders] TABLE_ORDER_SESSION_LOOKUP para Mesa ${tableNumber} (Restaurant: ${restaurantId})`);
           const { data: session, error: sError } = await supabaseAdmin
             .from("table_sessions")
@@ -247,47 +247,55 @@ export const Route = createFileRoute("/api/orders")({
           }), { status: 400, headers: cors });
         }
 
-        // 3. Validação de Mesa (se aplicável)
-        const deliveryType = (orderData.delivery_type || body.delivery_type || body.service_mode || "delivery").toLowerCase();
-        const isTableOrder = deliveryType === "table" || deliveryType === "mesa";
-        
-        console.log("ORDER_TYPE_DETECTED:", isTableOrder ? "table" : deliveryType);
+        // 3. Detecção/validação de Mesa (mais robusta: detecta mesa por presença de table_number/token, não só por delivery_type)
+        const rawDeliveryType = (orderData.delivery_type || body.delivery_type || body.service_mode || orderData.service_mode || orderData.order_type || body.order_type || "delivery").toLowerCase();
+        const rawTableNumber = body.table_number || orderData.table_number || "";
+        const rawTableToken = body.table_token || orderData.table_token || "";
+        const explicitTable = ["table", "mesa"].includes(rawDeliveryType);
+        const inferredTable = !!(String(rawTableNumber).trim()) || !!(String(rawTableToken).trim());
+        const isTableOrder = explicitTable || inferredTable;
+        const deliveryType = isTableOrder ? "table" : rawDeliveryType;
 
-        let validatedTableId = null;
-        let validatedTableNumber = body.table_number || orderData.table_number || "";
+        console.log("ORDER_TYPE_DETECTED:", isTableOrder ? "table" : deliveryType, "explicit:", explicitTable, "inferred:", inferredTable);
+
+        let validatedTableId: string | null = null;
+        let validatedTableNumber = rawTableNumber;
         let validatedTableName = body.table_name || orderData.table_name || "";
 
         if (isTableOrder) {
-          const tableNumber = body.table_number || orderData.table_number;
-          const tableToken = body.table_token || orderData.table_token;
+          const tableNumber = String(rawTableNumber || "").trim();
+          const tableToken = String(rawTableToken || "").trim();
 
-          console.log("TABLE_ORDER_DATA:", { tableNumber, tableToken });
+          console.log("TABLE_ORDER_DATA:", { tableNumber, tableToken: tableToken ? "present" : "missing" });
 
-          if (!tableNumber || !tableToken) {
-            console.error("❌ [API/Orders] Pedido de mesa sem table_number ou table_token");
-            console.log("ORDER_RESPONSE_SENT: error (invalid_table_data)");
-            return new Response(JSON.stringify({ 
-              success: false, 
+          if (!tableNumber) {
+            console.error("❌ [API/Orders] Pedido de mesa sem table_number");
+            return new Response(JSON.stringify({
+              success: false,
               error: "invalid_table_data",
-              message: "Número da mesa ou token ausente para pedido do tipo mesa" 
+              message: "Número da mesa ausente para pedido do tipo mesa"
             }), { status: 400, headers: cors });
           }
 
-          const validation = await validateTableForOrder(pz.id, String(tableNumber), tableToken);
-          console.log("TABLE_ORDER_VALIDATION_RESULT:", validation.valid ? "Valid" : "Invalid", validation.reason || "");
+          // Com token: validação estrita. Sem token: fallback por tenant+número (compat com payloads antigos do SF).
+          let tableQuery = supabaseAdmin
+            .from("restaurant_tables")
+            .select("id, table_number, table_name, public_token, is_active")
+            .eq("restaurant_id", pz.id)
+            .eq("table_number", tableNumber)
+            .eq("is_active", true);
+          if (tableToken) tableQuery = tableQuery.eq("public_token", tableToken);
 
-          if (!validation.valid) {
-            console.log("ORDER_RESPONSE_SENT: error (invalid_table)");
-            return new Response(JSON.stringify({ 
-              success: false, 
-              error: "invalid_table",
-              message: "Mesa inválida, inativa ou token incorreto" 
-            }), { status: 400, headers: cors });
+          const { data: table, error: tErr } = await tableQuery.maybeSingle();
+          if (tErr) console.error("❌ [API/Orders] Erro ao buscar mesa:", tErr.message);
+
+          if (!table) {
+            console.warn("⚠️ [API/Orders] Mesa não localizada com os dados; vinculando apenas por número.");
+          } else {
+            validatedTableId = table.id;
+            validatedTableNumber = table.table_number || validatedTableNumber;
+            validatedTableName = table.table_name || validatedTableName;
           }
-          
-          validatedTableId = validation.table?.id;
-          validatedTableNumber = validation.table?.table_number || validatedTableNumber;
-          validatedTableName = validation.table?.table_name || validatedTableName;
         }
 
         const orderToInsert: any = {
@@ -339,7 +347,7 @@ export const Route = createFileRoute("/api/orders")({
         console.log(`✨ [API/Orders] Pedido salvo! ID: ${order.id}`);
 
         // 5. Vincular à Comanda (se for pedido de mesa)
-        if (isTableOrder && validatedTableId) {
+        if (isTableOrder) {
           try {
             const customerName = orderToInsert.customer_name;
             
