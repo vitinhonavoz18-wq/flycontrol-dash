@@ -24,6 +24,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
