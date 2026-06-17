@@ -59,7 +59,7 @@ export function NotificationsProvider() {
         .select("*")
         .in("status", ["pending", "viewed"])
         .order("requested_at", { ascending: true });
-      if (pizzeriaId !== "__all__") q = q.eq("restaurant_id", pizzeriaId);
+      if (pizzeriaId && pizzeriaId !== "__all__") q = q.eq("restaurant_id", pizzeriaId);
       const { data } = await q;
       if (cancelled || !data) return;
       setQueue((prev) => {
