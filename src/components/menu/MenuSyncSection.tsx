@@ -151,17 +151,22 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       }
 
       if (response.ok && jsonResponse?.success) {
-        const categoriesCount = (jsonResponse.categories?.length || 0) + 
-          (jsonResponse.normalized_products?.reduce((acc: any, p: any) => p.category_name ? acc.add(p.category_name) : acc, new Set()).size || 0);
-        
-        const productsCount = (jsonResponse.products?.length || 0) + 
-          (jsonResponse.beverages?.length || 0) + 
-          (jsonResponse.drinks?.length || 0) +
-          (jsonResponse.normalized_products?.length || 0);
+        const menuRoot: any = jsonResponse.menu && typeof jsonResponse.menu === "object"
+          ? { ...jsonResponse, ...jsonResponse.menu }
+          : jsonResponse;
 
-        const extrasCount = (jsonResponse.borders?.length || 0) + (jsonResponse.additionals?.length || 0);
-        
+        const categoriesCount = (menuRoot.categories?.length || 0) +
+          (menuRoot.normalized_products?.reduce((acc: any, p: any) => p.category_name ? acc.add(p.category_name) : acc, new Set()).size || 0);
+
+        const productsCount = (menuRoot.products?.length || 0) +
+          (menuRoot.beverages?.length || 0) +
+          (menuRoot.drinks?.length || 0) +
+          (menuRoot.normalized_products?.length || 0);
+
+        const extrasCount = (menuRoot.borders?.length || 0) + (menuRoot.additionals?.length || 0);
+
         toast.success(`Conexão OK! Encontrado: ${categoriesCount} categorias, ${productsCount} produtos/bebidas e ${extrasCount} bordas/adicionais.`, { id: toastId });
+
       } else {
         if (response.status === 401 || (jsonResponse && !jsonResponse.success && (jsonResponse.error === "invalid_sync_token" || jsonResponse.message === "invalid_sync_token"))) {
           toast.error("Token inválido. Copie novamente o link no SiteCreatorFly ou regenere o token.", { id: toastId, duration: 5000 });
