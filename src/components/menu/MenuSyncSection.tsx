@@ -254,18 +254,27 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         throw new Error(externalMenu.message || externalMenu.error || "Erro retornado pela API do SiteCreatorFly");
       }
 
-      const categoriesCount = (externalMenu.categories?.length || 0) + 
-        (externalMenu.normalized_products?.reduce((acc: any, p: any) => p.category_name ? acc.add(p.category_name) : acc, new Set()).size || 0);
-      
-      const productsCount = (externalMenu.products?.length || 0) + 
-        (externalMenu.beverages?.length || 0) + 
-        (externalMenu.drinks?.length || 0) +
-        (externalMenu.combos?.length || 0) +
-        (externalMenu.normalized_products?.length || 0);
-      
+      // SiteCreatorFly returns { success, restaurant, menu: { categories, products, ... } }.
+      // Unwrap the "menu" envelope when present so we look at the right level.
+      const menuRoot: any = externalMenu.menu && typeof externalMenu.menu === "object"
+        ? { ...externalMenu, ...externalMenu.menu }
+        : externalMenu;
+
+      const categoriesCount = (menuRoot.categories?.length || 0) +
+        (menuRoot.normalized_products?.reduce((acc: any, p: any) => p.category_name ? acc.add(p.category_name) : acc, new Set()).size || 0);
+
+      const productsCount = (menuRoot.products?.length || 0) +
+        (menuRoot.beverages?.length || 0) +
+        (menuRoot.drinks?.length || 0) +
+        (menuRoot.combos?.length || 0) +
+        (menuRoot.normalized_products?.length || 0);
+
+      console.log("FL_SYNC_DETECTED", { categoriesCount, productsCount, hasMenuEnvelope: !!externalMenu.menu });
+
       if (categoriesCount === 0 && productsCount === 0) {
         throw new Error("O link respondeu, mas nenhum produto ou categoria foi encontrado.");
       }
+
 
       const syncResponse = await fetch("/api/pizzerias/sync-menu", {
         method: "POST",
