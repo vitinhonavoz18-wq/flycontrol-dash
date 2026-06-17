@@ -898,6 +898,51 @@ export type Database = {
           },
         ]
       }
+      table_close_requests: {
+        Row: {
+          created_at: string
+          customer_name: string | null
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          requested_at: string
+          restaurant_id: string
+          session_id: string | null
+          status: string
+          table_id: string | null
+          table_number: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          restaurant_id: string
+          session_id?: string | null
+          status?: string
+          table_id?: string | null
+          table_number: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          customer_name?: string | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          requested_at?: string
+          restaurant_id?: string
+          session_id?: string | null
+          status?: string
+          table_id?: string | null
+          table_number?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       table_session_orders: {
         Row: {
           created_at: string | null

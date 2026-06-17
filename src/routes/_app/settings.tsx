@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { FlyStatusSettings } from "@/components/flystatus/FlyStatusSettings";
 import { FiqonSettings } from "@/components/pizzerias/FiqonSettings";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
+import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
 
@@ -246,6 +247,9 @@ function Settings() {
             4. No SiteCreatorFly, certifique-se de que a <strong>URL base</strong> aponta para o endereço acima.
           </div>
         </div>
+      </div>
+      <div className="mb-8">
+        <NotificationSettings />
       </div>
 
       <h2 className="mb-3 text-xl font-semibold">Suas pizzarias</h2>
