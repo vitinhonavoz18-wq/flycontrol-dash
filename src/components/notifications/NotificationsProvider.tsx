@@ -64,7 +64,8 @@ export function NotificationsProvider() {
       if (cancelled || !data) return;
       setQueue((prev) => {
         const ids = new Set(prev.map((r) => r.id));
-        return [...prev, ...(data as CloseRequest[]).filter((r) => !ids.has(r.id as string))];
+        const incoming = (data as unknown as CloseRequest[]).filter((r) => r.id && !ids.has(r.id));
+        return [...prev, ...incoming];
       });
     }
     void load();
