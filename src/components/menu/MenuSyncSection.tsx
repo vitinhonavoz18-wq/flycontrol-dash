@@ -286,13 +286,14 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
           pizzeria_id: pizzeriaId,
           api_key: pizzeria.api_key,
           menu: {
-            ...externalMenu,
+            ...menuRoot,
             extras: [
-              ...(externalMenu.borders || []).map((b: any) => ({ ...b, extra_type: 'borda' })),
-              ...(externalMenu.additionals || []).map((a: any) => ({ ...a, extra_type: 'adicional' }))
+              ...(menuRoot.borders || []).map((b: any) => ({ ...b, extra_type: 'borda' })),
+              ...(menuRoot.additionals || []).map((a: any) => ({ ...a, extra_type: 'adicional' }))
             ]
           }
         })
+
       });
 
       const syncResult = await syncResponse.json();
