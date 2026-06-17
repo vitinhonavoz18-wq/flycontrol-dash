@@ -257,6 +257,7 @@ function AppLayout() {
 
         <main className="flex-1 overflow-x-hidden relative">
           <Outlet />
+          <NotificationsProvider />
         </main>
       </div>
     </div>
