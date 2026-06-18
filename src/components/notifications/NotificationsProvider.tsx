@@ -8,40 +8,47 @@ import { Button } from "@/components/ui/button";
 import { Volume2 } from "lucide-react";
 
 /**
- * Mounts global realtime subscriptions for the signed-in operator:
- *  - table_close_requests INSERT  → popup queue + close-request sound
- *  - orders INSERT                → toast + new-order sound
- * Also handles browser autoplay-unlock for audio.
+ * Global listener: close-requests + new orders.
+ * - Supports owners with multiple pizzerias (filters client-side).
+ * - Loads pending requests on mount AND polls every 15s as a belt-and-suspenders
+ *   fallback in case Realtime drops.
+ * - Logs every received event for diagnostics.
  */
 export function NotificationsProvider() {
   const { user, isSuperAdmin } = useAuth();
-  const [pizzeriaId, setPizzeriaId] = useState<string | null>(null);
+  const [pizzeriaIds, setPizzeriaIds] = useState<string[] | "__all__" | null>(null);
   const [queue, setQueue] = useState<CloseRequest[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [audioBlocked, setAudioBlocked] = useState(false);
   const seenOrderIds = useRef<Set<string>>(new Set());
+  const seenRequestIds = useRef<Set<string>>(new Set());
 
-  // Resolve the operator's pizzeria(s). Super admins can listen to all by passing null filter.
+  // Resolve owned pizzerias (all of them).
   useEffect(() => {
     let cancelled = false;
     async function load() {
       if (!user) {
-        setPizzeriaId(null);
+        setPizzeriaIds(null);
         return;
       }
       if (isSuperAdmin) {
-        setPizzeriaId("__all__");
+        setPizzeriaIds("__all__");
         return;
       }
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("pizzerias")
         .select("id")
         .eq("owner_id", user.id)
-        .neq("status", "deleted")
-        .order("created_at")
-        .limit(1)
-        .maybeSingle();
-      if (!cancelled) setPizzeriaId(data?.id || null);
+        .neq("status", "deleted");
+      if (cancelled) return;
+      if (error) {
+        console.error("[NotificationsProvider] pizzerias load error:", error);
+        setPizzeriaIds([]);
+        return;
+      }
+      const ids = (data || []).map((p: any) => p.id);
+      console.log("[NotificationsProvider] tracking pizzerias:", ids);
+      setPizzeriaIds(ids);
     }
     void load();
     return () => {
@@ -49,92 +56,115 @@ export function NotificationsProvider() {
     };
   }, [user, isSuperAdmin]);
 
-  // Load any already-pending close requests on mount.
-  useEffect(() => {
-    if (!pizzeriaId) return;
-    let cancelled = false;
-    async function load() {
-      let q = supabase
-        .from("table_close_requests")
-        .select("*")
-        .in("status", ["pending", "viewed"])
-        .order("requested_at", { ascending: true });
-      if (pizzeriaId && pizzeriaId !== "__all__") q = q.eq("restaurant_id", pizzeriaId);
-      const { data } = await q;
-      if (cancelled || !data) return;
-      setQueue((prev) => {
-        const ids = new Set(prev.map((r) => r.id));
-        const incoming = (data as unknown as CloseRequest[]).filter((r) => r.id && !ids.has(r.id));
-        return [...prev, ...incoming];
-      });
+  // Fetch any pending/viewed close requests and merge into queue.
+  async function fetchPending() {
+    if (!pizzeriaIds) return;
+    let q = supabase
+      .from("table_close_requests")
+      .select("*")
+      .in("status", ["pending", "viewed"])
+      .order("requested_at", { ascending: true });
+    if (pizzeriaIds !== "__all__") {
+      if (pizzeriaIds.length === 0) return;
+      q = q.in("restaurant_id", pizzeriaIds);
     }
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [pizzeriaId]);
+    const { data, error } = await q;
+    if (error) {
+      console.error("[NotificationsProvider] fetchPending error:", error);
+      return;
+    }
+    console.log("[NotificationsProvider] pending close requests:", data?.length || 0);
+    if (!data || data.length === 0) return;
+    setQueue((prev) => {
+      const ids = new Set(prev.map((r) => r.id));
+      const incoming = (data as unknown as CloseRequest[]).filter(
+        (r) => r.id && !ids.has(r.id)
+      );
+      // Play sound only if there were truly new ones we hadn't seen before.
+      const trulyNew = incoming.filter((r) => !seenRequestIds.current.has(r.id));
+      trulyNew.forEach((r) => seenRequestIds.current.add(r.id));
+      if (trulyNew.length > 0) {
+        playSound("close_request");
+        if (isAudioBlocked()) setAudioBlocked(true);
+      }
+      return [...prev, ...incoming];
+    });
+  }
 
-  // Realtime: close requests
+  // Initial load + polling fallback every 15s.
   useEffect(() => {
-    if (!pizzeriaId) return;
+    if (!pizzeriaIds) return;
+    void fetchPending();
+    const t = setInterval(() => void fetchPending(), 15000);
+    return () => clearInterval(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pizzeriaIds]);
+
+  // Realtime: close requests (no server-side filter — we filter in JS to support multi-pizzeria)
+  useEffect(() => {
+    if (!pizzeriaIds) return;
     const channel = supabase
-      .channel(`close-requests-${pizzeriaId}`)
+      .channel("close-requests-global")
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "table_close_requests",
-          ...(pizzeriaId !== "__all__" ? { filter: `restaurant_id=eq.${pizzeriaId}` } : {}),
-        },
+        { event: "INSERT", schema: "public", table: "table_close_requests" },
         (payload) => {
           const row = payload.new as CloseRequest;
+          console.log("[Realtime] table_close_requests INSERT:", row);
+          if (
+            pizzeriaIds !== "__all__" &&
+            !pizzeriaIds.includes(row.restaurant_id)
+          ) {
+            console.log("[Realtime] ignored — not our pizzeria");
+            return;
+          }
           setQueue((prev) => (prev.find((r) => r.id === row.id) ? prev : [...prev, row]));
-          playSound("close_request");
-          toast.warning(`Mesa ${row.table_number} pediu para fechar a conta`, {
-            description: row.customer_name ? `Cliente: ${row.customer_name}` : undefined,
-          });
-          if (isAudioBlocked()) setAudioBlocked(true);
+          if (!seenRequestIds.current.has(row.id)) {
+            seenRequestIds.current.add(row.id);
+            playSound("close_request");
+            toast.warning(`Mesa ${row.table_number} pediu para fechar a conta`, {
+              description: row.customer_name ? `Cliente: ${row.customer_name}` : undefined,
+            });
+            if (isAudioBlocked()) setAudioBlocked(true);
+          }
         }
       )
       .on(
         "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "table_close_requests",
-          ...(pizzeriaId !== "__all__" ? { filter: `restaurant_id=eq.${pizzeriaId}` } : {}),
-        },
+        { event: "UPDATE", schema: "public", table: "table_close_requests" },
         (payload) => {
           const row = payload.new as CloseRequest;
-          // Remove from queue if processed elsewhere
+          console.log("[Realtime] table_close_requests UPDATE:", row.id, row.status);
           if (["closed", "cancelled", "printed"].includes(row.status)) {
             setQueue((prev) => prev.filter((r) => r.id !== row.id));
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        console.log("[Realtime] close-requests channel:", status);
+      });
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [pizzeriaId]);
+  }, [pizzeriaIds]);
 
-  // Realtime: new orders → sound + toast
+  // Realtime: new orders
   useEffect(() => {
-    if (!pizzeriaId) return;
+    if (!pizzeriaIds) return;
     const channel = supabase
-      .channel(`orders-notify-${pizzeriaId}`)
+      .channel("orders-notify-global")
       .on(
         "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "orders",
-          ...(pizzeriaId !== "__all__" ? { filter: `tenant_id=eq.${pizzeriaId}` } : {}),
-        },
+        { event: "INSERT", schema: "public", table: "orders" },
         (payload) => {
           const row: any = payload.new;
           if (!row?.id || seenOrderIds.current.has(row.id)) return;
+          if (
+            pizzeriaIds !== "__all__" &&
+            !pizzeriaIds.includes(row.tenant_id)
+          ) {
+            return;
+          }
           seenOrderIds.current.add(row.id);
           playSound("new_order");
           const tipo = row.table_number
@@ -152,9 +182,9 @@ export function NotificationsProvider() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [pizzeriaId]);
+  }, [pizzeriaIds]);
 
-  // Detect browser audio block
+  // Browser audio block events
   useEffect(() => {
     const onBlocked = () => setAudioBlocked(true);
     const onUnlocked = () => setAudioBlocked(false);
