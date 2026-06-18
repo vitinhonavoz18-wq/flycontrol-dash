@@ -165,10 +165,10 @@ export function TableCloseRequestPopup({
       aria-modal="true"
     >
       <div className="w-full max-w-md rounded-xl border-2 border-orange-500/60 bg-card shadow-2xl shadow-orange-500/20 overflow-hidden animate-in zoom-in-95">
-        <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-3 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-white">
             <AlertTriangle className="h-5 w-5" />
-            <span className="font-bold text-lg">Pedido de Fechamento</span>
+            <span className="font-bold text-lg tracking-wide">CLIENTE FECHOU A MESA</span>
           </div>
           {queue.length > 1 && (
             <Badge variant="secondary" className="bg-white/20 text-white border-0">
