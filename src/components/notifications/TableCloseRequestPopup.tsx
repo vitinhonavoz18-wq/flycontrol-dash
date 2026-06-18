@@ -215,14 +215,14 @@ export function TableCloseRequestPopup({
               disabled={busy}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
-              <Printer className="h-4 w-4 mr-2" /> Imprimir Pré-Conta
+              <Printer className="h-4 w-4 mr-2" /> IMPRIMIR COMANDA
             </Button>
             <Button
               onClick={handleCloseTable}
               disabled={busy}
               className="w-full bg-green-600 hover:bg-green-700 text-white"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" /> Fechar Mesa
+              <CheckCircle2 className="h-4 w-4 mr-2" /> FINALIZAR MESA
             </Button>
             <Button
               onClick={handleDismiss}
@@ -230,7 +230,7 @@ export function TableCloseRequestPopup({
               variant="outline"
               className="w-full"
             >
-              <X className="h-4 w-4 mr-2" /> Adiar {queue.length > 1 && <ChevronRight className="h-4 w-4 ml-1" />}
+              <X className="h-4 w-4 mr-2" /> FECHAR POPUP {queue.length > 1 && <ChevronRight className="h-4 w-4 ml-1" />}
             </Button>
           </div>
         </div>
