@@ -165,10 +165,10 @@ export function TableCloseRequestPopup({
       aria-modal="true"
     >
       <div className="w-full max-w-md rounded-xl border-2 border-orange-500/60 bg-card shadow-2xl shadow-orange-500/20 overflow-hidden animate-in zoom-in-95">
-        <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-3 flex items-center justify-between">
+          <div className="bg-gradient-to-r from-orange-500 to-amber-500 px-5 py-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-white">
             <AlertTriangle className="h-5 w-5" />
-            <span className="font-bold text-lg">Pedido de Fechamento</span>
+            <span className="font-bold text-lg tracking-wide">CLIENTE FECHOU A MESA</span>
           </div>
           {queue.length > 1 && (
             <Badge variant="secondary" className="bg-white/20 text-white border-0">
@@ -215,14 +215,14 @@ export function TableCloseRequestPopup({
               disabled={busy}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white"
             >
-              <Printer className="h-4 w-4 mr-2" /> Imprimir Pré-Conta
+              <Printer className="h-4 w-4 mr-2" /> IMPRIMIR COMANDA
             </Button>
             <Button
               onClick={handleCloseTable}
               disabled={busy}
               className="w-full bg-green-600 hover:bg-green-700 text-white"
             >
-              <CheckCircle2 className="h-4 w-4 mr-2" /> Fechar Mesa
+              <CheckCircle2 className="h-4 w-4 mr-2" /> FINALIZAR MESA
             </Button>
             <Button
               onClick={handleDismiss}
@@ -230,7 +230,7 @@ export function TableCloseRequestPopup({
               variant="outline"
               className="w-full"
             >
-              <X className="h-4 w-4 mr-2" /> Adiar {queue.length > 1 && <ChevronRight className="h-4 w-4 ml-1" />}
+              <X className="h-4 w-4 mr-2" /> FECHAR POPUP {queue.length > 1 && <ChevronRight className="h-4 w-4 ml-1" />}
             </Button>
           </div>
         </div>
