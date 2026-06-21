@@ -139,12 +139,29 @@ export function TableCloseRequestPopup({
     }
     setBusy(true);
     try {
+      const { data: u } = await supabase.auth.getUser();
+      const operatorId = u?.user?.id || null;
+      const operatorName =
+        (u?.user?.user_metadata as any)?.full_name || u?.user?.email || "operador";
+      const closedAt = new Date().toISOString();
       const { error } = await supabase
         .from("table_sessions")
-        .update({ status: "closed", closed_at: new Date().toISOString() } as any)
+        .update({
+          status: "closed",
+          closed_at: closedAt,
+          closed_by: operatorId,
+          closure_reason: "operator_close",
+        } as any)
         .eq("id", current.session_id);
       if (error) throw error;
       await markStatus("closed");
+      console.log("TABLE_CLOSED", {
+        table_number: current.table_number,
+        session_id: current.session_id,
+        restaurant_id: current.restaurant_id,
+        closed_at: closedAt,
+        operator: operatorName,
+      });
       toast.success(`Mesa ${current.table_number} fechada.`);
       onProcessed(current.id);
     } catch (e: any) {
