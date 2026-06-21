@@ -28,6 +28,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppCombosRouteImport } from './routes/_app/combos'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
 import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
+import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
 import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/public/request-close-table'
 import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/public/open-table-session'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
@@ -135,6 +136,12 @@ const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const ApiPublicTableSessionStatusRoute =
+  ApiPublicTableSessionStatusRouteImport.update({
+    id: '/api/public/table-session-status',
+    path: '/api/public/table-session-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiPublicRequestCloseTableRoute =
   ApiPublicRequestCloseTableRouteImport.update({
     id: '/api/public/request-close-table',
@@ -228,6 +235,7 @@ export interface FileRoutesByFullPath {
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
+  '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/admin/': typeof AppAdminIndexRoute
 }
 export interface FileRoutesByTo {
@@ -259,6 +267,7 @@ export interface FileRoutesByTo {
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
+  '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/admin': typeof AppAdminIndexRoute
 }
 export interface FileRoutesById {
@@ -293,6 +302,7 @@ export interface FileRoutesById {
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
+  '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/_app/admin/': typeof AppAdminIndexRoute
 }
 export interface FileRouteTypes {
@@ -327,6 +337,7 @@ export interface FileRouteTypes {
     | '/api/public/create-pizzeria'
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
+    | '/api/public/table-session-status'
     | '/admin/'
   fileRoutesByTo: FileRoutesByTo
   to:
@@ -358,6 +369,7 @@ export interface FileRouteTypes {
     | '/api/public/create-pizzeria'
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
+    | '/api/public/table-session-status'
     | '/admin'
   id:
     | '__root__'
@@ -391,6 +403,7 @@ export interface FileRouteTypes {
     | '/api/public/create-pizzeria'
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
+    | '/api/public/table-session-status'
     | '/_app/admin/'
   fileRoutesById: FileRoutesById
 }
@@ -411,6 +424,7 @@ export interface RootRouteChildren {
   ApiPublicCreatePizzeriaRoute: typeof ApiPublicCreatePizzeriaRoute
   ApiPublicOpenTableSessionRoute: typeof ApiPublicOpenTableSessionRoute
   ApiPublicRequestCloseTableRoute: typeof ApiPublicRequestCloseTableRoute
+  ApiPublicTableSessionStatusRoute: typeof ApiPublicTableSessionStatusRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -547,6 +561,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/'
       preLoaderRoute: typeof AppAdminIndexRouteImport
       parentRoute: typeof AppAdminRoute
+    }
+    '/api/public/table-session-status': {
+      id: '/api/public/table-session-status'
+      path: '/api/public/table-session-status'
+      fullPath: '/api/public/table-session-status'
+      preLoaderRoute: typeof ApiPublicTableSessionStatusRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/public/request-close-table': {
       id: '/api/public/request-close-table'
@@ -700,6 +721,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicCreatePizzeriaRoute: ApiPublicCreatePizzeriaRoute,
   ApiPublicOpenTableSessionRoute: ApiPublicOpenTableSessionRoute,
   ApiPublicRequestCloseTableRoute: ApiPublicRequestCloseTableRoute,
+  ApiPublicTableSessionStatusRoute: ApiPublicTableSessionStatusRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

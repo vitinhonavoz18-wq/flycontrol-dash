@@ -63,10 +63,29 @@ export const Route = createFileRoute("/api/public/request-close-table")({
             tableId = t2?.id || null;
           }
 
-          // Resolve open session if not provided
+          // Resolve session (open) if not provided
           let sessionId: string | null = session_id || null;
           let resolvedCustomer: string | null = customer_name || null;
-          if (!sessionId) {
+
+          if (sessionId) {
+            // Reject if the provided session is already closed
+            const { data: existingSession } = await supabaseAdmin
+              .from("table_sessions")
+              .select("status, closed_at")
+              .eq("id", sessionId)
+              .maybeSingle();
+            if (existingSession?.status === "closed") {
+              return new Response(
+                JSON.stringify({
+                  success: false,
+                  error: "session_closed",
+                  message: "Esta mesa já foi fechada pelo restaurante.",
+                  closed_at: existingSession.closed_at,
+                }),
+                { status: 409, headers },
+              );
+            }
+          } else {
             const { data: s } = await supabaseAdmin
               .from("table_sessions")
               .select("id, customer_name")
@@ -80,7 +99,7 @@ export const Route = createFileRoute("/api/public/request-close-table")({
             if (!resolvedCustomer && s?.customer_name) resolvedCustomer = s.customer_name;
           }
 
-          // Dedupe: if there is already a pending request for this session in the last 2 min, return it.
+          // Dedupe: if there is already a pending request for this session, return it.
           if (sessionId) {
             const { data: existing } = await supabaseAdmin
               .from("table_close_requests")
