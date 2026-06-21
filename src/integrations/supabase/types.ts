@@ -982,6 +982,8 @@ export type Database = {
       table_sessions: {
         Row: {
           closed_at: string | null
+          closed_by: string | null
+          closure_reason: string | null
           created_at: string | null
           customer_name: string | null
           id: string
@@ -1000,6 +1002,8 @@ export type Database = {
         }
         Insert: {
           closed_at?: string | null
+          closed_by?: string | null
+          closure_reason?: string | null
           created_at?: string | null
           customer_name?: string | null
           id?: string
@@ -1018,6 +1022,8 @@ export type Database = {
         }
         Update: {
           closed_at?: string | null
+          closed_by?: string | null
+          closure_reason?: string | null
           created_at?: string | null
           customer_name?: string | null
           id?: string
