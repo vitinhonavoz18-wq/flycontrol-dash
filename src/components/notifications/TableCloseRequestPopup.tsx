@@ -106,7 +106,7 @@ export function TableCloseRequestPopup({
 
   if (!current) return null;
 
-  async function markStatus(status: "printed" | "closed" | "cancelled") {
+  async function markStatus(status: "printed" | "completed" | "cancelled") {
     const { data: u } = await supabase.auth.getUser();
     return supabase
       .from("table_close_requests")
