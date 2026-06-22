@@ -22,6 +22,9 @@ export function NotificationsProvider() {
   const [audioBlocked, setAudioBlocked] = useState(false);
   const seenOrderIds = useRef<Set<string>>(new Set());
   const seenRequestIds = useRef<Set<string>>(new Set());
+  // Hard cutoff: only requests created strictly AFTER FlyControl loaded are
+  // allowed to spawn a popup. Historical pending rows are never resurrected.
+  const appStartTime = useRef<string>(new Date().toISOString());
 
   // Resolve owned pizzerias (all of them).
   useEffect(() => {
