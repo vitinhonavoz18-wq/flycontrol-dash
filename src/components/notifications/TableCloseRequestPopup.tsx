@@ -154,7 +154,7 @@ export function TableCloseRequestPopup({
         } as any)
         .eq("id", current.session_id);
       if (error) throw error;
-      await markStatus("closed");
+      await markStatus("completed");
       console.log("TABLE_CLOSED", {
         table_number: current.table_number,
         session_id: current.session_id,
