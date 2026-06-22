@@ -59,53 +59,39 @@ export function NotificationsProvider() {
     };
   }, [user, isSuperAdmin]);
 
-  // Fetch only TRULY pending close requests and merge into queue.
-  // - Excludes any non-'pending' status (viewed/printed/closed/cancelled) so a
-  //   popup that was already shown/processed never returns on reload/polling
-  //   (this was the ghost-popup root cause).
-  // - Also filters out ids already seen in this session to prevent the polling
-  //   loop from re-adding a request the operator just dismissed locally.
-  async function fetchPending() {
+  // Polling = counters/health only. NEVER opens a popup. NEVER mutates the
+  // queue. Popups are exclusively driven by realtime INSERT events arriving
+  // after app start (see startup rule below).
+  async function pollCounters() {
     if (!pizzeriaIds) return;
     let q = supabase
       .from("table_close_requests")
-      .select("*")
-      .eq("status", "pending")
-      .order("requested_at", { ascending: true });
+      .select("id", { count: "exact", head: true })
+      .eq("status", "pending");
     if (pizzeriaIds !== "__all__") {
       if (pizzeriaIds.length === 0) return;
       q = q.in("restaurant_id", pizzeriaIds);
     }
-    const { data, error } = await q;
+    const { count, error } = await q;
     if (error) {
-      console.error("[NotificationsProvider] fetchPending error:", error);
+      console.error("[NotificationsProvider] pollCounters error:", error);
       return;
     }
-    console.log("[NotificationsProvider] pending close requests:", data?.length || 0);
-    if (!data || data.length === 0) return;
-    setQueue((prev) => {
-      const ids = new Set(prev.map((r) => r.id));
-      const incoming = (data as unknown as CloseRequest[]).filter(
-        (r) => r.id && !ids.has(r.id) && !seenRequestIds.current.has(r.id)
-      );
-      if (incoming.length === 0) return prev;
-      incoming.forEach((r) => seenRequestIds.current.add(r.id));
-      playSound("close_request");
-      if (isAudioBlocked()) setAudioBlocked(true);
-      return [...prev, ...incoming];
-    });
+    console.log("[NotificationsProvider] pending count (poll, counters only):", count ?? 0);
+    // Intentionally do NOT touch queue, dismissed, or seenRequestIds here.
   }
 
-  // Initial load + polling fallback every 15s.
+  // Counter polling every 30s. Does not spawn popups.
   useEffect(() => {
     if (!pizzeriaIds) return;
-    void fetchPending();
-    const t = setInterval(() => void fetchPending(), 15000);
+    void pollCounters();
+    const t = setInterval(() => void pollCounters(), 30000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pizzeriaIds]);
 
-  // Realtime: close requests (no server-side filter — we filter in JS to support multi-pizzeria)
+  // Realtime: close requests. Popups open ONLY on INSERT events for rows
+  // created strictly after the app started, and only once per request_id.
   useEffect(() => {
     if (!pizzeriaIds) return;
     const channel = supabase
@@ -115,23 +101,35 @@ export function NotificationsProvider() {
         { event: "INSERT", schema: "public", table: "table_close_requests" },
         (payload) => {
           const row = payload.new as CloseRequest;
-          console.log("[Realtime] table_close_requests INSERT:", row);
-          if (
-            pizzeriaIds !== "__all__" &&
-            !pizzeriaIds.includes(row.restaurant_id)
-          ) {
+          console.log("[Realtime] table_close_requests INSERT:", row.id, row.status);
+
+          // Strict dedup — once we've seen this request_id, never again.
+          if (seenRequestIds.current.has(row.id)) {
+            console.log("[Realtime] dedup — request already shown:", row.id);
+            return;
+          }
+          // Status rule: only 'pending' rows open a popup.
+          if (row.status !== "pending") return;
+          // Tenant scope.
+          if (pizzeriaIds !== "__all__" && !pizzeriaIds.includes(row.restaurant_id)) {
             console.log("[Realtime] ignored — not our pizzeria");
             return;
           }
-          setQueue((prev) => (prev.find((r) => r.id === row.id) ? prev : [...prev, row]));
-          if (!seenRequestIds.current.has(row.id)) {
-            seenRequestIds.current.add(row.id);
-            playSound("close_request");
-            toast.warning(`Mesa ${row.table_number} pediu para fechar a conta`, {
-              description: row.customer_name ? `Cliente: ${row.customer_name}` : undefined,
-            });
-            if (isAudioBlocked()) setAudioBlocked(true);
+          // Startup rule: ignore anything created at or before app start.
+          // Guards against Realtime backfill / reconnect replay of old rows.
+          const createdAt = (row as any).created_at || row.requested_at;
+          if (createdAt && createdAt <= appStartTime.current) {
+            console.log("[Realtime] ignored — historical row (pre-startup):", row.id);
+            return;
           }
+
+          seenRequestIds.current.add(row.id);
+          setQueue((prev) => (prev.find((r) => r.id === row.id) ? prev : [...prev, row]));
+          playSound("close_request");
+          toast.warning(`Mesa ${row.table_number} pediu para fechar a conta`, {
+            description: row.customer_name ? `Cliente: ${row.customer_name}` : undefined,
+          });
+          if (isAudioBlocked()) setAudioBlocked(true);
         }
       )
       .on(
