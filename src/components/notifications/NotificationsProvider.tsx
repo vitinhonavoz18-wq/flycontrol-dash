@@ -137,7 +137,10 @@ export function NotificationsProvider() {
         (payload) => {
           const row = payload.new as CloseRequest;
           console.log("[Realtime] table_close_requests UPDATE:", row.id, row.status);
-          if (["closed", "cancelled", "printed"].includes(row.status)) {
+          // Anything that isn't 'pending' anymore must be removed from the
+          // visible queue and marked as seen so polling cannot re-add it.
+          if (row.status !== "pending") {
+            seenRequestIds.current.add(row.id);
             setQueue((prev) => prev.filter((r) => r.id !== row.id));
           }
         }
