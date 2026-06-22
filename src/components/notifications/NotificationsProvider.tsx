@@ -56,13 +56,18 @@ export function NotificationsProvider() {
     };
   }, [user, isSuperAdmin]);
 
-  // Fetch any pending/viewed close requests and merge into queue.
+  // Fetch only TRULY pending close requests and merge into queue.
+  // - Excludes any non-'pending' status (viewed/printed/closed/cancelled) so a
+  //   popup that was already shown/processed never returns on reload/polling
+  //   (this was the ghost-popup root cause).
+  // - Also filters out ids already seen in this session to prevent the polling
+  //   loop from re-adding a request the operator just dismissed locally.
   async function fetchPending() {
     if (!pizzeriaIds) return;
     let q = supabase
       .from("table_close_requests")
       .select("*")
-      .in("status", ["pending", "viewed"])
+      .eq("status", "pending")
       .order("requested_at", { ascending: true });
     if (pizzeriaIds !== "__all__") {
       if (pizzeriaIds.length === 0) return;
@@ -78,15 +83,12 @@ export function NotificationsProvider() {
     setQueue((prev) => {
       const ids = new Set(prev.map((r) => r.id));
       const incoming = (data as unknown as CloseRequest[]).filter(
-        (r) => r.id && !ids.has(r.id)
+        (r) => r.id && !ids.has(r.id) && !seenRequestIds.current.has(r.id)
       );
-      // Play sound only if there were truly new ones we hadn't seen before.
-      const trulyNew = incoming.filter((r) => !seenRequestIds.current.has(r.id));
-      trulyNew.forEach((r) => seenRequestIds.current.add(r.id));
-      if (trulyNew.length > 0) {
-        playSound("close_request");
-        if (isAudioBlocked()) setAudioBlocked(true);
-      }
+      if (incoming.length === 0) return prev;
+      incoming.forEach((r) => seenRequestIds.current.add(r.id));
+      playSound("close_request");
+      if (isAudioBlocked()) setAudioBlocked(true);
       return [...prev, ...incoming];
     });
   }
