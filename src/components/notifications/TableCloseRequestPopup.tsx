@@ -154,16 +154,44 @@ export function TableCloseRequestPopup({
         } as any)
         .eq("id", current.session_id);
       if (error) throw error;
-      await markStatus("completed");
+
+      // Notify SiteCreatorFly so the customer's Digital Menu session terminates
+      const webhookPayload = {
+        table_number: current.table_number,
+        restaurant_id: current.restaurant_id,
+        request_id: current.id,
+        session_id: current.session_id,
+        closed_at: closedAt,
+      };
+      try {
+        await fetch("https://conectfly.com.br/api/public/flycontrol-table-closed", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(webhookPayload),
+          mode: "no-cors",
+          keepalive: true,
+        });
+      } catch (whErr) {
+        console.warn("SiteCreatorFly webhook failed (continuing):", whErr);
+      }
+
+      // Safety net: mark the originating request as completed regardless of webhook outcome
+      await supabase
+        .from("table_close_requests")
+        .update({ status: "completed", processed_at: closedAt, processed_by: operatorId })
+        .eq("id", current.id);
+
       console.log("TABLE_CLOSED", {
         table_number: current.table_number,
         session_id: current.session_id,
         restaurant_id: current.restaurant_id,
         closed_at: closedAt,
         operator: operatorName,
+        webhook_payload: webhookPayload,
       });
       toast.success(`Mesa ${current.table_number} fechada.`);
       onProcessed(current.id);
+
     } catch (e: any) {
       toast.error("Erro ao fechar mesa: " + (e.message || e));
     } finally {
