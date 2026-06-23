@@ -205,35 +205,19 @@ export function useTableSessions(tenantId: string | null) {
   }
 
   async function closeSession(sessionId: string) {
-    const { data: u } = await supabase.auth.getUser();
-    const operatorId = u?.user?.id || null;
-    const operatorName =
-      (u?.user?.user_metadata as any)?.full_name || u?.user?.email || "operador";
-    const closedAt = new Date().toISOString();
     const session = sessions.find((s) => s.id === sessionId);
-    const { error } = await supabase
-      .from("table_sessions")
-      .update({
-        status: "closed",
-        closed_at: closedAt,
-        closed_by: operatorId,
-        closure_reason: "operator_close",
-      } as any)
-      .eq("id", sessionId);
-
-    if (error) {
-      toast.error("Erro ao fechar mesa: " + error.message);
-    } else {
-      console.log("TABLE_CLOSED", {
-        table_number: session?.table_number,
-        session_id: sessionId,
-        restaurant_id: session?.tenant_id,
-        closed_at: closedAt,
-        operator: operatorName,
-      });
-      setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-      toast.success("Mesa fechada com sucesso!");
+    const { closeTableWorkflow } = await import("@/lib/closeTableWorkflow");
+    const res = await closeTableWorkflow({
+      sessionId,
+      tableNumber: session?.table_number,
+      restaurantId: session?.tenant_id,
+    });
+    if (!res.sessionClosed) {
+      toast.error("Erro ao fechar mesa: " + (res.error || "desconhecido"));
+      return;
     }
+    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    toast.success("Mesa fechada com sucesso!");
   }
 
   useEffect(() => {
