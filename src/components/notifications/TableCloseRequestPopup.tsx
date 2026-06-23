@@ -139,59 +139,19 @@ export function TableCloseRequestPopup({
     }
     setBusy(true);
     try {
-      const { data: u } = await supabase.auth.getUser();
-      const operatorId = u?.user?.id || null;
-      const operatorName =
-        (u?.user?.user_metadata as any)?.full_name || u?.user?.email || "operador";
-      const closedAt = new Date().toISOString();
-      const { error } = await supabase
-        .from("table_sessions")
-        .update({
-          status: "closed",
-          closed_at: closedAt,
-          closed_by: operatorId,
-          closure_reason: "operator_close",
-        } as any)
-        .eq("id", current.session_id);
-      if (error) throw error;
-
-      // Notify SiteCreatorFly so the customer's Digital Menu session terminates
-      const webhookPayload = {
-        table_number: current.table_number,
-        restaurant_id: current.restaurant_id,
-        request_id: current.id,
-        session_id: current.session_id,
-        closed_at: closedAt,
-      };
-      try {
-        await fetch("https://conectfly.com.br/api/public/flycontrol-table-closed", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(webhookPayload),
-          mode: "no-cors",
-          keepalive: true,
-        });
-      } catch (whErr) {
-        console.warn("SiteCreatorFly webhook failed (continuing):", whErr);
-      }
-
-      // Safety net: mark the originating request as completed regardless of webhook outcome
-      await supabase
-        .from("table_close_requests")
-        .update({ status: "completed", processed_at: closedAt, processed_by: operatorId })
-        .eq("id", current.id);
-
-      console.log("TABLE_CLOSED", {
-        table_number: current.table_number,
-        session_id: current.session_id,
-        restaurant_id: current.restaurant_id,
-        closed_at: closedAt,
-        operator: operatorName,
-        webhook_payload: webhookPayload,
+      const { closeTableWorkflow } = await import("@/lib/closeTableWorkflow");
+      const res = await closeTableWorkflow({
+        sessionId: current.session_id,
+        tableNumber: current.table_number,
+        restaurantId: current.restaurant_id,
+        requestId: current.id,
       });
+      if (!res.sessionClosed) {
+        toast.error("Erro ao fechar mesa: " + (res.error || "desconhecido"));
+        return;
+      }
       toast.success(`Mesa ${current.table_number} fechada.`);
       onProcessed(current.id);
-
     } catch (e: any) {
       toast.error("Erro ao fechar mesa: " + (e.message || e));
     } finally {
