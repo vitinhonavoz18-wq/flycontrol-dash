@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const WEBHOOK_URL = "https://conectfly.com.br/api/public/flycontrol-table-closed";
 
 export type CloseTableInput = {
   sessionId: string;
@@ -119,30 +118,31 @@ export async function closeTableWorkflow(
     }
   }
 
-  // STEP 3 — Notify SiteCreatorFly
-  const payload = {
-    restaurant_id: result.restaurantId,
-    table_number: result.tableNumber,
-    request_id: result.requestId,
-    session_id: input.sessionId,
-    closed_at: closedAt,
-  };
+  // STEP 3 — Notify SiteCreatorFly via server-side endpoint (must not be sent from the browser)
   try {
-    await fetch(WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-      mode: "no-cors",
-      keepalive: true,
+    const { notifyTableClosed } = await import("@/lib/notifyTableClosed.functions");
+    const whRes = await notifyTableClosed({
+      data: {
+        restaurant_id: result.restaurantId,
+        table_number: result.tableNumber,
+        request_id: result.requestId,
+        session_id: input.sessionId,
+        closed_at: closedAt,
+      },
     });
-    result.webhookOk = true;
-    console.log("[closeTableWorkflow] webhook sent", payload);
+    result.webhookOk = !!whRes?.ok;
+    console.log("[closeTableWorkflow] webhook result", whRes);
   } catch (whErr) {
-    console.warn("[closeTableWorkflow] webhook failed (continuing):", whErr);
+    console.warn("[closeTableWorkflow] webhook call failed (continuing):", whErr);
   }
 
+
   console.log("TABLE_CLOSED", {
-    ...payload,
+    session_id: input.sessionId,
+    table_number: result.tableNumber,
+    restaurant_id: result.restaurantId,
+    request_id: result.requestId,
+    closed_at: closedAt,
     operator: operatorName,
     request_updated: result.requestUpdated,
     webhook_ok: result.webhookOk,
