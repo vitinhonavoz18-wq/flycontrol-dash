@@ -139,7 +139,11 @@ export async function closeTableWorkflow(
 
 
   console.log("TABLE_CLOSED", {
-    ...payload,
+    session_id: input.sessionId,
+    table_number: result.tableNumber,
+    restaurant_id: result.restaurantId,
+    request_id: result.requestId,
+    closed_at: closedAt,
     operator: operatorName,
     request_updated: result.requestUpdated,
     webhook_ok: result.webhookOk,
