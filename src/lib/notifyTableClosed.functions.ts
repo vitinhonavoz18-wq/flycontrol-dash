@@ -23,6 +23,7 @@ export const notifyTableClosed = createServerFn({ method: "POST" })
     console.log("TABLE_CLOSED_WEBHOOK_START", ctx);
 
     const payload = {
+      event: "TABLE_SESSION_CLOSED",
       restaurant_id: data.restaurant_id,
       table_number: data.table_number,
       request_id: data.request_id,

@@ -999,6 +999,7 @@ export type Database = {
           table_number: string
           total_amount: number | null
           updated_at: string | null
+          webhook_sent_at: string | null
         }
         Insert: {
           closed_at?: string | null
@@ -1019,6 +1020,7 @@ export type Database = {
           table_number: string
           total_amount?: number | null
           updated_at?: string | null
+          webhook_sent_at?: string | null
         }
         Update: {
           closed_at?: string | null
@@ -1039,6 +1041,7 @@ export type Database = {
           table_number?: string
           total_amount?: number | null
           updated_at?: string | null
+          webhook_sent_at?: string | null
         }
         Relationships: [
           {
