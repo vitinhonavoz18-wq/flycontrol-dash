@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
-const WEBHOOK_URL = "https://conectfly.com.br/api/public/flycontrol-table-closed";
 
 export type CloseTableInput = {
   sessionId: string;
