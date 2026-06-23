@@ -70,8 +70,10 @@ export async function closeTableWorkflow(
     }
   }
 
-  // STEP 1 — Close table_sessions
-  const { error: closeErr } = await supabase
+  // STEP 1 — Close table_sessions (DB is the authority).
+  // Only transitions an OPEN session to CLOSED. If the row is already closed,
+  // this update affects 0 rows and we will NOT re-fire the webhook.
+  const { data: closedRow, error: closeErr } = await supabase
     .from("table_sessions")
     .update({
       status: "closed",
@@ -79,13 +81,26 @@ export async function closeTableWorkflow(
       closed_by: operatorId,
       closure_reason: "operator_close",
     } as any)
-    .eq("id", input.sessionId);
+    .eq("id", input.sessionId)
+    .eq("status", "open")
+    .select("id, table_number, restaurant_id, closed_at, webhook_sent_at")
+    .maybeSingle();
 
   if (closeErr) {
     result.error = closeErr.message;
     return result;
   }
+
+  if (!closedRow) {
+    // Session was already closed (or doesn't exist). Hard rule: no resurrection,
+    // no duplicate webhook. Report as already-closed and exit.
+    result.error = "session_already_closed";
+    return result;
+  }
+
   result.sessionClosed = true;
+  result.tableNumber = result.tableNumber ?? (closedRow as any).table_number ?? null;
+  result.restaurantId = result.restaurantId ?? (closedRow as any).restaurant_id ?? null;
 
   // STEP 2 — Find + update related close request
   let requestId = input.requestId ?? null;
@@ -118,22 +133,48 @@ export async function closeTableWorkflow(
     }
   }
 
-  // STEP 3 — Notify SiteCreatorFly via server-side endpoint (must not be sent from the browser)
-  try {
-    const { notifyTableClosed } = await import("@/lib/notifyTableClosed.functions");
-    const whRes = await notifyTableClosed({
-      data: {
-        restaurant_id: result.restaurantId,
-        table_number: result.tableNumber,
-        request_id: result.requestId,
-        session_id: input.sessionId,
-        closed_at: closedAt,
-      },
-    });
-    result.webhookOk = !!whRes?.ok;
-    console.log("[closeTableWorkflow] webhook result", whRes);
-  } catch (whErr) {
-    console.warn("[closeTableWorkflow] webhook call failed (continuing):", whErr);
+  // STEP 3 — Atomically claim the webhook slot. Only ONE caller can flip
+  // webhook_sent_at from NULL to a timestamp; everyone else gets 0 rows back
+  // and skips the network call. Guarantees exactly-once delivery per session.
+  const { data: claimed } = await supabase
+    .from("table_sessions")
+    .update({ webhook_sent_at: closedAt } as any)
+    .eq("id", input.sessionId)
+    .is("webhook_sent_at", null)
+    .select("id")
+    .maybeSingle();
+
+  if (!claimed) {
+    console.log("[closeTableWorkflow] webhook already sent for session", input.sessionId);
+    result.webhookOk = true; // previously delivered
+  } else {
+    try {
+      const { notifyTableClosed } = await import("@/lib/notifyTableClosed.functions");
+      const whRes = await notifyTableClosed({
+        data: {
+          restaurant_id: result.restaurantId,
+          table_number: result.tableNumber,
+          request_id: result.requestId,
+          session_id: input.sessionId,
+          closed_at: closedAt,
+        },
+      });
+      result.webhookOk = !!whRes?.ok;
+      console.log("[closeTableWorkflow] webhook result", whRes);
+      // If the webhook failed, release the slot so a retry can re-attempt.
+      if (!result.webhookOk) {
+        await supabase
+          .from("table_sessions")
+          .update({ webhook_sent_at: null } as any)
+          .eq("id", input.sessionId);
+      }
+    } catch (whErr) {
+      console.warn("[closeTableWorkflow] webhook call failed (continuing):", whErr);
+      await supabase
+        .from("table_sessions")
+        .update({ webhook_sent_at: null } as any)
+        .eq("id", input.sessionId);
+    }
   }
 
 
