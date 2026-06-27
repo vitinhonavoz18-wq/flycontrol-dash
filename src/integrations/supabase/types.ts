@@ -717,6 +717,7 @@ export type Database = {
           subscription_status: string | null
           sync_endpoint: string | null
           updated_at: string
+          waiter_commission_percent: number
         }
         Insert: {
           address?: string | null
@@ -757,6 +758,7 @@ export type Database = {
           subscription_status?: string | null
           sync_endpoint?: string | null
           updated_at?: string
+          waiter_commission_percent?: number
         }
         Update: {
           address?: string | null
@@ -797,6 +799,7 @@ export type Database = {
           subscription_status?: string | null
           sync_endpoint?: string | null
           updated_at?: string
+          waiter_commission_percent?: number
         }
         Relationships: []
       }
@@ -999,6 +1002,8 @@ export type Database = {
           table_number: string
           total_amount: number | null
           updated_at: string | null
+          waiter_commission_amount: number | null
+          waiter_commission_percent: number | null
           waiter_id: string | null
           webhook_sent_at: string | null
         }
@@ -1021,6 +1026,8 @@ export type Database = {
           table_number: string
           total_amount?: number | null
           updated_at?: string | null
+          waiter_commission_amount?: number | null
+          waiter_commission_percent?: number | null
           waiter_id?: string | null
           webhook_sent_at?: string | null
         }
@@ -1043,6 +1050,8 @@ export type Database = {
           table_number?: string
           total_amount?: number | null
           updated_at?: string | null
+          waiter_commission_amount?: number | null
+          waiter_commission_percent?: number | null
           waiter_id?: string | null
           webhook_sent_at?: string | null
         }
