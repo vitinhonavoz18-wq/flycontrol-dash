@@ -20,6 +20,7 @@ import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as AppTablesRouteImport } from './routes/_app/tables'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppSearchOrdersRouteImport } from './routes/_app/search-orders'
 import { Route as AppMyStoreRouteImport } from './routes/_app/my-store'
 import { Route as AppMenuRouteImport } from './routes/_app/menu'
 import { Route as AppFinanceRouteImport } from './routes/_app/finance'
@@ -94,6 +95,11 @@ const AppTablesRoute = AppTablesRouteImport.update({
 const AppSettingsRoute = AppSettingsRouteImport.update({
   id: '/settings',
   path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSearchOrdersRoute = AppSearchOrdersRouteImport.update({
+  id: '/search-orders',
+  path: '/search-orders',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMyStoreRoute = AppMyStoreRouteImport.update({
@@ -217,6 +223,7 @@ export interface FileRoutesByFullPath {
   '/finance': typeof AppFinanceRoute
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
+  '/search-orders': typeof AppSearchOrdersRoute
   '/settings': typeof AppSettingsRoute
   '/tables': typeof AppTablesRoute
   '/api/health': typeof ApiHealthRoute
@@ -249,6 +256,7 @@ export interface FileRoutesByTo {
   '/finance': typeof AppFinanceRoute
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
+  '/search-orders': typeof AppSearchOrdersRoute
   '/settings': typeof AppSettingsRoute
   '/tables': typeof AppTablesRoute
   '/api/health': typeof ApiHealthRoute
@@ -284,6 +292,7 @@ export interface FileRoutesById {
   '/_app/finance': typeof AppFinanceRoute
   '/_app/menu': typeof AppMenuRoute
   '/_app/my-store': typeof AppMyStoreRoute
+  '/_app/search-orders': typeof AppSearchOrdersRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/tables': typeof AppTablesRoute
   '/api/health': typeof ApiHealthRoute
@@ -319,6 +328,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/menu'
     | '/my-store'
+    | '/search-orders'
     | '/settings'
     | '/tables'
     | '/api/health'
@@ -351,6 +361,7 @@ export interface FileRouteTypes {
     | '/finance'
     | '/menu'
     | '/my-store'
+    | '/search-orders'
     | '/settings'
     | '/tables'
     | '/api/health'
@@ -385,6 +396,7 @@ export interface FileRouteTypes {
     | '/_app/finance'
     | '/_app/menu'
     | '/_app/my-store'
+    | '/_app/search-orders'
     | '/_app/settings'
     | '/_app/tables'
     | '/api/health'
@@ -504,6 +516,13 @@ declare module '@tanstack/react-router' {
       path: '/settings'
       fullPath: '/settings'
       preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/search-orders': {
+      id: '/_app/search-orders'
+      path: '/search-orders'
+      fullPath: '/search-orders'
+      preLoaderRoute: typeof AppSearchOrdersRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/my-store': {
@@ -686,6 +705,7 @@ interface AppRouteChildren {
   AppFinanceRoute: typeof AppFinanceRoute
   AppMenuRoute: typeof AppMenuRoute
   AppMyStoreRoute: typeof AppMyStoreRoute
+  AppSearchOrdersRoute: typeof AppSearchOrdersRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTablesRoute: typeof AppTablesRoute
 }
@@ -698,6 +718,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppFinanceRoute: AppFinanceRoute,
   AppMenuRoute: AppMenuRoute,
   AppMyStoreRoute: AppMyStoreRoute,
+  AppSearchOrdersRoute: AppSearchOrdersRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTablesRoute: AppTablesRoute,
 }
@@ -726,13 +747,3 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}

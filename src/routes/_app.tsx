@@ -17,7 +17,8 @@ import {
   Sun,
   Moon,
   CreditCard,
-  LayoutGrid
+  LayoutGrid,
+  Search
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -111,6 +112,7 @@ function AppLayout() {
   const items = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/tables", label: "Mesas", icon: LayoutGrid },
+    { to: "/search-orders", label: "Buscar Pedidos", icon: Search },
     { to: "/my-store", label: "Minha Loja", icon: Store },
     { to: "/menu", label: "Cardápio", icon: Menu },
     { to: "/combos", label: "Combos", icon: PieChart },
