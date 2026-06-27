@@ -19,7 +19,8 @@ import {
   CreditCard,
   LayoutGrid,
   Search,
-  UtensilsCrossed
+  UtensilsCrossed,
+  Wallet
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -120,6 +121,7 @@ function AppLayout() {
     { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },
     { to: "/settings", label: "Configurações", icon: Settings },
     { to: "/waiters", label: "Garçons", icon: UtensilsCrossed },
+    { to: "/commissions", label: "Comissões", icon: Wallet },
     { to: "/docs", label: "Documentação", icon: BookOpen },
   ];
 
