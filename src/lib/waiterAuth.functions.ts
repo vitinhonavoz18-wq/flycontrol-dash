@@ -22,10 +22,10 @@ function fromB64(s: string) {
 async function pbkdf2(password: string, salt: Uint8Array) {
   const enc = new TextEncoder();
   const key = await crypto.subtle.importKey(
-    "raw", enc.encode(password), "PBKDF2", false, ["deriveBits"],
+    "raw", enc.encode(password) as unknown as BufferSource, "PBKDF2", false, ["deriveBits"],
   );
   const bits = await crypto.subtle.deriveBits(
-    { name: "PBKDF2", salt, iterations: PBKDF2_ITER, hash: "SHA-256" },
+    { name: "PBKDF2", salt: salt as unknown as BufferSource, iterations: PBKDF2_ITER, hash: "SHA-256" },
     key, KEY_LEN * 8,
   );
   return new Uint8Array(bits);
@@ -46,10 +46,10 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
     const expected = fromB64(hashB64);
     const enc = new TextEncoder();
     const key = await crypto.subtle.importKey(
-      "raw", enc.encode(password), "PBKDF2", false, ["deriveBits"],
+      "raw", enc.encode(password) as unknown as BufferSource, "PBKDF2", false, ["deriveBits"],
     );
     const bits = await crypto.subtle.deriveBits(
-      { name: "PBKDF2", salt, iterations: iter, hash: "SHA-256" },
+      { name: "PBKDF2", salt: salt as unknown as BufferSource, iterations: iter, hash: "SHA-256" },
       key, expected.length * 8,
     );
     const got = new Uint8Array(bits);
@@ -68,14 +68,17 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 async function getHmacKey() {
   const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "fly-waiter-fallback";
   return crypto.subtle.importKey(
-    "raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"],
+    "raw", new TextEncoder().encode(secret) as unknown as BufferSource,
+    { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"],
   );
 }
 
 async function signToken(waiterId: string, tenantId: string, expiresAt: number) {
   const payload = `${waiterId}.${tenantId}.${expiresAt}`;
   const key = await getHmacKey();
-  const sig = new Uint8Array(await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(payload)));
+  const sig = new Uint8Array(await crypto.subtle.sign(
+    "HMAC", key, new TextEncoder().encode(payload) as unknown as BufferSource,
+  ));
   return `${payload}.${toB64(sig)}`;
 }
 
@@ -87,7 +90,11 @@ export async function verifyWaiterToken(token: string): Promise<{ waiterId: stri
   if (!exp || Date.now() > exp) return null;
   const payload = `${waiterId}.${tenantId}.${expStr}`;
   const key = await getHmacKey();
-  const ok = await crypto.subtle.verify("HMAC", key, fromB64(sigB64), new TextEncoder().encode(payload));
+  const ok = await crypto.subtle.verify(
+    "HMAC", key,
+    fromB64(sigB64) as unknown as BufferSource,
+    new TextEncoder().encode(payload) as unknown as BufferSource,
+  );
   return ok ? { waiterId, tenantId } : null;
 }
 

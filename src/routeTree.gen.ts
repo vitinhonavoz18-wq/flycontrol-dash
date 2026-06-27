@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WaiterPortalRouteImport } from './routes/waiter-portal'
+import { Route as WaiterLoginRouteImport } from './routes/waiter-login'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as PresentationRouteImport } from './routes/presentation'
 import { Route as LoginRouteImport } from './routes/login'
@@ -18,6 +20,7 @@ import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as ApiSyncTableSessionsRouteImport } from './routes/api/sync-table-sessions'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as AppWaitersRouteImport } from './routes/_app/waiters'
 import { Route as AppTablesRouteImport } from './routes/_app/tables'
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppSearchOrdersRouteImport } from './routes/_app/search-orders'
@@ -43,6 +46,16 @@ import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizze
 import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin/finance'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin/analytics'
 
+const WaiterPortalRoute = WaiterPortalRouteImport.update({
+  id: '/waiter-portal',
+  path: '/waiter-portal',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const WaiterLoginRoute = WaiterLoginRouteImport.update({
+  id: '/waiter-login',
+  path: '/waiter-login',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
@@ -86,6 +99,11 @@ const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AppWaitersRoute = AppWaitersRouteImport.update({
+  id: '/waiters',
+  path: '/waiters',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppTablesRoute = AppTablesRouteImport.update({
   id: '/tables',
@@ -216,6 +234,8 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/presentation': typeof PresentationRoute
   '/signup': typeof SignupRoute
+  '/waiter-login': typeof WaiterLoginRoute
+  '/waiter-portal': typeof WaiterPortalRoute
   '/admin': typeof AppAdminRouteWithChildren
   '/combos': typeof AppCombosRoute
   '/dashboard': typeof AppDashboardRoute
@@ -226,6 +246,7 @@ export interface FileRoutesByFullPath {
   '/search-orders': typeof AppSearchOrdersRoute
   '/settings': typeof AppSettingsRoute
   '/tables': typeof AppTablesRoute
+  '/waiters': typeof AppWaitersRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
@@ -250,6 +271,8 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/presentation': typeof PresentationRoute
   '/signup': typeof SignupRoute
+  '/waiter-login': typeof WaiterLoginRoute
+  '/waiter-portal': typeof WaiterPortalRoute
   '/combos': typeof AppCombosRoute
   '/dashboard': typeof AppDashboardRoute
   '/docs': typeof AppDocsRoute
@@ -259,6 +282,7 @@ export interface FileRoutesByTo {
   '/search-orders': typeof AppSearchOrdersRoute
   '/settings': typeof AppSettingsRoute
   '/tables': typeof AppTablesRoute
+  '/waiters': typeof AppWaitersRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
@@ -285,6 +309,8 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/presentation': typeof PresentationRoute
   '/signup': typeof SignupRoute
+  '/waiter-login': typeof WaiterLoginRoute
+  '/waiter-portal': typeof WaiterPortalRoute
   '/_app/admin': typeof AppAdminRouteWithChildren
   '/_app/combos': typeof AppCombosRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -295,6 +321,7 @@ export interface FileRoutesById {
   '/_app/search-orders': typeof AppSearchOrdersRoute
   '/_app/settings': typeof AppSettingsRoute
   '/_app/tables': typeof AppTablesRoute
+  '/_app/waiters': typeof AppWaitersRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
@@ -321,6 +348,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/presentation'
     | '/signup'
+    | '/waiter-login'
+    | '/waiter-portal'
     | '/admin'
     | '/combos'
     | '/dashboard'
@@ -331,6 +360,7 @@ export interface FileRouteTypes {
     | '/search-orders'
     | '/settings'
     | '/tables'
+    | '/waiters'
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
@@ -355,6 +385,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/presentation'
     | '/signup'
+    | '/waiter-login'
+    | '/waiter-portal'
     | '/combos'
     | '/dashboard'
     | '/docs'
@@ -364,6 +396,7 @@ export interface FileRouteTypes {
     | '/search-orders'
     | '/settings'
     | '/tables'
+    | '/waiters'
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
@@ -389,6 +422,8 @@ export interface FileRouteTypes {
     | '/login'
     | '/presentation'
     | '/signup'
+    | '/waiter-login'
+    | '/waiter-portal'
     | '/_app/admin'
     | '/_app/combos'
     | '/_app/dashboard'
@@ -399,6 +434,7 @@ export interface FileRouteTypes {
     | '/_app/search-orders'
     | '/_app/settings'
     | '/_app/tables'
+    | '/_app/waiters'
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
@@ -425,6 +461,8 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PresentationRoute: typeof PresentationRoute
   SignupRoute: typeof SignupRoute
+  WaiterLoginRoute: typeof WaiterLoginRoute
+  WaiterPortalRoute: typeof WaiterPortalRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiOrdersRoute: typeof ApiOrdersRoute
   ApiSyncTableSessionsRoute: typeof ApiSyncTableSessionsRoute
@@ -441,6 +479,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/waiter-portal': {
+      id: '/waiter-portal'
+      path: '/waiter-portal'
+      fullPath: '/waiter-portal'
+      preLoaderRoute: typeof WaiterPortalRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/waiter-login': {
+      id: '/waiter-login'
+      path: '/waiter-login'
+      fullPath: '/waiter-login'
+      preLoaderRoute: typeof WaiterLoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
@@ -503,6 +555,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/health'
       preLoaderRoute: typeof ApiHealthRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/_app/waiters': {
+      id: '/_app/waiters'
+      path: '/waiters'
+      fullPath: '/waiters'
+      preLoaderRoute: typeof AppWaitersRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/tables': {
       id: '/_app/tables'
@@ -708,6 +767,7 @@ interface AppRouteChildren {
   AppSearchOrdersRoute: typeof AppSearchOrdersRoute
   AppSettingsRoute: typeof AppSettingsRoute
   AppTablesRoute: typeof AppTablesRoute
+  AppWaitersRoute: typeof AppWaitersRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -721,6 +781,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSearchOrdersRoute: AppSearchOrdersRoute,
   AppSettingsRoute: AppSettingsRoute,
   AppTablesRoute: AppTablesRoute,
+  AppWaitersRoute: AppWaitersRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -731,6 +792,8 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PresentationRoute: PresentationRoute,
   SignupRoute: SignupRoute,
+  WaiterLoginRoute: WaiterLoginRoute,
+  WaiterPortalRoute: WaiterPortalRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiOrdersRoute: ApiOrdersRoute,
   ApiSyncTableSessionsRoute: ApiSyncTableSessionsRoute,
