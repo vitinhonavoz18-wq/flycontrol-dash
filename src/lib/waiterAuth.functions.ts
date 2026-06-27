@@ -362,12 +362,12 @@ export const listSessionOrders = createServerFn({ method: "POST" })
     const { data: sess } = await supabaseAdmin
       .from("table_sessions").select("restaurant_id").eq("id", data.sessionId).maybeSingle();
     if (!sess || sess.restaurant_id !== auth.tenantId) throw new Error("Comanda não encontrada");
-    const { data, error } = await supabaseAdmin
+    const { data: links, error } = await supabaseAdmin
       .from("table_session_orders")
       .select("order_id, orders(id, order_number, customer_name, total, status, items, notes, created_at)")
       .eq("table_session_id", data.sessionId);
     if (error) throw new Error(error.message);
-    return (data || []).map((d: any) => d.orders).filter(Boolean);
+    return (links || []).map((d: any) => d.orders).filter(Boolean);
   });
 
 // Request close for a session (waiter-driven)
