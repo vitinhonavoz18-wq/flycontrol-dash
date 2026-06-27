@@ -999,6 +999,7 @@ export type Database = {
           table_number: string
           total_amount: number | null
           updated_at: string | null
+          waiter_id: string | null
           webhook_sent_at: string | null
         }
         Insert: {
@@ -1020,6 +1021,7 @@ export type Database = {
           table_number: string
           total_amount?: number | null
           updated_at?: string | null
+          waiter_id?: string | null
           webhook_sent_at?: string | null
         }
         Update: {
@@ -1041,6 +1043,7 @@ export type Database = {
           table_number?: string
           total_amount?: number | null
           updated_at?: string | null
+          waiter_id?: string | null
           webhook_sent_at?: string | null
         }
         Relationships: [
@@ -1065,6 +1068,13 @@ export type Database = {
             referencedRelation: "restaurant_tables"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "table_sessions_waiter_id_fkey"
+            columns: ["waiter_id"]
+            isOneToOne: false
+            referencedRelation: "waiters"
+            referencedColumns: ["id"]
+          },
         ]
       }
       user_roles: {
@@ -1084,6 +1094,60 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      waiters: {
+        Row: {
+          created_at: string
+          full_name: string
+          id: string
+          is_active: boolean
+          last_login_at: string | null
+          password_hash: string
+          phone: string | null
+          tenant_id: string
+          updated_at: string
+          username: string
+        }
+        Insert: {
+          created_at?: string
+          full_name: string
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          password_hash: string
+          phone?: string | null
+          tenant_id: string
+          updated_at?: string
+          username: string
+        }
+        Update: {
+          created_at?: string
+          full_name?: string
+          id?: string
+          is_active?: boolean
+          last_login_at?: string | null
+          password_hash?: string
+          phone?: string | null
+          tenant_id?: string
+          updated_at?: string
+          username?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "waiters_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "waiters_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
       }
     }
     Views: {
