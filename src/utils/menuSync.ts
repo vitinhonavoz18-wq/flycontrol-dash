@@ -135,7 +135,17 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
 
     if (protocol === 'rest') {
       const resourcePath = REST_RESOURCE_PATH[externalType] ?? externalType;
-      const base = rawEndpoint.replace(/\/+$/, '');
+      const base = deriveRestBase(rawEndpoint);
+
+      if (base !== rawEndpoint.replace(/\/+$/, '')) {
+        console.warn(
+          '[SyncExternal] Invalid write endpoint.\n' +
+            'Public menu-sync endpoints are read-only.\n' +
+            'Switching automatically to REST endpoint.\n' +
+            `  configured: ${rawEndpoint}\n` +
+            `  rewritten:  ${base}`
+        );
+      }
 
       if (action === 'create') {
         url = `${base}/${resourcePath}`;
@@ -166,6 +176,12 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
         url = `${base}/${resourcePath}/${encodeURIComponent(externalId)}`;
         method = 'DELETE';
         bodyObj = undefined;
+      }
+
+      // Safety net: never write to a public read-only path.
+      if (/\/api\/public\/menu-sync\//i.test(url)) {
+        console.error('[SyncExternal] Refusing to write to public read-only endpoint:', url);
+        return { success: false, error: 'invalid_write_endpoint' };
       }
     } else {
       // ============ LEGACY (unchanged behavior) ============
