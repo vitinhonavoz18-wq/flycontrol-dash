@@ -50,7 +50,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "FlyControl" },
       { name: "mobile-web-app-capable", content: "yes" },
-      ...
+      { title: "FlyControl — Painel central de delivery" },
+      { name: "description", content: "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria." },
       { property: "og:title", content: "FlyControl — Painel central de delivery" },
       { property: "og:description", content: "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria." },
       { name: "twitter:title", content: "FlyControl — Painel central de delivery" },
