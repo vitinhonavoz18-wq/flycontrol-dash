@@ -329,13 +329,14 @@ function prepareDataForExternal(type: MenuType, data: any) {
   }
 
   if (type === 'product') {
+    const normalizedCategoryId = normalizeExternalId(data.external_category_id);
     return {
       name: data.name,
       description: data.description,
       price: data.price,
       image_url: data.image_url,
       active: data.active !== undefined ? data.active : true,
-      category_id: data.external_category_id,
+      category_id: normalizedCategoryId,
     };
   }
 
