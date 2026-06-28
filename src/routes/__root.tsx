@@ -91,6 +91,7 @@ function RootComponent() {
         <AuthProvider>
           <Outlet />
           <Toaster />
+          <InstallBanner />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
