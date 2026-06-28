@@ -173,36 +173,39 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
         );
       }
 
+      const restId = normalizeExternalId(externalId);
+
       if (action === 'create') {
         url = `${base}/${resourcePath}`;
         method = 'POST';
         bodyObj = prepareDataForExternal(externalType, data);
       } else if (action === 'update') {
-        if (!externalId) {
+        if (!restId) {
           console.error('[SyncExternal] REST update requer externalId.');
           return { success: false, error: 'missing_external_id' };
         }
-        url = `${base}/${resourcePath}/${encodeURIComponent(externalId)}`;
+        url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
         method = 'PUT';
         bodyObj = prepareDataForExternal(externalType, data);
       } else if (action === 'status') {
-        if (!externalId) {
+        if (!restId) {
           console.error('[SyncExternal] REST status requer externalId.');
           return { success: false, error: 'missing_external_id' };
         }
-        url = `${base}/${resourcePath}/${encodeURIComponent(externalId)}`;
+        url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
         method = 'PATCH';
         bodyObj = { active: data?.value };
       } else {
         // delete
-        if (!externalId) {
+        if (!restId) {
           console.error('[SyncExternal] REST delete requer externalId.');
           return { success: false, error: 'missing_external_id' };
         }
-        url = `${base}/${resourcePath}/${encodeURIComponent(externalId)}`;
+        url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
         method = 'DELETE';
         bodyObj = undefined;
       }
+
 
       // Safety net: never write to a public read-only path.
       if (/\/api\/public\/menu-sync\//i.test(url)) {
