@@ -37,10 +37,40 @@ function detectProtocol(endpoint: string): Protocol {
   try {
     const u = new URL(endpoint);
     const pathname = u.pathname.replace(/\/+$/, '');
+    // REST: explicit /api/menu-sync, or any public read-only endpoint
+    // (/api/public/menu-sync/{slug}/{token}) — writes will be redirected
+    // to the authenticated REST base derived from the same origin.
     if (/\/api\/menu-sync$/i.test(pathname)) return 'rest';
+    if (/\/api\/public\/menu-sync(\/|$)/i.test(pathname)) return 'rest';
     return 'legacy';
   } catch {
     return 'legacy';
+  }
+}
+
+/**
+ * Derive the authenticated REST base URL (…/api/menu-sync) from any
+ * configured endpoint. Public read-only URLs
+ * (…/api/public/menu-sync/{slug}/{token}) are automatically rewritten so
+ * writes never hit the read-only SPA shell.
+ */
+function deriveRestBase(endpoint: string): string {
+  try {
+    const u = new URL(endpoint);
+    let pathname = u.pathname.replace(/\/+$/, '');
+    const publicMatch = pathname.match(/^(.*)\/api\/public\/menu-sync(?:\/.*)?$/i);
+    if (publicMatch) {
+      pathname = `${publicMatch[1]}/api/menu-sync`;
+    } else if (!/\/api\/menu-sync$/i.test(pathname)) {
+      // Fall back to appending /api/menu-sync at the origin.
+      pathname = `${pathname}`.replace(/\/api\/menu-sync\/.*$/i, '/api/menu-sync');
+      if (!/\/api\/menu-sync$/i.test(pathname)) {
+        pathname = '/api/menu-sync';
+      }
+    }
+    return `${u.origin}${pathname}`;
+  } catch {
+    return endpoint.replace(/\/+$/, '');
   }
 }
 
