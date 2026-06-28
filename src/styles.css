@@ -211,3 +211,48 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   body { background: white !important; color: black !important; }
   .no-print { display: none !important; }
 }
+
+/* === MOBILE-FIRST UX (≤ 767px) ============================================
+   Aplica tipografia legível, touch-targets mínimos de 44–48px e cards mais
+   confortáveis para uso com uma mão. Desktop fica inalterado.
+   ========================================================================= */
+@media (max-width: 767px) {
+  html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
+  body { font-size: 16px; line-height: 1.45; }
+
+  h1 { font-size: 1.625rem; line-height: 1.2; letter-spacing: -0.01em; }
+  h2 { font-size: 1.25rem;  line-height: 1.25; }
+  h3 { font-size: 1.125rem; line-height: 1.3; }
+
+  /* Touch targets — botões, links de nav e itens clicáveis */
+  button:not([data-slot="sidebar-menu-sub-button"]):not(.no-touch-min),
+  [role="button"],
+  a.btn,
+  .touch-target {
+    min-height: 44px;
+  }
+
+  /* Inputs confortáveis para o polegar e sem zoom no iOS */
+  input:not([type="checkbox"]):not([type="radio"]),
+  select,
+  textarea {
+    min-height: 44px;
+    font-size: 16px;
+  }
+
+  /* Cards mais arredondados e respiráveis */
+  .bg-card { border-radius: 1rem; }
+
+  /* Diálogos quase em tela cheia no mobile */
+  [role="dialog"] { border-radius: 1rem 1rem 0 0; }
+
+  /* Permite scroll horizontal suave em chips/filtros */
+  .chips-scroll {
+    overflow-x: auto;
+    scroll-snap-type: x proximity;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .chips-scroll::-webkit-scrollbar { display: none; }
+  .chips-scroll > * { scroll-snap-align: start; flex-shrink: 0; }
+}
