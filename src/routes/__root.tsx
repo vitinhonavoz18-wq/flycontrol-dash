@@ -44,9 +44,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "FlyControl — Painel central de delivery" },
-      { name: "description", content: "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria." },
+      { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
+      { name: "theme-color", content: "#ff7a00" },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
+      { name: "apple-mobile-web-app-title", content: "FlyControl" },
+      { name: "mobile-web-app-capable", content: "yes" },
+      ...
       { property: "og:title", content: "FlyControl — Painel central de delivery" },
       { property: "og:description", content: "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria." },
       { name: "twitter:title", content: "FlyControl — Painel central de delivery" },
