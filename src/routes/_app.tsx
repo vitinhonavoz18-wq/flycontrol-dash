@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
+import { BottomNav } from "@/components/mobile/BottomNav";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
@@ -261,10 +262,13 @@ function AppLayout() {
           </Sheet>
         </header>
 
-        <main className="flex-1 overflow-x-hidden relative">
+        <main
+          className="flex-1 overflow-x-hidden relative pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0"
+        >
           <Outlet />
           <NotificationsProvider />
         </main>
+        <BottomNav />
       </div>
     </div>
   );
