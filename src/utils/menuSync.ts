@@ -74,6 +74,32 @@ function deriveRestBase(endpoint: string): string {
   }
 }
 
+const SF_ID_PREFIXES = [
+  'sf_prod_',
+  'sf_cat_',
+  'sf_combo_',
+  'sf_border_',
+  'sf_add_',
+  'sf_bev_',
+  'sf_size_',
+];
+
+/**
+ * Strip internal FlyControl prefix from a SiteCreatorFly external ID.
+ * SF stores raw UUIDs in Postgres UUID columns; prefixed IDs are rejected.
+ */
+function normalizeExternalId(externalId?: string): string | undefined {
+  if (!externalId) return externalId;
+  for (const prefix of SF_ID_PREFIXES) {
+    if (externalId.startsWith(prefix)) {
+      const stripped = externalId.slice(prefix.length);
+      console.log(`[SyncExternal] Normalized external ID: ${externalId} → ${stripped}`);
+      return stripped;
+    }
+  }
+  return externalId;
+}
+
 function mapExternalType(type: string, data?: any): MenuType {
   if (type === 'category') return 'category';
   if (type === 'beverage') return 'beverage';
@@ -147,36 +173,39 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
         );
       }
 
+      const restId = normalizeExternalId(externalId);
+
       if (action === 'create') {
         url = `${base}/${resourcePath}`;
         method = 'POST';
         bodyObj = prepareDataForExternal(externalType, data);
       } else if (action === 'update') {
-        if (!externalId) {
+        if (!restId) {
           console.error('[SyncExternal] REST update requer externalId.');
           return { success: false, error: 'missing_external_id' };
         }
-        url = `${base}/${resourcePath}/${encodeURIComponent(externalId)}`;
+        url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
         method = 'PUT';
         bodyObj = prepareDataForExternal(externalType, data);
       } else if (action === 'status') {
-        if (!externalId) {
+        if (!restId) {
           console.error('[SyncExternal] REST status requer externalId.');
           return { success: false, error: 'missing_external_id' };
         }
-        url = `${base}/${resourcePath}/${encodeURIComponent(externalId)}`;
+        url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
         method = 'PATCH';
         bodyObj = { active: data?.value };
       } else {
         // delete
-        if (!externalId) {
+        if (!restId) {
           console.error('[SyncExternal] REST delete requer externalId.');
           return { success: false, error: 'missing_external_id' };
         }
-        url = `${base}/${resourcePath}/${encodeURIComponent(externalId)}`;
+        url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
         method = 'DELETE';
         bodyObj = undefined;
       }
+
 
       // Safety net: never write to a public read-only path.
       if (/\/api\/public\/menu-sync\//i.test(url)) {
