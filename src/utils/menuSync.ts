@@ -74,6 +74,32 @@ function deriveRestBase(endpoint: string): string {
   }
 }
 
+const SF_ID_PREFIXES = [
+  'sf_prod_',
+  'sf_cat_',
+  'sf_combo_',
+  'sf_border_',
+  'sf_add_',
+  'sf_bev_',
+  'sf_size_',
+];
+
+/**
+ * Strip internal FlyControl prefix from a SiteCreatorFly external ID.
+ * SF stores raw UUIDs in Postgres UUID columns; prefixed IDs are rejected.
+ */
+function normalizeExternalId(externalId?: string): string | undefined {
+  if (!externalId) return externalId;
+  for (const prefix of SF_ID_PREFIXES) {
+    if (externalId.startsWith(prefix)) {
+      const stripped = externalId.slice(prefix.length);
+      console.log(`[SyncExternal] Normalized external ID: ${externalId} → ${stripped}`);
+      return stripped;
+    }
+  }
+  return externalId;
+}
+
 function mapExternalType(type: string, data?: any): MenuType {
   if (type === 'category') return 'category';
   if (type === 'beverage') return 'beverage';
