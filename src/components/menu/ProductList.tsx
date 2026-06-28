@@ -126,18 +126,40 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
       if (pizzeriaSlug && pizzeriaApiKey) {
         // Find external category ID
         const cat = categories.find(c => c.id === categoryId);
-        const external_category_id = cat?.external_id;
+        const rawExternalCategoryId = cat?.external_id ?? null;
+        const SF_CAT_PREFIX = 'sf_cat_';
+        const normalizedExternalCategoryId =
+          rawExternalCategoryId && rawExternalCategoryId.startsWith(SF_CAT_PREFIX)
+            ? rawExternalCategoryId.slice(SF_CAT_PREFIX.length)
+            : rawExternalCategoryId;
+
+        console.log('[ProductSync] Category trace', {
+          localCategoryId: categoryId || null,
+          localCategoryName: cat?.name ?? null,
+          externalCategoryId: rawExternalCategoryId,
+          normalizedExternalCategoryId,
+          finalCategoryIdSent: normalizedExternalCategoryId,
+        });
+
+        if (productType !== 'beverage' && !normalizedExternalCategoryId) {
+          toast.error(
+            'Categoria não sincronizada com o SiteCreatorFly. Sincronize/recadastre a categoria antes de salvar o produto.'
+          );
+          setSaving(false);
+          return;
+        }
 
         const syncResult = await syncToExternal({
           type: productType,
           action: editingProduct ? 'update' : 'create',
           id: editingProduct?.id,
           externalId: editingProduct?.external_id,
-          data: { ...payload, external_category_id },
+          data: { ...payload, external_category_id: normalizedExternalCategoryId },
           pizzeriaSlug,
           pizzeriaApiKey,
           syncEndpoint
         });
+
 
         if (!syncResult.success) {
           let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
