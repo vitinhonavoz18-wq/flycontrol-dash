@@ -40,12 +40,17 @@ export function useTables(tenantId: string | null) {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [loading, setLoading] = useState(false);
 
+  function mapRow(r: any): RestaurantTable {
+    return { ...r, default_waiter_name: r.default_waiter?.full_name ?? null };
+  }
+
   async function loadTables() {
     if (!tenantId) return;
     setLoading(true);
+    const selectStr = "*, default_waiter:waiters!restaurant_tables_default_waiter_id_fkey(id, full_name)";
     const { data, error } = await supabase
       .from("restaurant_tables")
-      .select("*")
+      .select(selectStr)
       .eq("tenant_id", tenantId)
       .order("table_number");
 
@@ -56,29 +61,26 @@ export function useTables(tenantId: string | null) {
     }
 
     if (data.length === 0) {
-      // If no tables, call the RPC to generate defaults
       const { error: rpcError } = await supabase.rpc('generate_default_restaurant_tables', {
         p_restaurant_id: tenantId
       });
 
       if (rpcError) {
         console.error("Error generating default tables:", rpcError);
-        // Fallback: manually insert if RPC fails for some reason (e.g. not created yet)
         setTables([]);
       } else {
-        // Reload tables after generation
         const { data: newData, error: newError } = await supabase
           .from("restaurant_tables")
-          .select("*")
+          .select(selectStr)
           .eq("tenant_id", tenantId)
           .order("table_number");
-        
+
         if (!newError && newData) {
-          setTables(newData as RestaurantTable[]);
+          setTables((newData as any[]).map(mapRow));
         }
       }
     } else {
-      setTables(data as RestaurantTable[]);
+      setTables((data as any[]).map(mapRow));
     }
     setLoading(false);
   }
