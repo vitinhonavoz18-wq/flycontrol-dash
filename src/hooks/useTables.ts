@@ -113,9 +113,10 @@ export function useTables(tenantId: string | null) {
   }
 
   async function updateTable(id: string, updates: Partial<RestaurantTable>) {
+    const { default_waiter_name: _drop, ...clean } = updates as any;
     const { error } = await supabase
       .from("restaurant_tables")
-      .update(updates)
+      .update(clean)
       .eq("id", id);
 
     if (error) {
