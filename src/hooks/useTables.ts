@@ -159,13 +159,27 @@ export function useTables(tenantId: string | null) {
     }
   }
 
+  async function updateDefaultWaiter(tableId: string, waiterId: string | null) {
+    const { error } = await supabase
+      .from("restaurant_tables")
+      .update({ default_waiter_id: waiterId })
+      .eq("id", tableId);
+    if (error) {
+      toast.error("Erro ao definir garçom padrão: " + error.message);
+      return false;
+    }
+    await loadTables();
+    toast.success(waiterId ? "Garçom padrão definido!" : "Garçom padrão removido.");
+    return true;
+  }
+
   useEffect(() => {
     if (tenantId) {
       loadTables();
     }
   }, [tenantId]);
 
-  return { tables, loading, loadTables, addTable, updateTable, toggleTable, deleteTable };
+  return { tables, loading, loadTables, addTable, updateTable, toggleTable, deleteTable, updateDefaultWaiter };
 }
 
 export function useTableSessions(tenantId: string | null) {
