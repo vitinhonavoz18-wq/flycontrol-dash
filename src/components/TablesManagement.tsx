@@ -72,6 +72,21 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     }
   }, [tables.length]);
 
+  useEffect(() => {
+    if (!tenantId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("waiters")
+        .select("id, full_name")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true)
+        .order("full_name");
+      if (!error && data) setWaiters(data as Array<{ id: string; full_name: string }>);
+    })();
+  }, [tenantId]);
+
+
+
   async function handleAddTable() {
     if (!newTableNumber) {
       toast.error("O número da mesa é obrigatório");
