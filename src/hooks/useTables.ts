@@ -296,7 +296,11 @@ export function useTableSessions(tenantId: string | null) {
   }
 
 
-  async function assignWaiter(sessionId: string, waiterId: string | null) {
+  async function assignWaiter(
+    sessionId: string,
+    waiterId: string | null,
+    opts: { alsoSetDefault?: boolean } = {}
+  ) {
     const { error } = await supabase
       .from("table_sessions")
       .update({ waiter_id: waiterId })
@@ -306,8 +310,24 @@ export function useTableSessions(tenantId: string | null) {
       toast.error("Erro ao atribuir garçom: " + error.message);
       return false;
     }
+
+    if (opts.alsoSetDefault) {
+      const session = sessions.find(s => s.id === sessionId);
+      if (session?.table_id) {
+        const { error: e2 } = await supabase
+          .from("restaurant_tables")
+          .update({ default_waiter_id: waiterId })
+          .eq("id", session.table_id);
+        if (e2) toast.error("Sessão trocada, mas falhou ao salvar padrão: " + e2.message);
+      }
+    }
+
     await loadSessions();
-    toast.success(waiterId ? "Garçom atribuído à mesa!" : "Garçom removido da mesa.");
+    toast.success(
+      opts.alsoSetDefault
+        ? "Garçom padrão da mesa atualizado!"
+        : waiterId ? "Garçom atribuído à mesa!" : "Garçom removido da mesa."
+    );
     return true;
   }
 
