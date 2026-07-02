@@ -37,11 +37,12 @@ interface TablesManagementProps {
 
 export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementProps) {
   const { tables, loading: tablesLoading, addTable, updateTable, toggleTable, deleteTable, loadTables } = useTables(tenantId);
-  const { sessions, loading: sessionsLoading, closeSession, loadSessions, toggleServiceFee } = useTableSessions(tenantId);
+  const { sessions, loading: sessionsLoading, closeSession, loadSessions, toggleServiceFee, assignWaiter } = useTableSessions(tenantId);
   const [selectedSession, setSelectedSession] = useState<TableSession | null>(null);
   const [sessionOrders, setSessionOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [waiters, setWaiters] = useState<Array<{ id: string; full_name: string }>>([]);
   
   const [newTableNumber, setNewTableNumber] = useState("");
   const [newTableName, setNewTableName] = useState("");
