@@ -182,6 +182,7 @@ function MyTablesTab({ token, tenantId }: { token: string; tenantId: string; wai
   const reqClose = useServerFn(waiterRequestClose);
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
+  const [now, setNow] = useState(() => Date.now());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -192,9 +193,18 @@ function MyTablesTab({ token, tenantId }: { token: string; tenantId: string; wai
 
   useEffect(() => { load(); }, [load]);
 
+  // 1s ticker for elapsed time (UI only, no fetch)
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
+
+  // Realtime: sessions + linked orders + orders themselves — no polling
   useEffect(() => {
     const ch = supabase.channel(`waiter-mytables-${tenantId}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "table_sessions", filter: `restaurant_id=eq.${tenantId}` }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "table_session_orders" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` }, () => load())
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [tenantId, load]);
@@ -209,7 +219,7 @@ function MyTablesTab({ token, tenantId }: { token: string; tenantId: string; wai
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="text-base">Minhas mesas</CardTitle>
+        <CardTitle className="text-base">Minhas mesas · resumo ao vivo</CardTitle>
         <Button variant="outline" size="sm" onClick={load} disabled={loading}>
           <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Atualizar
         </Button>
@@ -217,27 +227,59 @@ function MyTablesTab({ token, tenantId }: { token: string; tenantId: string; wai
       <CardContent>
         {loading && rows.length === 0 ? <Loader /> :
           rows.length === 0 ? <Empty text="Nenhuma mesa atribuída a você. Peça ao gerente para atribuir." /> :
-          <ul className="divide-y">
-            {rows.map((r: any) => (
-              <li key={r.id} className="py-3 flex items-center justify-between gap-3 flex-wrap">
-                <div>
-                  <div className="font-semibold">{r.table_name || `Mesa ${r.table_number}`}</div>
-                  <div className="text-xs text-muted-foreground">
-                    Aberta {new Date(r.opened_at).toLocaleTimeString("pt-BR")}
-                    {r.customer_name && <> · {r.customer_name}</>}
-                  </div>
-                </div>
-                <div className="flex items-center gap-3">
-                  <span className="font-mono text-sm">{fmtBRL(r.total_amount)}</span>
-                  <Button size="sm" variant="default" onClick={() => handleRequestClose(r.id)}>
-                    <BellRing className="h-4 w-4 mr-1" /> Fechar
-                  </Button>
-                </div>
-              </li>
-            ))}
-          </ul>}
+          <div className="grid gap-3 md:grid-cols-2">
+            {rows.map((r: any) => <LiveTableCard key={r.id} r={r} now={now} onClose={handleRequestClose} />)}
+          </div>}
       </CardContent>
     </Card>
+  );
+}
+
+function LiveTableCard({ r, now, onClose }: { r: any; now: number; onClose: (id: string) => void }) {
+  const subtotal = Number(r.subtotal_amount || 0);
+  const fee = Number(r.service_fee_amount || 0);
+  const discount = Number(r.discount_total || 0);
+  const total = Number(r.total_amount || 0);
+  const elapsedMs = Math.max(0, now - new Date(r.opened_at).getTime());
+  const h = Math.floor(elapsedMs / 3_600_000);
+  const m = Math.floor((elapsedMs % 3_600_000) / 60_000);
+  const s = Math.floor((elapsedMs % 60_000) / 1000);
+  const elapsed = h > 0 ? `${h}h ${String(m).padStart(2, "0")}m` : `${m}m ${String(s).padStart(2, "0")}s`;
+
+  return (
+    <div className="rounded-lg border bg-card p-3 space-y-2">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="font-semibold">{r.table_name || `Mesa ${r.table_number}`}</div>
+          <div className="text-xs text-muted-foreground flex items-center gap-1">
+            <Clock className="h-3 w-3" /> {elapsed} em aberto
+            {r.customer_name && <> · {r.customer_name}</>}
+          </div>
+        </div>
+        <Badge variant="outline" className="text-[10px]">{r.status}</Badge>
+      </div>
+
+      <dl className="text-sm grid grid-cols-2 gap-x-3 gap-y-1">
+        <dt className="text-muted-foreground">Subtotal</dt>
+        <dd className="text-right font-mono">{fmtBRL(subtotal)}</dd>
+        <dt className="text-muted-foreground">
+          Taxa serviço{r.service_fee_enabled ? ` (${Number(r.service_fee_percent || 0)}%)` : ""}
+        </dt>
+        <dd className="text-right font-mono">{fmtBRL(fee)}</dd>
+        <dt className="text-muted-foreground">Descontos</dt>
+        <dd className="text-right font-mono">{discount > 0 ? `− ${fmtBRL(discount)}` : fmtBRL(0)}</dd>
+        <dt className="font-semibold">Total</dt>
+        <dd className="text-right font-mono font-bold text-primary">{fmtBRL(total)}</dd>
+      </dl>
+
+      <div className="flex items-center justify-between text-xs text-muted-foreground border-t pt-2">
+        <span className="flex items-center gap-1"><ClipboardList className="h-3 w-3" /> {r.orders_count} pedido(s)</span>
+        <span className="flex items-center gap-1"><Users className="h-3 w-3" /> {r.customers_count} cliente(s)</span>
+        <Button size="sm" variant="default" onClick={() => onClose(r.id)}>
+          <BellRing className="h-4 w-4 mr-1" /> Fechar
+        </Button>
+      </div>
+    </div>
   );
 }
 
