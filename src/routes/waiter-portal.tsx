@@ -54,9 +54,17 @@ function WaiterPortal() {
               <p className="text-xs text-muted-foreground">{sess.waiter.fullName}</p>
             </div>
           </div>
-          <Button variant="ghost" size="sm" onClick={logout}>
-            <LogOut className="h-4 w-4 mr-2" /> Sair
-          </Button>
+          <div className="flex items-center gap-1">
+            <WaiterNotificationCenter
+              token={sess.token}
+              tenantId={sess.waiter.tenantId}
+              waiterId={sess.waiter.id}
+              onOpenTable={() => setTab("tables")}
+            />
+            <Button variant="ghost" size="sm" onClick={logout}>
+              <LogOut className="h-4 w-4 mr-2" /> Sair
+            </Button>
+          </div>
         </header>
 
         <Tabs value={tab} onValueChange={setTab} className="w-full">
