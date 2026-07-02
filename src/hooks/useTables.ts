@@ -28,8 +28,11 @@ export type TableSession = {
   service_fee_amount: number;
   customer_name: string | null;
   table_name: string | null;
+  waiter_id: string | null;
+  waiter_name: string | null;
   order_count?: number;
 };
+
 
 export function useTables(tenantId: string | null) {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
