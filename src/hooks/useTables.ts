@@ -176,7 +176,8 @@ export function useTableSessions(tenantId: string | null) {
       .from("table_sessions")
       .select(`
         *,
-        table_session_orders(count)
+        table_session_orders(count),
+        waiter:waiters(id, full_name)
       `)
       .eq("restaurant_id", tenantId)
       .eq("status", "open")
@@ -200,6 +201,8 @@ export function useTableSessions(tenantId: string | null) {
         service_fee_amount: Number(s.service_fee_amount || 0),
         customer_name: s.customer_name,
         table_name: s.table_name,
+        waiter_id: s.waiter_id ?? null,
+        waiter_name: s.waiter?.full_name ?? null,
         order_count: s.table_session_orders?.[0]?.count || 0
       })) as TableSession[];
       setSessions(mappedData);
