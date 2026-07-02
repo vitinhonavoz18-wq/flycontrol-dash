@@ -53,11 +53,13 @@ export async function closeTableWorkflow(
     requestId: input.requestId ?? null,
   };
 
-  // Backfill missing session metadata
-  if (!input.tableNumber || !input.restaurantId) {
+  // Load session identity (needed for the webhook payload)
+  let diningSessionId: string | null = null;
+  let customerToken: string | null = null;
+  {
     const { data: sess } = await supabase
       .from("table_sessions")
-      .select("table_number, restaurant_id, tenant_id")
+      .select("table_number, restaurant_id, tenant_id, dining_session_id, customer_token")
       .eq("id", input.sessionId)
       .maybeSingle();
     if (sess) {
@@ -67,12 +69,14 @@ export async function closeTableWorkflow(
         (sess as any).restaurant_id ??
         (sess as any).tenant_id ??
         null;
+      diningSessionId = (sess as any).dining_session_id ?? null;
+      customerToken = (sess as any).customer_token ?? null;
     }
   }
 
   // STEP 1 — Close table_sessions (DB is the authority).
-  // Only transitions an OPEN session to CLOSED. If the row is already closed,
-  // this update affects 0 rows and we will NOT re-fire the webhook.
+  // Any live status (open/requested_close/waiting_operator/closing) may transition to closed.
+  // Once closed, the state machine trigger blocks any further mutation.
   const { data: closedRow, error: closeErr } = await supabase
     .from("table_sessions")
     .update({
@@ -82,8 +86,8 @@ export async function closeTableWorkflow(
       closure_reason: "operator_close",
     } as any)
     .eq("id", input.sessionId)
-    .eq("status", "open")
-    .select("id, table_number, restaurant_id, closed_at, webhook_sent_at")
+    .in("status", ["open", "requested_close", "waiting_operator", "closing"])
+    .select("id, table_number, restaurant_id, closed_at, webhook_sent_at, dining_session_id, customer_token")
     .maybeSingle();
 
   if (closeErr) {
@@ -92,8 +96,7 @@ export async function closeTableWorkflow(
   }
 
   if (!closedRow) {
-    // Session was already closed (or doesn't exist). Hard rule: no resurrection,
-    // no duplicate webhook. Report as already-closed and exit.
+    // Session was already closed/archived (or doesn't exist). Do not re-fire the webhook.
     result.error = "session_already_closed";
     return result;
   }
@@ -101,6 +104,8 @@ export async function closeTableWorkflow(
   result.sessionClosed = true;
   result.tableNumber = result.tableNumber ?? (closedRow as any).table_number ?? null;
   result.restaurantId = result.restaurantId ?? (closedRow as any).restaurant_id ?? null;
+  diningSessionId = diningSessionId ?? (closedRow as any).dining_session_id ?? null;
+  customerToken = customerToken ?? (closedRow as any).customer_token ?? null;
 
   // STEP 2 — Find + update related close request
   let requestId = input.requestId ?? null;
