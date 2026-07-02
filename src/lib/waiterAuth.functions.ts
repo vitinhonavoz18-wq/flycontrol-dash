@@ -453,3 +453,144 @@ export const listMyCommissions = createServerFn({ method: "POST" })
       },
     };
   });
+
+// ============================================================
+// NEW: Waiter-scoped queries (only their own tables)
+// ============================================================
+
+// Sessions assigned to THIS waiter only
+export const listMyAssignedSessions = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string; includeClosed?: boolean }) => d)
+  .handler(async ({ data }) => {
+    const { auth, supabaseAdmin } = await authed(data.token);
+    let q = supabaseAdmin
+      .from("table_sessions")
+      .select("id, table_number, table_name, status, total_amount, subtotal_amount, service_fee_amount, service_fee_enabled, opened_at, closed_at, waiter_id, customer_name")
+      .eq("restaurant_id", auth.tenantId)
+      .eq("waiter_id", auth.waiterId)
+      .order("opened_at", { ascending: false });
+    if (!data.includeClosed) q = q.eq("status", "open");
+    const { data: rows, error } = await q;
+    if (error) throw new Error(error.message);
+    return rows || [];
+  });
+
+// Pending orders inside the waiter's assigned sessions
+export const listMyPendingOrders = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    const { auth, supabaseAdmin } = await authed(data.token);
+    const { data: mySessions } = await supabaseAdmin
+      .from("table_sessions")
+      .select("id")
+      .eq("restaurant_id", auth.tenantId)
+      .eq("waiter_id", auth.waiterId)
+      .eq("status", "open");
+    const ids = (mySessions || []).map((s: any) => s.id);
+    if (ids.length === 0) return [];
+    const { data: links, error } = await supabaseAdmin
+      .from("table_session_orders")
+      .select("table_session_id, order_id, orders(id, order_number, customer_name, total, status, items, created_at, table_number)")
+      .in("table_session_id", ids);
+    if (error) throw new Error(error.message);
+    return (links || [])
+      .map((l: any) => ({ ...l.orders, session_id: l.table_session_id }))
+      .filter((o: any) => o && !["cancelado", "cancelled", "canceled", "entregue", "finalizado", "completed", "delivered"].includes(String(o.status || "").toLowerCase()))
+      .sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  });
+
+// Close requests restricted to sessions assigned to this waiter
+export const listMyAssignedCloseRequests = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    const { auth, supabaseAdmin } = await authed(data.token);
+    const { data: mySessions } = await supabaseAdmin
+      .from("table_sessions")
+      .select("id")
+      .eq("restaurant_id", auth.tenantId)
+      .eq("waiter_id", auth.waiterId);
+    const ids = (mySessions || []).map((s: any) => s.id);
+    if (ids.length === 0) return [];
+    const { data: rows, error } = await supabaseAdmin
+      .from("table_close_requests")
+      .select("id, table_number, status, requested_at, customer_name, session_id")
+      .eq("restaurant_id", auth.tenantId)
+      .in("session_id", ids)
+      .in("status", ["pending", "viewed"])
+      .order("requested_at", { ascending: false })
+      .limit(50);
+    if (error) throw new Error(error.message);
+    return rows || [];
+  });
+
+// Dashboard KPIs for this waiter (today, in São Paulo tz)
+export const getWaiterDashboard = createServerFn({ method: "POST" })
+  .inputValidator((d: { token: string }) => d)
+  .handler(async ({ data }) => {
+    const { auth, supabaseAdmin } = await authed(data.token);
+
+    // Day boundary in America/Sao_Paulo (UTC-3, ignore DST — matches other reports)
+    const now = new Date();
+    const spOffsetMs = -3 * 60 * 60 * 1000;
+    const sp = new Date(now.getTime() + spOffsetMs);
+    const startSp = new Date(Date.UTC(sp.getUTCFullYear(), sp.getUTCMonth(), sp.getUTCDate(), 0, 0, 0));
+    const startUtcIso = new Date(startSp.getTime() - spOffsetMs).toISOString();
+
+    // Active sessions assigned to me
+    const { data: openSess } = await supabaseAdmin
+      .from("table_sessions")
+      .select("id, total_amount, subtotal_amount")
+      .eq("restaurant_id", auth.tenantId)
+      .eq("waiter_id", auth.waiterId)
+      .eq("status", "open");
+    const openIds = (openSess || []).map((s: any) => s.id);
+    const openTablesCount = openSess?.length || 0;
+    const openTablesTotal = (openSess || []).reduce((a: number, s: any) => a + Number(s.total_amount || 0), 0);
+
+    // Today's closed sessions assigned to me → today's sales + commission
+    const { data: todayClosed } = await supabaseAdmin
+      .from("table_sessions")
+      .select("subtotal_amount, total_amount, service_fee_amount, closed_at")
+      .eq("restaurant_id", auth.tenantId)
+      .eq("waiter_id", auth.waiterId)
+      .eq("status", "closed")
+      .gte("closed_at", startUtcIso);
+    const todaySales = (todayClosed || []).reduce((a: number, s: any) => a + Number(s.subtotal_amount || 0), 0);
+    const todayCommission = (todayClosed || []).reduce((a: number, s: any) => a + Number(s.service_fee_amount || 0), 0);
+    const todayClosedCount = todayClosed?.length || 0;
+
+    // Pending orders count (in open sessions)
+    let pendingOrders = 0;
+    if (openIds.length > 0) {
+      const { data: links } = await supabaseAdmin
+        .from("table_session_orders")
+        .select("orders(status)")
+        .in("table_session_id", openIds);
+      pendingOrders = (links || []).filter((l: any) => {
+        const st = String(l.orders?.status || "").toLowerCase();
+        return st && !["cancelado", "cancelled", "canceled", "entregue", "finalizado", "completed", "delivered"].includes(st);
+      }).length;
+    }
+
+    // Pending close requests for my sessions
+    let pendingCloseRequests = 0;
+    if (openIds.length > 0) {
+      const { count } = await supabaseAdmin
+        .from("table_close_requests")
+        .select("id", { count: "exact", head: true })
+        .in("session_id", openIds)
+        .in("status", ["pending", "viewed"]);
+      pendingCloseRequests = count || 0;
+    }
+
+    return {
+      openTablesCount,
+      openTablesTotal,
+      todaySales,
+      todayCommission,
+      todayClosedCount,
+      pendingOrders,
+      pendingCloseRequests,
+    };
+  });
+
