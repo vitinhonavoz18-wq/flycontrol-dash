@@ -414,7 +414,14 @@ export const Route = createFileRoute("/api/orders")({
             
             console.log("TABLE_SESSION_CREATE_OR_UPDATE:", { tableId: validatedTableId, tableNumber: validatedTableNumber });
             
-            const session = await getOrCreateTableSession(pz.id, validatedTableId, String(validatedTableNumber), validatedTableName);
+            // Prefer the already-resolved dining session (validated above). Fall back to lookup/create for legacy payloads.
+            const session = resolvedSessionRow
+              ? (await supabaseAdmin
+                  .from("table_sessions")
+                  .select("id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent")
+                  .eq("id", resolvedSessionRow.id)
+                  .single()).data!
+              : await getOrCreateTableSession(pz.id, validatedTableId, String(validatedTableNumber), validatedTableName);
             
             // Log do ID da sessão recebida/encontrada
             console.log("TABLE_ORDER_SESSION_ID_FOUND:", session.id);
