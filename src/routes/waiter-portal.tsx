@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { getWaiterSession, clearWaiterSession } from "@/lib/waiterSession";
+import { WaiterNotificationCenter } from "@/components/waiter/WaiterNotificationCenter";
 import {
   listMyAssignedSessions, listMyPendingOrders,
   listMyAssignedCloseRequests, getWaiterDashboard,
