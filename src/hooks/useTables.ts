@@ -12,7 +12,6 @@ export type RestaurantTable = {
   is_active: boolean;
   created_at: string;
   default_waiter_id: string | null;
-  default_waiter_name: string | null;
   default_waiter_name?: string | null;
 };
 
