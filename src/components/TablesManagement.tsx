@@ -844,10 +844,11 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                 </div>
                 {selectedSession.service_fee_enabled && (
                   <div className="flex justify-between text-sm text-orange-600">
-                    <span>Taxa Garçom (15%):</span>
+                    <span>Taxa de Serviço ({selectedSession.service_fee_percent}%):</span>
                     <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(feeAmount)}</span>
                   </div>
                 )}
+
                 <div className="flex justify-between text-xl font-black text-primary pt-2 border-t">
                   <span>TOTAL FINAL:</span>
                   <span className="text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span>
