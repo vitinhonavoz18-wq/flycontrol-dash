@@ -2,7 +2,14 @@
 // Generates distinct tones per event type. Includes a queue so simultaneous
 // events play sequentially without overlap.
 
-export type SoundEvent = "new_order" | "close_request" | "alert";
+export type SoundEvent =
+  | "new_order"
+  | "close_request"
+  | "alert"
+  | "bill_request"
+  | "order_ready"
+  | "customer_call"
+  | "new_item";
 
 const STORAGE_KEY = "fc_notification_settings_v1";
 
