@@ -528,6 +528,7 @@ export type Database = {
           ticket_number: string | null
           total: number
           updated_at: string
+          waiter_id: string | null
           whatsapp_message: string | null
         }
         Insert: {
@@ -561,6 +562,7 @@ export type Database = {
           ticket_number?: string | null
           total?: number
           updated_at?: string
+          waiter_id?: string | null
           whatsapp_message?: string | null
         }
         Update: {
@@ -594,6 +596,7 @@ export type Database = {
           ticket_number?: string | null
           total?: number
           updated_at?: string
+          waiter_id?: string | null
           whatsapp_message?: string | null
         }
         Relationships: [
@@ -616,6 +619,13 @@ export type Database = {
             columns: ["tenant_id"]
             isOneToOne: false
             referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "orders_waiter_id_fkey"
+            columns: ["waiter_id"]
+            isOneToOne: false
+            referencedRelation: "waiters"
             referencedColumns: ["id"]
           },
         ]
@@ -839,6 +849,7 @@ export type Database = {
       restaurant_tables: {
         Row: {
           created_at: string
+          default_waiter_id: string | null
           id: string
           is_active: boolean
           public_token: string
@@ -851,6 +862,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          default_waiter_id?: string | null
           id?: string
           is_active?: boolean
           public_token?: string
@@ -863,6 +875,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          default_waiter_id?: string | null
           id?: string
           is_active?: boolean
           public_token?: string
@@ -874,6 +887,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "restaurant_tables_default_waiter_id_fkey"
+            columns: ["default_waiter_id"]
+            isOneToOne: false
+            referencedRelation: "waiters"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "restaurant_tables_restaurant_id_fkey"
             columns: ["restaurant_id"]
