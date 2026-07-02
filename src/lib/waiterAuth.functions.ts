@@ -332,6 +332,13 @@ export const openTableAsWaiter = createServerFn({ method: "POST" })
       .maybeSingle();
     if (existing) throw new Error("Já existe uma comanda aberta para esta mesa");
 
+    const { data: pzCfg } = await supabaseAdmin
+      .from("pizzerias")
+      .select("service_fee_percent")
+      .eq("id", auth.tenantId)
+      .maybeSingle();
+    const defaultPct = Number((pzCfg as any)?.service_fee_percent ?? 10);
+
     const { data: ins, error: iErr } = await supabaseAdmin
       .from("table_sessions")
       .insert({
@@ -343,13 +350,14 @@ export const openTableAsWaiter = createServerFn({ method: "POST" })
         subtotal_amount: 0,
         total_amount: 0,
         service_fee_enabled: false,
-        service_fee_percent: 15,
+        service_fee_percent: defaultPct,
         service_fee_amount: 0,
         waiter_id: auth.waiterId,
         opened_at: new Date().toISOString(),
       })
       .select("id")
       .single();
+
     if (iErr) throw new Error(iErr.message);
     return { ok: true, sessionId: ins.id };
   });
