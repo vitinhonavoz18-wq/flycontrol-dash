@@ -504,8 +504,10 @@ export type Database = {
           customer_name: string
           customer_phone: string
           customer_reference: string | null
+          customer_token: string | null
           delivery_fee: number
           delivery_type: string | null
+          dining_session_id: string | null
           discount: number | null
           external_order_id: string | null
           id: string
@@ -538,8 +540,10 @@ export type Database = {
           customer_name: string
           customer_phone: string
           customer_reference?: string | null
+          customer_token?: string | null
           delivery_fee?: number
           delivery_type?: string | null
+          dining_session_id?: string | null
           discount?: number | null
           external_order_id?: string | null
           id?: string
@@ -572,8 +576,10 @@ export type Database = {
           customer_name?: string
           customer_phone?: string
           customer_reference?: string | null
+          customer_token?: string | null
           delivery_fee?: number
           delivery_type?: string | null
+          dining_session_id?: string | null
           discount?: number | null
           external_order_id?: string | null
           id?: string
@@ -928,6 +934,8 @@ export type Database = {
         Row: {
           created_at: string
           customer_name: string | null
+          customer_token: string | null
+          dining_session_id: string | null
           id: string
           processed_at: string | null
           processed_by: string | null
@@ -942,6 +950,8 @@ export type Database = {
         Insert: {
           created_at?: string
           customer_name?: string | null
+          customer_token?: string | null
+          dining_session_id?: string | null
           id?: string
           processed_at?: string | null
           processed_by?: string | null
@@ -956,6 +966,8 @@ export type Database = {
         Update: {
           created_at?: string
           customer_name?: string | null
+          customer_token?: string | null
+          dining_session_id?: string | null
           id?: string
           processed_at?: string | null
           processed_by?: string | null
@@ -1012,6 +1024,8 @@ export type Database = {
           closure_reason: string | null
           created_at: string | null
           customer_name: string | null
+          customer_token: string
+          dining_session_id: string
           id: string
           opened_at: string | null
           restaurant_id: string
@@ -1036,6 +1050,8 @@ export type Database = {
           closure_reason?: string | null
           created_at?: string | null
           customer_name?: string | null
+          customer_token?: string
+          dining_session_id?: string
           id?: string
           opened_at?: string | null
           restaurant_id: string
@@ -1060,6 +1076,8 @@ export type Database = {
           closure_reason?: string | null
           created_at?: string | null
           customer_name?: string | null
+          customer_token?: string
+          dining_session_id?: string
           id?: string
           opened_at?: string | null
           restaurant_id?: string
