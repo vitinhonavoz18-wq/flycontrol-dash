@@ -261,5 +261,20 @@ export function useTableSessions(tenantId: string | null) {
     }
   }
 
-  return { sessions, loading, loadSessions, closeSession, toggleServiceFee };
+  async function assignWaiter(sessionId: string, waiterId: string | null) {
+    const { error } = await supabase
+      .from("table_sessions")
+      .update({ waiter_id: waiterId })
+      .eq("id", sessionId);
+
+    if (error) {
+      toast.error("Erro ao atribuir garçom: " + error.message);
+      return false;
+    }
+    await loadSessions();
+    toast.success(waiterId ? "Garçom atribuído à mesa!" : "Garçom removido da mesa.");
+    return true;
+  }
+
+  return { sessions, loading, loadSessions, closeSession, toggleServiceFee, assignWaiter };
 }
