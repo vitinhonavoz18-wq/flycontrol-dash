@@ -28,8 +28,11 @@ export type TableSession = {
   service_fee_amount: number;
   customer_name: string | null;
   table_name: string | null;
+  waiter_id: string | null;
+  waiter_name: string | null;
   order_count?: number;
 };
+
 
 export function useTables(tenantId: string | null) {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
@@ -173,7 +176,8 @@ export function useTableSessions(tenantId: string | null) {
       .from("table_sessions")
       .select(`
         *,
-        table_session_orders(count)
+        table_session_orders(count),
+        waiter:waiters(id, full_name)
       `)
       .eq("restaurant_id", tenantId)
       .eq("status", "open")
@@ -197,6 +201,8 @@ export function useTableSessions(tenantId: string | null) {
         service_fee_amount: Number(s.service_fee_amount || 0),
         customer_name: s.customer_name,
         table_name: s.table_name,
+        waiter_id: s.waiter_id ?? null,
+        waiter_name: s.waiter?.full_name ?? null,
         order_count: s.table_session_orders?.[0]?.count || 0
       })) as TableSession[];
       setSessions(mappedData);
@@ -255,5 +261,20 @@ export function useTableSessions(tenantId: string | null) {
     }
   }
 
-  return { sessions, loading, loadSessions, closeSession, toggleServiceFee };
+  async function assignWaiter(sessionId: string, waiterId: string | null) {
+    const { error } = await supabase
+      .from("table_sessions")
+      .update({ waiter_id: waiterId })
+      .eq("id", sessionId);
+
+    if (error) {
+      toast.error("Erro ao atribuir garçom: " + error.message);
+      return false;
+    }
+    await loadSessions();
+    toast.success(waiterId ? "Garçom atribuído à mesa!" : "Garçom removido da mesa.");
+    return true;
+  }
+
+  return { sessions, loading, loadSessions, closeSession, toggleServiceFee, assignWaiter };
 }

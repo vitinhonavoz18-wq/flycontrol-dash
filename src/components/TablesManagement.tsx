@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { 
   QrCode, 
   Plus, 
@@ -37,11 +38,12 @@ interface TablesManagementProps {
 
 export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementProps) {
   const { tables, loading: tablesLoading, addTable, updateTable, toggleTable, deleteTable, loadTables } = useTables(tenantId);
-  const { sessions, loading: sessionsLoading, closeSession, loadSessions, toggleServiceFee } = useTableSessions(tenantId);
+  const { sessions, loading: sessionsLoading, closeSession, loadSessions, toggleServiceFee, assignWaiter } = useTableSessions(tenantId);
   const [selectedSession, setSelectedSession] = useState<TableSession | null>(null);
   const [sessionOrders, setSessionOrders] = useState<any[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
+  const [waiters, setWaiters] = useState<Array<{ id: string; full_name: string }>>([]);
   
   const [newTableNumber, setNewTableNumber] = useState("");
   const [newTableName, setNewTableName] = useState("");
@@ -70,6 +72,21 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
       setNewTableName("Mesa 01");
     }
   }, [tables.length]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    (async () => {
+      const { data, error } = await supabase
+        .from("waiters")
+        .select("id, full_name")
+        .eq("tenant_id", tenantId)
+        .eq("is_active", true)
+        .order("full_name");
+      if (!error && data) setWaiters(data as Array<{ id: string; full_name: string }>);
+    })();
+  }, [tenantId]);
+
+
 
   async function handleAddTable() {
     if (!newTableNumber) {
@@ -603,7 +620,38 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                         <Clock className="h-3 w-3" /> Aberta há {new Date(session.opened_at).toLocaleTimeString()}
                       </div>
                     </div>
-                    <Badge className="bg-green-500 hover:bg-green-600">ABERTA</Badge>
+                    <Badge className={session.waiter_id ? "bg-green-500 hover:bg-green-600" : "bg-amber-500 hover:bg-amber-600"}>
+                      {session.waiter_id ? "ABERTA" : "AGUARDANDO GARÇOM"}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 space-y-1">
+                    <Label className="text-[10px] uppercase text-muted-foreground">
+                      Garçom Responsável
+                    </Label>
+                    <Select
+                      value={session.waiter_id ?? "__none__"}
+                      onValueChange={(val) => assignWaiter(session.id, val === "__none__" ? null : val)}
+                    >
+                      <SelectTrigger className="h-9 bg-background">
+                        <SelectValue placeholder="Atribuir Garçom" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Sem garçom —</SelectItem>
+                        {waiters.map(w => (
+                          <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>
+                        ))}
+                        {waiters.length === 0 && (
+                          <div className="p-2 text-xs text-muted-foreground">
+                            Nenhum garçom cadastrado. Cadastre em "Garçons".
+                          </div>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {session.waiter_name && (
+                      <div className="text-xs font-medium text-primary pt-1">
+                        Atribuída a: {session.waiter_name}
+                      </div>
+                    )}
                   </div>
                 </CardHeader>
                 <CardContent className="p-5 space-y-4">
