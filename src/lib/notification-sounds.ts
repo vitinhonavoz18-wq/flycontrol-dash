@@ -98,7 +98,30 @@ const PATTERNS: Record<SoundEvent, Tone[]> = {
     { freq: 330, dur: 0.18, type: "square", gap: 0.04 },
     { freq: 440, dur: 0.18, type: "square", gap: 0.04 },
   ],
-};
+  // Bill / payment request — cash register ding
+  bill_request: [
+    { freq: 1046, dur: 0.14, type: "triangle" },
+    { freq: 1568, dur: 0.20, type: "triangle", gap: 0.05 },
+    { freq: 1046, dur: 0.14, type: "triangle", gap: 0.05 },
+  ],
+  // Order ready — bright upward chime
+  order_ready: [
+    { freq: 784, dur: 0.12, type: "sine" },
+    { freq: 988, dur: 0.12, type: "sine", gap: 0.02 },
+    { freq: 1319, dur: 0.22, type: "sine", gap: 0.02 },
+  ],
+  // Customer calling waiter — attention pulse
+  customer_call: [
+    { freq: 1200, dur: 0.10, type: "square" },
+    { freq: 900, dur: 0.10, type: "square", gap: 0.05 },
+    { freq: 1200, dur: 0.10, type: "square", gap: 0.05 },
+    { freq: 900, dur: 0.15, type: "square", gap: 0.05 },
+  ],
+  // New item added to existing order — soft double tap
+  new_item: [
+    { freq: 660, dur: 0.10, type: "sine" },
+    { freq: 880, dur: 0.14, type: "sine", gap: 0.03 },
+  ],
 
 async function playPattern(event: SoundEvent) {
   const settings = loadSettings();
