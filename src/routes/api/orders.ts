@@ -254,54 +254,106 @@ export const Route = createFileRoute("/api/orders")({
           }), { status: 400, headers: cors });
         }
 
-        // 3. Detecção/validação de Mesa (mais robusta: detecta mesa por presença de table_number/token, não só por delivery_type)
+        // 3. Detecção/validação de Mesa (detecta por presença de table_number/token OU dining_session_id)
         const rawDeliveryType = (orderData.delivery_type || body.delivery_type || body.service_mode || orderData.service_mode || orderData.order_type || body.order_type || "delivery").toLowerCase();
         const rawTableNumber = body.table_number || orderData.table_number || "";
         const rawTableToken = body.table_token || orderData.table_token || "";
+        const rawDiningSessionId = String(body.dining_session_id || orderData.dining_session_id || "").trim() || null;
+        const rawCustomerToken = String(body.customer_token || orderData.customer_token || "").trim() || null;
         const explicitTable = ["table", "mesa"].includes(rawDeliveryType);
-        const inferredTable = !!(String(rawTableNumber).trim()) || !!(String(rawTableToken).trim());
+        const inferredTable = !!(String(rawTableNumber).trim()) || !!(String(rawTableToken).trim()) || !!rawDiningSessionId || !!rawCustomerToken;
         const isTableOrder = explicitTable || inferredTable;
         const deliveryType = isTableOrder ? "table" : rawDeliveryType;
 
-        console.log("ORDER_TYPE_DETECTED:", isTableOrder ? "table" : deliveryType, "explicit:", explicitTable, "inferred:", inferredTable);
+        console.log("ORDER_TYPE_DETECTED:", isTableOrder ? "table" : deliveryType,
+          "explicit:", explicitTable, "inferred:", inferredTable,
+          "dining_session_id:", rawDiningSessionId ? "present" : "absent");
 
         let validatedTableId: string | null = null;
         let validatedTableNumber = rawTableNumber;
         let validatedTableName = body.table_name || orderData.table_name || "";
+        let validatedDiningSessionId: string | null = null;
+        let validatedCustomerToken: string | null = null;
+        let resolvedSessionRow: { id: string; status: string; table_number: string | null; table_name: string | null; table_id: string | null } | null = null;
 
         if (isTableOrder) {
-          const tableNumber = String(rawTableNumber || "").trim();
-          const tableToken = String(rawTableToken || "").trim();
+          // Preferred path: dining_session_id / customer_token
+          if (rawDiningSessionId || rawCustomerToken) {
+            const q = supabaseAdmin
+              .from("table_sessions")
+              .select("id, status, table_number, table_name, table_id, dining_session_id, customer_token, restaurant_id");
+            const { data: sess, error: sErr } = rawDiningSessionId
+              ? await q.eq("dining_session_id", rawDiningSessionId).maybeSingle()
+              : await q.eq("customer_token", rawCustomerToken!).maybeSingle();
 
-          console.log("TABLE_ORDER_DATA:", { tableNumber, tableToken: tableToken ? "present" : "missing" });
+            if (sErr) console.error("❌ [API/Orders] Erro ao buscar sessão via dining_session_id:", sErr.message);
 
-          if (!tableNumber) {
-            console.error("❌ [API/Orders] Pedido de mesa sem table_number");
-            return new Response(JSON.stringify({
-              success: false,
-              error: "invalid_table_data",
-              message: "Número da mesa ausente para pedido do tipo mesa"
-            }), { status: 400, headers: cors });
-          }
+            if (!sess) {
+              return new Response(JSON.stringify({
+                success: false,
+                error: "invalid_dining_session",
+                message: "dining_session_id inválido — a mesa não foi encontrada. Refaça o scan do QR Code.",
+              }), { status: 400, headers: cors });
+            }
+            if ((sess as any).restaurant_id !== pz.id) {
+              return new Response(JSON.stringify({
+                success: false, error: "dining_session_restaurant_mismatch",
+                message: "Este dining_session_id não pertence a esta loja.",
+              }), { status: 400, headers: cors });
+            }
+            if (["closed", "archived"].includes((sess as any).status)) {
+              return new Response(JSON.stringify({
+                success: false,
+                error: "session_closed",
+                message: "Esta mesa foi encerrada. Refaça o scan do QR Code para abrir uma nova comanda.",
+                dining_session_id: (sess as any).dining_session_id,
+              }), { status: 409, headers: cors });
+            }
 
-          // Com token: validação estrita. Sem token: fallback por tenant+número (compat com payloads antigos do SF).
-          let tableQuery = supabaseAdmin
-            .from("restaurant_tables")
-            .select("id, table_number, table_name, public_token, is_active")
-            .eq("restaurant_id", pz.id)
-            .eq("table_number", tableNumber)
-            .eq("is_active", true);
-          if (tableToken) tableQuery = tableQuery.eq("public_token", tableToken);
-
-          const { data: table, error: tErr } = await tableQuery.maybeSingle();
-          if (tErr) console.error("❌ [API/Orders] Erro ao buscar mesa:", tErr.message);
-
-          if (!table) {
-            console.warn("⚠️ [API/Orders] Mesa não localizada com os dados; vinculando apenas por número.");
+            resolvedSessionRow = {
+              id: (sess as any).id,
+              status: (sess as any).status,
+              table_number: (sess as any).table_number,
+              table_name: (sess as any).table_name,
+              table_id: (sess as any).table_id,
+            };
+            validatedDiningSessionId = (sess as any).dining_session_id;
+            validatedCustomerToken = (sess as any).customer_token;
+            validatedTableId = (sess as any).table_id ?? validatedTableId;
+            validatedTableNumber = (sess as any).table_number || validatedTableNumber;
+            validatedTableName = (sess as any).table_name || validatedTableName;
           } else {
-            validatedTableId = table.id;
-            validatedTableNumber = table.table_number || validatedTableNumber;
-            validatedTableName = table.table_name || validatedTableName;
+            console.warn("[ORDERS_LEGACY_PAYLOAD] pedido de mesa sem dining_session_id — usando table_number/token (deprecado)");
+
+            const tableNumber = String(rawTableNumber || "").trim();
+            const tableToken = String(rawTableToken || "").trim();
+
+            if (!tableNumber) {
+              return new Response(JSON.stringify({
+                success: false,
+                error: "invalid_table_data",
+                message: "Número da mesa ausente para pedido do tipo mesa"
+              }), { status: 400, headers: cors });
+            }
+
+            let tableQuery = supabaseAdmin
+              .from("restaurant_tables")
+              .select("id, table_number, table_name, public_token, is_active")
+              .eq("restaurant_id", pz.id)
+              .eq("table_number", tableNumber)
+              .eq("is_active", true);
+            if (tableToken) tableQuery = tableQuery.eq("public_token", tableToken);
+
+            const { data: table, error: tErr } = await tableQuery.maybeSingle();
+            if (tErr) console.error("❌ [API/Orders] Erro ao buscar mesa:", tErr.message);
+
+            if (!table) {
+              console.warn("⚠️ [API/Orders] Mesa não localizada com os dados; vinculando apenas por número.");
+            } else {
+              validatedTableId = (table as any).id;
+              validatedTableNumber = (table as any).table_number || validatedTableNumber;
+              validatedTableName = (table as any).table_name || validatedTableName;
+            }
           }
         }
 
@@ -323,6 +375,8 @@ export const Route = createFileRoute("/api/orders")({
           table_id: validatedTableId,
           table_name: validatedTableName,
           table_token: body.table_token || orderData.table_token || null,
+          dining_session_id: validatedDiningSessionId,
+          customer_token: validatedCustomerToken,
           notes: orderData.notes || body.notes || "",
           status: "novo",
           source: body.source || "sitecreatorfly",
@@ -360,7 +414,14 @@ export const Route = createFileRoute("/api/orders")({
             
             console.log("TABLE_SESSION_CREATE_OR_UPDATE:", { tableId: validatedTableId, tableNumber: validatedTableNumber });
             
-            const session = await getOrCreateTableSession(pz.id, validatedTableId, String(validatedTableNumber), validatedTableName);
+            // Prefer the already-resolved dining session (validated above). Fall back to lookup/create for legacy payloads.
+            const session = resolvedSessionRow
+              ? (await supabaseAdmin
+                  .from("table_sessions")
+                  .select("id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent")
+                  .eq("id", resolvedSessionRow.id)
+                  .single()).data!
+              : await getOrCreateTableSession(pz.id, validatedTableId, String(validatedTableNumber), validatedTableName);
             
             // Log do ID da sessão recebida/encontrada
             console.log("TABLE_ORDER_SESSION_ID_FOUND:", session.id);
