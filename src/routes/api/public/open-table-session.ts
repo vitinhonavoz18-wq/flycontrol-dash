@@ -40,9 +40,15 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             table_number,
             table_token,
             customer_name,
+            dining_session_id: incomingDiningSessionId,
+            customer_token: incomingCustomerToken,
           } = body || {};
 
-          console.log("OPEN_TABLE_SESSION_REQUEST:", { restaurant_slug, table_number, table_token });
+          console.log("OPEN_TABLE_SESSION_REQUEST:", {
+            restaurant_slug, table_number, table_token,
+            incoming_dining: incomingDiningSessionId || null,
+            incoming_token: incomingCustomerToken ? String(incomingCustomerToken).slice(0, 6) + "…" : null,
+          });
 
           if (!restaurant_slug || !table_number || !table_token) {
             console.warn("⚠️ OPEN_TABLE_SESSION_BAD_REQUEST: Missing required fields");
