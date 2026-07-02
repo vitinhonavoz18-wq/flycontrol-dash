@@ -356,11 +356,12 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
             </div>
             ${session.service_fee_enabled ? `
               <div class="summary-row">
-                <span>Taxa Garçom (15%):</span>
+                <span>Taxa de Serviço (${session.service_fee_percent}%):</span>
                 <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(feeAmount)}</span>
               </div>
-              <div style="font-size: 9px; text-align: right; margin-bottom: 5px;">Taxa de garçom de 15% aplicada ao total.</div>
+              <div style="font-size: 9px; text-align: right; margin-bottom: 5px;">Taxa de serviço de ${session.service_fee_percent}% aplicada ao total.</div>
             ` : ''}
+
             <div class="summary-row total-row">
               <span>TOTAL FINAL:</span>
               <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span>
