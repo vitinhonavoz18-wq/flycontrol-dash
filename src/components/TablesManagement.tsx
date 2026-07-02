@@ -558,6 +558,28 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                     </div>
                   )}
 
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase text-muted-foreground">Garçom Padrão</Label>
+                    <Select
+                      value={table.default_waiter_id ?? "__none__"}
+                      onValueChange={(val) => updateDefaultWaiter(table.id, val === "__none__" ? null : val)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Nenhum" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Nenhum —</SelectItem>
+                        {waiters.map(w => (
+                          <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="text-[10px] text-muted-foreground">
+                      Toda nova comanda desta mesa nasce atribuída ao garçom padrão.
+                    </div>
+                  </div>
+
+
                   <div className="grid grid-cols-2 gap-2">
                     <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => printQRCode(table)}>
                       <Printer className="h-3 w-3" /> Imprimir
