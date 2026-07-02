@@ -137,7 +137,7 @@ export const Route = createFileRoute("/api/public/open-table-session")({
                 status: "open",
                 subtotal_amount: 0,
                 service_fee_enabled: false,
-                service_fee_percent: 15,
+                service_fee_percent: Number((pz as any).service_fee_percent ?? 10),
                 service_fee_amount: 0,
                 total_amount: 0,
                 customer_name: customer_name || null,
