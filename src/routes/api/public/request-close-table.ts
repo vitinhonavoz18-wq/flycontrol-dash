@@ -57,38 +57,20 @@ export const Route = createFileRoute("/api/public/request-close-table")({
               .from("table_sessions").select(selectCols)
               .eq("customer_token", customer_token).maybeSingle();
             session = (data as any) ?? null;
-          } else if (session_id) {
-            console.warn("[REQUEST_CLOSE_TABLE_LEGACY] lookup by session_id — please migrate to dining_session_id");
-            const { data } = await supabaseAdmin
-              .from("table_sessions").select(selectCols)
-              .eq("id", session_id).maybeSingle();
-            session = (data as any) ?? null;
-          } else if (restaurant_slug && table_number) {
-            console.warn("[REQUEST_CLOSE_TABLE_LEGACY] lookup by slug+table_number — please migrate to dining_session_id");
-            const { data: pz } = await supabaseAdmin
-              .from("pizzerias").select("id")
-              .eq("slug", restaurant_slug).neq("status", "deleted").maybeSingle();
-            if (pz) {
-              const { data } = await supabaseAdmin
-                .from("table_sessions").select(selectCols)
-                .eq("restaurant_id", pz.id)
-                .eq("table_number", String(table_number))
-                .in("status", ["open", "requested_close", "waiting_operator", "closing"])
-                .order("opened_at", { ascending: false })
-                .limit(1)
-                .maybeSingle();
-              session = (data as any) ?? null;
-            }
           } else {
+            // Authoritative contract — no legacy lookup by session_id / slug+table_number.
             return new Response(
               JSON.stringify({
                 success: false,
-                error: "missing_params",
-                message: "Informe dining_session_id (ou customer_token) para identificar a mesa.",
+                error: "missing_dining_session",
+                message: "Informe dining_session_id (ou customer_token) emitido pelo FlyControl. Chame /api/public/open-table-session primeiro.",
               }),
               { status: 400, headers },
             );
           }
+
+          // Reference for legacy body fields kept for logging only; not used for lookup.
+          void session_id; void restaurant_slug; void table_number;
 
           if (!session) {
             return new Response(
