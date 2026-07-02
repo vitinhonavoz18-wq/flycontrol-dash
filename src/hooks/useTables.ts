@@ -11,6 +11,8 @@ export type RestaurantTable = {
   qr_code_url: string | null;
   is_active: boolean;
   created_at: string;
+  default_waiter_id: string | null;
+  default_waiter_name?: string | null;
 };
 
 export type TableSession = {
@@ -38,12 +40,17 @@ export function useTables(tenantId: string | null) {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [loading, setLoading] = useState(false);
 
+  function mapRow(r: any): RestaurantTable {
+    return { ...r, default_waiter_name: r.default_waiter?.full_name ?? null };
+  }
+
   async function loadTables() {
     if (!tenantId) return;
     setLoading(true);
+    const selectStr = "*, default_waiter:waiters!restaurant_tables_default_waiter_id_fkey(id, full_name)";
     const { data, error } = await supabase
       .from("restaurant_tables")
-      .select("*")
+      .select(selectStr)
       .eq("tenant_id", tenantId)
       .order("table_number");
 
@@ -54,29 +61,26 @@ export function useTables(tenantId: string | null) {
     }
 
     if (data.length === 0) {
-      // If no tables, call the RPC to generate defaults
       const { error: rpcError } = await supabase.rpc('generate_default_restaurant_tables', {
         p_restaurant_id: tenantId
       });
 
       if (rpcError) {
         console.error("Error generating default tables:", rpcError);
-        // Fallback: manually insert if RPC fails for some reason (e.g. not created yet)
         setTables([]);
       } else {
-        // Reload tables after generation
         const { data: newData, error: newError } = await supabase
           .from("restaurant_tables")
-          .select("*")
+          .select(selectStr)
           .eq("tenant_id", tenantId)
           .order("table_number");
-        
+
         if (!newError && newData) {
-          setTables(newData as RestaurantTable[]);
+          setTables((newData as any[]).map(mapRow));
         }
       }
     } else {
-      setTables(data as RestaurantTable[]);
+      setTables((data as any[]).map(mapRow));
     }
     setLoading(false);
   }
@@ -111,9 +115,10 @@ export function useTables(tenantId: string | null) {
   }
 
   async function updateTable(id: string, updates: Partial<RestaurantTable>) {
+    const { default_waiter_name: _drop, ...clean } = updates as any;
     const { error } = await supabase
       .from("restaurant_tables")
-      .update(updates)
+      .update(clean)
       .eq("id", id);
 
     if (error) {
@@ -154,13 +159,27 @@ export function useTables(tenantId: string | null) {
     }
   }
 
+  async function updateDefaultWaiter(tableId: string, waiterId: string | null) {
+    const { error } = await supabase
+      .from("restaurant_tables")
+      .update({ default_waiter_id: waiterId })
+      .eq("id", tableId);
+    if (error) {
+      toast.error("Erro ao definir garçom padrão: " + error.message);
+      return false;
+    }
+    await loadTables();
+    toast.success(waiterId ? "Garçom padrão definido!" : "Garçom padrão removido.");
+    return true;
+  }
+
   useEffect(() => {
     if (tenantId) {
       loadTables();
     }
   }, [tenantId]);
 
-  return { tables, loading, loadTables, addTable, updateTable, toggleTable, deleteTable };
+  return { tables, loading, loadTables, addTable, updateTable, toggleTable, deleteTable, updateDefaultWaiter };
 }
 
 export function useTableSessions(tenantId: string | null) {
@@ -277,7 +296,11 @@ export function useTableSessions(tenantId: string | null) {
   }
 
 
-  async function assignWaiter(sessionId: string, waiterId: string | null) {
+  async function assignWaiter(
+    sessionId: string,
+    waiterId: string | null,
+    opts: { alsoSetDefault?: boolean } = {}
+  ) {
     const { error } = await supabase
       .from("table_sessions")
       .update({ waiter_id: waiterId })
@@ -287,8 +310,24 @@ export function useTableSessions(tenantId: string | null) {
       toast.error("Erro ao atribuir garçom: " + error.message);
       return false;
     }
+
+    if (opts.alsoSetDefault) {
+      const session = sessions.find(s => s.id === sessionId);
+      if (session?.table_id) {
+        const { error: e2 } = await supabase
+          .from("restaurant_tables")
+          .update({ default_waiter_id: waiterId })
+          .eq("id", session.table_id);
+        if (e2) toast.error("Sessão trocada, mas falhou ao salvar padrão: " + e2.message);
+      }
+    }
+
     await loadSessions();
-    toast.success(waiterId ? "Garçom atribuído à mesa!" : "Garçom removido da mesa.");
+    toast.success(
+      opts.alsoSetDefault
+        ? "Garçom padrão da mesa atualizado!"
+        : waiterId ? "Garçom atribuído à mesa!" : "Garçom removido da mesa."
+    );
     return true;
   }
 

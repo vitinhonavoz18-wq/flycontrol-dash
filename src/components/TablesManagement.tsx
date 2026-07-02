@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { 
   QrCode, 
   Plus, 
@@ -37,7 +39,7 @@ interface TablesManagementProps {
 }
 
 export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementProps) {
-  const { tables, loading: tablesLoading, addTable, updateTable, toggleTable, deleteTable, loadTables } = useTables(tenantId);
+  const { tables, loading: tablesLoading, addTable, updateTable, toggleTable, deleteTable, loadTables, updateDefaultWaiter } = useTables(tenantId);
   const { sessions, loading: sessionsLoading, closeSession, loadSessions, toggleServiceFee, assignWaiter } = useTableSessions(tenantId);
   const [selectedSession, setSelectedSession] = useState<TableSession | null>(null);
   const [sessionOrders, setSessionOrders] = useState<any[]>([]);
@@ -51,6 +53,9 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
   const [editingTable, setEditingTable] = useState<RestaurantTable | null>(null);
   const [editName, setEditName] = useState("");
   const [editNumber, setEditNumber] = useState("");
+  const [changeWaiterSession, setChangeWaiterSession] = useState<TableSession | null>(null);
+  const [changeWaiterId, setChangeWaiterId] = useState<string>("__none__");
+  const [changeWaiterMode, setChangeWaiterMode] = useState<"session" | "default">("session");
 
   useEffect(() => {
     if (tables.length > 0 && !newTableNumber) {
@@ -558,6 +563,28 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                     </div>
                   )}
 
+                  <div className="space-y-1">
+                    <Label className="text-[10px] uppercase text-muted-foreground">Garçom Padrão</Label>
+                    <Select
+                      value={table.default_waiter_id ?? "__none__"}
+                      onValueChange={(val) => updateDefaultWaiter(table.id, val === "__none__" ? null : val)}
+                    >
+                      <SelectTrigger className="h-9">
+                        <SelectValue placeholder="Nenhum" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="__none__">— Nenhum —</SelectItem>
+                        {waiters.map(w => (
+                          <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <div className="text-[10px] text-muted-foreground">
+                      Toda nova comanda desta mesa nasce atribuída ao garçom padrão.
+                    </div>
+                  </div>
+
+
                   <div className="grid grid-cols-2 gap-2">
                     <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => printQRCode(table)}>
                       <Printer className="h-3 w-3" /> Imprimir
@@ -625,35 +652,25 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                       {session.waiter_id ? "ABERTA" : "AGUARDANDO GARÇOM"}
                     </Badge>
                   </div>
-                  <div className="mt-3 space-y-1">
+                  <div className="mt-3 space-y-2">
                     <Label className="text-[10px] uppercase text-muted-foreground">
                       Garçom Responsável
                     </Label>
-                    <Select
-                      value={session.waiter_id ?? "__none__"}
-                      onValueChange={(val) => assignWaiter(session.id, val === "__none__" ? null : val)}
-                    >
-                      <SelectTrigger className="h-9 bg-background">
-                        <SelectValue placeholder="Atribuir Garçom" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— Sem garçom —</SelectItem>
-                        {waiters.map(w => (
-                          <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>
-                        ))}
-                        {waiters.length === 0 && (
-                          <div className="p-2 text-xs text-muted-foreground">
-                            Nenhum garçom cadastrado. Cadastre em "Garçons".
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {session.waiter_name && (
-                      <div className="text-xs font-medium text-primary pt-1">
-                        Atribuída a: {session.waiter_name}
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between gap-2 bg-background rounded-md border px-3 py-2">
+                      <span className="text-sm font-medium truncate">
+                        {session.waiter_name ?? <span className="text-muted-foreground">Sem garçom</span>}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => setChangeWaiterSession(session)}
+                      >
+                        Trocar
+                      </Button>
+                    </div>
                   </div>
+
                 </CardHeader>
                 <CardContent className="p-5 space-y-4">
                   <div className="flex justify-between text-sm font-medium">
@@ -935,6 +952,81 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           </div>
         );
       })()}
+      <Dialog
+        open={!!changeWaiterSession}
+        onOpenChange={(open) => {
+          if (!open) setChangeWaiterSession(null);
+          else if (changeWaiterSession) {
+            setChangeWaiterId(changeWaiterSession.waiter_id ?? "__none__");
+            setChangeWaiterMode("session");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Trocar garçom da Mesa {changeWaiterSession?.table_number}</DialogTitle>
+            <DialogDescription>
+              Escolha o novo garçom responsável e como aplicar a troca.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Novo garçom</Label>
+              <Select value={changeWaiterId} onValueChange={setChangeWaiterId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">— Sem garçom —</SelectItem>
+                  {waiters.map(w => (
+                    <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Aplicar como:</Label>
+              <RadioGroup value={changeWaiterMode} onValueChange={(v) => setChangeWaiterMode(v as "session" | "default")}>
+                <div className="flex items-start gap-3 rounded-md border p-3">
+                  <RadioGroupItem value="session" id="mode-session" className="mt-1" />
+                  <label htmlFor="mode-session" className="text-sm cursor-pointer flex-1">
+                    <div className="font-medium">Transferir apenas esta sessão</div>
+                    <div className="text-xs text-muted-foreground">
+                      Após fechar, a mesa volta ao garçom padrão original.
+                    </div>
+                  </label>
+                </div>
+                <div className="flex items-start gap-3 rounded-md border p-3">
+                  <RadioGroupItem value="default" id="mode-default" className="mt-1" />
+                  <label htmlFor="mode-default" className="text-sm cursor-pointer flex-1">
+                    <div className="font-medium">Mudar garçom padrão desta mesa</div>
+                    <div className="text-xs text-muted-foreground">
+                      Toda futura sessão desta mesa também usará esse garçom.
+                    </div>
+                  </label>
+                </div>
+              </RadioGroup>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setChangeWaiterSession(null)}>Cancelar</Button>
+            <Button
+              onClick={async () => {
+                if (!changeWaiterSession) return;
+                const wid = changeWaiterId === "__none__" ? null : changeWaiterId;
+                await assignWaiter(changeWaiterSession.id, wid, { alsoSetDefault: changeWaiterMode === "default" });
+                if (changeWaiterMode === "default") await loadTables();
+                setChangeWaiterSession(null);
+              }}
+            >
+              Confirmar troca
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
