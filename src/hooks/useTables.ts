@@ -197,7 +197,7 @@ export function useTableSessions(tenantId: string | null) {
         total_amount: Number(s.total_amount || 0),
         subtotal_amount: Number(s.subtotal_amount || 0),
         service_fee_enabled: s.service_fee_enabled,
-        service_fee_percent: Number(s.service_fee_percent || 15),
+        service_fee_percent: Number(s.service_fee_percent || 10),
         service_fee_amount: Number(s.service_fee_amount || 0),
         customer_name: s.customer_name,
         table_name: s.table_name,
