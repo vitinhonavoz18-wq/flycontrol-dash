@@ -10,6 +10,8 @@ const cors = (request?: Request) => ({
   "Content-Type": "application/json",
 });
 
+const DEAD_STATUSES = new Set(["closed", "archived"]);
+
 export const Route = createFileRoute("/api/public/request-close-table")({
   server: {
     handlers: {
@@ -19,130 +21,182 @@ export const Route = createFileRoute("/api/public/request-close-table")({
         const headers = cors(request);
         try {
           const body = await request.json().catch(() => ({}));
-          const { restaurant_slug, table_number, table_token, session_id, customer_name } = body || {};
+          const {
+            dining_session_id,
+            customer_token,
+            restaurant_slug,
+            table_number,
+            table_token,
+            session_id, // legacy
+            customer_name,
+          } = body || {};
 
-          if (!restaurant_slug || !table_number) {
+          // Preferred: resolve session by dining_session_id / customer_token
+          let session:
+            | {
+                id: string;
+                status: string;
+                closed_at: string | null;
+                restaurant_id: string;
+                table_number: string | null;
+                customer_name: string | null;
+                dining_session_id: string;
+                customer_token: string;
+              }
+            | null = null;
+
+          const selectCols = "id, status, closed_at, restaurant_id, table_number, customer_name, dining_session_id, customer_token";
+
+          if (dining_session_id) {
+            const { data } = await supabaseAdmin
+              .from("table_sessions").select(selectCols)
+              .eq("dining_session_id", dining_session_id).maybeSingle();
+            session = (data as any) ?? null;
+          } else if (customer_token) {
+            const { data } = await supabaseAdmin
+              .from("table_sessions").select(selectCols)
+              .eq("customer_token", customer_token).maybeSingle();
+            session = (data as any) ?? null;
+          } else if (session_id) {
+            console.warn("[REQUEST_CLOSE_TABLE_LEGACY] lookup by session_id — please migrate to dining_session_id");
+            const { data } = await supabaseAdmin
+              .from("table_sessions").select(selectCols)
+              .eq("id", session_id).maybeSingle();
+            session = (data as any) ?? null;
+          } else if (restaurant_slug && table_number) {
+            console.warn("[REQUEST_CLOSE_TABLE_LEGACY] lookup by slug+table_number — please migrate to dining_session_id");
+            const { data: pz } = await supabaseAdmin
+              .from("pizzerias").select("id")
+              .eq("slug", restaurant_slug).neq("status", "deleted").maybeSingle();
+            if (pz) {
+              const { data } = await supabaseAdmin
+                .from("table_sessions").select(selectCols)
+                .eq("restaurant_id", pz.id)
+                .eq("table_number", String(table_number))
+                .in("status", ["open", "requested_close", "waiting_operator", "closing"])
+                .order("opened_at", { ascending: false })
+                .limit(1)
+                .maybeSingle();
+              session = (data as any) ?? null;
+            }
+          } else {
             return new Response(
-              JSON.stringify({ success: false, error: "missing_params", message: "restaurant_slug e table_number são obrigatórios" }),
-              { status: 400, headers }
+              JSON.stringify({
+                success: false,
+                error: "missing_params",
+                message: "Informe dining_session_id (ou customer_token) para identificar a mesa.",
+              }),
+              { status: 400, headers },
             );
           }
 
-          const { data: pz, error: pErr } = await supabaseAdmin
-            .from("pizzerias")
-            .select("id, name, slug")
-            .eq("slug", restaurant_slug)
-            .neq("status", "deleted")
-            .maybeSingle();
-          if (pErr) throw pErr;
-          if (!pz) {
+          if (!session) {
             return new Response(
-              JSON.stringify({ success: false, error: "invalid_restaurant", message: "Restaurante não encontrado" }),
-              { status: 404, headers }
+              JSON.stringify({ success: false, error: "session_not_found", message: "Sessão não encontrada." }),
+              { status: 404, headers },
             );
           }
 
-          // Resolve table (optional but helpful)
+          if (DEAD_STATUSES.has(session.status)) {
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "session_closed",
+                message: "Esta mesa já foi encerrada pelo restaurante.",
+                closed_at: session.closed_at,
+                dining_session_id: session.dining_session_id,
+              }),
+              { status: 409, headers },
+            );
+          }
+
+          // Resolve table row (best effort, used for the notification badge)
           let tableId: string | null = null;
           if (table_token) {
             const { data: t } = await supabaseAdmin
-              .from("restaurant_tables")
-              .select("id")
-              .eq("restaurant_id", pz.id)
-              .eq("public_token", table_token)
-              .maybeSingle();
-            tableId = t?.id || null;
+              .from("restaurant_tables").select("id")
+              .eq("restaurant_id", session.restaurant_id)
+              .eq("public_token", table_token).maybeSingle();
+            tableId = (t as any)?.id ?? null;
           }
-          if (!tableId) {
+          if (!tableId && session.table_number) {
             const { data: t2 } = await supabaseAdmin
-              .from("restaurant_tables")
-              .select("id")
-              .eq("restaurant_id", pz.id)
-              .eq("table_number", String(table_number))
-              .maybeSingle();
-            tableId = t2?.id || null;
+              .from("restaurant_tables").select("id")
+              .eq("restaurant_id", session.restaurant_id)
+              .eq("table_number", session.table_number).maybeSingle();
+            tableId = (t2 as any)?.id ?? null;
           }
 
-          // Resolve session (open) if not provided
-          let sessionId: string | null = session_id || null;
-          let resolvedCustomer: string | null = customer_name || null;
+          // Dedupe pending request
+          const { data: existing } = await supabaseAdmin
+            .from("table_close_requests")
+            .select("id, status, requested_at")
+            .eq("session_id", session.id)
+            .eq("status", "pending")
+            .order("requested_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
 
-          if (sessionId) {
-            // Reject if the provided session is already closed
-            const { data: existingSession } = await supabaseAdmin
-              .from("table_sessions")
-              .select("status, closed_at")
-              .eq("id", sessionId)
-              .maybeSingle();
-            if (existingSession?.status === "closed") {
-              return new Response(
-                JSON.stringify({
-                  success: false,
-                  error: "session_closed",
-                  message: "Esta mesa já foi fechada pelo restaurante.",
-                  closed_at: existingSession.closed_at,
-                }),
-                { status: 409, headers },
-              );
+          if (existing) {
+            // Ensure the session is at least in REQUESTED_CLOSE
+            if (session.status === "open") {
+              await supabaseAdmin.from("table_sessions")
+                .update({ status: "requested_close" } as any)
+                .eq("id", session.id).eq("status", "open");
             }
-          } else {
-            const { data: s } = await supabaseAdmin
-              .from("table_sessions")
-              .select("id, customer_name")
-              .eq("restaurant_id", pz.id)
-              .eq("table_number", String(table_number))
-              .eq("status", "open")
-              .order("opened_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            sessionId = s?.id || null;
-            if (!resolvedCustomer && s?.customer_name) resolvedCustomer = s.customer_name;
-          }
-
-          // Dedupe: if there is already a pending request for this session, return it.
-          if (sessionId) {
-            const { data: existing } = await supabaseAdmin
-              .from("table_close_requests")
-              .select("id, status, requested_at")
-              .eq("session_id", sessionId)
-              .eq("status", "pending")
-              .order("requested_at", { ascending: false })
-              .limit(1)
-              .maybeSingle();
-            if (existing) {
-              return new Response(
-                JSON.stringify({ success: true, status: "already_pending", request_id: existing.id }),
-                { status: 200, headers }
-              );
-            }
+            return new Response(JSON.stringify({
+              success: true,
+              status: "already_pending",
+              request_id: (existing as any).id,
+              session_status: session.status === "open" ? "requested_close" : session.status,
+              dining_session_id: session.dining_session_id,
+            }), { status: 200, headers });
           }
 
           const { data: inserted, error: iErr } = await supabaseAdmin
             .from("table_close_requests")
             .insert({
-              restaurant_id: pz.id,
+              restaurant_id: session.restaurant_id,
               table_id: tableId,
-              table_number: String(table_number),
-              session_id: sessionId,
-              customer_name: resolvedCustomer,
+              table_number: session.table_number,
+              session_id: session.id,
+              dining_session_id: session.dining_session_id,
+              customer_token: session.customer_token,
+              customer_name: customer_name || session.customer_name || null,
               status: "pending",
-            })
+            } as any)
             .select("id, requested_at")
             .single();
 
           if (iErr) throw iErr;
 
-          console.log("CLOSE_REQUEST_CREATED:", inserted.id, "table:", table_number, "restaurant:", pz.slug);
+          // Transition session to REQUESTED_CLOSE (only if still ACTIVE/open).
+          const { data: transitioned } = await supabaseAdmin
+            .from("table_sessions")
+            .update({ status: "requested_close" } as any)
+            .eq("id", session.id)
+            .eq("status", "open")
+            .select("status")
+            .maybeSingle();
 
-          return new Response(
-            JSON.stringify({ success: true, status: "created", request_id: inserted.id, requested_at: inserted.requested_at }),
-            { status: 201, headers }
-          );
+          const finalStatus = (transitioned as any)?.status ?? session.status;
+
+          console.log("CLOSE_REQUEST_CREATED:", (inserted as any).id,
+            "session:", session.id, "dining:", session.dining_session_id, "status:", finalStatus);
+
+          return new Response(JSON.stringify({
+            success: true,
+            status: "created",
+            request_id: (inserted as any).id,
+            requested_at: (inserted as any).requested_at,
+            session_status: finalStatus,
+            dining_session_id: session.dining_session_id,
+          }), { status: 201, headers });
         } catch (err: any) {
           console.error("❌ REQUEST_CLOSE_TABLE_ERROR:", err?.message);
           return new Response(
             JSON.stringify({ success: false, error: "server_error", message: "Erro ao registrar pedido de fechamento" }),
-            { status: 500, headers }
+            { status: 500, headers },
           );
         }
       },
