@@ -424,60 +424,6 @@ export default function MyStore() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="menu" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Edição do Cardápio</CardTitle>
-              <CardDescription>Edite preços e visibilidade dos seus produtos.</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-8">
-                {categories.map(category => (
-                  <div key={category.id} className="space-y-4">
-                    <h3 className="font-bold text-lg border-b pb-1 text-primary">{category.name}</h3>
-                    <div className="grid gap-4">
-                      {products.filter(p => p.category_id === category.id).map(product => (
-                        <div key={product.id} className="flex flex-col md:flex-row gap-4 p-4 border rounded-lg bg-card/50">
-                          {product.image_url && (
-                            <img src={product.image_url} alt={product.name} className="w-20 h-20 object-cover rounded-md" />
-                          )}
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <h4 className="font-semibold">{product.name}</h4>
-                              <div className="flex items-center gap-2">
-                                <Switch 
-                                  checked={product.active} 
-                                  onCheckedChange={checked => handleUpdateProduct(product.id, { active: checked })}
-                                />
-                                <span className="text-xs">{product.active ? "Ativo" : "Inativo"}</span>
-                              </div>
-                            </div>
-                            <p className="text-xs text-muted-foreground line-clamp-2">{product.description}</p>
-                            <div className="flex items-center gap-4 pt-2">
-                              <div className="w-32">
-                                <Label className="text-[10px] uppercase text-muted-foreground">Preço (R$)</Label>
-                                <Input 
-                                  type="number" 
-                                  step="0.01" 
-                                  className="h-8 text-sm"
-                                  defaultValue={product.price}
-                                  onBlur={e => {
-                                    const val = parseFloat(e.target.value);
-                                    if (val !== product.price) handleUpdateProduct(product.id, { price: val });
-                                  }}
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
       </Tabs>
     </div>
   );
