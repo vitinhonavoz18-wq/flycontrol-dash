@@ -94,7 +94,7 @@ export const Route = createFileRoute("/api/public/open-table-session")({
           // Reuse an existing ACTIVE session (aliased as 'open' in DB).
           const { data: existingSession } = await supabaseAdmin
             .from("table_sessions")
-            .select("id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
+            .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
             .eq("restaurant_id", pz.id)
             .eq("table_number", String(table_number))
             .in("status", ["open", "requested_close", "waiting_operator", "closing"])
@@ -103,7 +103,17 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             .maybeSingle();
 
           if (existingSession) {
-            console.log("OPEN_TABLE_SESSION_FOUND_EXISTING:", existingSession.id, "dining:", (existingSession as any).dining_session_id);
+            // Ensure the reused session is linked to the real restaurant_tables row.
+            if (!(existingSession as any).table_id && table?.id) {
+              await supabaseAdmin
+                .from("table_sessions")
+                .update({ table_id: table.id } as any)
+                .eq("id", (existingSession as any).id);
+              (existingSession as any).table_id = table.id;
+            }
+            console.log("OPEN_TABLE_SESSION_FOUND_EXISTING:", existingSession.id,
+              "dining:", (existingSession as any).dining_session_id,
+              "table_id:", (existingSession as any).table_id);
             return new Response(JSON.stringify({
               success: true,
               status: "already_open",
@@ -128,14 +138,14 @@ export const Route = createFileRoute("/api/public/open-table-session")({
                 customer_name: customer_name || null,
                 opened_at: new Date().toISOString(),
               } as any)
-              .select("id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
+              .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
               .single();
 
             if (iErr) {
               if (iErr.code === "23505") {
                 const { data: raceSession } = await supabaseAdmin
                   .from("table_sessions")
-                  .select("id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
+                  .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
                   .eq("restaurant_id", pz.id)
                   .eq("table_number", String(table_number))
                   .in("status", ["open", "requested_close", "waiting_operator", "closing"])
@@ -163,7 +173,7 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             if (insertError?.code === "23505") {
               const { data: finalSession } = await supabaseAdmin
                 .from("table_sessions")
-                .select("id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
+                .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
                 .eq("restaurant_id", pz.id)
                 .eq("table_number", String(table_number))
                 .in("status", ["open", "requested_close", "waiting_operator", "closing"])
