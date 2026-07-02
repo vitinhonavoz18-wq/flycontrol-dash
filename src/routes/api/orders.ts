@@ -323,37 +323,15 @@ export const Route = createFileRoute("/api/orders")({
             validatedTableNumber = (sess as any).table_number || validatedTableNumber;
             validatedTableName = (sess as any).table_name || validatedTableName;
           } else {
-            console.warn("[ORDERS_LEGACY_PAYLOAD] pedido de mesa sem dining_session_id — usando table_number/token (deprecado)");
-
-            const tableNumber = String(rawTableNumber || "").trim();
-            const tableToken = String(rawTableToken || "").trim();
-
-            if (!tableNumber) {
-              return new Response(JSON.stringify({
-                success: false,
-                error: "invalid_table_data",
-                message: "Número da mesa ausente para pedido do tipo mesa"
-              }), { status: 400, headers: cors });
-            }
-
-            let tableQuery = supabaseAdmin
-              .from("restaurant_tables")
-              .select("id, table_number, table_name, public_token, is_active")
-              .eq("restaurant_id", pz.id)
-              .eq("table_number", tableNumber)
-              .eq("is_active", true);
-            if (tableToken) tableQuery = tableQuery.eq("public_token", tableToken);
-
-            const { data: table, error: tErr } = await tableQuery.maybeSingle();
-            if (tErr) console.error("❌ [API/Orders] Erro ao buscar mesa:", tErr.message);
-
-            if (!table) {
-              console.warn("⚠️ [API/Orders] Mesa não localizada com os dados; vinculando apenas por número.");
-            } else {
-              validatedTableId = (table as any).id;
-              validatedTableNumber = (table as any).table_number || validatedTableNumber;
-              validatedTableName = (table as any).table_name || validatedTableName;
-            }
+            // Authoritative contract: FlyControl is the source of truth.
+            // Table orders MUST carry the dining_session_id (or customer_token)
+            // returned by POST /api/public/open-table-session. No fallback.
+            console.error("❌ [API/Orders] table order without dining_session_id/customer_token — rejecting per authoritative contract");
+            return new Response(JSON.stringify({
+              success: false,
+              error: "missing_dining_session",
+              message: "Pedido de mesa exige dining_session_id (ou customer_token) emitido pelo FlyControl via /api/public/open-table-session. Refaça o scan do QR Code.",
+            }), { status: 400, headers: cors });
           }
         }
 
