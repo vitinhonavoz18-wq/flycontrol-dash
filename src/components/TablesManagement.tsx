@@ -647,35 +647,25 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                       {session.waiter_id ? "ABERTA" : "AGUARDANDO GARÇOM"}
                     </Badge>
                   </div>
-                  <div className="mt-3 space-y-1">
+                  <div className="mt-3 space-y-2">
                     <Label className="text-[10px] uppercase text-muted-foreground">
                       Garçom Responsável
                     </Label>
-                    <Select
-                      value={session.waiter_id ?? "__none__"}
-                      onValueChange={(val) => assignWaiter(session.id, val === "__none__" ? null : val)}
-                    >
-                      <SelectTrigger className="h-9 bg-background">
-                        <SelectValue placeholder="Atribuir Garçom" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="__none__">— Sem garçom —</SelectItem>
-                        {waiters.map(w => (
-                          <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>
-                        ))}
-                        {waiters.length === 0 && (
-                          <div className="p-2 text-xs text-muted-foreground">
-                            Nenhum garçom cadastrado. Cadastre em "Garçons".
-                          </div>
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {session.waiter_name && (
-                      <div className="text-xs font-medium text-primary pt-1">
-                        Atribuída a: {session.waiter_name}
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between gap-2 bg-background rounded-md border px-3 py-2">
+                      <span className="text-sm font-medium truncate">
+                        {session.waiter_name ?? <span className="text-muted-foreground">Sem garçom</span>}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        onClick={() => setChangeWaiterSession(session)}
+                      >
+                        Trocar
+                      </Button>
+                    </div>
                   </div>
+
                 </CardHeader>
                 <CardContent className="p-5 space-y-4">
                   <div className="flex justify-between text-sm font-medium">
