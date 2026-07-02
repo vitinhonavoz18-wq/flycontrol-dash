@@ -1,0 +1,79 @@
+
+ALTER TABLE public.pizzerias
+  ADD COLUMN IF NOT EXISTS service_fee_percent numeric(5,2) NOT NULL DEFAULT 10;
+
+-- Enforce 0..30 range
+DO $$ BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint WHERE conname = 'pizzerias_service_fee_percent_range'
+  ) THEN
+    ALTER TABLE public.pizzerias
+      ADD CONSTRAINT pizzerias_service_fee_percent_range
+      CHECK (service_fee_percent >= 0 AND service_fee_percent <= 30);
+  END IF;
+END $$;
+
+-- Update sync logic to seed new sessions from pizzeria default
+CREATE OR REPLACE FUNCTION public.sync_order_to_table_session_logic(p_order_id uuid)
+ RETURNS void
+ LANGUAGE plpgsql
+ SECURITY DEFINER
+AS $function$
+DECLARE
+    v_order RECORD;
+    v_order_type TEXT;
+    v_table_number TEXT;
+    v_session_id UUID;
+    v_normalized_table TEXT;
+    v_default_pct numeric(5,2);
+BEGIN
+    SELECT * INTO v_order FROM public.orders WHERE id = p_order_id;
+
+    v_order_type := COALESCE(v_order.order_type, v_order.service_mode, 'delivery');
+
+    IF v_order_type != 'table' AND v_order_type != 'mesa' THEN
+        RETURN;
+    END IF;
+
+    v_table_number := v_order.table_number;
+    IF v_table_number IS NULL OR v_table_number = '' THEN
+        RETURN;
+    END IF;
+
+    v_normalized_table := TRIM(LOWER(v_table_number));
+    v_normalized_table := REPLACE(v_normalized_table, 'mesa', '');
+    v_normalized_table := TRIM(v_normalized_table);
+    IF v_normalized_table ~ '^\d$' THEN
+        v_normalized_table := LPAD(v_normalized_table, 2, '0');
+    END IF;
+
+    SELECT id INTO v_session_id
+    FROM public.table_sessions
+    WHERE restaurant_id = v_order.tenant_id
+      AND (
+        TRIM(LOWER(REPLACE(REPLACE(table_number, 'mesa', ''), ' ', ''))) = v_normalized_table
+        OR table_number = v_table_number
+      )
+      AND status = 'open'
+    ORDER BY opened_at DESC
+    LIMIT 1;
+
+    IF v_session_id IS NULL THEN
+        SELECT COALESCE(service_fee_percent, 10) INTO v_default_pct
+          FROM public.pizzerias WHERE id = v_order.tenant_id;
+
+        INSERT INTO public.table_sessions (
+            restaurant_id, table_number, status, opened_at,
+            service_fee_enabled, service_fee_percent
+        ) VALUES (
+            v_order.tenant_id, v_table_number, 'open', now(), false, COALESCE(v_default_pct, 10)
+        ) RETURNING id INTO v_session_id;
+    END IF;
+
+    INSERT INTO public.table_session_orders (table_session_id, order_id)
+    VALUES (v_session_id, v_order.id)
+    ON CONFLICT (order_id) DO NOTHING;
+
+    PERFORM public.recalculate_table_session_totals(v_session_id);
+END;
+$function$;
