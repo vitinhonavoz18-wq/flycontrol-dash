@@ -161,6 +161,8 @@ export async function closeTableWorkflow(
           table_number: result.tableNumber,
           request_id: result.requestId,
           session_id: input.sessionId,
+          dining_session_id: diningSessionId,
+          customer_token: customerToken,
           closed_at: closedAt,
         },
       });
