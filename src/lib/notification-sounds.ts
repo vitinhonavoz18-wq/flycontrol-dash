@@ -122,6 +122,9 @@ const PATTERNS: Record<SoundEvent, Tone[]> = {
     { freq: 660, dur: 0.10, type: "sine" },
     { freq: 880, dur: 0.14, type: "sine", gap: 0.03 },
   ],
+};
+
+
 
 async function playPattern(event: SoundEvent) {
   const settings = loadSettings();
