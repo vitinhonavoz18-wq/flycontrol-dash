@@ -44,7 +44,7 @@ export const Route = createFileRoute("/api/public/open-table-session")({
           // 1. Validar restaurante
           const { data: pz, error: pErr } = await supabaseAdmin
             .from("pizzerias")
-            .select("id, name, slug, is_active, subscription_status")
+            .select("id, name, slug, is_active, subscription_status, service_fee_percent")
             .eq("slug", restaurant_slug)
             .neq("status", "deleted")
             .maybeSingle();
