@@ -465,14 +465,46 @@ export const listMyAssignedSessions = createServerFn({ method: "POST" })
     const { auth, supabaseAdmin } = await authed(data.token);
     let q = supabaseAdmin
       .from("table_sessions")
-      .select("id, table_number, table_name, status, total_amount, subtotal_amount, service_fee_amount, service_fee_enabled, opened_at, closed_at, waiter_id, customer_name")
+      .select("id, table_number, table_name, status, total_amount, subtotal_amount, service_fee_amount, service_fee_enabled, service_fee_percent, opened_at, closed_at, waiter_id, customer_name")
       .eq("restaurant_id", auth.tenantId)
       .eq("waiter_id", auth.waiterId)
       .order("opened_at", { ascending: false });
     if (!data.includeClosed) q = q.eq("status", "open");
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
-    return rows || [];
+    const sessions = rows || [];
+    if (sessions.length === 0) return [];
+
+    // Aggregate orders per session for live financial summary
+    const ids = sessions.map((s: any) => s.id);
+    const { data: links } = await supabaseAdmin
+      .from("table_session_orders")
+      .select("table_session_id, orders(id, total, discount, customer_name, status)")
+      .in("table_session_id", ids);
+
+    const agg = new Map<string, { orders_count: number; customers: Set<string>; discount_total: number }>();
+    for (const id of ids) agg.set(id, { orders_count: 0, customers: new Set(), discount_total: 0 });
+    for (const l of links || []) {
+      const o: any = (l as any).orders;
+      if (!o) continue;
+      const st = String(o.status || "").toLowerCase();
+      if (["cancelado", "cancelled", "canceled", "deleted"].includes(st)) continue;
+      const a = agg.get((l as any).table_session_id);
+      if (!a) continue;
+      a.orders_count += 1;
+      a.discount_total += Number(o.discount || 0);
+      if (o.customer_name) a.customers.add(String(o.customer_name).trim().toLowerCase());
+    }
+
+    return sessions.map((s: any) => {
+      const a = agg.get(s.id)!;
+      return {
+        ...s,
+        orders_count: a.orders_count,
+        customers_count: a.customers.size,
+        discount_total: a.discount_total,
+      };
+    });
   });
 
 // Pending orders inside the waiter's assigned sessions
