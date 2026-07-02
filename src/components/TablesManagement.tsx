@@ -667,7 +667,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                     </div>
                     {session.service_fee_enabled && (
                       <div className="flex justify-between text-orange-600">
-                        <span>Taxa Garçom (15%):</span>
+                        <span>Taxa de Serviço ({session.service_fee_percent}%):</span>
                         <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.service_fee_amount)}</span>
                       </div>
                     )}
@@ -688,8 +688,9 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                       onClick={() => toggleServiceFee(session.id, !session.service_fee_enabled)}
                     >
                       <Receipt className="h-4 w-4" /> 
-                      {session.service_fee_enabled ? "Remover 15%" : "Adicionar 15%"}
+                      {session.service_fee_enabled ? `Remover ${session.service_fee_percent}%` : `Adicionar Taxa de Serviço`}
                     </Button>
+
                     <Button variant="default" size="sm" className="gap-2" onClick={() => {
                       setSelectedSession(session);
                       loadSessionOrders(session);
