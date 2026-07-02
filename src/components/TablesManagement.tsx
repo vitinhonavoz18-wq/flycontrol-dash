@@ -904,7 +904,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                   </div>
                   {selectedSession.service_fee_enabled && (
                     <div className="flex justify-between text-sm text-orange-600">
-                      <span>Taxa Garçom (15%):</span>
+                      <span>Taxa de Serviço ({selectedSession.service_fee_percent}%):</span>
                       <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(feeAmount)}</span>
                     </div>
                   )}
@@ -915,9 +915,10 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                 </div>
                 {selectedSession.service_fee_enabled && (
                   <p className="text-[10px] text-center text-muted-foreground">
-                    Taxa de garçom de 15% aplicada ao total da comanda.
+                    Taxa de serviço de {selectedSession.service_fee_percent}% aplicada ao total da comanda.
                   </p>
                 )}
+
               </CardContent>
               <div className="p-4 bg-muted/20 border-t flex flex-col gap-2">
                 <Button className="w-full h-12 text-lg font-bold" onClick={() => {
