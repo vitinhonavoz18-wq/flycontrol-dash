@@ -31,8 +31,7 @@ import {
   Heart
 } from "lucide-react";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
-import { syncToExternal } from "@/utils/menuSync";
-import { TablesManagement } from "@/components/TablesManagement";
+
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
