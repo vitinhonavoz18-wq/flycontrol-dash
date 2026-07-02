@@ -37,7 +37,7 @@ interface TablesManagementProps {
 }
 
 export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementProps) {
-  const { tables, loading: tablesLoading, addTable, updateTable, toggleTable, deleteTable, loadTables } = useTables(tenantId);
+  const { tables, loading: tablesLoading, addTable, updateTable, toggleTable, deleteTable, loadTables, updateDefaultWaiter } = useTables(tenantId);
   const { sessions, loading: sessionsLoading, closeSession, loadSessions, toggleServiceFee, assignWaiter } = useTableSessions(tenantId);
   const [selectedSession, setSelectedSession] = useState<TableSession | null>(null);
   const [sessionOrders, setSessionOrders] = useState<any[]>([]);
