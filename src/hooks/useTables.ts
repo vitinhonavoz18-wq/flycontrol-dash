@@ -197,7 +197,7 @@ export function useTableSessions(tenantId: string | null) {
         total_amount: Number(s.total_amount || 0),
         subtotal_amount: Number(s.subtotal_amount || 0),
         service_fee_enabled: s.service_fee_enabled,
-        service_fee_percent: Number(s.service_fee_percent || 15),
+        service_fee_percent: Number(s.service_fee_percent || 10),
         service_fee_amount: Number(s.service_fee_amount || 0),
         customer_name: s.customer_name,
         table_name: s.table_name,
@@ -234,32 +234,48 @@ export function useTableSessions(tenantId: string | null) {
     const session = sessions.find(s => s.id === sessionId);
     if (!session) return;
 
+    // Se ativando, use a taxa configurada na pizzaria (fonte da verdade).
+    // Se a sessão já foi calculada com outra taxa, mantém sua própria.
+    let percent = Number(session.service_fee_percent) || 10;
+    if (enabled && tenantId) {
+      const { data: p } = await supabase
+        .from("pizzerias")
+        .select("service_fee_percent")
+        .eq("id", tenantId)
+        .maybeSingle();
+      if (p && p.service_fee_percent != null) {
+        percent = Number(p.service_fee_percent);
+      }
+    }
+
     const subtotal = Number(session.subtotal_amount) || 0;
-    const percent = Number(session.service_fee_percent) || 15;
     const feeAmount = enabled ? subtotal * (percent / 100) : 0;
     const total = subtotal + feeAmount;
 
     const { error } = await supabase
       .from("table_sessions")
-      .update({ 
+      .update({
         service_fee_enabled: enabled,
+        service_fee_percent: percent,
         service_fee_amount: feeAmount,
-        total_amount: total
+        total_amount: total,
       })
       .eq("id", sessionId);
 
     if (error) {
       toast.error("Erro ao atualizar taxa de serviço: " + error.message);
     } else {
-      setSessions(prev => prev.map(s => s.id === sessionId ? { 
-        ...s, 
-        service_fee_enabled: enabled, 
-        service_fee_amount: feeAmount, 
-        total_amount: total 
+      setSessions(prev => prev.map(s => s.id === sessionId ? {
+        ...s,
+        service_fee_enabled: enabled,
+        service_fee_percent: percent,
+        service_fee_amount: feeAmount,
+        total_amount: total,
       } : s));
-      toast.success(enabled ? "Taxa de 15% adicionada!" : "Taxa de serviço removida.");
+      toast.success(enabled ? `Taxa de ${percent}% adicionada!` : "Taxa de serviço removida.");
     }
   }
+
 
   async function assignWaiter(sessionId: string, waiterId: string | null) {
     const { error } = await supabase

@@ -303,6 +303,32 @@ function Settings() {
                   />
                 </div>
                 <div className="space-y-2">
+                  <Label className="text-xs font-medium uppercase text-muted-foreground">
+                    Taxa de Serviço (%) — 0 a 30
+                  </Label>
+                  <Input
+                    type="number"
+                    min={0}
+                    max={30}
+                    step={0.5}
+                    placeholder="10"
+                    defaultValue={p.service_fee_percent ?? 10}
+                    onBlur={(e) => {
+                      let val = parseFloat(e.target.value);
+                      if (isNaN(val)) val = 10;
+                      if (val < 0) val = 0;
+                      if (val > 30) val = 30;
+                      // arredonda para múltiplo de 0.5
+                      val = Math.round(val * 2) / 2;
+                      e.target.value = String(val);
+                      update(p.id, { service_fee_percent: val });
+                    }}
+                  />
+                  <p className="text-[10px] text-muted-foreground">
+                    Aplicada a novas mesas abertas. Mesas já fechadas não são alteradas.
+                  </p>
+                </div>
+                <div className="space-y-2">
                   <Label className="text-xs font-medium uppercase text-muted-foreground">Horários de Funcionamento</Label>
                   <Input 
                     placeholder="Ex: Seg a Sex: 18h às 23h" 
@@ -310,7 +336,6 @@ function Settings() {
                     onBlur={(e) => {
                       let val = e.target.value;
                       try {
-                        // Tentar parsear se for JSON, senão salvar como string/array simples
                         if (val.startsWith('[') || val.startsWith('{')) {
                           update(p.id, { opening_hours: JSON.parse(val) });
                         } else {
@@ -323,6 +348,7 @@ function Settings() {
                   />
                 </div>
               </div>
+
             </div>
 
             <div className="mt-6 border-t border-border pt-4">

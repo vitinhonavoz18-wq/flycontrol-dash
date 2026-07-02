@@ -356,11 +356,12 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
             </div>
             ${session.service_fee_enabled ? `
               <div class="summary-row">
-                <span>Taxa Garçom (15%):</span>
+                <span>Taxa de Serviço (${session.service_fee_percent}%):</span>
                 <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(feeAmount)}</span>
               </div>
-              <div style="font-size: 9px; text-align: right; margin-bottom: 5px;">Taxa de garçom de 15% aplicada ao total.</div>
+              <div style="font-size: 9px; text-align: right; margin-bottom: 5px;">Taxa de serviço de ${session.service_fee_percent}% aplicada ao total.</div>
             ` : ''}
+
             <div class="summary-row total-row">
               <span>TOTAL FINAL:</span>
               <span>${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span>
@@ -666,7 +667,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                     </div>
                     {session.service_fee_enabled && (
                       <div className="flex justify-between text-orange-600">
-                        <span>Taxa Garçom (15%):</span>
+                        <span>Taxa de Serviço ({session.service_fee_percent}%):</span>
                         <span>{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(session.service_fee_amount)}</span>
                       </div>
                     )}
@@ -687,8 +688,9 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                       onClick={() => toggleServiceFee(session.id, !session.service_fee_enabled)}
                     >
                       <Receipt className="h-4 w-4" /> 
-                      {session.service_fee_enabled ? "Remover 15%" : "Adicionar 15%"}
+                      {session.service_fee_enabled ? `Remover ${session.service_fee_percent}%` : `Adicionar Taxa de Serviço`}
                     </Button>
+
                     <Button variant="default" size="sm" className="gap-2" onClick={() => {
                       setSelectedSession(session);
                       loadSessionOrders(session);
@@ -842,10 +844,11 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                 </div>
                 {selectedSession.service_fee_enabled && (
                   <div className="flex justify-between text-sm text-orange-600">
-                    <span>Taxa Garçom (15%):</span>
+                    <span>Taxa de Serviço ({selectedSession.service_fee_percent}%):</span>
                     <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(feeAmount)}</span>
                   </div>
                 )}
+
                 <div className="flex justify-between text-xl font-black text-primary pt-2 border-t">
                   <span>TOTAL FINAL:</span>
                   <span className="text-2xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span>
@@ -901,7 +904,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                   </div>
                   {selectedSession.service_fee_enabled && (
                     <div className="flex justify-between text-sm text-orange-600">
-                      <span>Taxa Garçom (15%):</span>
+                      <span>Taxa de Serviço ({selectedSession.service_fee_percent}%):</span>
                       <span className="font-bold">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(feeAmount)}</span>
                     </div>
                   )}
@@ -912,9 +915,10 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                 </div>
                 {selectedSession.service_fee_enabled && (
                   <p className="text-[10px] text-center text-muted-foreground">
-                    Taxa de garçom de 15% aplicada ao total da comanda.
+                    Taxa de serviço de {selectedSession.service_fee_percent}% aplicada ao total da comanda.
                   </p>
                 )}
+
               </CardContent>
               <div className="p-4 bg-muted/20 border-t flex flex-col gap-2">
                 <Button className="w-full h-12 text-lg font-bold" onClick={() => {

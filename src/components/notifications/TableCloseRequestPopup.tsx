@@ -76,7 +76,7 @@ export function TableCloseRequestPopup({
         subtotal_amount: Number(d.subtotal_amount || 0),
         service_fee_amount: Number(d.service_fee_amount || 0),
         service_fee_enabled: !!d.service_fee_enabled,
-        service_fee_percent: Number(d.service_fee_percent || 15),
+        service_fee_percent: Number(d.service_fee_percent || 10),
         customer_name: d.customer_name,
         order_count: d.table_session_orders?.[0]?.count || 0,
       });

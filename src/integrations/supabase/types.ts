@@ -701,6 +701,7 @@ export type Database = {
           phone: string | null
           primary_color: string | null
           print_auto: boolean
+          service_fee_percent: number
           short_message: string | null
           slug: string
           sound_enabled: boolean
@@ -742,6 +743,7 @@ export type Database = {
           phone?: string | null
           primary_color?: string | null
           print_auto?: boolean
+          service_fee_percent?: number
           short_message?: string | null
           slug: string
           sound_enabled?: boolean
@@ -783,6 +785,7 @@ export type Database = {
           phone?: string | null
           primary_color?: string | null
           print_auto?: boolean
+          service_fee_percent?: number
           short_message?: string | null
           slug?: string
           sound_enabled?: boolean

@@ -92,7 +92,7 @@ export const Route = createFileRoute("/api/sync-table-sessions")({
             const subtotal = (ordersInfo || [])
               .filter(o => o.status !== "cancelado" && o.status !== "deleted")
               .reduce((sum, o) => sum + (Number(o.total) || 0), 0);
-            const fee = sess.service_fee_enabled ? subtotal * (Number(sess.service_fee_percent) || 15) / 100 : 0;
+            const fee = sess.service_fee_enabled ? subtotal * (Number(sess.service_fee_percent) || 10) / 100 : 0;
             const total = subtotal + fee;
 
             await supabaseAdmin.from("table_sessions").update({
