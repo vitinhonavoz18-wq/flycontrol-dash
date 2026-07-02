@@ -423,7 +423,7 @@ export const Route = createFileRoute("/api/orders")({
               let finalTotal = subtotal;
 
               if (session.service_fee_enabled) {
-                const percent = Number(session.service_fee_percent) || 15;
+                const percent = Number(session.service_fee_percent) || 10;
                 serviceFeeAmount = subtotal * (percent / 100);
                 finalTotal = subtotal + serviceFeeAmount;
                 console.log(`[API/Orders] SYNC_SESSION_TOTAL_RECALCULATED: ${finalTotal}`);
