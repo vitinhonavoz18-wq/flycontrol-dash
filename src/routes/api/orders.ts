@@ -277,7 +277,7 @@ export const Route = createFileRoute("/api/orders")({
         let resolvedSessionRow: { id: string; status: string; table_number: string | null; table_name: string | null; table_id: string | null } | null = null;
 
         if (isTableOrder) {
-          // Preferred path: dining_session_id / customer_token
+          // Preferred path: dining_session_id / customer_token from SiteCreatorFly (authoritative).
           if (rawDiningSessionId || rawCustomerToken) {
             const q = supabaseAdmin
               .from("table_sessions")
@@ -288,49 +288,142 @@ export const Route = createFileRoute("/api/orders")({
 
             if (sErr) console.error("❌ [API/Orders] Erro ao buscar sessão via dining_session_id:", sErr.message);
 
-            if (!sess) {
-              return new Response(JSON.stringify({
-                success: false,
-                error: "invalid_dining_session",
-                message: "dining_session_id inválido — a mesa não foi encontrada. Refaça o scan do QR Code.",
-              }), { status: 400, headers: cors });
-            }
-            if ((sess as any).restaurant_id !== pz.id) {
-              return new Response(JSON.stringify({
-                success: false, error: "dining_session_restaurant_mismatch",
-                message: "Este dining_session_id não pertence a esta loja.",
-              }), { status: 400, headers: cors });
-            }
-            if (["closed", "archived"].includes((sess as any).status)) {
-              return new Response(JSON.stringify({
-                success: false,
-                error: "session_closed",
-                message: "Esta mesa foi encerrada. Refaça o scan do QR Code para abrir uma nova comanda.",
-                dining_session_id: (sess as any).dining_session_id,
-              }), { status: 409, headers: cors });
-            }
+            if (sess) {
+              if ((sess as any).restaurant_id !== pz.id) {
+                return new Response(JSON.stringify({
+                  success: false, error: "dining_session_restaurant_mismatch",
+                  message: "Este dining_session_id não pertence a esta loja.",
+                }), { status: 400, headers: cors });
+              }
+              if (["closed", "archived"].includes((sess as any).status)) {
+                return new Response(JSON.stringify({
+                  success: false,
+                  error: "session_closed",
+                  message: "Esta mesa foi encerrada. Refaça o scan do QR Code para abrir uma nova comanda.",
+                  dining_session_id: (sess as any).dining_session_id,
+                }), { status: 409, headers: cors });
+              }
 
-            resolvedSessionRow = {
-              id: (sess as any).id,
-              status: (sess as any).status,
-              table_number: (sess as any).table_number,
-              table_name: (sess as any).table_name,
-              table_id: (sess as any).table_id,
-            };
-            validatedDiningSessionId = (sess as any).dining_session_id;
-            validatedCustomerToken = (sess as any).customer_token;
-            validatedTableId = (sess as any).table_id ?? validatedTableId;
-            validatedTableNumber = (sess as any).table_number || validatedTableNumber;
-            validatedTableName = (sess as any).table_name || validatedTableName;
+              resolvedSessionRow = {
+                id: (sess as any).id,
+                status: (sess as any).status,
+                table_number: (sess as any).table_number,
+                table_name: (sess as any).table_name,
+                table_id: (sess as any).table_id,
+              };
+              validatedDiningSessionId = (sess as any).dining_session_id;
+              validatedCustomerToken = (sess as any).customer_token;
+              validatedTableId = (sess as any).table_id ?? validatedTableId;
+              validatedTableNumber = (sess as any).table_number || validatedTableNumber;
+              validatedTableName = (sess as any).table_name || validatedTableName;
+            } else {
+              // AUTHORITATIVE ADOPTION: dining_session_id was minted by SiteCreatorFly
+              // and does not yet exist locally. Persist it verbatim instead of rejecting.
+              console.log("ADOPT_FOREIGN_DINING_SESSION:", { dining: rawDiningSessionId, token: rawCustomerToken ? rawCustomerToken.slice(0, 6) + "…" : null });
+
+              // Resolve real restaurant_tables UUID from table_number (+ token if present).
+              let tableRow: { id: string; table_name: string | null; table_number: string } | null = null;
+              if (rawTableNumber) {
+                const tq = supabaseAdmin
+                  .from("restaurant_tables")
+                  .select("id, table_name, table_number")
+                  .eq("restaurant_id", pz.id)
+                  .eq("table_number", String(rawTableNumber))
+                  .eq("is_active", true);
+                const { data: t } = rawTableToken
+                  ? await tq.eq("public_token", rawTableToken).maybeSingle()
+                  : await tq.maybeSingle();
+                tableRow = (t as any) ?? null;
+              }
+              if (!tableRow) {
+                return new Response(JSON.stringify({
+                  success: false, error: "invalid_table",
+                  message: "Não foi possível localizar a mesa (table_number/table_token) para vincular ao dining_session_id.",
+                }), { status: 400, headers: cors });
+              }
+
+              // Look for an existing OPEN session on this table to adopt SCF's IDs into.
+              const { data: openOnTable } = await supabaseAdmin
+                .from("table_sessions")
+                .select("id, status, dining_session_id, customer_token, table_id, table_number, table_name")
+                .eq("restaurant_id", pz.id)
+                .eq("table_number", tableRow.table_number)
+                .in("status", ["open", "requested_close", "waiting_operator", "closing"])
+                .maybeSingle();
+
+              let sessionRow: any = null;
+              if (openOnTable) {
+                const updates: any = { table_id: tableRow.id };
+                if (rawDiningSessionId && (openOnTable as any).dining_session_id !== rawDiningSessionId) {
+                  updates.dining_session_id = rawDiningSessionId;
+                }
+                if (rawCustomerToken && (openOnTable as any).customer_token !== rawCustomerToken) {
+                  updates.customer_token = rawCustomerToken;
+                }
+                const { data: upd, error: uErr } = await supabaseAdmin
+                  .from("table_sessions")
+                  .update(updates as any)
+                  .eq("id", (openOnTable as any).id)
+                  .select("id, status, dining_session_id, customer_token, table_id, table_number, table_name")
+                  .single();
+                if (uErr) {
+                  console.error("❌ [API/Orders] Failed to adopt SCF IDs on existing session:", uErr.message);
+                  return new Response(JSON.stringify({
+                    success: false, error: "session_adopt_failed", message: uErr.message,
+                  }), { status: 409, headers: cors });
+                }
+                sessionRow = upd;
+              } else {
+                const { data: pzCfg } = await supabaseAdmin
+                  .from("pizzerias").select("service_fee_percent").eq("id", pz.id).maybeSingle();
+                const defaultPct = Number((pzCfg as any)?.service_fee_percent ?? 10);
+                const insertPayload: any = {
+                  restaurant_id: pz.id,
+                  table_id: tableRow.id,
+                  table_number: tableRow.table_number,
+                  table_name: tableRow.table_name || `Mesa ${tableRow.table_number}`,
+                  status: "open",
+                  subtotal_amount: 0,
+                  service_fee_enabled: false,
+                  service_fee_percent: defaultPct,
+                  service_fee_amount: 0,
+                  total_amount: 0,
+                  opened_at: new Date().toISOString(),
+                };
+                if (rawDiningSessionId) insertPayload.dining_session_id = rawDiningSessionId;
+                if (rawCustomerToken) insertPayload.customer_token = rawCustomerToken;
+                const { data: ins, error: iErr } = await supabaseAdmin
+                  .from("table_sessions").insert(insertPayload)
+                  .select("id, status, dining_session_id, customer_token, table_id, table_number, table_name")
+                  .single();
+                if (iErr) {
+                  console.error("❌ [API/Orders] Failed to create adopted session:", iErr.message);
+                  return new Response(JSON.stringify({
+                    success: false, error: "session_create_failed", message: iErr.message,
+                  }), { status: 500, headers: cors });
+                }
+                sessionRow = ins;
+              }
+
+              resolvedSessionRow = {
+                id: sessionRow.id,
+                status: sessionRow.status,
+                table_number: sessionRow.table_number,
+                table_name: sessionRow.table_name,
+                table_id: sessionRow.table_id,
+              };
+              validatedDiningSessionId = sessionRow.dining_session_id;
+              validatedCustomerToken = sessionRow.customer_token;
+              validatedTableId = sessionRow.table_id;
+              validatedTableNumber = sessionRow.table_number;
+              validatedTableName = sessionRow.table_name || validatedTableName;
+            }
           } else {
-            // Authoritative contract: FlyControl is the source of truth.
-            // Table orders MUST carry the dining_session_id (or customer_token)
-            // returned by POST /api/public/open-table-session. No fallback.
-            console.error("❌ [API/Orders] table order without dining_session_id/customer_token — rejecting per authoritative contract");
+            console.error("❌ [API/Orders] table order without dining_session_id/customer_token");
             return new Response(JSON.stringify({
               success: false,
               error: "missing_dining_session",
-              message: "Pedido de mesa exige dining_session_id (ou customer_token) emitido pelo FlyControl via /api/public/open-table-session. Refaça o scan do QR Code.",
+              message: "Pedido de mesa exige dining_session_id (ou customer_token). Refaça o scan do QR Code.",
             }), { status: 400, headers: cors });
           }
         }
