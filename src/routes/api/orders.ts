@@ -375,6 +375,8 @@ export const Route = createFileRoute("/api/orders")({
           table_id: validatedTableId,
           table_name: validatedTableName,
           table_token: body.table_token || orderData.table_token || null,
+          dining_session_id: validatedDiningSessionId,
+          customer_token: validatedCustomerToken,
           notes: orderData.notes || body.notes || "",
           status: "novo",
           source: body.source || "sitecreatorfly",
