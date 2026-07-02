@@ -40,9 +40,15 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             table_number,
             table_token,
             customer_name,
+            dining_session_id: incomingDiningSessionId,
+            customer_token: incomingCustomerToken,
           } = body || {};
 
-          console.log("OPEN_TABLE_SESSION_REQUEST:", { restaurant_slug, table_number, table_token });
+          console.log("OPEN_TABLE_SESSION_REQUEST:", {
+            restaurant_slug, table_number, table_token,
+            incoming_dining: incomingDiningSessionId || null,
+            incoming_token: incomingCustomerToken ? String(incomingCustomerToken).slice(0, 6) + "…" : null,
+          });
 
           if (!restaurant_slug || !table_number || !table_token) {
             console.warn("⚠️ OPEN_TABLE_SESSION_BAD_REQUEST: Missing required fields");
@@ -103,13 +109,23 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             .maybeSingle();
 
           if (existingSession) {
-            // Ensure the reused session is linked to the real restaurant_tables row.
-            if (!(existingSession as any).table_id && table?.id) {
-              await supabaseAdmin
-                .from("table_sessions")
-                .update({ table_id: table.id } as any)
-                .eq("id", (existingSession as any).id);
-              (existingSession as any).table_id = table.id;
+            // Adopt SCF-provided IDs onto the reused session (authoritative contract).
+            const updates: any = {};
+            if (!(existingSession as any).table_id && table?.id) updates.table_id = table.id;
+            if (incomingDiningSessionId && (existingSession as any).dining_session_id !== incomingDiningSessionId) {
+              updates.dining_session_id = incomingDiningSessionId;
+            }
+            if (incomingCustomerToken && (existingSession as any).customer_token !== incomingCustomerToken) {
+              updates.customer_token = incomingCustomerToken;
+            }
+            if (Object.keys(updates).length > 0) {
+              const { data: upd, error: uErr } = await supabaseAdmin
+                .from("table_sessions").update(updates as any)
+                .eq("id", (existingSession as any).id)
+                .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
+                .single();
+              if (!uErr && upd) Object.assign(existingSession as any, upd);
+              else if (uErr) console.error("OPEN_TABLE_SESSION_ADOPT_ERROR:", uErr.message);
             }
             console.log("OPEN_TABLE_SESSION_FOUND_EXISTING:", existingSession.id,
               "dining:", (existingSession as any).dining_session_id,
@@ -122,22 +138,25 @@ export const Route = createFileRoute("/api/public/open-table-session")({
           }
 
           try {
+            const insertPayload: any = {
+              restaurant_id: pz.id,
+              table_id: table.id,
+              table_number: String(table_number),
+              table_name: table.table_name || `Mesa ${table_number}`,
+              status: "open",
+              subtotal_amount: 0,
+              service_fee_enabled: false,
+              service_fee_percent: Number((pz as any).service_fee_percent ?? 10),
+              service_fee_amount: 0,
+              total_amount: 0,
+              customer_name: customer_name || null,
+              opened_at: new Date().toISOString(),
+            };
+            if (incomingDiningSessionId) insertPayload.dining_session_id = incomingDiningSessionId;
+            if (incomingCustomerToken) insertPayload.customer_token = incomingCustomerToken;
             const { data: newSession, error: iErr } = await supabaseAdmin
               .from("table_sessions")
-              .insert({
-                restaurant_id: pz.id,
-                table_id: table.id,
-                table_number: String(table_number),
-                table_name: table.table_name || `Mesa ${table_number}`,
-                status: "open",
-                subtotal_amount: 0,
-                service_fee_enabled: false,
-                service_fee_percent: Number((pz as any).service_fee_percent ?? 10),
-                service_fee_amount: 0,
-                total_amount: 0,
-                customer_name: customer_name || null,
-                opened_at: new Date().toISOString(),
-              } as any)
+              .insert(insertPayload)
               .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
               .single();
 
