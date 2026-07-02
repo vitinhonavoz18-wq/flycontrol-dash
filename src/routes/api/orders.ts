@@ -71,6 +71,12 @@ export const Route = createFileRoute("/api/orders")({
           }
 
           console.log(`🆕 [API/Orders] TABLE_SESSION_CREATED para Mesa ${tableNumber}`);
+          const { data: pzCfg } = await supabaseAdmin
+            .from("pizzerias")
+            .select("service_fee_percent")
+            .eq("id", restaurantId)
+            .maybeSingle();
+          const defaultPct = Number((pzCfg as any)?.service_fee_percent ?? 10);
           const { data: newSession, error: iError } = await supabaseAdmin
             .from("table_sessions")
             .insert({
@@ -81,13 +87,14 @@ export const Route = createFileRoute("/api/orders")({
               status: "open",
               subtotal_amount: 0,
               service_fee_enabled: false,
-              service_fee_percent: 15,
+              service_fee_percent: defaultPct,
               service_fee_amount: 0,
               total_amount: 0,
               opened_at: new Date().toISOString()
             })
             .select("id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent")
             .single();
+
 
           if (iError) {
             console.error("❌ [API/Orders] Erro ao criar sessão:", iError.message);
