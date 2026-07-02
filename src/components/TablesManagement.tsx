@@ -53,6 +53,9 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
   const [editingTable, setEditingTable] = useState<RestaurantTable | null>(null);
   const [editName, setEditName] = useState("");
   const [editNumber, setEditNumber] = useState("");
+  const [changeWaiterSession, setChangeWaiterSession] = useState<TableSession | null>(null);
+  const [changeWaiterId, setChangeWaiterId] = useState<string>("__none__");
+  const [changeWaiterMode, setChangeWaiterMode] = useState<"session" | "default">("session");
 
   useEffect(() => {
     if (tables.length > 0 && !newTableNumber) {
