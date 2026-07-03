@@ -231,11 +231,27 @@ export function useTableSessions(tenantId: string | null) {
 
   async function closeSession(sessionId: string) {
     const session = sessions.find((s) => s.id === sessionId);
+
+    // UNIFIED FLOW: every close origin (customer/waiter/operator) must
+    // first produce a `table_close_requests` row so the realtime pipeline
+    // (popup + waiter notifications + audit trail) fires consistently.
+    let requestId: string | null = null;
+    try {
+      const { ensureCloseRequest } = await import("@/lib/createCloseRequest");
+      const r = await ensureCloseRequest({ sessionId, origin: "operator" });
+      requestId = r.requestId;
+    } catch (e: any) {
+      // Non-fatal: if session was already closed, ensureCloseRequest throws;
+      // we still proceed to the workflow which will handle it idempotently.
+      console.warn("[closeSession] ensureCloseRequest failed:", e?.message);
+    }
+
     const { closeTableWorkflow } = await import("@/lib/closeTableWorkflow");
     const res = await closeTableWorkflow({
       sessionId,
       tableNumber: session?.table_number,
       restaurantId: session?.tenant_id,
+      requestId: requestId ?? undefined,
     });
     if (!res.sessionClosed) {
       toast.error("Erro ao fechar mesa: " + (res.error || "desconhecido"));

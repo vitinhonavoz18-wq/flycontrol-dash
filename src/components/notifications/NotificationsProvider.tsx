@@ -21,10 +21,6 @@ export function NotificationsProvider() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [audioBlocked, setAudioBlocked] = useState(false);
   const seenOrderIds = useRef<Set<string>>(new Set());
-  const seenRequestIds = useRef<Set<string>>(new Set());
-  // Hard cutoff: only requests created strictly AFTER FlyControl loaded are
-  // allowed to spawn a popup. Historical pending rows are never resurrected.
-  const appStartTime = useRef<string>(new Date().toISOString());
 
   // Resolve owned pizzerias (all of them).
   useEffect(() => {
@@ -59,39 +55,58 @@ export function NotificationsProvider() {
     };
   }, [user, isSuperAdmin]);
 
-  // Polling = counters/health only. NEVER opens a popup. NEVER mutates the
-  // queue. Popups are exclusively driven by realtime INSERT events arriving
-  // after app start (see startup rule below).
-  async function pollCounters() {
+  // Load every PENDING close request currently in the database and put
+  // it on the popup queue. Runs on mount, on reconnect, and every 15s.
+  // No startup-time cutoff — a pending request is always shown until an
+  // operator explicitly dismisses (dismissed set) or the DB flips it.
+  async function loadPending() {
     if (!pizzeriaIds) return;
     let q = supabase
       .from("table_close_requests")
-      .select("id", { count: "exact", head: true })
-      .eq("status", "pending");
+      .select("id, restaurant_id, table_id, table_number, session_id, customer_name, status, requested_at")
+      .in("status", ["pending", "viewed"])
+      .order("requested_at", { ascending: true })
+      .limit(50);
     if (pizzeriaIds !== "__all__") {
       if (pizzeriaIds.length === 0) return;
       q = q.in("restaurant_id", pizzeriaIds);
     }
-    const { count, error } = await q;
+    const { data, error } = await q;
     if (error) {
-      console.error("[NotificationsProvider] pollCounters error:", error);
+      console.error("[NotificationsProvider] loadPending error:", error);
       return;
     }
-    console.log("[NotificationsProvider] pending count (poll, counters only):", count ?? 0);
-    // Intentionally do NOT touch queue, dismissed, or seenRequestIds here.
+    const rows = (data || []) as CloseRequest[];
+    if (rows.length === 0) {
+      // Prune anything still queued but no longer pending.
+      setQueue((prev) => prev.filter((r) => rows.find((x) => x.id === r.id)));
+      return;
+    }
+    setQueue((prev) => {
+      const byId = new Map(prev.map((r) => [r.id, r]));
+      for (const r of rows) if (!byId.has(r.id)) byId.set(r.id, r);
+      // Drop queued rows that no longer come back as pending/viewed
+      for (const id of byId.keys()) {
+        if (!rows.find((r) => r.id === id) && !prev.find((r) => r.id === id)) {
+          byId.delete(id);
+        }
+      }
+      return Array.from(byId.values());
+    });
+    console.log("[NotificationsProvider] pending refreshed:", rows.length);
   }
 
-  // Counter polling every 30s. Does not spawn popups.
   useEffect(() => {
     if (!pizzeriaIds) return;
-    void pollCounters();
-    const t = setInterval(() => void pollCounters(), 30000);
+    void loadPending();
+    const t = setInterval(() => void loadPending(), 15000);
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pizzeriaIds]);
 
-  // Realtime: close requests. Popups open ONLY on INSERT events for rows
-  // created strictly after the app started, and only once per request_id.
+  // Realtime: close requests. Any INSERT with status pending/viewed opens
+  // the popup. No startup guard, no historical filter — reconnects and
+  // fresh reloads always recover pending requests via loadPending().
   useEffect(() => {
     if (!pizzeriaIds) return;
     const channel = supabase
@@ -102,28 +117,11 @@ export function NotificationsProvider() {
         (payload) => {
           const row = payload.new as CloseRequest;
           console.log("[Realtime] table_close_requests INSERT:", row.id, row.status);
-
-          // Strict dedup — once we've seen this request_id, never again.
-          if (seenRequestIds.current.has(row.id)) {
-            console.log("[Realtime] dedup — request already shown:", row.id);
-            return;
-          }
-          // Status rule: only 'pending' rows open a popup.
-          if (row.status !== "pending") return;
-          // Tenant scope.
+          if (row.status !== "pending" && row.status !== "viewed") return;
           if (pizzeriaIds !== "__all__" && !pizzeriaIds.includes(row.restaurant_id)) {
             console.log("[Realtime] ignored — not our pizzeria");
             return;
           }
-          // Startup rule: ignore anything created at or before app start.
-          // Guards against Realtime backfill / reconnect replay of old rows.
-          const createdAt = (row as any).created_at || row.requested_at;
-          if (createdAt && createdAt <= appStartTime.current) {
-            console.log("[Realtime] ignored — historical row (pre-startup):", row.id);
-            return;
-          }
-
-          seenRequestIds.current.add(row.id);
           setQueue((prev) => (prev.find((r) => r.id === row.id) ? prev : [...prev, row]));
           playSound("close_request");
           toast.warning(`Mesa ${row.table_number} pediu para fechar a conta`, {
@@ -138,20 +136,20 @@ export function NotificationsProvider() {
         (payload) => {
           const row = payload.new as CloseRequest;
           console.log("[Realtime] table_close_requests UPDATE:", row.id, row.status);
-          // Anything that isn't 'pending' anymore must be removed from the
-          // visible queue and marked as seen so polling cannot re-add it.
-          if (row.status !== "pending") {
-            seenRequestIds.current.add(row.id);
+          if (!["pending", "viewed"].includes(row.status)) {
             setQueue((prev) => prev.filter((r) => r.id !== row.id));
           }
         }
       )
       .subscribe((status) => {
         console.log("[Realtime] close-requests channel:", status);
+        // On (re)connect, always resync pending so nothing gets missed.
+        if (status === "SUBSCRIBED") void loadPending();
       });
     return () => {
       supabase.removeChannel(channel);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pizzeriaIds]);
 
   // Realtime: new orders
