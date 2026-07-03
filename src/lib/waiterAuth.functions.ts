@@ -385,17 +385,29 @@ export const waiterRequestClose = createServerFn({ method: "POST" })
     const { auth, supabaseAdmin } = await authed(data.token);
     const { data: sess } = await supabaseAdmin
       .from("table_sessions")
-      .select("id, restaurant_id, table_number, table_id, customer_name, status")
+      .select("id, restaurant_id, table_number, table_id, customer_name, status, dining_session_id, customer_token")
       .eq("id", data.sessionId)
       .maybeSingle();
     if (!sess || sess.restaurant_id !== auth.tenantId) throw new Error("Comanda não encontrada");
-    if (sess.status !== "open") throw new Error("Comanda já está fechada");
+    if (["closed", "archived"].includes(sess.status)) throw new Error("Comanda já está fechada");
+
+    // Transition to requested_close (if still open) so the state machine
+    // reflects the pending action for every origin, matching ensureCloseRequest.
+    if (sess.status === "open") {
+      await supabaseAdmin
+        .from("table_sessions")
+        .update({ status: "requested_close" } as any)
+        .eq("id", sess.id)
+        .eq("status", "open");
+    }
 
     const { data: existing } = await supabaseAdmin
       .from("table_close_requests")
       .select("id")
       .eq("session_id", sess.id)
-      .eq("status", "pending")
+      .in("status", ["pending", "viewed"])
+      .order("requested_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (existing) return { ok: true, requestId: existing.id, status: "already_pending" };
 
@@ -406,9 +418,11 @@ export const waiterRequestClose = createServerFn({ method: "POST" })
         table_id: sess.table_id,
         table_number: sess.table_number,
         session_id: sess.id,
+        dining_session_id: (sess as any).dining_session_id,
+        customer_token: (sess as any).customer_token,
         customer_name: sess.customer_name,
         status: "pending",
-      })
+      } as any)
       .select("id")
       .single();
     if (error) throw new Error(error.message);
