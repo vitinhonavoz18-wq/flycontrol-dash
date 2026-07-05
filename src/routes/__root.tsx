@@ -91,6 +91,7 @@ function RootComponent() {
       <ThemeProvider defaultTheme="dark">
         <AuthProvider>
           <Outlet />
+          <NotificationsProvider />
           <Toaster />
           <InstallBanner />
         </AuthProvider>
