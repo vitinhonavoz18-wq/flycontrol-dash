@@ -64,7 +64,7 @@ export function NotificationsProvider() {
     let q = supabase
       .from("table_close_requests")
       .select("id, restaurant_id, table_id, table_number, session_id, customer_name, status, requested_at")
-      .in("status", ["pending", "viewed"])
+      .eq("status", "pending")
       .order("requested_at", { ascending: true })
       .limit(50);
     if (pizzeriaIds !== "__all__") {
@@ -117,7 +117,7 @@ export function NotificationsProvider() {
         (payload) => {
           const row = payload.new as CloseRequest;
           console.log("[Realtime] table_close_requests INSERT:", row.id, row.status);
-          if (row.status !== "pending" && row.status !== "viewed") return;
+          if (row.status !== "pending") return;
           if (pizzeriaIds !== "__all__" && !pizzeriaIds.includes(row.restaurant_id)) {
             console.log("[Realtime] ignored — not our pizzeria");
             return;
@@ -136,7 +136,7 @@ export function NotificationsProvider() {
         (payload) => {
           const row = payload.new as CloseRequest;
           console.log("[Realtime] table_close_requests UPDATE:", row.id, row.status);
-          if (!["pending", "viewed"].includes(row.status)) {
+          if (row.status !== "pending") {
             setQueue((prev) => prev.filter((r) => r.id !== row.id));
           }
         }
