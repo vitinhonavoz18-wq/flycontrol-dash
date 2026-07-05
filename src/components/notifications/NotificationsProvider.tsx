@@ -64,7 +64,7 @@ export function NotificationsProvider() {
     let q = supabase
       .from("table_close_requests")
       .select("id, restaurant_id, table_id, table_number, session_id, customer_name, status, requested_at")
-      .in("status", ["pending", "viewed"])
+      .eq("status", "pending")
       .order("requested_at", { ascending: true })
       .limit(50);
     if (pizzeriaIds !== "__all__") {
