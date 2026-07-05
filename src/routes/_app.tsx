@@ -27,7 +27,6 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
-import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 import { BottomNav } from "@/components/mobile/BottomNav";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
@@ -39,22 +38,24 @@ function AppLayout() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pizzeriaStatus, setPizzeriaStatus] = useState<{ is_active: boolean; subscription_status: string } | null>(null);
-  const [checkingStatus, setCheckingStatus] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/login" });
   }, [loading, user, nav]);
 
+  // Load pizzeria status ONCE per authenticated session. Do NOT depend on
+  // `path` — re-running on every navigation used to force the whole layout
+  // into a "Carregando..." early-return, unmounting realtime providers.
   useEffect(() => {
+    let cancelled = false;
     async function checkPizzeriaStatus() {
       if (!user || isSuperAdmin || loading) return;
-      
-      setCheckingStatus(true);
+
       const params = new URLSearchParams(window.location.search);
       const pizzeriaId = params.get("pizzeriaId");
 
       let query = supabase.from("pizzerias").select("is_active, subscription_status");
-      
+
       if (pizzeriaId) {
         query = query.eq("id", pizzeriaId);
       } else {
@@ -62,20 +63,21 @@ function AppLayout() {
       }
 
       const { data, error } = await query.maybeSingle();
-      
+      if (cancelled) return;
+
       if (!error && data) {
-        setPizzeriaStatus({ 
+        setPizzeriaStatus({
           is_active: data.is_active ?? true,
-          subscription_status: data.subscription_status ?? 'active'
+          subscription_status: data.subscription_status ?? 'active',
         });
       }
-      setCheckingStatus(false);
     }
 
-    checkPizzeriaStatus();
-  }, [user, isSuperAdmin, loading, path]);
+    void checkPizzeriaStatus();
+    return () => { cancelled = true; };
+  }, [user, isSuperAdmin, loading]);
 
-  if (loading || !user || checkingStatus) {
+  if (loading || !user) {
     return <div className="grid min-h-screen place-items-center text-muted-foreground">Carregando...</div>;
   }
 
@@ -266,7 +268,6 @@ function AppLayout() {
           className="flex-1 overflow-x-hidden relative pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0"
         >
           <Outlet />
-          <NotificationsProvider />
         </main>
         <BottomNav />
       </div>
