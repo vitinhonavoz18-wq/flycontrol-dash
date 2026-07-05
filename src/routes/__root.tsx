@@ -12,6 +12,7 @@ import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { InstallBanner } from "@/components/pwa/InstallBanner";
+import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 
 function NotFoundComponent() {
   return (
