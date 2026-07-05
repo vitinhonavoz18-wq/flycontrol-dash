@@ -268,7 +268,6 @@ function AppLayout() {
           className="flex-1 overflow-x-hidden relative pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0"
         >
           <Outlet />
-          <NotificationsProvider />
         </main>
         <BottomNav />
       </div>
