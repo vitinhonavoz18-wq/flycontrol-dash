@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -6,6 +7,11 @@ import { playSound, unlockAudio, isAudioBlocked } from "@/lib/notification-sound
 import { TableCloseRequestPopup, type CloseRequest } from "./TableCloseRequestPopup";
 import { Button } from "@/components/ui/button";
 import { Volume2 } from "lucide-react";
+
+// Routes that must NEVER receive customer close-request popups.
+// The Waiter Portal is a separate surface with its own auth; even if an
+// operator session is present in the same browser, the popup must not appear.
+const POPUP_FORBIDDEN_PREFIXES = ["/waiter-portal", "/waiter-login", "/print"];
 
 /**
  * Global listener: close-requests + new orders.
