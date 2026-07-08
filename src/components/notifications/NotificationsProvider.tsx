@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -6,6 +7,11 @@ import { playSound, unlockAudio, isAudioBlocked } from "@/lib/notification-sound
 import { TableCloseRequestPopup, type CloseRequest } from "./TableCloseRequestPopup";
 import { Button } from "@/components/ui/button";
 import { Volume2 } from "lucide-react";
+
+// Routes that must NEVER receive customer close-request popups.
+// The Waiter Portal is a separate surface with its own auth; even if an
+// operator session is present in the same browser, the popup must not appear.
+const POPUP_FORBIDDEN_PREFIXES = ["/waiter-portal", "/waiter-login", "/print"];
 
 /**
  * Global listener: close-requests + new orders.
@@ -16,6 +22,8 @@ import { Volume2 } from "lucide-react";
  */
 export function NotificationsProvider() {
   const { user, isSuperAdmin } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isForbiddenRoute = POPUP_FORBIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
   const [pizzeriaIds, setPizzeriaIds] = useState<string[] | "__all__" | null>(null);
   const [queue, setQueue] = useState<CloseRequest[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -93,7 +101,10 @@ export function NotificationsProvider() {
         (payload) => {
           const row = payload.new as CloseRequest;
           console.log("[Realtime] table_close_requests UPDATE:", row.id, row.status);
-          if (row.status !== "pending") {
+          // Only terminal statuses close the popup. `viewed` / `printed` are
+          // intermediate operator actions — the popup must remain visible so
+          // the operator can still press "Finalizar Mesa".
+          if (row.status === "completed" || row.status === "cancelled") {
             setQueue((prev) => prev.filter((r) => r.id !== row.id));
           }
         }
@@ -176,7 +187,7 @@ export function NotificationsProvider() {
           </Button>
         </div>
       )}
-      {visibleQueue.length > 0 && (
+      {!isForbiddenRoute && visibleQueue.length > 0 && (
         <TableCloseRequestPopup
           queue={visibleQueue}
           onDismiss={(id) => setDismissed((p) => new Set(p).add(id))}
