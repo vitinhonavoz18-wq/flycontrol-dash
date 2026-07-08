@@ -187,7 +187,7 @@ export function NotificationsProvider() {
           </Button>
         </div>
       )}
-      {visibleQueue.length > 0 && (
+      {!isForbiddenRoute && visibleQueue.length > 0 && (
         <TableCloseRequestPopup
           queue={visibleQueue}
           onDismiss={(id) => setDismissed((p) => new Set(p).add(id))}
