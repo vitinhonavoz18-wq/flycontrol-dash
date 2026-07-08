@@ -22,6 +22,8 @@ const POPUP_FORBIDDEN_PREFIXES = ["/waiter-portal", "/waiter-login", "/print"];
  */
 export function NotificationsProvider() {
   const { user, isSuperAdmin } = useAuth();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const isForbiddenRoute = POPUP_FORBIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
   const [pizzeriaIds, setPizzeriaIds] = useState<string[] | "__all__" | null>(null);
   const [queue, setQueue] = useState<CloseRequest[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
