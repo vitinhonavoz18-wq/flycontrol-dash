@@ -250,45 +250,11 @@ export function WaiterNotificationCenter({
             });
           }
         })
-      // Close requests — customer asked to pay / close
-      .on("postgres_changes",
-        { event: "INSERT", schema: "public", table: "table_close_requests", filter: `restaurant_id=eq.${tenantId}` },
-        async (payload) => {
-          if (cancelled) return;
-          const r: any = payload.new;
-          let sess = r?.session_id ? sessionsRef.current.get(r.session_id) : undefined;
-
-          // Fallback lookup — resolve the session by any identifier the
-          // request row carries. Ensures the waiter is notified even when
-          // the in-memory session cache hasn't caught up yet.
-          if (!sess) {
-            const orClauses: string[] = [];
-            if (r?.session_id) orClauses.push(`id.eq.${r.session_id}`);
-            if (r?.dining_session_id) orClauses.push(`dining_session_id.eq.${r.dining_session_id}`);
-            if (r?.customer_token) orClauses.push(`customer_token.eq.${r.customer_token}`);
-            if (orClauses.length > 0) {
-              const { data: s } = await supabase
-                .from("table_sessions")
-                .select("id, table_number, customer_name, waiter_id, restaurant_id")
-                .or(orClauses.join(","))
-                .maybeSingle();
-              if (s && (s as any).restaurant_id === tenantId) {
-                sess = { id: (s as any).id, table_number: String((s as any).table_number || r?.table_number || ""), customer_name: (s as any).customer_name } as any;
-              }
-            }
-          }
-
-          if (!sess) return;
-          const kind: NotifType = String(r.request_type || "").toLowerCase() === "bill"
-            ? "bill_request" : "close_request";
-          push({
-            type: kind,
-            sessionId: sess.id,
-            tableNumber: String(r.table_number || sess.table_number),
-            customerName: r.customer_name || sess.customer_name,
-            meta: { request_id: r.id },
-          });
-        })
+      // Close/bill requests are handled EXCLUSIVELY by the Dashboard's
+      // NotificationsProvider (src/components/notifications/NotificationsProvider.tsx).
+      // The Waiter Portal must not subscribe to table_close_requests, must not
+      // push those events into its notification queue, must not play a sound
+      // for them, and must not render TableCloseRequestPopup.
       .subscribe();
 
     return () => { cancelled = true; supabase.removeChannel(ch); };

@@ -12,7 +12,10 @@ import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { InstallBanner } from "@/components/pwa/InstallBanner";
-import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
+// NotificationsProvider is intentionally mounted only inside the Dashboard
+// layout (src/routes/_app.tsx), never globally. The close-request popup and
+// its Realtime subscription must not exist on the Waiter Portal or any
+// other public route.
 
 function NotFoundComponent() {
   return (
@@ -91,7 +94,7 @@ function RootComponent() {
       <ThemeProvider defaultTheme="dark">
         <AuthProvider>
           <Outlet />
-          <NotificationsProvider />
+          {/* NotificationsProvider mounts inside _app.tsx (Dashboard only). */}
           <Toaster />
           <InstallBanner />
         </AuthProvider>
