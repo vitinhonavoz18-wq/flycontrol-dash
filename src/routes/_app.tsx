@@ -28,6 +28,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/mobile/BottomNav";
+import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
