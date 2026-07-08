@@ -100,8 +100,6 @@ export function NotificationsProvider() {
       )
       .subscribe((status) => {
         console.log("[Realtime] close-requests channel:", status);
-        // On (re)connect, always resync pending so nothing gets missed.
-        if (status === "SUBSCRIBED") void loadPending();
       });
     return () => {
       supabase.removeChannel(channel);
