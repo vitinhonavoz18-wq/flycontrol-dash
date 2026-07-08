@@ -189,7 +189,10 @@ function MyTablesTab({ token, tenantId, highlight, onClearHighlight }: {
       .on("postgres_changes", { event: "*", schema: "public", table: "table_sessions", filter: `restaurant_id=eq.${tenantId}` }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "table_session_orders" }, () => load())
       .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "table_close_requests", filter: `restaurant_id=eq.${tenantId}` }, () => load())
+      // table_close_requests is intentionally NOT subscribed here. Customer
+      // close requests are owned exclusively by the Dashboard's
+      // NotificationsProvider. The Waiter Portal must not receive, list,
+      // render or process them.
       .subscribe();
     return () => { supabase.removeChannel(ch); };
   }, [tenantId, load]);
