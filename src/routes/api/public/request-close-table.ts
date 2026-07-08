@@ -38,6 +38,7 @@ export const Route = createFileRoute("/api/public/request-close-table")({
                 status: string;
                 closed_at: string | null;
                 restaurant_id: string;
+                table_id: string | null;
                 table_number: string | null;
                 customer_name: string | null;
                 dining_session_id: string;
@@ -45,7 +46,8 @@ export const Route = createFileRoute("/api/public/request-close-table")({
               }
             | null = null;
 
-          const selectCols = "id, status, closed_at, restaurant_id, table_number, customer_name, dining_session_id, customer_token";
+          const selectCols = "id, status, closed_at, restaurant_id, table_id, table_number, customer_name, dining_session_id, customer_token";
+
 
           if (dining_session_id) {
             const { data } = await supabaseAdmin
@@ -92,9 +94,13 @@ export const Route = createFileRoute("/api/public/request-close-table")({
             );
           }
 
-          // Resolve table row (best effort, used for the notification badge)
-          let tableId: string | null = null;
-          if (table_token) {
+          // Resolve table row. Prefer the session's own table_id (authoritative,
+          // set by open-table-session). Fall back to public_token, then to
+          // restaurant_id + table_number lookup. This guarantees the customer
+          // INSERT carries the same table_id operator INSERTs (ensureCloseRequest)
+          // rely on — critical for Dashboard notifications and downstream joins.
+          let tableId: string | null = session.table_id ?? null;
+          if (!tableId && table_token) {
             const { data: t } = await supabaseAdmin
               .from("restaurant_tables").select("id")
               .eq("restaurant_id", session.restaurant_id)
@@ -108,6 +114,7 @@ export const Route = createFileRoute("/api/public/request-close-table")({
               .eq("table_number", session.table_number).maybeSingle();
             tableId = (t2 as any)?.id ?? null;
           }
+
 
           // Dedupe pending request
           const { data: existing } = await supabaseAdmin
