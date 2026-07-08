@@ -87,17 +87,10 @@ export function TableCloseRequestPopup({
     };
   }, [current?.id, current?.session_id]);
 
-  // Mark as viewed when popup opens
-  useEffect(() => {
-    if (!current) return;
-    if (current.status === "pending") {
-      void supabase
-        .from("table_close_requests")
-        .update({ status: "viewed" })
-        .eq("id", current.id)
-        .eq("status", "pending");
-    }
-  }, [current?.id]);
+  // NOTE: no auto "viewed" marker. The popup must NOT mutate
+  // table_close_requests.status on open — only two legal transitions exist:
+  // customer creates 'pending'; operator "Finalizar Mesa" sets 'completed'
+  // via closeTableWorkflow. Any other UPDATE is forbidden by design.
 
   const customerName = useMemo(
     () => current?.customer_name || session?.customer_name || null,
@@ -106,30 +99,15 @@ export function TableCloseRequestPopup({
 
   if (!current) return null;
 
-  async function markStatus(status: "printed" | "completed" | "cancelled") {
-    const { data: u } = await supabase.auth.getUser();
-    return supabase
-      .from("table_close_requests")
-      .update({ status, processed_at: new Date().toISOString(), processed_by: u?.user?.id || null })
-      .eq("id", current.id);
-  }
-
-  async function handlePrintPreview() {
+  function handlePrintPreview() {
     if (!current.session_id) {
       toast.error("Sessão não encontrada para impressão.");
       return;
     }
-    setBusy(true);
-    try {
-      // Open print view in new window — keeps table open
-      window.open(`/print/session-${current.session_id}`, "_blank", "width=420,height=680");
-      // Fallback if route not available: just print the popup contents
-      await markStatus("printed");
-      toast.success("Pré-conta enviada para impressão. Mesa permanece aberta.");
-      onProcessed(current.id);
-    } finally {
-      setBusy(false);
-    }
+    // Print ONLY. No status mutation. No queue mutation. No closeTableWorkflow.
+    // Mesa permanece aberta; popup permanece visível para o operador finalizar.
+    window.open(`/print/session-${current.session_id}`, "_blank", "width=420,height=680");
+    toast.success("Pré-conta enviada para impressão. Mesa permanece aberta.");
   }
 
   async function handleCloseTable() {
