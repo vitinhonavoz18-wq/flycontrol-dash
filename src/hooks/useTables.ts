@@ -230,36 +230,20 @@ export function useTableSessions(tenantId: string | null) {
   }
 
   async function closeSession(sessionId: string) {
-    const session = sessions.find((s) => s.id === sessionId);
-
-    // UNIFIED FLOW: every close origin (customer/waiter/operator) must
-    // first produce a `table_close_requests` row so the realtime pipeline
-    // (popup + waiter notifications + audit trail) fires consistently.
-    let requestId: string | null = null;
+    // ARCHITECTURAL RULE: this hook must NEVER call closeTableWorkflow.
+    // The ONLY caller of closeTableWorkflow is the "Finalizar Mesa" button
+    // inside TableCloseRequestPopup. Operator-initiated closures from the
+    // Tables screen must produce a table_close_requests row and let the
+    // popup pipeline handle finalization uniformly.
     try {
       const { ensureCloseRequest } = await import("@/lib/createCloseRequest");
-      const r = await ensureCloseRequest({ sessionId, origin: "operator" });
-      requestId = r.requestId;
+      await ensureCloseRequest({ sessionId, origin: "operator" });
+      toast.success("Solicitação de fechamento aberta. Confirme no popup.");
     } catch (e: any) {
-      // Non-fatal: if session was already closed, ensureCloseRequest throws;
-      // we still proceed to the workflow which will handle it idempotently.
-      console.warn("[closeSession] ensureCloseRequest failed:", e?.message);
+      toast.error("Erro ao solicitar fechamento: " + (e?.message || e));
     }
-
-    const { closeTableWorkflow } = await import("@/lib/closeTableWorkflow");
-    const res = await closeTableWorkflow({
-      sessionId,
-      tableNumber: session?.table_number,
-      restaurantId: session?.tenant_id,
-      requestId: requestId ?? undefined,
-    });
-    if (!res.sessionClosed) {
-      toast.error("Erro ao fechar mesa: " + (res.error || "desconhecido"));
-      return;
-    }
-    setSessions((prev) => prev.filter((s) => s.id !== sessionId));
-    toast.success("Mesa fechada com sucesso!");
   }
+
 
   useEffect(() => {
     if (tenantId) loadSessions();
