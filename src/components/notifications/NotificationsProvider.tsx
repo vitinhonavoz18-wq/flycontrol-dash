@@ -55,54 +55,11 @@ export function NotificationsProvider() {
     };
   }, [user, isSuperAdmin]);
 
-  // Load every PENDING close request currently in the database and put
-  // it on the popup queue. Runs on mount, on reconnect, and every 15s.
-  // No startup-time cutoff — a pending request is always shown until an
-  // operator explicitly dismisses (dismissed set) or the DB flips it.
-  async function loadPending() {
-    if (!pizzeriaIds) return;
-    let q = supabase
-      .from("table_close_requests")
-      .select("id, restaurant_id, table_id, table_number, session_id, customer_name, status, requested_at")
-      .eq("status", "pending")
-      .order("requested_at", { ascending: true })
-      .limit(50);
-    if (pizzeriaIds !== "__all__") {
-      if (pizzeriaIds.length === 0) return;
-      q = q.in("restaurant_id", pizzeriaIds);
-    }
-    const { data, error } = await q;
-    if (error) {
-      console.error("[NotificationsProvider] loadPending error:", error);
-      return;
-    }
-    const rows = (data || []) as CloseRequest[];
-    if (rows.length === 0) {
-      // Prune anything still queued but no longer pending.
-      setQueue((prev) => prev.filter((r) => rows.find((x) => x.id === r.id)));
-      return;
-    }
-    setQueue((prev) => {
-      const byId = new Map(prev.map((r) => [r.id, r]));
-      for (const r of rows) if (!byId.has(r.id)) byId.set(r.id, r);
-      // Drop queued rows that no longer come back as pending/viewed
-      for (const id of byId.keys()) {
-        if (!rows.find((r) => r.id === id) && !prev.find((r) => r.id === id)) {
-          byId.delete(id);
-        }
-      }
-      return Array.from(byId.values());
-    });
-    console.log("[NotificationsProvider] pending refreshed:", rows.length);
-  }
+  // NOTE: no loadPending(), no polling, no interval, no fallback fetch.
+  // The popup queue is populated EXCLUSIVELY by the Realtime INSERT callback
+  // below. This is a hard architectural rule — do not reintroduce fetch-based
+  // recovery paths here.
 
-  useEffect(() => {
-    if (!pizzeriaIds) return;
-    void loadPending();
-    const t = setInterval(() => void loadPending(), 15000);
-    return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pizzeriaIds]);
 
   // Realtime: close requests. Any INSERT with status pending/viewed opens
   // the popup. No startup guard, no historical filter — reconnects and
