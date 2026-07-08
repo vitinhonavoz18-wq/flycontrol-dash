@@ -232,26 +232,18 @@ export function useTableSessions(tenantId: string | null) {
   async function closeSession(sessionId: string) {
     const session = sessions.find((s) => s.id === sessionId);
 
-    // UNIFIED FLOW (single source of truth):
-    //   - CUSTOMER creates the `table_close_requests` row (status=pending).
-    //   - POPUP consumes it and triggers this workflow.
-    //   - OPERATOR only completes existing requests — NEVER creates one here.
-    // We DO NOT call ensureCloseRequest from this path. If a pending request
-    // already exists we reuse it; otherwise the workflow just closes the
-    // session directly (manual operator close with no prior customer request).
+    // UNIFIED FLOW: every close origin (customer/waiter/operator) must
+    // first produce a `table_close_requests` row so the realtime pipeline
+    // (popup + waiter notifications + audit trail) fires consistently.
     let requestId: string | null = null;
     try {
-      const { data: existing } = await supabase
-        .from("table_close_requests")
-        .select("id")
-        .eq("session_id", sessionId)
-        .in("status", ["pending", "viewed", "printed"])
-        .order("requested_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-      requestId = (existing as any)?.id ?? null;
+      const { ensureCloseRequest } = await import("@/lib/createCloseRequest");
+      const r = await ensureCloseRequest({ sessionId, origin: "operator" });
+      requestId = r.requestId;
     } catch (e: any) {
-      console.warn("[closeSession] lookup pending request failed:", e?.message);
+      // Non-fatal: if session was already closed, ensureCloseRequest throws;
+      // we still proceed to the workflow which will handle it idempotently.
+      console.warn("[closeSession] ensureCloseRequest failed:", e?.message);
     }
 
     const { closeTableWorkflow } = await import("@/lib/closeTableWorkflow");

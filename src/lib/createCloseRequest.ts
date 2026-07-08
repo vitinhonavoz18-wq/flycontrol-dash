@@ -30,15 +30,6 @@ export async function ensureCloseRequest(
 ): Promise<EnsureCloseRequestResult> {
   const { sessionId, origin, customerName } = input;
 
-  // UNIFIED FLOW CONTRACT:
-  //   - CUSTOMER creates requests (via /api/public/table-close-request).
-  //   - WAITER may create requests (portal action).
-  //   - OPERATOR / DASHBOARD NEVER create requests here; they only complete
-  //     existing ones via closeTableWorkflow(). If an operator path calls this
-  //     function, we either reuse an existing pending request or refuse the
-  //     INSERT — guaranteeing the INSERT belongs exclusively to the customer.
-
-
   // Load session identity so we can copy dining_session_id / customer_token
   // onto the request row (authoritative contract).
   const { data: sess, error: sErr } = await supabase
@@ -81,13 +72,6 @@ export async function ensureCloseRequest(
       status: "already_pending",
       sessionStatus: "requested_close",
     };
-  }
-
-  // Operator/dashboard origins are NOT allowed to INSERT. Only customer/waiter
-  // may create a pending request. This eliminates the operator race where an
-  // INSERT was immediately followed (~1s) by an UPDATE to `completed`.
-  if (origin === "operator" || origin === "dashboard") {
-    throw new Error("operator_cannot_create_close_request");
   }
 
   const { data: inserted, error: iErr } = await supabase
