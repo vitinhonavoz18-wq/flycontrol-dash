@@ -272,6 +272,9 @@ function AppLayout() {
         </main>
         <BottomNav />
       </div>
+      {/* Dashboard-only: close-request popup + realtime queue. Must NOT be
+          mounted on the Waiter Portal or any public route. */}
+      <NotificationsProvider />
     </div>
   );
 }
