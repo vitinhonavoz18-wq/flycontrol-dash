@@ -101,7 +101,10 @@ export function NotificationsProvider() {
         (payload) => {
           const row = payload.new as CloseRequest;
           console.log("[Realtime] table_close_requests UPDATE:", row.id, row.status);
-          if (row.status !== "pending") {
+          // Only terminal statuses close the popup. `viewed` / `printed` are
+          // intermediate operator actions — the popup must remain visible so
+          // the operator can still press "Finalizar Mesa".
+          if (row.status === "completed" || row.status === "cancelled") {
             setQueue((prev) => prev.filter((r) => r.id !== row.id));
           }
         }
