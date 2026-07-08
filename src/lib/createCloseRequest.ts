@@ -83,6 +83,13 @@ export async function ensureCloseRequest(
     };
   }
 
+  // Operator/dashboard origins are NOT allowed to INSERT. Only customer/waiter
+  // may create a pending request. This eliminates the operator race where an
+  // INSERT was immediately followed (~1s) by an UPDATE to `completed`.
+  if (origin === "operator" || origin === "dashboard") {
+    throw new Error("operator_cannot_create_close_request");
+  }
+
   const { data: inserted, error: iErr } = await supabase
     .from("table_close_requests")
     .insert({
