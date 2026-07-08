@@ -94,7 +94,7 @@ function RootComponent() {
       <ThemeProvider defaultTheme="dark">
         <AuthProvider>
           <Outlet />
-          <NotificationsProvider />
+          {/* NotificationsProvider mounts inside _app.tsx (Dashboard only). */}
           <Toaster />
           <InstallBanner />
         </AuthProvider>
