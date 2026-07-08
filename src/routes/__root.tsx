@@ -91,7 +91,9 @@ function RootComponent() {
       <ThemeProvider defaultTheme="dark">
         <AuthProvider>
           <Outlet />
-          {/* NotificationsProvider mounts inside _app.tsx (Dashboard only). */}
+          {/* Global mount: self-gates via useAuth() — Waiter Portal has no
+              Supabase user, so pizzeriaIds stays null and no channel opens. */}
+          <NotificationsProvider />
           <Toaster />
           <InstallBanner />
         </AuthProvider>
