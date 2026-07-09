@@ -105,62 +105,95 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
 
         const categoriesMap: Record<string, string> = {}; 
 
-        // Helper function to get or create category by name
+        // Helper: resolve or create a category by (external_id, name).
+        // Safety: never overwrites an existing external_id, only fills NULL.
         const getOrCreateCategory = async (catName: string, externalId?: string) => {
+          const extKey = externalId ? `ext:${externalId}` : null;
+          if (extKey && categoriesMap[extKey]) return categoriesMap[extKey];
           if (categoriesMap[catName]) return categoriesMap[catName];
-          if (externalId && categoriesMap[externalId]) return categoriesMap[externalId];
 
-          let query = supabaseAdmin
-            .from("menu_categories")
-            .select("id")
-            .eq("pizzeria_id", pizzeriaId);
-          
+          // Prefer match by external_id first (authoritative), then by name.
+          let existing: { id: string; external_id: string | null; name: string } | null = null;
           if (externalId) {
-            query = query.or(`external_id.eq.${externalId},name.eq."${catName}"`);
-          } else {
-            query = query.eq("name", catName);
+            const { data } = await supabaseAdmin
+              .from("menu_categories")
+              .select("id, external_id, name")
+              .eq("pizzeria_id", pizzeriaId)
+              .eq("external_id", externalId)
+              .maybeSingle();
+            existing = data as any;
+          }
+          if (!existing) {
+            const { data } = await supabaseAdmin
+              .from("menu_categories")
+              .select("id, external_id, name")
+              .eq("pizzeria_id", pizzeriaId)
+              .eq("name", catName)
+              .maybeSingle();
+            existing = data as any;
           }
 
-          const { data: existing } = await query.maybeSingle();
-
-          const payload = {
-            pizzeria_id: pizzeriaId,
-            name: catName,
-            active: true,
-            order_index: 0,
-            external_id: externalId || null,
-            external_source: "sitecreatorfly",
-            last_synced_at: new Date().toISOString()
-          };
-
           if (existing) {
-            await supabaseAdmin.from("menu_categories").update(payload).eq("id", existing.id);
-            categoriesMap[catName] = existing.id;
-            if (externalId) categoriesMap[externalId] = existing.id;
-            return existing.id;
-          } else {
-            const { data: inserted } = await supabaseAdmin
-              .from("menu_categories")
-              .insert(payload)
-              .select("id")
-              .single();
-            if (inserted) {
-              categoriesMap[catName] = inserted.id;
-              if (externalId) categoriesMap[externalId] = inserted.id;
-              results.categories_created++;
-              results.categories++;
-              return inserted.id;
+            const update: {
+              last_synced_at: string;
+              external_source: string;
+              external_id?: string;
+            } = {
+              last_synced_at: new Date().toISOString(),
+              external_source: "sitecreatorfly",
+            };
+            // Only backfill external_id when local row is missing it.
+            if (externalId && !existing.external_id) {
+              update.external_id = externalId;
+              console.log(
+                `[Sync] Backfilled external_id for legacy category "${existing.name}" (${existing.id}) → ${externalId}`
+              );
             }
+            await supabaseAdmin.from("menu_categories").update(update).eq("id", existing.id);
+            categoriesMap[catName] = existing.id;
+            if (extKey) categoriesMap[extKey] = existing.id;
+            return existing.id;
+          }
+
+          const { data: inserted } = await supabaseAdmin
+            .from("menu_categories")
+            .insert({
+              pizzeria_id: pizzeriaId,
+              name: catName,
+              active: true,
+              order_index: 0,
+              external_id: externalId || null,
+              external_source: "sitecreatorfly",
+              last_synced_at: new Date().toISOString(),
+            })
+            .select("id")
+            .single();
+          if (inserted) {
+            categoriesMap[catName] = inserted.id;
+            if (extKey) categoriesMap[extKey] = inserted.id;
+            results.categories_created++;
+            results.categories++;
+            return inserted.id;
           }
           return null;
         };
+
+        // Pre-seed categories from the SF payload so external_id is known
+        // BEFORE processing products (products reference categories by name).
+        if (Array.isArray(menuData.categories)) {
+          for (const cat of menuData.categories) {
+            const extId = (cat.external_id ?? cat.id)?.toString();
+            if (cat?.name) await getOrCreateCategory(cat.name, extId);
+          }
+        }
 
         if (normalizedProducts.length > 0) {
           console.log("🚀 [Sync] Usando normalized_products como fonte principal");
           for (const item of normalizedProducts) {
             const catName = item.category_name || "Geral";
-            const catId = await getOrCreateCategory(catName);
-            
+            const catExternalId = (item.category_external_id ?? item.category_id)?.toString();
+            const catId = await getOrCreateCategory(catName, catExternalId);
+
             const externalId = item.external_id?.toString();
             const productType = item.type === "drink" ? "beverage" : (item.type || "standard");
 
