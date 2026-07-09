@@ -103,7 +103,27 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
         console.log(`FL_MENU_SYNC_PRODUCTS_COUNT: ${traditionalProducts.length}`);
         console.log(`FL_MENU_SYNC_DRINKS_COUNT: ${traditionalDrinks.length}`);
 
-        const categoriesMap: Record<string, string> = {}; 
+        const categoriesMap: Record<string, string> = {};
+
+        // Self-healing helper: never overwrite a valid existing external_id.
+        // Returns a payload copy safe to pass to update().
+        const preserveExternalId = <T extends { external_id?: any }>(
+          payload: T,
+          existing: { external_id: string | null } | null | undefined,
+          incoming: string | undefined,
+        ): T => {
+          const clone: any = { ...payload };
+          if (existing?.external_id) {
+            // Existing row already has a valid external_id — keep it untouched.
+            delete clone.external_id;
+          } else if (incoming) {
+            // Backfill missing external_id.
+            clone.external_id = incoming;
+          } else {
+            delete clone.external_id;
+          }
+          return clone;
+        };
 
         // Helper: resolve or create a category by (external_id, name).
         // Safety: never overwrites an existing external_id, only fills NULL.
@@ -199,7 +219,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
 
             let query = supabaseAdmin
               .from("menu_products")
-              .select("id")
+              .select("id, external_id")
               .eq("pizzeria_id", pizzeriaId)
               .eq("product_type", productType);
             
@@ -231,7 +251,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             };
 
             if (existing) {
-              await supabaseAdmin.from("menu_products").update(payload).eq("id", existing.id);
+              await supabaseAdmin.from("menu_products").update(preserveExternalId(payload, existing, externalId)).eq("id", existing.id);
               results.products_updated++;
             } else {
               await supabaseAdmin.from("menu_products").insert(payload);
@@ -265,7 +285,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
               
               let query = supabaseAdmin
                 .from("menu_products")
-                .select("id")
+                .select("id, external_id")
                 .eq("pizzeria_id", pizzeriaId)
                 .eq("product_type", prod.product_type || "standard");
               
@@ -297,7 +317,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
               };
 
               if (existing) {
-                await supabaseAdmin.from("menu_products").update(payload).eq("id", existing.id);
+                await supabaseAdmin.from("menu_products").update(preserveExternalId(payload, existing, externalId)).eq("id", existing.id);
                 results.products_updated++;
               } else {
                 await supabaseAdmin.from("menu_products").insert(payload);
@@ -314,7 +334,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
               
               let query = supabaseAdmin
                 .from("menu_products")
-                .select("id")
+                .select("id, external_id")
                 .eq("pizzeria_id", pizzeriaId)
                 .eq("product_type", "beverage");
 
@@ -341,7 +361,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
               };
 
               if (existing) {
-                await supabaseAdmin.from("menu_products").update(payload).eq("id", existing.id);
+                await supabaseAdmin.from("menu_products").update(preserveExternalId(payload, existing, externalId)).eq("id", existing.id);
                 results.products_updated++;
               } else {
                 await supabaseAdmin.from("menu_products").insert(payload);
@@ -359,7 +379,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             
             let query = supabaseAdmin
               .from("menu_extras")
-              .select("id")
+              .select("id, external_id")
               .eq("pizzeria_id", pizzeriaId)
               .eq("extra_type", ext.extra_type || "borda");
 
@@ -383,7 +403,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             };
 
             if (existing) {
-              await supabaseAdmin.from("menu_extras").update(payload).eq("id", existing.id);
+              await supabaseAdmin.from("menu_extras").update(preserveExternalId(payload, existing, externalId)).eq("id", existing.id);
             } else {
               await supabaseAdmin.from("menu_extras").insert(payload);
               results.extras++;
@@ -397,7 +417,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             
             let query = supabaseAdmin
               .from("combos")
-              .select("id")
+              .select("id, external_id")
               .eq("pizzeria_id", pizzeriaId);
 
             if (externalId) {
@@ -425,7 +445,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
 
             let comboId = existing?.id;
             if (existing) {
-              await supabaseAdmin.from("combos").update(payload).eq("id", existing.id);
+              await supabaseAdmin.from("combos").update(preserveExternalId(payload, existing, externalId)).eq("id", existing.id);
             } else {
               const { data: inserted } = await supabaseAdmin
                 .from("combos")
@@ -458,7 +478,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             
             let query = supabaseAdmin
               .from("pizzeria_pizza_sizes")
-              .select("id")
+              .select("id, external_id")
               .eq("pizzeria_id", pizzeriaId);
 
             if (externalId) {
@@ -482,7 +502,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             };
 
             if (existing) {
-              await supabaseAdmin.from("pizzeria_pizza_sizes").update(payload).eq("id", existing.id);
+              await supabaseAdmin.from("pizzeria_pizza_sizes").update(preserveExternalId(payload, existing, externalId)).eq("id", existing.id);
             } else {
               await supabaseAdmin.from("pizzeria_pizza_sizes").insert(payload);
               results.pizza_sizes++;
@@ -499,7 +519,24 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           console.log("FL_MENU_SYNC_NO_ITEMS_REASON: Todos os arrays de produtos e categorias estavam vazios no JSON.");
         }
 
-        return new Response(JSON.stringify({ success: true, results }), { status: 200, headers: cors });
+        // Self-healing validation: report any rows still missing external_id.
+        const [catsMissing, prodsMissing, extrasMissing, combosMissing, sizesMissing] = await Promise.all([
+          supabaseAdmin.from("menu_categories").select("id", { count: "exact", head: true }).eq("pizzeria_id", pizzeriaId).is("external_id", null),
+          supabaseAdmin.from("menu_products").select("id", { count: "exact", head: true }).eq("pizzeria_id", pizzeriaId).is("external_id", null),
+          supabaseAdmin.from("menu_extras").select("id", { count: "exact", head: true }).eq("pizzeria_id", pizzeriaId).is("external_id", null),
+          supabaseAdmin.from("combos").select("id", { count: "exact", head: true }).eq("pizzeria_id", pizzeriaId).is("external_id", null),
+          supabaseAdmin.from("pizzeria_pizza_sizes").select("id", { count: "exact", head: true }).eq("pizzeria_id", pizzeriaId).is("external_id", null),
+        ]);
+        const validation = {
+          categories_missing_external_id: catsMissing.count ?? 0,
+          products_missing_external_id: prodsMissing.count ?? 0,
+          extras_missing_external_id: extrasMissing.count ?? 0,
+          combos_missing_external_id: combosMissing.count ?? 0,
+          pizza_sizes_missing_external_id: sizesMissing.count ?? 0,
+        };
+        console.log(`FL_SYNC_VALIDATION: ${JSON.stringify(validation)}`);
+
+        return new Response(JSON.stringify({ success: true, results, validation }), { status: 200, headers: cors });
       }
     }
   }
