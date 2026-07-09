@@ -103,7 +103,27 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
         console.log(`FL_MENU_SYNC_PRODUCTS_COUNT: ${traditionalProducts.length}`);
         console.log(`FL_MENU_SYNC_DRINKS_COUNT: ${traditionalDrinks.length}`);
 
-        const categoriesMap: Record<string, string> = {}; 
+        const categoriesMap: Record<string, string> = {};
+
+        // Self-healing helper: never overwrite a valid existing external_id.
+        // Returns a payload copy safe to pass to update().
+        const preserveExternalId = <T extends { external_id?: any }>(
+          payload: T,
+          existing: { external_id: string | null } | null | undefined,
+          incoming: string | undefined,
+        ): T => {
+          const clone: any = { ...payload };
+          if (existing?.external_id) {
+            // Existing row already has a valid external_id — keep it untouched.
+            delete clone.external_id;
+          } else if (incoming) {
+            // Backfill missing external_id.
+            clone.external_id = incoming;
+          } else {
+            delete clone.external_id;
+          }
+          return clone;
+        };
 
         // Helper: resolve or create a category by (external_id, name).
         // Safety: never overwrites an existing external_id, only fills NULL.
