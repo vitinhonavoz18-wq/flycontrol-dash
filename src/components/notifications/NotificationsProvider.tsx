@@ -63,17 +63,47 @@ export function NotificationsProvider() {
     };
   }, [user, isSuperAdmin]);
 
-  // NOTE: no loadPending(), no polling, no interval, no fallback fetch.
-  // The popup queue is populated EXCLUSIVELY by the Realtime INSERT callback
-  // below. This is a hard architectural rule — do not reintroduce fetch-based
-  // recovery paths here.
+  // Recovery fetch: pulls every pending close request the operator owns and
+  // merges it into the queue. Runs on mount (after pizzeriaIds resolves) and
+  // on every Realtime (re)subscribe. This is the ONLY safety net against
+  // fire-and-forget Realtime losing INSERTs delivered outside the subscribed
+  // window (cold start, tab closed, socket drop, browser refresh).
+  // NOT polled — no timers, no intervals.
+  async function recoverPending(ids: string[] | "__all__") {
+    let query = supabase
+      .from("table_close_requests")
+      .select("id, restaurant_id, table_id, table_number, session_id, customer_name, status, requested_at")
+      .eq("status", "pending")
+      .order("requested_at", { ascending: true });
+    if (ids !== "__all__") {
+      if (ids.length === 0) return;
+      query = query.in("restaurant_id", ids);
+    }
+    const { data, error } = await query;
+    if (error) {
+      console.error("[NotificationsProvider] recoverPending error:", error);
+      return;
+    }
+    const rows = (data || []) as CloseRequest[];
+    if (rows.length === 0) return;
+    console.log("[NotificationsProvider] recovered pending:", rows.map((r) => r.id));
+    setQueue((prev) => {
+      const seen = new Set(prev.map((r) => r.id));
+      const merged = [...prev];
+      for (const r of rows) if (!seen.has(r.id)) merged.push(r);
+      return merged;
+    });
+  }
 
 
   // Realtime: close requests. Any INSERT with status pending/viewed opens
-  // the popup. No startup guard, no historical filter — reconnects and
-  // fresh reloads always recover pending requests via loadPending().
+  // the popup. Recovery runs on every SUBSCRIBED transition to cover any
+  // events that occurred while the socket was down.
   useEffect(() => {
     if (!pizzeriaIds) return;
+    // Startup recovery (before/at the same time the channel opens).
+    void recoverPending(pizzeriaIds);
+
     const channel = supabase
       .channel("close-requests-global")
       .on(
@@ -111,12 +141,19 @@ export function NotificationsProvider() {
       )
       .subscribe((status) => {
         console.log("[Realtime] close-requests channel:", status);
+        // Reconnection recovery: on every successful (re)subscribe, re-fetch
+        // pending rows. Covers CHANNEL_ERROR / TIMED_OUT / CLOSED → rejoin
+        // cycles where Realtime does not replay missed events.
+        if (status === "SUBSCRIBED") {
+          void recoverPending(pizzeriaIds);
+        }
       });
     return () => {
       supabase.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pizzeriaIds]);
+
 
   // Realtime: new orders
   useEffect(() => {
