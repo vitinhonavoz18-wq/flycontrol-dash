@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, Image as ImageIcon, Loader2, ChevronDown, ChevronRight, Search } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
 import { ImageUpload } from "@/components/ui/image-upload";
 
@@ -79,16 +79,46 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     setLoading(false);
   }
 
-  function openCreate() {
+  function openCreate(preselectCategoryId?: string) {
     setEditingProduct(null);
     setName("");
     setDescription("");
     setPrice("");
-    setCategoryId(categories.length > 0 ? categories[0].id : "");
+    setCategoryId(preselectCategoryId ?? (categories.length > 0 ? categories[0].id : ""));
     setImageUrl("");
     setProductType(type === "beverage" ? "beverage" : "standard");
     setIsDialogOpen(true);
   }
+
+  // Search + collapsible category state (session-only)
+  const [search, setSearch] = useState("");
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+
+  function toggleCategory(catId: string) {
+    setCollapsed((prev) => ({ ...prev, [catId]: !prev[catId] }));
+  }
+
+  const grouped = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filter = (p: any) =>
+      !q ||
+      p.name?.toLowerCase().includes(q) ||
+      p.description?.toLowerCase().includes(q);
+
+    const groups = categories.map((cat) => ({
+      id: cat.id,
+      name: cat.name,
+      items: products.filter((p) => p.category_id === cat.id && filter(p)),
+    }));
+    const uncategorized = products.filter((p) => !p.category_id && filter(p));
+    if (uncategorized.length) {
+      groups.push({ id: "__uncategorized__", name: "Sem categoria", items: uncategorized });
+    }
+    return groups;
+  }, [products, categories, search]);
+
+  // Auto-expand categories that contain search matches
+  const forceOpen = search.trim().length > 0;
 
   function openEdit(prod: any) {
     setEditingProduct(prod);
@@ -329,74 +359,148 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     );
   }
 
+  const isBeverage = type === "beverage";
+  const filteredFlat = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    if (!q) return products;
+    return products.filter(
+      (p) =>
+        p.name?.toLowerCase().includes(q) ||
+        p.description?.toLowerCase().includes(q)
+    );
+  }, [products, search]);
+
+  const renderProductCard = (prod: any) => (
+    <Card key={prod.id} className={`overflow-hidden transition-all hover:border-primary/30 ${!prod.active ? 'opacity-60 bg-muted/30' : ''}`}>
+      {prod.image_url ? (
+        <div className="h-40 w-full overflow-hidden bg-muted">
+          <img src={prod.image_url} alt={prod.name} className="h-full w-full object-cover" />
+        </div>
+      ) : (
+        <div className="h-40 w-full bg-muted flex items-center justify-center">
+          <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
+        </div>
+      )}
+      <CardContent className="p-4 space-y-3">
+        <div className="flex justify-between items-start gap-2">
+          <div>
+            <h4 className="font-bold line-clamp-1">{prod.name}</h4>
+            <p className="text-xs text-muted-foreground">{prod.menu_categories?.name || 'Sem categoria'}</p>
+          </div>
+          <p className="font-bold text-primary">R$ {prod.price.toFixed(2)}</p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[10px] font-medium">
+            <span className={prod.available ? 'text-success' : 'text-destructive'}>
+              {prod.available ? 'Disponível' : 'Indisponível'}
+            </span>
+            <Switch
+              checked={prod.available}
+              onCheckedChange={() => toggleStatus(prod, 'available')}
+              className="h-4 w-7 data-[state=checked]:bg-success"
+            />
+          </div>
+          <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[10px] font-medium ml-auto">
+            <span>Ativo</span>
+            <Switch
+              checked={prod.active}
+              onCheckedChange={() => toggleStatus(prod, 'active')}
+              className="h-4 w-7"
+            />
+          </div>
+        </div>
+        <div className="flex items-center justify-end gap-2 pt-2 border-t">
+          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(prod)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(prod)}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-3">
         <h3 className="text-lg font-semibold">{title}</h3>
-        <Button onClick={openCreate} className="gap-2">
+        <Button onClick={() => openCreate()} className="gap-2">
           <Plus className="h-4 w-4" /> Novo Item
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {products.map((prod) => (
-          <Card key={prod.id} className={`overflow-hidden transition-all hover:border-primary/30 ${!prod.active ? 'opacity-60 bg-muted/30' : ''}`}>
-            {prod.image_url ? (
-              <div className="h-40 w-full overflow-hidden bg-muted">
-                <img src={prod.image_url} alt={prod.name} className="h-full w-full object-cover" />
-              </div>
-            ) : (
-              <div className="h-40 w-full bg-muted flex items-center justify-center">
-                <ImageIcon className="h-8 w-8 text-muted-foreground/30" />
-              </div>
-            )}
-            <CardContent className="p-4 space-y-3">
-              <div className="flex justify-between items-start gap-2">
-                <div>
-                  <h4 className="font-bold line-clamp-1">{prod.name}</h4>
-                  <p className="text-xs text-muted-foreground">{prod.menu_categories?.name || 'Sem categoria'}</p>
-                </div>
-                <p className="font-bold text-primary">R$ {prod.price.toFixed(2)}</p>
-              </div>
-              
-              <div className="flex flex-wrap gap-2">
-                <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[10px] font-medium">
-                  <span className={prod.available ? 'text-success' : 'text-destructive'}>
-                    {prod.available ? 'Disponível' : 'Indisponível'}
-                  </span>
-                  <Switch 
-                    checked={prod.available} 
-                    onCheckedChange={() => toggleStatus(prod, 'available')}
-                    className="h-4 w-7 data-[state=checked]:bg-success"
-                  />
-                </div>
-                <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[10px] font-medium ml-auto">
-                  <span>Ativo</span>
-                  <Switch 
-                    checked={prod.active} 
-                    onCheckedChange={() => toggleStatus(prod, 'active')}
-                    className="h-4 w-7"
-                  />
-                </div>
-              </div>
-
-              <div className="flex items-center justify-end gap-2 pt-2 border-t">
-                <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(prod)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(prod)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-        {!products.length && (
-          <div className="col-span-full text-center py-12 border border-dashed rounded-lg text-muted-foreground">
-            Nenhum produto encontrado.
-          </div>
-        )}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Buscar produto..."
+          className="pl-9"
+        />
       </div>
+
+      {isBeverage ? (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {filteredFlat.map(renderProductCard)}
+          {!filteredFlat.length && (
+            <div className="col-span-full text-center py-12 border border-dashed rounded-lg text-muted-foreground">
+              Nenhum produto encontrado.
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {grouped.map((group) => {
+            const isOpen = forceOpen ? group.items.length > 0 : !collapsed[group.id];
+            const isReal = group.id !== "__uncategorized__";
+            return (
+              <div key={group.id} className="border rounded-lg overflow-hidden">
+                <div className="flex items-center justify-between gap-2 bg-muted/40 px-3 py-2">
+                  <button
+                    type="button"
+                    onClick={() => toggleCategory(group.id)}
+                    className="flex items-center gap-2 flex-1 text-left"
+                  >
+                    {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    <span className="font-semibold">{group.name}</span>
+                    <span className="text-xs text-muted-foreground">({group.items.length})</span>
+                  </button>
+                  {isReal && (
+                    <Button size="sm" variant="ghost" className="gap-1 h-7" onClick={() => openCreate(group.id)}>
+                      <Plus className="h-3.5 w-3.5" /> Novo
+                    </Button>
+                  )}
+                </div>
+                {isOpen && (
+                  <div className="p-3">
+                    {group.items.length ? (
+                      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                        {group.items.map(renderProductCard)}
+                      </div>
+                    ) : (
+                      <div className="text-center py-6 text-sm text-muted-foreground">
+                        <p className="mb-2">Nenhum produto cadastrado.</p>
+                        {isReal && (
+                          <Button size="sm" variant="outline" className="gap-1" onClick={() => openCreate(group.id)}>
+                            <Plus className="h-3.5 w-3.5" /> Criar Produto
+                          </Button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+          {!grouped.length && (
+            <div className="text-center py-12 border border-dashed rounded-lg text-muted-foreground">
+              Nenhuma categoria cadastrada.
+            </div>
+          )}
+        </div>
+      )}
+
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
