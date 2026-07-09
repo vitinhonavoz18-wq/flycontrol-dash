@@ -134,7 +134,11 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           }
 
           if (existing) {
-            const update: Record<string, any> = {
+            const update: {
+              last_synced_at: string;
+              external_source: string;
+              external_id?: string;
+            } = {
               last_synced_at: new Date().toISOString(),
               external_source: "sitecreatorfly",
             };
