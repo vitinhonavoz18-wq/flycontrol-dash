@@ -351,15 +351,6 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex h-32 items-center justify-center">
-        <Loader2 className="h-6 w-6 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  const isBeverage = type === "beverage";
   const filteredFlat = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return products;
@@ -369,6 +360,16 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
         p.description?.toLowerCase().includes(q)
     );
   }, [products, search]);
+
+  if (loading) {
+    return (
+      <div className="flex h-32 items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const isBeverage = type === "beverage";
 
   const renderProductCard = (prod: any) => (
     <Card key={prod.id} className={`overflow-hidden transition-all hover:border-primary/30 ${!prod.active ? 'opacity-60 bg-muted/30' : ''}`}>
