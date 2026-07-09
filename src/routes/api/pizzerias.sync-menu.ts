@@ -478,7 +478,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             
             let query = supabaseAdmin
               .from("pizzeria_pizza_sizes")
-              .select("id")
+              .select("id, external_id")
               .eq("pizzeria_id", pizzeriaId);
 
             if (externalId) {
@@ -502,7 +502,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             };
 
             if (existing) {
-              await supabaseAdmin.from("pizzeria_pizza_sizes").update(payload).eq("id", existing.id);
+              await supabaseAdmin.from("pizzeria_pizza_sizes").update(preserveExternalId(payload, existing, externalId)).eq("id", existing.id);
             } else {
               await supabaseAdmin.from("pizzeria_pizza_sizes").insert(payload);
               results.pizza_sizes++;
