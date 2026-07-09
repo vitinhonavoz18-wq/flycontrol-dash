@@ -461,8 +461,8 @@ export function ComboManager({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEnd
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="combo-img">URL da Imagem</Label>
-                <Input id="combo-img" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
+                <Label>Imagem do Combo</Label>
+                <ImageUpload value={imageUrl} onChange={(url) => setImageUrl(url ?? "")} folder="combos" />
               </div>
               <div className="flex items-center gap-4 pt-2">
                 <div className="flex items-center space-x-2">
