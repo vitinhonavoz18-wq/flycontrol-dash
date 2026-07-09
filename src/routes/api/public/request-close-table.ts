@@ -115,20 +115,6 @@ export const Route = createFileRoute("/api/public/request-close-table")({
             tableId = (t2 as any)?.id ?? null;
           }
 
-          // Runtime orphan sweep. Acknowledges any pending row for this
-          // (restaurant, table) that can never be processed (missing session
-          // ids, dead sessions, lifecycle mismatch). Healthy pending requests
-          // are left untouched so the popup still fires for them.
-          try {
-            const { acknowledgeOrphanCloseRequests } = await import("@/lib/orphanCloseRequests");
-            await acknowledgeOrphanCloseRequests(supabaseAdmin as any, {
-              restaurantId: session.restaurant_id,
-              tableId,
-            });
-          } catch (sweepErr) {
-            console.warn("[request-close-table] orphan sweep failed:", sweepErr);
-          }
-
 
           // Dedupe pending request
           const { data: existing } = await supabaseAdmin
