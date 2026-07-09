@@ -29,10 +29,20 @@ export function NotificationsProvider() {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [audioBlocked, setAudioBlocked] = useState(false);
   const seenOrderIds = useRef<Set<string>>(new Set());
+  // Live ref so the Realtime callback (created once per user) always sees
+  // the latest owned pizzerias without needing to tear down the channel.
+  const pizzeriaIdsRef = useRef<string[] | "__all__" | null>(null);
+  useEffect(() => {
+    pizzeriaIdsRef.current = pizzeriaIds;
+  }, [pizzeriaIds]);
 
-  // Resolve owned pizzerias (all of them).
+  // Resolve owned pizzerias with automatic retry on failure. The provider
+  // MUST NOT stay stuck with pizzeriaIds == null after login.
   useEffect(() => {
     let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
+    let attempt = 0;
+
     async function load() {
       if (!user) {
         setPizzeriaIds(null);
@@ -49,8 +59,15 @@ export function NotificationsProvider() {
         .neq("status", "deleted");
       if (cancelled) return;
       if (error) {
-        console.error("[NotificationsProvider] pizzerias load error:", error);
-        setPizzeriaIds([]);
+        attempt += 1;
+        const delay = Math.min(30000, 1000 * 2 ** Math.min(attempt, 5));
+        console.error(
+          `[NotificationsProvider] pizzerias load error (retry in ${delay}ms):`,
+          error
+        );
+        retryTimer = setTimeout(() => {
+          if (!cancelled) void load();
+        }, delay);
         return;
       }
       const ids = (data || []).map((p: any) => p.id);
@@ -60,16 +77,16 @@ export function NotificationsProvider() {
     void load();
     return () => {
       cancelled = true;
+      if (retryTimer) clearTimeout(retryTimer);
     };
   }, [user, isSuperAdmin]);
 
   // Recovery fetch: pulls every pending close request the operator owns and
-  // merges it into the queue. Runs on mount (after pizzeriaIds resolves) and
-  // on every Realtime (re)subscribe. This is the ONLY safety net against
-  // fire-and-forget Realtime losing INSERTs delivered outside the subscribed
-  // window (cold start, tab closed, socket drop, browser refresh).
-  // NOT polled — no timers, no intervals.
-  async function recoverPending(ids: string[] | "__all__") {
+  // merges it into the queue. Runs after auth resolves and on every Realtime
+  // (re)subscribe. Only safety net for INSERTs missed while the socket was
+  // down. NOT polled.
+  async function recoverPending(ids: string[] | "__all__" | null) {
+    if (!ids) return;
     let query = supabase
       .from("table_close_requests")
       .select("id, restaurant_id, table_id, table_number, session_id, customer_name, status, requested_at")
@@ -95,14 +112,20 @@ export function NotificationsProvider() {
     });
   }
 
-
-  // Realtime: close requests. Any INSERT with status pending/viewed opens
-  // the popup. Recovery runs on every SUBSCRIBED transition to cover any
-  // events that occurred while the socket was down.
+  // Once pizzeriaIds resolves after login, run recovery exactly once per
+  // (user, ids) transition — independent of the Realtime subscribe cycle.
   useEffect(() => {
     if (!pizzeriaIds) return;
-    // Startup recovery (before/at the same time the channel opens).
     void recoverPending(pizzeriaIds);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pizzeriaIds]);
+
+  // Realtime: close requests. Subscribes as soon as the user is authenticated
+  // — does NOT wait for pizzeriaIds so a slow/failed pizzerias fetch cannot
+  // prevent the channel from ever opening. The INSERT filter reads the live
+  // ref, so it starts working the moment pizzeriaIds resolves.
+  useEffect(() => {
+    if (!user) return;
 
     const channel = supabase
       .channel("close-requests-global")
@@ -113,10 +136,13 @@ export function NotificationsProvider() {
           const row = payload.new as CloseRequest;
           console.log("[Realtime] table_close_requests INSERT:", row.id, row.status);
           if (row.status !== "pending") return;
-          if (pizzeriaIds !== "__all__" && !pizzeriaIds.includes(row.restaurant_id)) {
+          const ids = pizzeriaIdsRef.current;
+          if (ids && ids !== "__all__" && !ids.includes(row.restaurant_id)) {
             console.log("[Realtime] ignored — not our pizzeria");
             return;
           }
+          // If ids not resolved yet, accept the row optimistically; the
+          // recovery fetch will reconcile against DB truth.
           setQueue((prev) => (prev.find((r) => r.id === row.id) ? prev : [...prev, row]));
           playSound("close_request");
           toast.warning(`Mesa ${row.table_number} pediu para fechar a conta`, {
@@ -131,9 +157,6 @@ export function NotificationsProvider() {
         (payload) => {
           const row = payload.new as CloseRequest;
           console.log("[Realtime] table_close_requests UPDATE:", row.id, row.status);
-          // Only terminal statuses close the popup. `viewed` / `printed` are
-          // intermediate operator actions — the popup must remain visible so
-          // the operator can still press "Finalizar Mesa".
           if (row.status === "completed" || row.status === "cancelled") {
             setQueue((prev) => prev.filter((r) => r.id !== row.id));
           }
@@ -141,18 +164,29 @@ export function NotificationsProvider() {
       )
       .subscribe((status) => {
         console.log("[Realtime] close-requests channel:", status);
-        // Reconnection recovery: on every successful (re)subscribe, re-fetch
-        // pending rows. Covers CHANNEL_ERROR / TIMED_OUT / CLOSED → rejoin
-        // cycles where Realtime does not replay missed events.
         if (status === "SUBSCRIBED") {
-          void recoverPending(pizzeriaIds);
+          void recoverPending(pizzeriaIdsRef.current);
+        }
+        // Auto-reconnect: on terminal socket states, drop the current
+        // channel; the effect cleanup + user-dep will not re-run on its
+        // own, so schedule a rejoin using the same channel name.
+        if (status === "CHANNEL_ERROR" || status === "TIMED_OUT" || status === "CLOSED") {
+          setTimeout(() => {
+            // Guard against duplicate subscriptions: removeChannel is
+            // idempotent, and re-subscribing on the same channel object
+            // is a no-op if already SUBSCRIBED.
+            try {
+              channel.subscribe();
+            } catch (e) {
+              console.warn("[Realtime] rejoin failed:", e);
+            }
+          }, 2000);
         }
       });
     return () => {
       supabase.removeChannel(channel);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pizzeriaIds]);
+  }, [user]);
 
 
   // Realtime: new orders
