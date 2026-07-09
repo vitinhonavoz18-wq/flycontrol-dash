@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 import {
   Dialog,
