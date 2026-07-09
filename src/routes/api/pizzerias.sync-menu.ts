@@ -519,7 +519,24 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
           console.log("FL_MENU_SYNC_NO_ITEMS_REASON: Todos os arrays de produtos e categorias estavam vazios no JSON.");
         }
 
-        return new Response(JSON.stringify({ success: true, results }), { status: 200, headers: cors });
+        // Self-healing validation: report any rows still missing external_id.
+        const [catsMissing, prodsMissing, extrasMissing, combosMissing, sizesMissing] = await Promise.all([
+          supabaseAdmin.from("menu_categories").select("id", { count: "exact", head: true }).eq("pizzeria_id", pizzeriaId).is("external_id", null),
+          supabaseAdmin.from("menu_products").select("id", { count: "exact", head: true }).eq("pizzeria_id", pizzeriaId).is("external_id", null),
+          supabaseAdmin.from("menu_extras").select("id", { count: "exact", head: true }).eq("pizzeria_id", pizzeriaId).is("external_id", null),
+          supabaseAdmin.from("combos").select("id", { count: "exact", head: true }).eq("pizzeria_id", pizzeriaId).is("external_id", null),
+          supabaseAdmin.from("pizzeria_pizza_sizes").select("id", { count: "exact", head: true }).eq("pizzeria_id", pizzeriaId).is("external_id", null),
+        ]);
+        const validation = {
+          categories_missing_external_id: catsMissing.count ?? 0,
+          products_missing_external_id: prodsMissing.count ?? 0,
+          extras_missing_external_id: extrasMissing.count ?? 0,
+          combos_missing_external_id: combosMissing.count ?? 0,
+          pizza_sizes_missing_external_id: sizesMissing.count ?? 0,
+        };
+        console.log(`FL_SYNC_VALIDATION: ${JSON.stringify(validation)}`);
+
+        return new Response(JSON.stringify({ success: true, results, validation }), { status: 200, headers: cors });
       }
     }
   }
