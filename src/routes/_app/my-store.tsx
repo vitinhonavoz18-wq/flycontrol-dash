@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
+import { ImageUpload } from "@/components/ui/image-upload";
 import { 
   Store, 
   Settings, 
@@ -256,12 +257,11 @@ export default function MyStore() {
               </div>
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
-                  <Label htmlFor="logo-url">URL da Logo</Label>
-                  <Input 
-                    id="logo-url" 
-                    placeholder="https://exemplo.com/logo.png"
-                    value={pizzeria.logo_url || ""} 
-                    onChange={e => setPizzeria({...pizzeria, logo_url: e.target.value})} 
+                  <Label>Logo da Pizzaria</Label>
+                  <ImageUpload
+                    value={pizzeria.logo_url || ""}
+                    onChange={(url) => setPizzeria({ ...pizzeria, logo_url: url ?? "" })}
+                    folder="logos"
                   />
                 </div>
                 <div className="space-y-2">

@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Image as ImageIcon, Loader2 } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
+import { ImageUpload } from "@/components/ui/image-upload";
 
 import {
   Dialog,
@@ -451,15 +452,8 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
             )}
 
             <div className="space-y-2">
-              <Label htmlFor="prod-img">URL da Imagem</Label>
-              <div className="flex gap-2">
-                <Input id="prod-img" value={imageUrl} onChange={(e) => setImageUrl(e.target.value)} placeholder="https://..." />
-                {imageUrl && (
-                  <div className="h-10 w-10 shrink-0 rounded border overflow-hidden">
-                    <img src={imageUrl} alt="Preview" className="h-full w-full object-cover" />
-                  </div>
-                )}
-              </div>
+              <Label>Imagem</Label>
+              <ImageUpload value={imageUrl} onChange={(url) => setImageUrl(url ?? "")} folder="products" />
             </div>
           </div>
           <DialogFooter>
