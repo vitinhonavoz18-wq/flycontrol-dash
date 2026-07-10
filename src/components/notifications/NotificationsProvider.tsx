@@ -21,10 +21,9 @@ const POPUP_FORBIDDEN_PREFIXES = ["/waiter-portal", "/waiter-login", "/print"];
  * - Logs every received event for diagnostics.
  */
 export function NotificationsProvider() {
-  const { user, loading, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isForbiddenRoute = POPUP_FORBIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
-  console.log("[TRACE#1 mount NotificationsProvider]", { userId: user?.id ?? null, loading, pathname, isForbiddenRoute });
   const [pizzeriaIds, setPizzeriaIds] = useState<string[] | "__all__" | null>(null);
   const [queue, setQueue] = useState<CloseRequest[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
@@ -40,11 +39,6 @@ export function NotificationsProvider() {
   // Resolve owned pizzerias with automatic retry on failure. The provider
   // MUST NOT stay stuck with pizzeriaIds == null after login.
   useEffect(() => {
-    if (loading) return;
-    if (!user) {
-      setPizzeriaIds(null);
-      return;
-    }
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let attempt = 0;
@@ -85,7 +79,7 @@ export function NotificationsProvider() {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [user, loading, isSuperAdmin]);
+  }, [user, isSuperAdmin]);
 
   // Recovery fetch: pulls every pending close request the operator owns and
   // merges it into the queue. Runs after auth resolves and on every Realtime
@@ -131,9 +125,7 @@ export function NotificationsProvider() {
   // prevent the channel from ever opening. The INSERT filter reads the live
   // ref, so it starts working the moment pizzeriaIds resolves.
   useEffect(() => {
-    console.log("[TRACE#2 realtime effect]", { loading, userId: user?.id ?? null });
-    if (loading) { console.log("[TRACE#2a] abort — loading"); return; }
-    if (!user) { console.log("[TRACE#2b] abort — no user"); return; }
+    if (!user) return;
 
     const channel = supabase
       .channel("close-requests-global")
@@ -142,19 +134,16 @@ export function NotificationsProvider() {
         { event: "INSERT", schema: "public", table: "table_close_requests" },
         (payload) => {
           const row = payload.new as CloseRequest;
-          console.log("[TRACE#3 INSERT callback]", { id: row.id, restaurant_id: row.restaurant_id, status: row.status, table_number: row.table_number });
-          if (row.status !== "pending") { console.log("[TRACE#3a] discard — status != pending"); return; }
+          console.log("[Realtime] table_close_requests INSERT:", row.id, row.status);
+          if (row.status !== "pending") return;
           const ids = pizzeriaIdsRef.current;
-          console.log("[TRACE#3b] pizzeriaIdsRef", ids);
           if (ids && ids !== "__all__" && !ids.includes(row.restaurant_id)) {
-            console.log("[TRACE#3c] discard — restaurant_id not in owned", { row_rid: row.restaurant_id, ids });
+            console.log("[Realtime] ignored — not our pizzeria");
             return;
           }
-          console.log("[TRACE#4 ADICIONANDO REQUEST NA FILA]", row.id);
-          setQueue((prev) => {
-            if (prev.find((r) => r.id === row.id)) { console.log("[TRACE#4a] dedup — already in queue"); return prev; }
-            return [...prev, row];
-          });
+          // If ids not resolved yet, accept the row optimistically; the
+          // recovery fetch will reconcile against DB truth.
+          setQueue((prev) => (prev.find((r) => r.id === row.id) ? prev : [...prev, row]));
           playSound("close_request");
           toast.warning(`Mesa ${row.table_number} pediu para fechar a conta`, {
             description: row.customer_name ? `Cliente: ${row.customer_name}` : undefined,
@@ -174,7 +163,7 @@ export function NotificationsProvider() {
         }
       )
       .subscribe((status) => {
-        console.log("[TRACE#5 subscribe status]", status);
+        console.log("[Realtime] close-requests channel:", status);
         if (status === "SUBSCRIBED") {
           void recoverPending(pizzeriaIdsRef.current);
         }
@@ -197,7 +186,7 @@ export function NotificationsProvider() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user, loading]);
+  }, [user]);
 
 
   // Realtime: new orders
@@ -249,7 +238,6 @@ export function NotificationsProvider() {
   }, []);
 
   const visibleQueue = queue.filter((r) => !dismissed.has(r.id));
-  console.log("[TRACE#6 render]", { visibleQueueLen: visibleQueue.length, queueLen: queue.length, queueIds: queue.map(q => q.id), isForbiddenRoute, pathname });
 
   return (
     <>
