@@ -24,6 +24,7 @@ export function NotificationsProvider() {
   const { user, loading, isSuperAdmin } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isForbiddenRoute = POPUP_FORBIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
+  console.log("[TRACE#1 mount NotificationsProvider]", { userId: user?.id ?? null, loading, pathname, isForbiddenRoute });
   const [pizzeriaIds, setPizzeriaIds] = useState<string[] | "__all__" | null>(null);
   const [queue, setQueue] = useState<CloseRequest[]>([]);
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
