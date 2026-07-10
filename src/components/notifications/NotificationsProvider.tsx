@@ -174,7 +174,7 @@ export function NotificationsProvider() {
         }
       )
       .subscribe((status) => {
-        console.log("[Realtime] close-requests channel:", status);
+        console.log("[TRACE#5 subscribe status]", status);
         if (status === "SUBSCRIBED") {
           void recoverPending(pizzeriaIdsRef.current);
         }
