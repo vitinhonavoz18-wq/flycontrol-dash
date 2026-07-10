@@ -249,6 +249,7 @@ export function NotificationsProvider() {
   }, []);
 
   const visibleQueue = queue.filter((r) => !dismissed.has(r.id));
+  console.log("[TRACE#6 render]", { visibleQueueLen: visibleQueue.length, queueLen: queue.length, queueIds: queue.map(q => q.id), isForbiddenRoute, pathname });
 
   return (
     <>
