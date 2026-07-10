@@ -230,17 +230,28 @@ export function useTableSessions(tenantId: string | null) {
   }
 
   async function closeSession(sessionId: string) {
-    // ARCHITECTURAL RULE: this hook must NEVER call closeTableWorkflow.
-    // The ONLY caller of closeTableWorkflow is the "Finalizar Mesa" button
-    // inside TableCloseRequestPopup. Operator-initiated closures from the
-    // Tables screen must produce a table_close_requests row and let the
-    // popup pipeline handle finalization uniformly.
+    // ARCHITECTURAL RULE (admin flow — FlyControl):
+    // Operator-initiated closures from the Tables screen are ADMINISTRATIVE.
+    // They must finalize the table directly via closeTableWorkflow (which
+    // updates the session, marks any pending request completed, and fires
+    // the SF webhook). They must NOT create a table_close_requests row —
+    // that path belongs exclusively to the customer flow (SiteCreatorFly),
+    // whose request opens the popup and is finalized by the operator there.
     try {
-      const { ensureCloseRequest } = await import("@/lib/createCloseRequest");
-      await ensureCloseRequest({ sessionId, origin: "operator" });
-      toast.success("Solicitação de fechamento aberta. Confirme no popup.");
+      const { closeTableWorkflow } = await import("@/lib/closeTableWorkflow");
+      const res = await closeTableWorkflow({ sessionId });
+      if (!res.success) {
+        toast.error("Erro ao fechar mesa: " + (res.error || "desconhecido"));
+        return;
+      }
+      if (!res.webhookOk) {
+        toast.warning("Mesa fechada, mas o webhook do SiteCreatorFly falhou.");
+      } else {
+        toast.success("Mesa encerrada.");
+      }
+      await loadSessions();
     } catch (e: any) {
-      toast.error("Erro ao solicitar fechamento: " + (e?.message || e));
+      toast.error("Erro ao fechar mesa: " + (e?.message || e));
     }
   }
 
