@@ -21,7 +21,7 @@ const POPUP_FORBIDDEN_PREFIXES = ["/waiter-portal", "/waiter-login", "/print"];
  * - Logs every received event for diagnostics.
  */
 export function NotificationsProvider() {
-  const { user, isSuperAdmin } = useAuth();
+  const { user, loading, isSuperAdmin } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const isForbiddenRoute = POPUP_FORBIDDEN_PREFIXES.some((p) => pathname.startsWith(p));
   const [pizzeriaIds, setPizzeriaIds] = useState<string[] | "__all__" | null>(null);
@@ -39,6 +39,11 @@ export function NotificationsProvider() {
   // Resolve owned pizzerias with automatic retry on failure. The provider
   // MUST NOT stay stuck with pizzeriaIds == null after login.
   useEffect(() => {
+    if (loading) return;
+    if (!user) {
+      setPizzeriaIds(null);
+      return;
+    }
     let cancelled = false;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
     let attempt = 0;
@@ -79,7 +84,7 @@ export function NotificationsProvider() {
       cancelled = true;
       if (retryTimer) clearTimeout(retryTimer);
     };
-  }, [user, isSuperAdmin]);
+  }, [user, loading, isSuperAdmin]);
 
   // Recovery fetch: pulls every pending close request the operator owns and
   // merges it into the queue. Runs after auth resolves and on every Realtime
@@ -125,6 +130,7 @@ export function NotificationsProvider() {
   // prevent the channel from ever opening. The INSERT filter reads the live
   // ref, so it starts working the moment pizzeriaIds resolves.
   useEffect(() => {
+    if (loading) return;
     if (!user) return;
 
     const channel = supabase
@@ -186,7 +192,7 @@ export function NotificationsProvider() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [user]);
+  }, [user, loading]);
 
 
   // Realtime: new orders
