@@ -95,6 +95,7 @@ export const Route = createFileRoute("/api/pizzerias/create")({
           const update: any = {
             provisioned_at: new Date().toISOString(),
             provision_error: null,
+            provision_status: "provisioned",
             status: "active",
           };
           if (provision.sf_restaurant_id) update.sf_restaurant_id = provision.sf_restaurant_id;
@@ -120,17 +121,17 @@ export const Route = createFileRoute("/api/pizzerias/create")({
           }), { status: 200, headers: cors });
         }
 
-        console.error("[Provision] Marking pizzeria as provision_pending:", provision.error);
+        console.error("[Provision] Marking pizzeria as failed:", provision.error);
         await supabaseAdmin
           .from("pizzerias")
-          .update({ status: "provision_pending", provision_error: provision.error })
+          .update({ provision_status: "failed", provision_error: provision.error } as any)
           .eq("id", data.id);
 
         return new Response(JSON.stringify({
           tenant_id: data.id,
           api_key: data.api_key,
           order_endpoint: new URL("/api/orders", request.url).toString(),
-          provision_status: "provision_pending",
+          provision_status: "failed",
           provision_error: provision.error,
         }), { status: 200, headers: cors });
       },
