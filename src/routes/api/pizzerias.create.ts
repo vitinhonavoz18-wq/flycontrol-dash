@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { provisionRestaurantInSF } from "@/integrations/sitecreatorfly/provision.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -20,68 +21,6 @@ function slugify(s: string) {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 60) || `pz-${Date.now()}`;
 }
 
-type ProvisionResult =
-  | {
-      ok: true;
-      sf_restaurant_id?: string;
-      menu_sync_token?: string;
-      public_url?: string;
-      sync_endpoint?: string;
-    }
-  | { ok: false; error: string };
-
-async function provisionRestaurantInSF(payload: {
-  flycontrol_id: string;
-  name: string;
-  slug: string;
-  owner_name: string;
-  business_type: string;
-  selected_template: string;
-  api_key: string;
-}): Promise<ProvisionResult> {
-  const base = (process.env.SITECREATORFLY_BASE_URL || "").trim().replace(/\/+$/, "");
-  if (!base) {
-    console.error("[Provision] SITECREATORFLY_BASE_URL not configured");
-    return { ok: false, error: "missing_sf_base_url" };
-  }
-  const url = `${base}/api/internal/provision-restaurant`;
-  const internalToken = (process.env.SITECREATORFLY_INTERNAL_TOKEN || "").trim();
-
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    "x-api-key": payload.api_key,
-  };
-  if (internalToken) headers["Authorization"] = `Bearer ${internalToken}`;
-
-  console.log("[Provision] POST", url, "flycontrol_id:", payload.flycontrol_id);
-
-  try {
-    const resp = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify(payload),
-    });
-    const text = await resp.text();
-    console.log("[Provision] status:", resp.status, "body:", text.slice(0, 500));
-    if (!resp.ok) {
-      return { ok: false, error: `sf_http_${resp.status}: ${text.slice(0, 200)}` };
-    }
-    let parsed: any = null;
-    try { parsed = text ? JSON.parse(text) : null; } catch {
-      return { ok: false, error: "sf_invalid_json_response" };
-    }
-    return {
-      ok: true,
-      sf_restaurant_id: parsed?.sf_restaurant_id ?? parsed?.restaurant_id ?? parsed?.id,
-      menu_sync_token: parsed?.menu_sync_token ?? parsed?.token,
-      public_url: parsed?.public_url ?? parsed?.url,
-      sync_endpoint: parsed?.sync_endpoint,
-    };
-  } catch (err: any) {
-    console.error("[Provision] fetch error:", err);
-    return { ok: false, error: err?.message || "network_error" };
-  }
-}
 
 export const Route = createFileRoute("/api/pizzerias/create")({
   server: {
@@ -156,6 +95,7 @@ export const Route = createFileRoute("/api/pizzerias/create")({
           const update: any = {
             provisioned_at: new Date().toISOString(),
             provision_error: null,
+            provision_status: "provisioned",
             status: "active",
           };
           if (provision.sf_restaurant_id) update.sf_restaurant_id = provision.sf_restaurant_id;
@@ -181,17 +121,17 @@ export const Route = createFileRoute("/api/pizzerias/create")({
           }), { status: 200, headers: cors });
         }
 
-        console.error("[Provision] Marking pizzeria as provision_pending:", provision.error);
+        console.error("[Provision] Marking pizzeria as failed:", provision.error);
         await supabaseAdmin
           .from("pizzerias")
-          .update({ status: "provision_pending", provision_error: provision.error })
+          .update({ provision_status: "failed", provision_error: provision.error } as any)
           .eq("id", data.id);
 
         return new Response(JSON.stringify({
           tenant_id: data.id,
           api_key: data.api_key,
           order_endpoint: new URL("/api/orders", request.url).toString(),
-          provision_status: "provision_pending",
+          provision_status: "failed",
           provision_error: provision.error,
         }), { status: 200, headers: cors });
       },

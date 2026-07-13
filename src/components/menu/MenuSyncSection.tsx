@@ -17,6 +17,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [reprovisioning, setReprovisioning] = useState(false);
   const [pizzeria, setPizzeria] = useState<any>(null);
   const [syncStatus, setSyncStatus] = useState<{
     lastSync?: string;
@@ -36,7 +37,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     setLoading(true);
     const { data, error } = await supabase
       .from("pizzerias")
-      .select("id, name, slug, api_key, sync_endpoint, sf_restaurant_id, menu_sync_token, public_url, provisioned_at")
+      .select("id, name, slug, api_key, sync_endpoint, sf_restaurant_id, menu_sync_token, public_url, provisioned_at, provision_status, provision_error")
       .eq("id", pizzeriaId)
       .single();
 
@@ -331,7 +332,40 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     }
   }
 
+  async function handleReprovision() {
+    setReprovisioning(true);
+    const toastId = toast.loading("Provisionando restaurante no SiteCreatorFly...");
+    try {
+      const resp = await fetch(`/api/pizzerias/${pizzeriaId}/provision`, { method: "POST" });
+      const json = await resp.json().catch(() => ({}));
+      if (resp.ok && json?.success) {
+        toast.success(
+          json.already_existed
+            ? "Restaurante já existia no SiteCreatorFly — dados atualizados."
+            : "Restaurante provisionado com sucesso.",
+          { id: toastId }
+        );
+        await loadPizzeria();
+        if (onSyncSuccess) onSyncSuccess();
+      } else {
+        toast.error(`Falha no provisionamento: ${json?.error || resp.status}`, { id: toastId });
+        await loadPizzeria();
+      }
+    } catch (err: any) {
+      console.error("[Reprovision] error:", err);
+      toast.error(`Erro: ${err?.message || "desconhecido"}`, { id: toastId });
+    } finally {
+      setReprovisioning(false);
+    }
+  }
+
+  const provisionStatus: string | null = pizzeria?.provision_status ?? null;
+  const isProvisioned = provisionStatus === "provisioned" || !!pizzeria?.sf_restaurant_id;
+  const needsProvision = !isProvisioned && (provisionStatus === "failed" || provisionStatus === "provision_pending");
+
   if (loading) return null;
+
+
 
   return (
     <Card className="mb-6 border-primary/20 bg-primary/5">
@@ -345,6 +379,36 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {needsProvision && (
+          <div className={`p-3 rounded-md border text-sm flex flex-col gap-2 ${
+            provisionStatus === "failed"
+              ? "border-red-300 bg-red-50 text-red-800"
+              : "border-amber-300 bg-amber-50 text-amber-800"
+          }`}>
+            <div className="flex items-center gap-2 font-medium">
+              <AlertCircle className="h-4 w-4" />
+              {provisionStatus === "failed"
+                ? "Falha ao provisionar este restaurante no SiteCreatorFly."
+                : "Provisionamento pendente no SiteCreatorFly."}
+            </div>
+            {pizzeria?.provision_error && (
+              <div className="text-xs font-mono bg-white/60 p-2 rounded border break-all">
+                {pizzeria.provision_error}
+              </div>
+            )}
+            <div>
+              <Button
+                onClick={handleReprovision}
+                disabled={reprovisioning}
+                className="gap-2"
+                size="sm"
+              >
+                {reprovisioning ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Provisionar Restaurante
+              </Button>
+            </div>
+          </div>
+        )}
         {(pizzeria?.sf_restaurant_id || pizzeria?.provisioned_at) ? (
           <div className="space-y-3">
             <div className="p-3 rounded-md border border-primary/30 bg-primary/10 text-sm flex items-start gap-2">

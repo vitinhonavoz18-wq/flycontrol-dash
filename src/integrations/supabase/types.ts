@@ -719,6 +719,7 @@ export type Database = {
           primary_color: string | null
           print_auto: boolean
           provision_error: string | null
+          provision_status: string | null
           provisioned_at: string | null
           public_url: string | null
           service_fee_percent: number
@@ -766,6 +767,7 @@ export type Database = {
           primary_color?: string | null
           print_auto?: boolean
           provision_error?: string | null
+          provision_status?: string | null
           provisioned_at?: string | null
           public_url?: string | null
           service_fee_percent?: number
@@ -813,6 +815,7 @@ export type Database = {
           primary_color?: string | null
           print_auto?: boolean
           provision_error?: string | null
+          provision_status?: string | null
           provisioned_at?: string | null
           public_url?: string | null
           service_fee_percent?: number
