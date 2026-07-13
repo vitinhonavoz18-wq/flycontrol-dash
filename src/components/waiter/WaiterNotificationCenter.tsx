@@ -277,10 +277,10 @@ export function WaiterNotificationCenter({
           if (row.table_id) {
             const { data: t } = await supabase
               .from("restaurant_tables")
-              .select("name")
+              .select("table_name")
               .eq("id", row.table_id)
               .maybeSingle();
-            tableName = t?.name ?? null;
+            tableName = t?.table_name ?? null;
           }
           try { playSound("close_request"); } catch {}
           setCloseAlert({
