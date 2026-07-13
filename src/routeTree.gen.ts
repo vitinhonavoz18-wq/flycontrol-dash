@@ -46,6 +46,7 @@ import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/s
 import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizzerias'
 import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin/finance'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin/analytics'
+import { Route as ApiPizzeriasIdProvisionRouteImport } from './routes/api/pizzerias.$id.provision'
 
 const WaiterPortalRoute = WaiterPortalRouteImport.update({
   id: '/waiter-portal',
@@ -234,6 +235,11 @@ const AppAdminAnalyticsRoute = AppAdminAnalyticsRouteImport.update({
   path: '/analytics',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const ApiPizzeriasIdProvisionRoute = ApiPizzeriasIdProvisionRouteImport.update({
+  id: '/api/pizzerias/$id/provision',
+  path: '/api/pizzerias/$id/provision',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -272,6 +278,7 @@ export interface FileRoutesByFullPath {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/admin/': typeof AppAdminIndexRoute
+  '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -309,6 +316,7 @@ export interface FileRoutesByTo {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/admin': typeof AppAdminIndexRoute
+  '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -349,6 +357,7 @@ export interface FileRoutesById {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/_app/admin/': typeof AppAdminIndexRoute
+  '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -389,6 +398,7 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/admin/'
+    | '/api/pizzerias/$id/provision'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -426,6 +436,7 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/admin'
+    | '/api/pizzerias/$id/provision'
   id:
     | '__root__'
     | '/'
@@ -465,6 +476,7 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/_app/admin/'
+    | '/api/pizzerias/$id/provision'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -487,6 +499,7 @@ export interface RootRouteChildren {
   ApiPublicOpenTableSessionRoute: typeof ApiPublicOpenTableSessionRoute
   ApiPublicRequestCloseTableRoute: typeof ApiPublicRequestCloseTableRoute
   ApiPublicTableSessionStatusRoute: typeof ApiPublicTableSessionStatusRoute
+  ApiPizzeriasIdProvisionRoute: typeof ApiPizzeriasIdProvisionRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -750,6 +763,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminAnalyticsRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/api/pizzerias/$id/provision': {
+      id: '/api/pizzerias/$id/provision'
+      path: '/api/pizzerias/$id/provision'
+      fullPath: '/api/pizzerias/$id/provision'
+      preLoaderRoute: typeof ApiPizzeriasIdProvisionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -827,6 +847,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOpenTableSessionRoute: ApiPublicOpenTableSessionRoute,
   ApiPublicRequestCloseTableRoute: ApiPublicRequestCloseTableRoute,
   ApiPublicTableSessionStatusRoute: ApiPublicTableSessionStatusRoute,
+  ApiPizzeriasIdProvisionRoute: ApiPizzeriasIdProvisionRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
