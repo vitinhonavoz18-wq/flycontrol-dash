@@ -36,7 +36,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     setLoading(true);
     const { data, error } = await supabase
       .from("pizzerias")
-      .select("id, name, slug, api_key, sync_endpoint, sf_restaurant_id, menu_sync_token, public_url, provisioned_at")
+      .select("id, name, slug, api_key, sync_endpoint, sf_restaurant_id, menu_sync_token, public_url, provisioned_at, provision_status, provision_error")
       .eq("id", pizzeriaId)
       .single();
 
