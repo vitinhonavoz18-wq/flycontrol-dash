@@ -709,6 +709,7 @@ export type Database = {
           is_active: boolean | null
           is_open: boolean | null
           logo_url: string | null
+          menu_sync_token: string | null
           name: string
           neighborhood: string | null
           opening_hours: Json | null
@@ -717,7 +718,11 @@ export type Database = {
           phone: string | null
           primary_color: string | null
           print_auto: boolean
+          provision_error: string | null
+          provisioned_at: string | null
+          public_url: string | null
           service_fee_percent: number
+          sf_restaurant_id: string | null
           short_message: string | null
           slug: string
           sound_enabled: boolean
@@ -751,6 +756,7 @@ export type Database = {
           is_active?: boolean | null
           is_open?: boolean | null
           logo_url?: string | null
+          menu_sync_token?: string | null
           name: string
           neighborhood?: string | null
           opening_hours?: Json | null
@@ -759,7 +765,11 @@ export type Database = {
           phone?: string | null
           primary_color?: string | null
           print_auto?: boolean
+          provision_error?: string | null
+          provisioned_at?: string | null
+          public_url?: string | null
           service_fee_percent?: number
+          sf_restaurant_id?: string | null
           short_message?: string | null
           slug: string
           sound_enabled?: boolean
@@ -793,6 +803,7 @@ export type Database = {
           is_active?: boolean | null
           is_open?: boolean | null
           logo_url?: string | null
+          menu_sync_token?: string | null
           name?: string
           neighborhood?: string | null
           opening_hours?: Json | null
@@ -801,7 +812,11 @@ export type Database = {
           phone?: string | null
           primary_color?: string | null
           print_auto?: boolean
+          provision_error?: string | null
+          provisioned_at?: string | null
+          public_url?: string | null
           service_fee_percent?: number
+          sf_restaurant_id?: string | null
           short_message?: string | null
           slug?: string
           sound_enabled?: boolean
