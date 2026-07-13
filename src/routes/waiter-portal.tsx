@@ -87,6 +87,7 @@ function WaiterPortal() {
               token={sess.token}
               tenantId={sess.waiter.tenantId}
               waiterId={sess.waiter.id}
+              waiterName={sess.waiter.fullName}
               onOpenTable={() => setTab("tables")}
             />
           </div>
