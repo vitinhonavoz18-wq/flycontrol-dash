@@ -345,6 +345,30 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {(pizzeria?.sf_restaurant_id || pizzeria?.provisioned_at) ? (
+          <div className="space-y-3">
+            <div className="p-3 rounded-md border border-primary/30 bg-primary/10 text-sm flex items-start gap-2">
+              <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
+              <span>Este restaurante é sincronizado automaticamente pelo FlyControl.</span>
+            </div>
+            {pizzeria?.public_url && (
+              <div className="text-xs">
+                <span className="text-muted-foreground">URL pública: </span>
+                <a href={pizzeria.public_url} target="_blank" rel="noreferrer" className="underline break-all">{pizzeria.public_url}</a>
+              </div>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                onClick={handleSync}
+                disabled={saving || syncing || !syncEndpoint}
+                className="gap-2 bg-primary hover:bg-primary/90"
+              >
+                {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Sincronizar Cardápio
+              </Button>
+            </div>
+          </div>
+        ) : (
         <div className="grid gap-4 items-end">
           <div className="space-y-2">
             <Label htmlFor="sync-link" className="flex items-center gap-2">
@@ -399,6 +423,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
             </Button>
           </div>
         </div>
+        )}
 
         {syncStatus.lastSync && (
           <div className={`mt-4 p-3 rounded-md border flex flex-col gap-2 ${
