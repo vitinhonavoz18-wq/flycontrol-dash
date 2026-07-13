@@ -379,6 +379,36 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
+        {needsProvision && (
+          <div className={`p-3 rounded-md border text-sm flex flex-col gap-2 ${
+            provisionStatus === "failed"
+              ? "border-red-300 bg-red-50 text-red-800"
+              : "border-amber-300 bg-amber-50 text-amber-800"
+          }`}>
+            <div className="flex items-center gap-2 font-medium">
+              <AlertCircle className="h-4 w-4" />
+              {provisionStatus === "failed"
+                ? "Falha ao provisionar este restaurante no SiteCreatorFly."
+                : "Provisionamento pendente no SiteCreatorFly."}
+            </div>
+            {pizzeria?.provision_error && (
+              <div className="text-xs font-mono bg-white/60 p-2 rounded border break-all">
+                {pizzeria.provision_error}
+              </div>
+            )}
+            <div>
+              <Button
+                onClick={handleReprovision}
+                disabled={reprovisioning}
+                className="gap-2"
+                size="sm"
+              >
+                {reprovisioning ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+                Provisionar Restaurante
+              </Button>
+            </div>
+          </div>
+        )}
         {(pizzeria?.sf_restaurant_id || pizzeria?.provisioned_at) ? (
           <div className="space-y-3">
             <div className="p-3 rounded-md border border-primary/30 bg-primary/10 text-sm flex items-start gap-2">
