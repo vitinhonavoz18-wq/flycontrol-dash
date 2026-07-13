@@ -153,7 +153,7 @@ export const Route = createFileRoute("/api/pizzerias/create")({
         });
 
         if (provision.ok) {
-          const update: Record<string, unknown> = {
+          const update: any = {
             provisioned_at: new Date().toISOString(),
             provision_error: null,
             status: "active",
