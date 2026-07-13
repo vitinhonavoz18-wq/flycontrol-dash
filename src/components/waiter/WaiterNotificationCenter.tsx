@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Bell, ClipboardList, DollarSign, HandPlatter, PackageCheck, PlusCircle, Utensils, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { playSound, unlockAudio, type SoundEvent } from "@/lib/notification-sounds";
+import { WaiterCloseRequestPopup, type WaiterCloseAlert } from "./WaiterCloseRequestPopup";
 
 type NotifType =
   | "new_order"
@@ -84,16 +85,19 @@ export function WaiterNotificationCenter({
   token,
   tenantId,
   waiterId,
+  waiterName,
   onOpenTable,
 }: {
   token: string;
   tenantId: string;
   waiterId: string;
+  waiterName?: string;
   onOpenTable?: () => void;
 }) {
   const [items, setItems] = useState<WaiterNotif[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
+  const [closeAlert, setCloseAlert] = useState<WaiterCloseAlert | null>(null);
   // Maps kept in refs so realtime callbacks always see latest values
   const sessionsRef = useRef<Map<string, AssignedSession>>(new Map());
   const orderToSessionRef = useRef<Map<string, string>>(new Map());
@@ -250,15 +254,50 @@ export function WaiterNotificationCenter({
             });
           }
         })
-      // Close/bill requests are handled EXCLUSIVELY by the Dashboard's
-      // NotificationsProvider (src/components/notifications/NotificationsProvider.tsx).
-      // The Waiter Portal must not subscribe to table_close_requests, must not
-      // push those events into its notification queue, must not play a sound
-      // for them, and must not render TableCloseRequestPopup.
+      // Customer close-request → PASSIVE waiter popup. The waiter only sees an
+      // informational alert; no status is changed, no workflow triggered. The
+      // administrator continues to be the one who actually closes the table.
+      .on("postgres_changes",
+        { event: "INSERT", schema: "public", table: "table_close_requests" },
+        async (payload) => {
+          if (cancelled) return;
+          const row: any = payload.new;
+          if (!row?.session_id || row.status !== "pending") return;
+          // Confirm the session belongs to this waiter (uses live DB truth so
+          // we don't miss a request against a session that just changed to
+          // 'requested_close' and was dropped from sessionsRef).
+          const { data: sess } = await supabase
+            .from("table_sessions")
+            .select("id, table_number, customer_name, waiter_id")
+            .eq("id", row.session_id)
+            .maybeSingle();
+          if (!sess || sess.waiter_id !== waiterId) return;
+          // Resolve table name (optional).
+          let tableName: string | null = null;
+          if (row.table_id) {
+            const { data: t } = await supabase
+              .from("restaurant_tables")
+              .select("table_name")
+              .eq("id", row.table_id)
+              .maybeSingle();
+            tableName = t?.table_name ?? null;
+          }
+          try { playSound("close_request"); } catch {}
+          setCloseAlert({
+            requestId: row.id,
+            sessionId: row.session_id,
+            tableNumber: String(sess.table_number || row.table_number || ""),
+            tableName,
+            customerName: row.customer_name || sess.customer_name || null,
+            requestedAt: row.requested_at || new Date().toISOString(),
+            waiterName: waiterName || "",
+            notes: row.notes ?? null,
+          });
+        })
       .subscribe();
 
     return () => { cancelled = true; supabase.removeChannel(ch); };
-  }, [tenantId, waiterId, loadContext, push]);
+  }, [tenantId, waiterId, waiterName, loadContext, push]);
 
   const grouped = useMemo(() => items, [items]);
 
@@ -281,6 +320,10 @@ export function WaiterNotificationCenter({
   }
 
   return (
+    <>
+    {closeAlert && (
+      <WaiterCloseRequestPopup alert={closeAlert} onDismiss={() => setCloseAlert(null)} />
+    )}
     <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (v) setUnread(0); }}>
       <SheetTrigger asChild>
         <Button variant="ghost" size="sm" className="relative" onClick={openAndClear}>
@@ -348,5 +391,6 @@ export function WaiterNotificationCenter({
         </div>
       </SheetContent>
     </Sheet>
+    </>
   );
 }
