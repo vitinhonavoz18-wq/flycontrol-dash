@@ -85,16 +85,19 @@ export function WaiterNotificationCenter({
   token,
   tenantId,
   waiterId,
+  waiterName,
   onOpenTable,
 }: {
   token: string;
   tenantId: string;
   waiterId: string;
+  waiterName?: string;
   onOpenTable?: () => void;
 }) {
   const [items, setItems] = useState<WaiterNotif[]>([]);
   const [unread, setUnread] = useState(0);
   const [open, setOpen] = useState(false);
+  const [closeAlert, setCloseAlert] = useState<WaiterCloseAlert | null>(null);
   // Maps kept in refs so realtime callbacks always see latest values
   const sessionsRef = useRef<Map<string, AssignedSession>>(new Map());
   const orderToSessionRef = useRef<Map<string, string>>(new Map());
