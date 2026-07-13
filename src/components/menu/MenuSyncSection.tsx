@@ -17,6 +17,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [reprovisioning, setReprovisioning] = useState(false);
   const [pizzeria, setPizzeria] = useState<any>(null);
   const [syncStatus, setSyncStatus] = useState<{
     lastSync?: string;
