@@ -332,7 +332,40 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     }
   }
 
+  async function handleReprovision() {
+    setReprovisioning(true);
+    const toastId = toast.loading("Provisionando restaurante no SiteCreatorFly...");
+    try {
+      const resp = await fetch(`/api/pizzerias/${pizzeriaId}/provision`, { method: "POST" });
+      const json = await resp.json().catch(() => ({}));
+      if (resp.ok && json?.success) {
+        toast.success(
+          json.already_existed
+            ? "Restaurante já existia no SiteCreatorFly — dados atualizados."
+            : "Restaurante provisionado com sucesso.",
+          { id: toastId }
+        );
+        await loadPizzeria();
+        if (onSyncSuccess) onSyncSuccess();
+      } else {
+        toast.error(`Falha no provisionamento: ${json?.error || resp.status}`, { id: toastId });
+        await loadPizzeria();
+      }
+    } catch (err: any) {
+      console.error("[Reprovision] error:", err);
+      toast.error(`Erro: ${err?.message || "desconhecido"}`, { id: toastId });
+    } finally {
+      setReprovisioning(false);
+    }
+  }
+
+  const provisionStatus: string | null = pizzeria?.provision_status ?? null;
+  const isProvisioned = provisionStatus === "provisioned" || !!pizzeria?.sf_restaurant_id;
+  const needsProvision = !isProvisioned && (provisionStatus === "failed" || provisionStatus === "provision_pending");
+
   if (loading) return null;
+
+
 
   return (
     <Card className="mb-6 border-primary/20 bg-primary/5">
