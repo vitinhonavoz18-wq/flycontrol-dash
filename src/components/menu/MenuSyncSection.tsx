@@ -456,7 +456,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
           </div>
         )}
         
-        {!syncEndpoint && (
+        {!syncEndpoint && !(pizzeria?.sf_restaurant_id || pizzeria?.provisioned_at) && (
           <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-2">
             <AlertCircle className="h-3 w-3" />
             Cole e salve o link de sincronização antes de sincronizar.
