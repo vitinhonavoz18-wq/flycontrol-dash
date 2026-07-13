@@ -70,7 +70,7 @@ export function WaiterCloseRequestPopup({
             name: it.name || it.product_name || it.title || "Item",
             qty: Number(it.qty ?? it.quantity ?? 1),
           }));
-          itemCount += mapped.reduce((s, x) => s + x.qty, 0);
+          itemCount += mapped.reduce((s: number, x: { qty: number }) => s + x.qty, 0);
           ordersOut.push({
             id: o.id,
             number: o.order_number ? String(o.order_number) : null,

@@ -6,6 +6,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Bell, ClipboardList, DollarSign, HandPlatter, PackageCheck, PlusCircle, Utensils, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { playSound, unlockAudio, type SoundEvent } from "@/lib/notification-sounds";
+import { WaiterCloseRequestPopup, type WaiterCloseAlert } from "./WaiterCloseRequestPopup";
 
 type NotifType =
   | "new_order"
