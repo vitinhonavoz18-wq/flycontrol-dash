@@ -30,6 +30,7 @@ import {
   type FlyStatusKind,
   type FlyStatusPizzeria,
 } from "@/components/flystatus/FlyStatusModal";
+import { ClubCentsCard } from "@/components/club/ClubCentsCard";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
@@ -731,6 +732,8 @@ function Dashboard() {
           </Button>
         </div>
       </div>
+
+      <ClubCentsCard tenantId={activeId} />
 
       {showNew && (
         <div className="mb-8 grid gap-6 md:grid-cols-2">

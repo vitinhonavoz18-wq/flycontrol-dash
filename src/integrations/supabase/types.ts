@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -11,6 +11,31 @@ export type Database = {
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
     PostgrestVersion: "14.5"
+  }
+  graphql_public: {
+    Tables: {
+      [_ in never]: never
+    }
+    Views: {
+      [_ in never]: never
+    }
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json
+          operationName?: string
+          query?: string
+          variables?: Json
+        }
+        Returns: Json
+      }
+    }
+    Enums: {
+      [_ in never]: never
+    }
+    CompositeTypes: {
+      [_ in never]: never
+    }
   }
   public: {
     Tables: {
@@ -41,6 +66,757 @@ export type Database = {
           id?: string
           reason?: string | null
           user_id_antigo?: string | null
+        }
+        Relationships: []
+      }
+      club_achievements: {
+        Row: {
+          club_id: string
+          created_at: string
+          criteria_type: string
+          criteria_value: number
+          description: string | null
+          icon: string | null
+          id: string
+          name: string
+          rarity: string
+          slug: string
+          status: string
+        }
+        Insert: {
+          club_id: string
+          created_at?: string
+          criteria_type: string
+          criteria_value?: number
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name: string
+          rarity?: string
+          slug: string
+          status?: string
+        }
+        Update: {
+          club_id?: string
+          created_at?: string
+          criteria_type?: string
+          criteria_value?: number
+          description?: string | null
+          icon?: string | null
+          id?: string
+          name?: string
+          rarity?: string
+          slug?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_achievements_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_audit_logs: {
+        Row: {
+          action: string
+          company_id: string | null
+          created_at: string
+          device: string | null
+          id: string
+          ip: string | null
+          new_value: Json | null
+          old_value: Json | null
+          table_name: string
+          user_id: string | null
+        }
+        Insert: {
+          action: string
+          company_id?: string | null
+          created_at?: string
+          device?: string | null
+          id?: string
+          ip?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          table_name: string
+          user_id?: string | null
+        }
+        Update: {
+          action?: string
+          company_id?: string | null
+          created_at?: string
+          device?: string | null
+          id?: string
+          ip?: string | null
+          new_value?: Json | null
+          old_value?: Json | null
+          table_name?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "club_audit_logs_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_benefits: {
+        Row: {
+          activation_rule: Json | null
+          benefit_type: string
+          benefit_value: number | null
+          created_at: string
+          description: string | null
+          expiration_rule: Json | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          activation_rule?: Json | null
+          benefit_type: string
+          benefit_value?: number | null
+          created_at?: string
+          description?: string | null
+          expiration_rule?: Json | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          activation_rule?: Json | null
+          benefit_type?: string
+          benefit_value?: number | null
+          created_at?: string
+          description?: string | null
+          expiration_rule?: Json | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      club_campaigns: {
+        Row: {
+          created_at: string
+          description: string | null
+          end_date: string | null
+          id: string
+          reward: Json | null
+          rule: Json | null
+          start_date: string | null
+          status: string
+          title: string
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          reward?: Json | null
+          rule?: Json | null
+          start_date?: string | null
+          status?: string
+          title: string
+          type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          end_date?: string | null
+          id?: string
+          reward?: Json | null
+          rule?: Json | null
+          start_date?: string | null
+          status?: string
+          title?: string
+          type?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      club_customer_achievements: {
+        Row: {
+          achievement_id: string
+          company_id: string
+          id: string
+          unlocked_at: string
+        }
+        Insert: {
+          achievement_id: string
+          company_id: string
+          id?: string
+          unlocked_at?: string
+        }
+        Update: {
+          achievement_id?: string
+          company_id?: string
+          id?: string
+          unlocked_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_customer_achievements_achievement_id_fkey"
+            columns: ["achievement_id"]
+            isOneToOne: false
+            referencedRelation: "club_achievements"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_customer_achievements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "club_customer_achievements_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_customer_status: {
+        Row: {
+          club_id: string
+          company_id: string
+          created_at: string
+          current_cycle: number
+          current_level: string | null
+          current_price: number | null
+          current_streak: number
+          goal_date: string | null
+          goal_reached: boolean
+          gold_cycles_total: number
+          hall_of_fame: boolean
+          id: string
+          legend: boolean
+          lifetime_orders: number
+          next_cycle_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          club_id: string
+          company_id: string
+          created_at?: string
+          current_cycle?: number
+          current_level?: string | null
+          current_price?: number | null
+          current_streak?: number
+          goal_date?: string | null
+          goal_reached?: boolean
+          gold_cycles_total?: number
+          hall_of_fame?: boolean
+          id?: string
+          legend?: boolean
+          lifetime_orders?: number
+          next_cycle_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          club_id?: string
+          company_id?: string
+          created_at?: string
+          current_cycle?: number
+          current_level?: string | null
+          current_price?: number | null
+          current_streak?: number
+          goal_date?: string | null
+          goal_reached?: boolean
+          gold_cycles_total?: number
+          hall_of_fame?: boolean
+          id?: string
+          legend?: boolean
+          lifetime_orders?: number
+          next_cycle_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_customer_status_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_customer_status_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "club_customer_status_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_customer_status_current_level_fkey"
+            columns: ["current_level"]
+            isOneToOne: false
+            referencedRelation: "club_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_cycles: {
+        Row: {
+          closed_at: string | null
+          club_id: string
+          company_id: string
+          created_at: string
+          cycle_number: number
+          ends_at: string
+          estimated_amount: number | null
+          final_amount: number | null
+          goal: number
+          goal_reached: boolean
+          id: string
+          next_cycle_price: number | null
+          orders: number
+          price_per_order: number
+          started_at: string
+          status: string
+        }
+        Insert: {
+          closed_at?: string | null
+          club_id: string
+          company_id: string
+          created_at?: string
+          cycle_number: number
+          ends_at: string
+          estimated_amount?: number | null
+          final_amount?: number | null
+          goal: number
+          goal_reached?: boolean
+          id?: string
+          next_cycle_price?: number | null
+          orders?: number
+          price_per_order: number
+          started_at: string
+          status?: string
+        }
+        Update: {
+          closed_at?: string | null
+          club_id?: string
+          company_id?: string
+          created_at?: string
+          cycle_number?: number
+          ends_at?: string
+          estimated_amount?: number | null
+          final_amount?: number | null
+          goal?: number
+          goal_reached?: boolean
+          id?: string
+          next_cycle_price?: number | null
+          orders?: number
+          price_per_order?: number
+          started_at?: string
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_cycles_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_cycles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "club_cycles_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_history: {
+        Row: {
+          company_id: string
+          created_at: string
+          cycle_id: string | null
+          description: string | null
+          event_type: string
+          id: string
+          payload_json: Json | null
+          title: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          cycle_id?: string | null
+          description?: string | null
+          event_type: string
+          id?: string
+          payload_json?: Json | null
+          title: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          cycle_id?: string | null
+          description?: string | null
+          event_type?: string
+          id?: string
+          payload_json?: Json | null
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "club_history_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_history_cycle_id_fkey"
+            columns: ["cycle_id"]
+            isOneToOne: false
+            referencedRelation: "club_cycles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_levels: {
+        Row: {
+          benefit_id: string | null
+          club_id: string
+          color: string | null
+          created_at: string
+          icon: string | null
+          id: string
+          maximum_orders: number | null
+          minimum_orders: number
+          name: string
+          priority: number
+          slug: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          benefit_id?: string | null
+          club_id: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          maximum_orders?: number | null
+          minimum_orders?: number
+          name: string
+          priority?: number
+          slug: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          benefit_id?: string | null
+          club_id?: string
+          color?: string | null
+          created_at?: string
+          icon?: string | null
+          id?: string
+          maximum_orders?: number | null
+          minimum_orders?: number
+          name?: string
+          priority?: number
+          slug?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_levels_benefit_id_fkey"
+            columns: ["benefit_id"]
+            isOneToOne: false
+            referencedRelation: "club_benefits"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_levels_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: false
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_notifications: {
+        Row: {
+          company_id: string
+          created_at: string
+          displayed: boolean
+          id: string
+          message: string
+          notification_type: string
+          read: boolean
+          title: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          displayed?: boolean
+          id?: string
+          message: string
+          notification_type: string
+          read?: boolean
+          title: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          displayed?: boolean
+          id?: string
+          message?: string
+          notification_type?: string
+          read?: boolean
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "club_notifications_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_rankings: {
+        Row: {
+          company_id: string
+          created_at: string
+          cycle: number
+          id: string
+          level: string | null
+          orders: number
+          position: number | null
+          score: number
+          streak: number
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          cycle: number
+          id?: string
+          level?: string | null
+          orders?: number
+          position?: number | null
+          score?: number
+          streak?: number
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          cycle?: number
+          id?: string
+          level?: string | null
+          orders?: number
+          position?: number | null
+          score?: number
+          streak?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_rankings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "club_rankings_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "club_rankings_level_fkey"
+            columns: ["level"]
+            isOneToOne: false
+            referencedRelation: "club_levels"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_settings: {
+        Row: {
+          challenge_days: number
+          club_id: string
+          default_price_per_order: number
+          enable_campaign: boolean
+          enable_hall_of_fame: boolean
+          enable_notifications: boolean
+          goal_orders: number
+          gold_price_per_order: number
+          id: string
+          legend_streak_required: number
+          updated_at: string
+          updated_by: string | null
+          voucher_months: number
+        }
+        Insert: {
+          challenge_days?: number
+          club_id: string
+          default_price_per_order?: number
+          enable_campaign?: boolean
+          enable_hall_of_fame?: boolean
+          enable_notifications?: boolean
+          goal_orders?: number
+          gold_price_per_order?: number
+          id?: string
+          legend_streak_required?: number
+          updated_at?: string
+          updated_by?: string | null
+          voucher_months?: number
+        }
+        Update: {
+          challenge_days?: number
+          club_id?: string
+          default_price_per_order?: number
+          enable_campaign?: boolean
+          enable_hall_of_fame?: boolean
+          enable_notifications?: boolean
+          goal_orders?: number
+          gold_price_per_order?: number
+          id?: string
+          legend_streak_required?: number
+          updated_at?: string
+          updated_by?: string | null
+          voucher_months?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_settings_club_id_fkey"
+            columns: ["club_id"]
+            isOneToOne: true
+            referencedRelation: "clubs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      club_vouchers: {
+        Row: {
+          company_id: string
+          expires_at: string | null
+          id: string
+          issued_at: string
+          months: number | null
+          status: string
+          used_at: string | null
+          voucher_type: string
+        }
+        Insert: {
+          company_id: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string
+          months?: number | null
+          status?: string
+          used_at?: string | null
+          voucher_type: string
+        }
+        Update: {
+          company_id?: string
+          expires_at?: string | null
+          id?: string
+          issued_at?: string
+          months?: number | null
+          status?: string
+          used_at?: string | null
+          voucher_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "club_vouchers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzeria_financial_metrics"
+            referencedColumns: ["pizzeria_id"]
+          },
+          {
+            foreignKeyName: "club_vouchers_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "pizzerias"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      clubs: {
+        Row: {
+          created_at: string
+          deleted_at: string | null
+          description: string | null
+          id: string
+          name: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          name: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          deleted_at?: string | null
+          description?: string | null
+          id?: string
+          name?: string
+          status?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -1252,6 +2028,31 @@ export type Database = {
       }
     }
     Functions: {
+      club_check_achievements: {
+        Args: { p_club_id: string; p_company_id: string }
+        Returns: undefined
+      }
+      club_close_cycle: { Args: { p_cycle_id: string }; Returns: undefined }
+      club_close_due_cycles: { Args: never; Returns: number }
+      club_get_or_create_active_cycle: {
+        Args: { p_club_id?: string; p_company_id: string }
+        Returns: string
+      }
+      club_is_challenge_active: {
+        Args: { p_cycle_id: string }
+        Returns: boolean
+      }
+      club_recalculate_level: {
+        Args: { p_club_id: string; p_company_id: string }
+        Returns: undefined
+      }
+      club_resolve_price: {
+        Args: { p_club_id?: string; p_company_id: string }
+        Returns: {
+          price: number
+          source: string
+        }[]
+      }
       generate_default_restaurant_tables: {
         Args: { p_restaurant_id: string }
         Returns: undefined
@@ -1497,6 +2298,9 @@ export type CompositeTypes<
     : never
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       app_role: ["super_admin", "owner"],
