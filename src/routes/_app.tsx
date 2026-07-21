@@ -126,7 +126,8 @@ function AppLayoutInner() {
     return <div className="grid min-h-screen place-items-center text-muted-foreground">Carregando...</div>;
   }
 
-  const items: { to: string; label: string; icon: typeof LayoutDashboard; feature?: Feature }[] = [
+  type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; feature?: Feature };
+  const allItems: NavItem[] = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/tables", label: "Mesas", icon: LayoutGrid, feature: "tables" },
     { to: "/search-orders", label: "Buscar Pedidos", icon: Search },
@@ -138,7 +139,8 @@ function AppLayoutInner() {
     { to: "/waiters", label: "Garçons", icon: UtensilsCrossed, feature: "waiters" },
     { to: "/commissions", label: "Comissões", icon: Wallet, feature: "commissions" },
     { to: "/docs", label: "Documentação", icon: BookOpen },
-  ].filter((it) => !it.feature || hasFeature(it.feature));
+  ];
+  const items = allItems.filter((it) => !it.feature || hasFeature(it.feature));
 
   const adminItems = [
     { to: "/admin/pizzerias", label: "FlyPizzarias", icon: Store },

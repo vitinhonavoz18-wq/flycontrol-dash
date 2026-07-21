@@ -2040,10 +2040,6 @@ export type Database = {
       }
       club_close_cycle: { Args: { p_cycle_id: string }; Returns: undefined }
       club_close_due_cycles: { Args: never; Returns: number }
-      enroll_company_in_cents: {
-        Args: { p_club_id?: string; p_company_id: string }
-        Returns: undefined
-      }
       club_get_hall_of_fame: {
         Args: { p_club_id?: string; p_limit?: number }
         Returns: {
@@ -2075,6 +2071,10 @@ export type Database = {
           price: number
           source: string
         }[]
+      }
+      enroll_company_in_cents: {
+        Args: { p_club_id?: string; p_company_id: string }
+        Returns: undefined
       }
       generate_default_restaurant_tables: {
         Args: { p_restaurant_id: string }
