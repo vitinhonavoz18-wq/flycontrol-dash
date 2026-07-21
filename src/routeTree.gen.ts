@@ -9,63 +9,53 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as WaiterPortalRouteImport } from './routes/waiter-portal'
-import { Route as WaiterLoginRouteImport } from './routes/waiter-login'
-import { Route as SignupRouteImport } from './routes/signup'
-import { Route as PresentationRouteImport } from './routes/presentation'
-import { Route as LoginRouteImport } from './routes/login'
-import { Route as AppRouteImport } from './routes/_app'
 import { Route as IndexRouteImport } from './routes/index'
-import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
-import { Route as ApiSyncTableSessionsRouteImport } from './routes/api/sync-table-sessions'
-import { Route as ApiOrdersRouteImport } from './routes/api/orders'
-import { Route as ApiHealthRouteImport } from './routes/api/health'
-import { Route as AppWaitersRouteImport } from './routes/_app/waiters'
-import { Route as AppTablesRouteImport } from './routes/_app/tables'
-import { Route as AppSettingsRouteImport } from './routes/_app/settings'
-import { Route as AppSearchOrdersRouteImport } from './routes/_app/search-orders'
-import { Route as AppMyStoreRouteImport } from './routes/_app/my-store'
-import { Route as AppMenuRouteImport } from './routes/_app/menu'
-import { Route as AppFinanceRouteImport } from './routes/_app/finance'
-import { Route as AppDocsRouteImport } from './routes/_app/docs'
-import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
-import { Route as AppCommissionsRouteImport } from './routes/_app/commissions'
-import { Route as AppCombosRouteImport } from './routes/_app/combos'
+import { Route as AppRouteImport } from './routes/_app'
+import { Route as LoginRouteImport } from './routes/login'
+import { Route as PresentationRouteImport } from './routes/presentation'
+import { Route as SignupRouteImport } from './routes/signup'
+import { Route as WaiterLoginRouteImport } from './routes/waiter-login'
+import { Route as WaiterPortalRouteImport } from './routes/waiter-portal'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as AppCombosRouteImport } from './routes/_app/combos'
+import { Route as AppCommissionsRouteImport } from './routes/_app/commissions'
+import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
+import { Route as AppDocsRouteImport } from './routes/_app/docs'
+import { Route as AppFinanceRouteImport } from './routes/_app/finance'
+import { Route as AppMenuRouteImport } from './routes/_app/menu'
+import { Route as AppMyStoreRouteImport } from './routes/_app/my-store'
+import { Route as AppSearchOrdersRouteImport } from './routes/_app/search-orders'
+import { Route as AppSettingsRouteImport } from './routes/_app/settings'
+import { Route as AppTablesRouteImport } from './routes/_app/tables'
+import { Route as AppWaitersRouteImport } from './routes/_app/waiters'
+import { Route as ApiHealthRouteImport } from './routes/api/health'
+import { Route as ApiOrdersRouteImport } from './routes/api/orders'
+import { Route as ApiSyncTableSessionsRouteImport } from './routes/api/sync-table-sessions'
+import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
-import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
-import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/public/request-close-table'
-import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/public/open-table-session'
-import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
-import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
-import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
-import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
-import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
-import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
-import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
-import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizzerias'
-import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin/finance'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin/analytics'
+import { Route as AppAdminCentsRouteImport } from './routes/_app/admin/cents'
+import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin/finance'
+import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizzerias'
+import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
+import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
+import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
+import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
+import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
+import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
+import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
+import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/public/open-table-session'
+import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/public/request-close-table'
+import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
 import { Route as ApiPizzeriasIdProvisionRouteImport } from './routes/api/pizzerias.$id.provision'
 
-const WaiterPortalRoute = WaiterPortalRouteImport.update({
-  id: '/waiter-portal',
-  path: '/waiter-portal',
+const IndexRoute = IndexRouteImport.update({
+  id: '/',
+  path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
-const WaiterLoginRoute = WaiterLoginRouteImport.update({
-  id: '/waiter-login',
-  path: '/waiter-login',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const SignupRoute = SignupRouteImport.update({
-  id: '/signup',
-  path: '/signup',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const PresentationRoute = PresentationRouteImport.update({
-  id: '/presentation',
-  path: '/presentation',
+const AppRoute = AppRouteImport.update({
+  id: '/_app',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -73,83 +63,29 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AppRoute = AppRouteImport.update({
-  id: '/_app',
+const PresentationRoute = PresentationRouteImport.update({
+  id: '/presentation',
+  path: '/presentation',
   getParentRoute: () => rootRouteImport,
 } as any)
-const IndexRoute = IndexRouteImport.update({
-  id: '/',
-  path: '/',
+const SignupRoute = SignupRouteImport.update({
+  id: '/signup',
+  path: '/signup',
   getParentRoute: () => rootRouteImport,
 } as any)
-const PrintOrderIdRoute = PrintOrderIdRouteImport.update({
-  id: '/print/$orderId',
-  path: '/print/$orderId',
+const WaiterLoginRoute = WaiterLoginRouteImport.update({
+  id: '/waiter-login',
+  path: '/waiter-login',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiSyncTableSessionsRoute = ApiSyncTableSessionsRouteImport.update({
-  id: '/api/sync-table-sessions',
-  path: '/api/sync-table-sessions',
+const WaiterPortalRoute = WaiterPortalRouteImport.update({
+  id: '/waiter-portal',
+  path: '/waiter-portal',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiOrdersRoute = ApiOrdersRouteImport.update({
-  id: '/api/orders',
-  path: '/api/orders',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiHealthRoute = ApiHealthRouteImport.update({
-  id: '/api/health',
-  path: '/api/health',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppWaitersRoute = AppWaitersRouteImport.update({
-  id: '/waiters',
-  path: '/waiters',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppTablesRoute = AppTablesRouteImport.update({
-  id: '/tables',
-  path: '/tables',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSettingsRoute = AppSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppSearchOrdersRoute = AppSearchOrdersRouteImport.update({
-  id: '/search-orders',
-  path: '/search-orders',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMyStoreRoute = AppMyStoreRouteImport.update({
-  id: '/my-store',
-  path: '/my-store',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppMenuRoute = AppMenuRouteImport.update({
-  id: '/menu',
-  path: '/menu',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppFinanceRoute = AppFinanceRouteImport.update({
-  id: '/finance',
-  path: '/finance',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDocsRoute = AppDocsRouteImport.update({
-  id: '/docs',
-  path: '/docs',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppDashboardRoute = AppDashboardRouteImport.update({
-  id: '/dashboard',
-  path: '/dashboard',
-  getParentRoute: () => AppRoute,
-} as any)
-const AppCommissionsRoute = AppCommissionsRouteImport.update({
-  id: '/commissions',
-  path: '/commissions',
+const AppAdminRoute = AppAdminRouteImport.update({
+  id: '/admin',
+  path: '/admin',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCombosRoute = AppCombosRouteImport.update({
@@ -157,20 +93,140 @@ const AppCombosRoute = AppCombosRouteImport.update({
   path: '/combos',
   getParentRoute: () => AppRoute,
 } as any)
-const AppAdminRoute = AppAdminRouteImport.update({
-  id: '/admin',
-  path: '/admin',
+const AppCommissionsRoute = AppCommissionsRouteImport.update({
+  id: '/commissions',
+  path: '/commissions',
   getParentRoute: () => AppRoute,
+} as any)
+const AppDashboardRoute = AppDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppDocsRoute = AppDocsRouteImport.update({
+  id: '/docs',
+  path: '/docs',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppFinanceRoute = AppFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMenuRoute = AppMenuRouteImport.update({
+  id: '/menu',
+  path: '/menu',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMyStoreRoute = AppMyStoreRouteImport.update({
+  id: '/my-store',
+  path: '/my-store',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSearchOrdersRoute = AppSearchOrdersRouteImport.update({
+  id: '/search-orders',
+  path: '/search-orders',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppSettingsRoute = AppSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppTablesRoute = AppTablesRouteImport.update({
+  id: '/tables',
+  path: '/tables',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppWaitersRoute = AppWaitersRouteImport.update({
+  id: '/waiters',
+  path: '/waiters',
+  getParentRoute: () => AppRoute,
+} as any)
+const ApiHealthRoute = ApiHealthRouteImport.update({
+  id: '/api/health',
+  path: '/api/health',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiOrdersRoute = ApiOrdersRouteImport.update({
+  id: '/api/orders',
+  path: '/api/orders',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiSyncTableSessionsRoute = ApiSyncTableSessionsRouteImport.update({
+  id: '/api/sync-table-sessions',
+  path: '/api/sync-table-sessions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrintOrderIdRoute = PrintOrderIdRouteImport.update({
+  id: '/print/$orderId',
+  path: '/print/$orderId',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => AppAdminRoute,
 } as any)
-const ApiPublicTableSessionStatusRoute =
-  ApiPublicTableSessionStatusRouteImport.update({
-    id: '/api/public/table-session-status',
-    path: '/api/public/table-session-status',
+const AppAdminAnalyticsRoute = AppAdminAnalyticsRouteImport.update({
+  id: '/analytics',
+  path: '/analytics',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminCentsRoute = AppAdminCentsRouteImport.update({
+  id: '/cents',
+  path: '/cents',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminFinanceRoute = AppAdminFinanceRouteImport.update({
+  id: '/finance',
+  path: '/finance',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminPizzeriasRoute = AppAdminPizzeriasRouteImport.update({
+  id: '/pizzerias',
+  path: '/pizzerias',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminSubscriptionsRoute = AppAdminSubscriptionsRouteImport.update({
+  id: '/subscriptions',
+  path: '/subscriptions',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
+  id: '/users',
+  path: '/users',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const ApiPizzeriasCreateRoute = ApiPizzeriasCreateRouteImport.update({
+  id: '/api/pizzerias/create',
+  path: '/api/pizzerias/create',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPizzeriasFiqonTestRoute = ApiPizzeriasFiqonTestRouteImport.update({
+  id: '/api/pizzerias/fiqon-test',
+  path: '/api/pizzerias/fiqon-test',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPizzeriasSyncMenuRoute = ApiPizzeriasSyncMenuRouteImport.update({
+  id: '/api/pizzerias/sync-menu',
+  path: '/api/pizzerias/sync-menu',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCreateOrderRoute = ApiPublicCreateOrderRouteImport.update({
+  id: '/api/public/create-order',
+  path: '/api/public/create-order',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicCreatePizzeriaRoute = ApiPublicCreatePizzeriaRouteImport.update({
+  id: '/api/public/create-pizzeria',
+  path: '/api/public/create-pizzeria',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPublicOpenTableSessionRoute =
+  ApiPublicOpenTableSessionRouteImport.update({
+    id: '/api/public/open-table-session',
+    path: '/api/public/open-table-session',
     getParentRoute: () => rootRouteImport,
   } as any)
 const ApiPublicRequestCloseTableRoute =
@@ -179,62 +235,12 @@ const ApiPublicRequestCloseTableRoute =
     path: '/api/public/request-close-table',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicOpenTableSessionRoute =
-  ApiPublicOpenTableSessionRouteImport.update({
-    id: '/api/public/open-table-session',
-    path: '/api/public/open-table-session',
+const ApiPublicTableSessionStatusRoute =
+  ApiPublicTableSessionStatusRouteImport.update({
+    id: '/api/public/table-session-status',
+    path: '/api/public/table-session-status',
     getParentRoute: () => rootRouteImport,
   } as any)
-const ApiPublicCreatePizzeriaRoute = ApiPublicCreatePizzeriaRouteImport.update({
-  id: '/api/public/create-pizzeria',
-  path: '/api/public/create-pizzeria',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPublicCreateOrderRoute = ApiPublicCreateOrderRouteImport.update({
-  id: '/api/public/create-order',
-  path: '/api/public/create-order',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPizzeriasSyncMenuRoute = ApiPizzeriasSyncMenuRouteImport.update({
-  id: '/api/pizzerias/sync-menu',
-  path: '/api/pizzerias/sync-menu',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPizzeriasFiqonTestRoute = ApiPizzeriasFiqonTestRouteImport.update({
-  id: '/api/pizzerias/fiqon-test',
-  path: '/api/pizzerias/fiqon-test',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ApiPizzeriasCreateRoute = ApiPizzeriasCreateRouteImport.update({
-  id: '/api/pizzerias/create',
-  path: '/api/pizzerias/create',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
-  id: '/users',
-  path: '/users',
-  getParentRoute: () => AppAdminRoute,
-} as any)
-const AppAdminSubscriptionsRoute = AppAdminSubscriptionsRouteImport.update({
-  id: '/subscriptions',
-  path: '/subscriptions',
-  getParentRoute: () => AppAdminRoute,
-} as any)
-const AppAdminPizzeriasRoute = AppAdminPizzeriasRouteImport.update({
-  id: '/pizzerias',
-  path: '/pizzerias',
-  getParentRoute: () => AppAdminRoute,
-} as any)
-const AppAdminFinanceRoute = AppAdminFinanceRouteImport.update({
-  id: '/finance',
-  path: '/finance',
-  getParentRoute: () => AppAdminRoute,
-} as any)
-const AppAdminAnalyticsRoute = AppAdminAnalyticsRouteImport.update({
-  id: '/analytics',
-  path: '/analytics',
-  getParentRoute: () => AppAdminRoute,
-} as any)
 const ApiPizzeriasIdProvisionRoute = ApiPizzeriasIdProvisionRouteImport.update({
   id: '/api/pizzerias/$id/provision',
   path: '/api/pizzerias/$id/provision',
@@ -265,6 +271,7 @@ export interface FileRoutesByFullPath {
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
+  '/admin/cents': typeof AppAdminCentsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
@@ -303,6 +310,7 @@ export interface FileRoutesByTo {
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
+  '/admin/cents': typeof AppAdminCentsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
@@ -344,6 +352,7 @@ export interface FileRoutesById {
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
+  '/_app/admin/cents': typeof AppAdminCentsRoute
   '/_app/admin/finance': typeof AppAdminFinanceRoute
   '/_app/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
@@ -385,6 +394,7 @@ export interface FileRouteTypes {
     | '/api/sync-table-sessions'
     | '/print/$orderId'
     | '/admin/analytics'
+    | '/admin/cents'
     | '/admin/finance'
     | '/admin/pizzerias'
     | '/admin/subscriptions'
@@ -423,6 +433,7 @@ export interface FileRouteTypes {
     | '/api/sync-table-sessions'
     | '/print/$orderId'
     | '/admin/analytics'
+    | '/admin/cents'
     | '/admin/finance'
     | '/admin/pizzerias'
     | '/admin/subscriptions'
@@ -463,6 +474,7 @@ export interface FileRouteTypes {
     | '/api/sync-table-sessions'
     | '/print/$orderId'
     | '/_app/admin/analytics'
+    | '/_app/admin/cents'
     | '/_app/admin/finance'
     | '/_app/admin/pizzerias'
     | '/_app/admin/subscriptions'
@@ -504,39 +516,11 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/waiter-portal': {
-      id: '/waiter-portal'
-      path: '/waiter-portal'
-      fullPath: '/waiter-portal'
-      preLoaderRoute: typeof WaiterPortalRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/waiter-login': {
-      id: '/waiter-login'
-      path: '/waiter-login'
-      fullPath: '/waiter-login'
-      preLoaderRoute: typeof WaiterLoginRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/signup': {
-      id: '/signup'
-      path: '/signup'
-      fullPath: '/signup'
-      preLoaderRoute: typeof SignupRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/presentation': {
-      id: '/presentation'
-      path: '/presentation'
-      fullPath: '/presentation'
-      preLoaderRoute: typeof PresentationRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/login': {
-      id: '/login'
-      path: '/login'
-      fullPath: '/login'
-      preLoaderRoute: typeof LoginRouteImport
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/_app': {
@@ -546,109 +530,46 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
+    '/login': {
+      id: '/login'
+      path: '/login'
+      fullPath: '/login'
+      preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/print/$orderId': {
-      id: '/print/$orderId'
-      path: '/print/$orderId'
-      fullPath: '/print/$orderId'
-      preLoaderRoute: typeof PrintOrderIdRouteImport
+    '/presentation': {
+      id: '/presentation'
+      path: '/presentation'
+      fullPath: '/presentation'
+      preLoaderRoute: typeof PresentationRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/sync-table-sessions': {
-      id: '/api/sync-table-sessions'
-      path: '/api/sync-table-sessions'
-      fullPath: '/api/sync-table-sessions'
-      preLoaderRoute: typeof ApiSyncTableSessionsRouteImport
+    '/signup': {
+      id: '/signup'
+      path: '/signup'
+      fullPath: '/signup'
+      preLoaderRoute: typeof SignupRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/orders': {
-      id: '/api/orders'
-      path: '/api/orders'
-      fullPath: '/api/orders'
-      preLoaderRoute: typeof ApiOrdersRouteImport
+    '/waiter-login': {
+      id: '/waiter-login'
+      path: '/waiter-login'
+      fullPath: '/waiter-login'
+      preLoaderRoute: typeof WaiterLoginRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/health': {
-      id: '/api/health'
-      path: '/api/health'
-      fullPath: '/api/health'
-      preLoaderRoute: typeof ApiHealthRouteImport
+    '/waiter-portal': {
+      id: '/waiter-portal'
+      path: '/waiter-portal'
+      fullPath: '/waiter-portal'
+      preLoaderRoute: typeof WaiterPortalRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_app/waiters': {
-      id: '/_app/waiters'
-      path: '/waiters'
-      fullPath: '/waiters'
-      preLoaderRoute: typeof AppWaitersRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/tables': {
-      id: '/_app/tables'
-      path: '/tables'
-      fullPath: '/tables'
-      preLoaderRoute: typeof AppTablesRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/settings': {
-      id: '/_app/settings'
-      path: '/settings'
-      fullPath: '/settings'
-      preLoaderRoute: typeof AppSettingsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/search-orders': {
-      id: '/_app/search-orders'
-      path: '/search-orders'
-      fullPath: '/search-orders'
-      preLoaderRoute: typeof AppSearchOrdersRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/my-store': {
-      id: '/_app/my-store'
-      path: '/my-store'
-      fullPath: '/my-store'
-      preLoaderRoute: typeof AppMyStoreRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/menu': {
-      id: '/_app/menu'
-      path: '/menu'
-      fullPath: '/menu'
-      preLoaderRoute: typeof AppMenuRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/finance': {
-      id: '/_app/finance'
-      path: '/finance'
-      fullPath: '/finance'
-      preLoaderRoute: typeof AppFinanceRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/docs': {
-      id: '/_app/docs'
-      path: '/docs'
-      fullPath: '/docs'
-      preLoaderRoute: typeof AppDocsRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/dashboard': {
-      id: '/_app/dashboard'
-      path: '/dashboard'
-      fullPath: '/dashboard'
-      preLoaderRoute: typeof AppDashboardRouteImport
-      parentRoute: typeof AppRoute
-    }
-    '/_app/commissions': {
-      id: '/_app/commissions'
-      path: '/commissions'
-      fullPath: '/commissions'
-      preLoaderRoute: typeof AppCommissionsRouteImport
+    '/_app/admin': {
+      id: '/_app/admin'
+      path: '/admin'
+      fullPath: '/admin'
+      preLoaderRoute: typeof AppAdminRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/combos': {
@@ -658,12 +579,103 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppCombosRouteImport
       parentRoute: typeof AppRoute
     }
-    '/_app/admin': {
-      id: '/_app/admin'
-      path: '/admin'
-      fullPath: '/admin'
-      preLoaderRoute: typeof AppAdminRouteImport
+    '/_app/commissions': {
+      id: '/_app/commissions'
+      path: '/commissions'
+      fullPath: '/commissions'
+      preLoaderRoute: typeof AppCommissionsRouteImport
       parentRoute: typeof AppRoute
+    }
+    '/_app/dashboard': {
+      id: '/_app/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof AppDashboardRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/docs': {
+      id: '/_app/docs'
+      path: '/docs'
+      fullPath: '/docs'
+      preLoaderRoute: typeof AppDocsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/finance': {
+      id: '/_app/finance'
+      path: '/finance'
+      fullPath: '/finance'
+      preLoaderRoute: typeof AppFinanceRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/menu': {
+      id: '/_app/menu'
+      path: '/menu'
+      fullPath: '/menu'
+      preLoaderRoute: typeof AppMenuRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/my-store': {
+      id: '/_app/my-store'
+      path: '/my-store'
+      fullPath: '/my-store'
+      preLoaderRoute: typeof AppMyStoreRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/search-orders': {
+      id: '/_app/search-orders'
+      path: '/search-orders'
+      fullPath: '/search-orders'
+      preLoaderRoute: typeof AppSearchOrdersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/settings': {
+      id: '/_app/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof AppSettingsRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/tables': {
+      id: '/_app/tables'
+      path: '/tables'
+      fullPath: '/tables'
+      preLoaderRoute: typeof AppTablesRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/waiters': {
+      id: '/_app/waiters'
+      path: '/waiters'
+      fullPath: '/waiters'
+      preLoaderRoute: typeof AppWaitersRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/api/health': {
+      id: '/api/health'
+      path: '/api/health'
+      fullPath: '/api/health'
+      preLoaderRoute: typeof ApiHealthRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/orders': {
+      id: '/api/orders'
+      path: '/api/orders'
+      fullPath: '/api/orders'
+      preLoaderRoute: typeof ApiOrdersRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/sync-table-sessions': {
+      id: '/api/sync-table-sessions'
+      path: '/api/sync-table-sessions'
+      fullPath: '/api/sync-table-sessions'
+      preLoaderRoute: typeof ApiSyncTableSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/print/$orderId': {
+      id: '/print/$orderId'
+      path: '/print/$orderId'
+      fullPath: '/print/$orderId'
+      preLoaderRoute: typeof PrintOrderIdRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/_app/admin/': {
       id: '/_app/admin/'
@@ -672,81 +684,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminIndexRouteImport
       parentRoute: typeof AppAdminRoute
     }
-    '/api/public/table-session-status': {
-      id: '/api/public/table-session-status'
-      path: '/api/public/table-session-status'
-      fullPath: '/api/public/table-session-status'
-      preLoaderRoute: typeof ApiPublicTableSessionStatusRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/request-close-table': {
-      id: '/api/public/request-close-table'
-      path: '/api/public/request-close-table'
-      fullPath: '/api/public/request-close-table'
-      preLoaderRoute: typeof ApiPublicRequestCloseTableRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/open-table-session': {
-      id: '/api/public/open-table-session'
-      path: '/api/public/open-table-session'
-      fullPath: '/api/public/open-table-session'
-      preLoaderRoute: typeof ApiPublicOpenTableSessionRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/create-pizzeria': {
-      id: '/api/public/create-pizzeria'
-      path: '/api/public/create-pizzeria'
-      fullPath: '/api/public/create-pizzeria'
-      preLoaderRoute: typeof ApiPublicCreatePizzeriaRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/public/create-order': {
-      id: '/api/public/create-order'
-      path: '/api/public/create-order'
-      fullPath: '/api/public/create-order'
-      preLoaderRoute: typeof ApiPublicCreateOrderRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/pizzerias/sync-menu': {
-      id: '/api/pizzerias/sync-menu'
-      path: '/api/pizzerias/sync-menu'
-      fullPath: '/api/pizzerias/sync-menu'
-      preLoaderRoute: typeof ApiPizzeriasSyncMenuRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/pizzerias/fiqon-test': {
-      id: '/api/pizzerias/fiqon-test'
-      path: '/api/pizzerias/fiqon-test'
-      fullPath: '/api/pizzerias/fiqon-test'
-      preLoaderRoute: typeof ApiPizzeriasFiqonTestRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/api/pizzerias/create': {
-      id: '/api/pizzerias/create'
-      path: '/api/pizzerias/create'
-      fullPath: '/api/pizzerias/create'
-      preLoaderRoute: typeof ApiPizzeriasCreateRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/_app/admin/users': {
-      id: '/_app/admin/users'
-      path: '/users'
-      fullPath: '/admin/users'
-      preLoaderRoute: typeof AppAdminUsersRouteImport
+    '/_app/admin/analytics': {
+      id: '/_app/admin/analytics'
+      path: '/analytics'
+      fullPath: '/admin/analytics'
+      preLoaderRoute: typeof AppAdminAnalyticsRouteImport
       parentRoute: typeof AppAdminRoute
     }
-    '/_app/admin/subscriptions': {
-      id: '/_app/admin/subscriptions'
-      path: '/subscriptions'
-      fullPath: '/admin/subscriptions'
-      preLoaderRoute: typeof AppAdminSubscriptionsRouteImport
-      parentRoute: typeof AppAdminRoute
-    }
-    '/_app/admin/pizzerias': {
-      id: '/_app/admin/pizzerias'
-      path: '/pizzerias'
-      fullPath: '/admin/pizzerias'
-      preLoaderRoute: typeof AppAdminPizzeriasRouteImport
+    '/_app/admin/cents': {
+      id: '/_app/admin/cents'
+      path: '/cents'
+      fullPath: '/admin/cents'
+      preLoaderRoute: typeof AppAdminCentsRouteImport
       parentRoute: typeof AppAdminRoute
     }
     '/_app/admin/finance': {
@@ -756,12 +705,82 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminFinanceRouteImport
       parentRoute: typeof AppAdminRoute
     }
-    '/_app/admin/analytics': {
-      id: '/_app/admin/analytics'
-      path: '/analytics'
-      fullPath: '/admin/analytics'
-      preLoaderRoute: typeof AppAdminAnalyticsRouteImport
+    '/_app/admin/pizzerias': {
+      id: '/_app/admin/pizzerias'
+      path: '/pizzerias'
+      fullPath: '/admin/pizzerias'
+      preLoaderRoute: typeof AppAdminPizzeriasRouteImport
       parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/subscriptions': {
+      id: '/_app/admin/subscriptions'
+      path: '/subscriptions'
+      fullPath: '/admin/subscriptions'
+      preLoaderRoute: typeof AppAdminSubscriptionsRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/_app/admin/users': {
+      id: '/_app/admin/users'
+      path: '/users'
+      fullPath: '/admin/users'
+      preLoaderRoute: typeof AppAdminUsersRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
+    '/api/pizzerias/create': {
+      id: '/api/pizzerias/create'
+      path: '/api/pizzerias/create'
+      fullPath: '/api/pizzerias/create'
+      preLoaderRoute: typeof ApiPizzeriasCreateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pizzerias/fiqon-test': {
+      id: '/api/pizzerias/fiqon-test'
+      path: '/api/pizzerias/fiqon-test'
+      fullPath: '/api/pizzerias/fiqon-test'
+      preLoaderRoute: typeof ApiPizzeriasFiqonTestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pizzerias/sync-menu': {
+      id: '/api/pizzerias/sync-menu'
+      path: '/api/pizzerias/sync-menu'
+      fullPath: '/api/pizzerias/sync-menu'
+      preLoaderRoute: typeof ApiPizzeriasSyncMenuRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/create-order': {
+      id: '/api/public/create-order'
+      path: '/api/public/create-order'
+      fullPath: '/api/public/create-order'
+      preLoaderRoute: typeof ApiPublicCreateOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/create-pizzeria': {
+      id: '/api/public/create-pizzeria'
+      path: '/api/public/create-pizzeria'
+      fullPath: '/api/public/create-pizzeria'
+      preLoaderRoute: typeof ApiPublicCreatePizzeriaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/open-table-session': {
+      id: '/api/public/open-table-session'
+      path: '/api/public/open-table-session'
+      fullPath: '/api/public/open-table-session'
+      preLoaderRoute: typeof ApiPublicOpenTableSessionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/request-close-table': {
+      id: '/api/public/request-close-table'
+      path: '/api/public/request-close-table'
+      fullPath: '/api/public/request-close-table'
+      preLoaderRoute: typeof ApiPublicRequestCloseTableRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/public/table-session-status': {
+      id: '/api/public/table-session-status'
+      path: '/api/public/table-session-status'
+      fullPath: '/api/public/table-session-status'
+      preLoaderRoute: typeof ApiPublicTableSessionStatusRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/pizzerias/$id/provision': {
       id: '/api/pizzerias/$id/provision'
@@ -775,6 +794,7 @@ declare module '@tanstack/react-router' {
 
 interface AppAdminRouteChildren {
   AppAdminAnalyticsRoute: typeof AppAdminAnalyticsRoute
+  AppAdminCentsRoute: typeof AppAdminCentsRoute
   AppAdminFinanceRoute: typeof AppAdminFinanceRoute
   AppAdminPizzeriasRoute: typeof AppAdminPizzeriasRoute
   AppAdminSubscriptionsRoute: typeof AppAdminSubscriptionsRoute
@@ -784,6 +804,7 @@ interface AppAdminRouteChildren {
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminAnalyticsRoute: AppAdminAnalyticsRoute,
+  AppAdminCentsRoute: AppAdminCentsRoute,
   AppAdminFinanceRoute: AppAdminFinanceRoute,
   AppAdminPizzeriasRoute: AppAdminPizzeriasRoute,
   AppAdminSubscriptionsRoute: AppAdminSubscriptionsRoute,

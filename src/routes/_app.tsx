@@ -20,7 +20,8 @@ import {
   LayoutGrid,
   Search,
   UtensilsCrossed,
-  Wallet
+  Wallet,
+  Trophy
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -134,6 +135,7 @@ function AppLayout() {
     { to: "/admin/finance", label: "Financeiro Global", icon: BarChart3 },
     { to: "/admin/users", label: "Usuários", icon: Users },
     { to: "/admin/subscriptions", label: "Clientes e Planos", icon: CreditCard },
+    { to: "/admin/cents", label: "Clube CENTS", icon: Trophy },
   ];
 
   const NavItems = ({ className = "" }: { className?: string }) => (
