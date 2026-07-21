@@ -29,11 +29,22 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/mobile/BottomNav";
+import { PlanProvider, usePlan } from "@/lib/plan-context";
+import type { Feature } from "@/lib/planPermissions";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
 function AppLayout() {
+  return (
+    <PlanProvider>
+      <AppLayoutInner />
+    </PlanProvider>
+  );
+}
+
+function AppLayoutInner() {
   const { user, loading, isSuperAdmin, signOut } = useAuth();
+  const { hasFeature } = usePlan();
   const { theme, setTheme } = useTheme();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
@@ -115,19 +126,19 @@ function AppLayout() {
     return <div className="grid min-h-screen place-items-center text-muted-foreground">Carregando...</div>;
   }
 
-  const items = [
+  const items: { to: string; label: string; icon: typeof LayoutDashboard; feature?: Feature }[] = [
     { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-    { to: "/tables", label: "Mesas", icon: LayoutGrid },
+    { to: "/tables", label: "Mesas", icon: LayoutGrid, feature: "tables" },
     { to: "/search-orders", label: "Buscar Pedidos", icon: Search },
     { to: "/my-store", label: "Minha Loja", icon: Store },
     { to: "/menu", label: "Cardápio", icon: Menu },
     { to: "/combos", label: "Combos", icon: PieChart },
     { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },
     { to: "/settings", label: "Configurações", icon: Settings },
-    { to: "/waiters", label: "Garçons", icon: UtensilsCrossed },
-    { to: "/commissions", label: "Comissões", icon: Wallet },
+    { to: "/waiters", label: "Garçons", icon: UtensilsCrossed, feature: "waiters" },
+    { to: "/commissions", label: "Comissões", icon: Wallet, feature: "commissions" },
     { to: "/docs", label: "Documentação", icon: BookOpen },
-  ];
+  ].filter((it) => !it.feature || hasFeature(it.feature));
 
   const adminItems = [
     { to: "/admin/pizzerias", label: "FlyPizzarias", icon: Store },

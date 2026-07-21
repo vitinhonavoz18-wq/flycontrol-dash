@@ -5,10 +5,19 @@ import { useAuth } from "@/lib/auth";
 import { TablesManagement } from "@/components/TablesManagement";
 import { Loader2, LayoutGrid, Store } from "lucide-react";
 import { toast } from "sonner";
+import { RequireFeature } from "@/components/PremiumFeatureLock";
 
 export const Route = createFileRoute("/_app/tables")({ component: TablesPage });
 
 function TablesPage() {
+  return (
+    <RequireFeature feature="tables">
+      <TablesPageInner />
+    </RequireFeature>
+  );
+}
+
+function TablesPageInner() {
   const { user, isSuperAdmin, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
   const [pizzeria, setPizzeria] = useState<any>(null);

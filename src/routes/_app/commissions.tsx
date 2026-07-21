@@ -17,6 +17,7 @@ import {
   getCommissionPercent, setCommissionPercent,
   getCommissionReport, listTenantWaiters,
 } from "@/lib/commissions.functions";
+import { RequireFeature } from "@/components/PremiumFeatureLock";
 
 export const Route = createFileRoute("/_app/commissions")({ component: CommissionsPage });
 
@@ -26,6 +27,14 @@ const fmtBRL = (n: number) =>
 type Pz = { id: string; name: string };
 
 function CommissionsPage() {
+  return (
+    <RequireFeature feature="commissions">
+      <CommissionsPageInner />
+    </RequireFeature>
+  );
+}
+
+function CommissionsPageInner() {
   const { user, isSuperAdmin } = useAuth();
   const getPct = useServerFn(getCommissionPercent);
   const setPct = useServerFn(setCommissionPercent);

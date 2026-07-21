@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertOwnsTenantWithFeature } from "@/lib/server/plan-guard";
 
 // ============================================================
 // Password hashing (PBKDF2 via WebCrypto — Cloudflare Worker safe)
@@ -102,16 +103,7 @@ export async function verifyWaiterToken(token: string): Promise<{ waiterId: stri
 // Tenant ownership helper (used by admin-only fns)
 // ============================================================
 async function assertOwnsTenant(supabase: any, userId: string, tenantId: string) {
-  const { data, error } = await supabase
-    .from("pizzerias")
-    .select("id, owner_id")
-    .eq("id", tenantId)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Loja não encontrada");
-  // super admin check via has_role
-  const { data: isAdmin } = await supabase.rpc("is_admin");
-  if (data.owner_id !== userId && !isAdmin) throw new Error("Acesso negado a esta loja");
+  await assertOwnsTenantWithFeature(supabase, userId, tenantId, "waiters");
 }
 
 // ============================================================

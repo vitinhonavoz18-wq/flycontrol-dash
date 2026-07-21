@@ -1,13 +1,9 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertOwnsTenantWithFeature } from "@/lib/server/plan-guard";
 
 async function assertOwns(supabase: any, userId: string, tenantId: string) {
-  const { data, error } = await supabase
-    .from("pizzerias").select("id, owner_id").eq("id", tenantId).maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) throw new Error("Loja não encontrada");
-  const { data: admin } = await supabase.rpc("is_admin");
-  if (!admin && data.owner_id !== userId) throw new Error("Acesso negado");
+  await assertOwnsTenantWithFeature(supabase, userId, tenantId, "commissions");
 }
 
 // Read current commission percentage

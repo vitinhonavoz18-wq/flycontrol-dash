@@ -19,8 +19,17 @@ import { toast } from "sonner";
 import {
   listWaiters, createWaiter, updateWaiter, deleteWaiter,
 } from "@/lib/waiterAuth.functions";
+import { RequireFeature } from "@/components/PremiumFeatureLock";
 
 export const Route = createFileRoute("/_app/waiters")({ component: WaitersPage });
+
+function WaitersPage() {
+  return (
+    <RequireFeature feature="waiters">
+      <WaitersPageInner />
+    </RequireFeature>
+  );
+}
 
 type Pizzeria = { id: string; name: string };
 type Waiter = {
@@ -29,7 +38,7 @@ type Waiter = {
   last_login_at: string | null; created_at: string;
 };
 
-function WaitersPage() {
+function WaitersPageInner() {
   const { user, isSuperAdmin } = useAuth();
   const list = useServerFn(listWaiters);
   const create = useServerFn(createWaiter);
