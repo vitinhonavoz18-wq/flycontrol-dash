@@ -103,13 +103,14 @@ export const Route = createFileRoute("/api/orders")({
 
           return newSession;
         };
+        let body: any;
+        try {
         console.log("ORDER_RECEIVE_STARTED");
         const origin = request.headers.get("origin") || "N/A";
-        
+
         console.log("📥 [API/Orders] Requisição POST recebida");
         console.log(`🌐 Origem: ${origin}`);
 
-        let body: any;
         try {
           const bodyText = await request.clone().text();
           body = JSON.parse(bodyText);
@@ -677,8 +678,26 @@ export const Route = createFileRoute("/api/orders")({
           order_type: orderToInsert.delivery_type,
           service_mode: orderToInsert.delivery_type === "table" ? "mesa" : orderToInsert.delivery_type,
           table_number: orderToInsert.table_number,
-          message: "Pedido recebido com sucesso" 
+          message: "Pedido recebido com sucesso"
         }), { status: 201, headers: cors });
+        } catch (err: any) {
+          console.error("❌ [API/Orders] Erro não tratado:", err?.stack || err?.message || err);
+          try {
+            await supabaseAdmin.from("external_order_logs").insert({
+              api_key_partial: "N/A",
+              payload: typeof body !== "undefined" ? body : null,
+              status_code: 500,
+              error_message: `Erro não tratado: ${err?.message || String(err)}`,
+            });
+          } catch (logErr) {
+            console.error("❌ [API/Orders] Falha ao registrar log de erro não tratado:", logErr);
+          }
+          return new Response(JSON.stringify({
+            success: false,
+            error: "internal_error",
+            message: "Erro interno ao processar pedido no FlyControl",
+          }), { status: 500, headers: cors });
+        }
       },
     },
   },
