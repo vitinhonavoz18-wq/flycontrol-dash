@@ -2034,6 +2034,19 @@ export type Database = {
       }
       club_close_cycle: { Args: { p_cycle_id: string }; Returns: undefined }
       club_close_due_cycles: { Args: never; Returns: number }
+      club_get_hall_of_fame: {
+        Args: { p_club_id?: string; p_limit?: number }
+        Returns: {
+          company_name: string
+          company_slug: string
+          legend: boolean
+          level_color: string
+          level_icon: string
+          level_name: string
+          lifetime_orders: number
+          streak: number
+        }[]
+      }
       club_get_or_create_active_cycle: {
         Args: { p_club_id?: string; p_company_id: string }
         Returns: string
