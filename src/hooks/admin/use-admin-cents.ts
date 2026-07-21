@@ -13,7 +13,7 @@ export function useAdminCentsOverview() {
       const [{ data: statuses, error: e1 }, { data: activeCycles, error: e2 }, { data: settings, error: e3 }] = await Promise.all([
         supabase
           .from("club_customer_status")
-          .select("company_id, current_streak, goal_reached, legend, hall_of_fame, lifetime_orders, gold_cycles_total, current_level(name, slug, icon, color), pizzerias:company_id(name, slug)")
+          .select("company_id, current_streak, goal_reached, legend, hall_of_fame, lifetime_orders, gold_cycles_total, current_level(name, slug, icon, color), pizzerias:company_id(name, slug, plan_type)")
           .eq("club_id", DEFAULT_CLUB_ID),
         supabase
           .from("club_cycles")
@@ -29,7 +29,12 @@ export function useAdminCentsOverview() {
 
       const cyclesByCompany = new Map((activeCycles ?? []).map((c) => [c.company_id, c]));
 
-      const rows = (statuses ?? []).map((s: any) => ({
+      // Só exibe empresas atualmente no plano CENTS. Trocar para Premium remove
+      // a empresa desta lista sem apagar club_customer_status/club_history —
+      // ela reaparece automaticamente se voltar para CENTS.
+      const centsStatuses = (statuses ?? []).filter((s: any) => s.pizzerias?.plan_type === "cents");
+
+      const rows = centsStatuses.map((s: any) => ({
         companyId: s.company_id,
         companyName: s.pizzerias?.name ?? "—",
         companySlug: s.pizzerias?.slug ?? "",
