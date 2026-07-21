@@ -12,11 +12,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { CreatePizzeriaDialog } from "./CreatePizzeriaDialog";
+
+const DEFAULT_CLUB_ID = "00000000-0000-0000-0000-0000000000c1";
+const PREMIUM_PRICE = 375;
 
 export const SubscriptionsDashboard = () => {
   const queryClient = useQueryClient();
   const [editingPizzeria, setEditingPizzeria] = useState<any>(null);
-  
+  const [savingPlan, setSavingPlan] = useState(false);
+
   const { data: pizzerias, isLoading } = useQuery({
     queryKey: ["admin-subscriptions"],
     queryFn: async () => {
@@ -30,13 +35,26 @@ export const SubscriptionsDashboard = () => {
     },
   });
 
+  const { data: centsPrice } = useQuery({
+    queryKey: ["cents-default-price"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("club_settings")
+        .select("default_price_per_order")
+        .eq("club_id", DEFAULT_CLUB_ID)
+        .maybeSingle();
+      if (error) throw error;
+      return Number(data?.default_price_per_order ?? 0);
+    },
+  });
+
   const toggleSuspension = async (id: string, currentStatus: string | null) => {
     const newStatus = currentStatus === "suspended" ? "active" : "suspended";
     const { error } = await supabase
       .from("pizzerias")
       .update({ subscription_status: newStatus })
       .eq("id", id);
-    
+
     if (error) {
       toast.error("Erro ao atualizar status: " + error.message);
     } else {
@@ -48,32 +66,48 @@ export const SubscriptionsDashboard = () => {
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editingPizzeria) return;
+    setSavingPlan(true);
 
-    const { error } = await supabase
-      .from("pizzerias")
-      .update({
-        subscription_plan: editingPizzeria.subscription_plan,
-        subscription_status: editingPizzeria.subscription_status,
-        subscription_expires_at: editingPizzeria.subscription_expires_at,
-        subscription_price: editingPizzeria.subscription_price,
-        internal_notes: editingPizzeria.internal_notes
-      })
-      .eq("id", editingPizzeria.id);
+    const newPlanType = editingPizzeria.plan_type === "cents" ? "cents" : "premium";
+    const billing_model = newPlanType === "cents" ? "per_order" : "fixed";
+    const update: any = {
+      plan_type: newPlanType,
+      billing_model,
+      subscription_status: editingPizzeria.subscription_status,
+      internal_notes: editingPizzeria.internal_notes,
+    };
+    if (newPlanType === "premium") update.subscription_price = PREMIUM_PRICE;
+
+    const { error } = await supabase.from("pizzerias").update(update).eq("id", editingPizzeria.id);
 
     if (error) {
       toast.error("Erro ao salvar: " + error.message);
-    } else {
-      toast.success("Dados atualizados com sucesso!");
-      setEditingPizzeria(null);
-      queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+      setSavingPlan(false);
+      return;
     }
+
+    if (newPlanType === "cents") {
+      const { error: enrollErr } = await supabase.rpc("enroll_company_in_cents", { p_company_id: editingPizzeria.id });
+      if (enrollErr) {
+        toast.error("Plano salvo, mas falhou ao matricular no Clube CENTS: " + enrollErr.message);
+      }
+    }
+
+    toast.success("Dados atualizados com sucesso!");
+    setEditingPizzeria(null);
+    setSavingPlan(false);
+    queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] });
+    queryClient.invalidateQueries({ queryKey: ["admin-cents-overview"] });
   };
 
   if (isLoading) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
 
   return (
     <div className="p-8 pb-20">
-      <h1 className="text-3xl font-bold mb-4">Clientes e Planos</h1>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-3xl font-bold">Clientes e Planos</h1>
+        <CreatePizzeriaDialog onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] })} />
+      </div>
       <div className="bg-card border rounded-lg p-6 shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
@@ -88,10 +122,11 @@ export const SubscriptionsDashboard = () => {
           </TableHeader>
           <TableBody>
             {pizzerias?.map((p) => {
-              const daysLeft = p.subscription_expires_at 
-                ? differenceInDays(new Date(p.subscription_expires_at), new Date()) 
+              const daysLeft = p.subscription_expires_at
+                ? differenceInDays(new Date(p.subscription_expires_at), new Date())
                 : null;
-              
+              const isCents = p.plan_type === "cents";
+
               return (
                 <TableRow key={p.id}>
                   <TableCell className="font-medium">
@@ -100,11 +135,11 @@ export const SubscriptionsDashboard = () => {
                   </TableCell>
                   <TableCell>
                     <Badge variant="outline" className="capitalize">
-                      {p.subscription_plan || "Free"}
+                      {isCents ? "CENTS" : "Premium"}
                     </Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge 
+                    <Badge
                       variant={p.subscription_status === "active" ? "default" : p.subscription_status === "suspended" ? "destructive" : "secondary"}
                       className="capitalize"
                     >
@@ -114,8 +149,8 @@ export const SubscriptionsDashboard = () => {
                   <TableCell>
                     <div className="flex flex-col">
                       <span>
-                        {p.subscription_expires_at 
-                          ? format(new Date(p.subscription_expires_at), "dd/MM/yyyy") 
+                        {p.subscription_expires_at
+                          ? format(new Date(p.subscription_expires_at), "dd/MM/yyyy")
                           : "N/A"}
                       </span>
                       {daysLeft !== null && (
@@ -126,19 +161,21 @@ export const SubscriptionsDashboard = () => {
                     </div>
                   </TableCell>
                   <TableCell>
-                    R$ {Number(p.subscription_price || 0).toFixed(2)}
+                    {isCents
+                      ? `R$ ${Number(centsPrice ?? 0).toFixed(2)} por pedido`
+                      : `R$ ${PREMIUM_PRICE.toFixed(2)}`}
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => setEditingPizzeria(p)}
                       >
                         Editar
                       </Button>
-                      <Button 
-                        variant={p.subscription_status === "suspended" ? "default" : "outline"} 
+                      <Button
+                        variant={p.subscription_status === "suspended" ? "default" : "outline"}
                         size="sm"
                         className={p.subscription_status !== "suspended" ? "text-destructive hover:text-destructive" : ""}
                         onClick={() => toggleSuspension(p.id, p.subscription_status)}
@@ -163,26 +200,24 @@ export const SubscriptionsDashboard = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Plano</Label>
-                <Select 
-                  value={editingPizzeria?.subscription_plan || "free"} 
-                  onValueChange={(v) => setEditingPizzeria({...editingPizzeria, subscription_plan: v})}
+                <Select
+                  value={editingPizzeria?.plan_type === "cents" ? "cents" : "premium"}
+                  onValueChange={(v) => setEditingPizzeria({ ...editingPizzeria, plan_type: v })}
                 >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="free">Teste Grátis</SelectItem>
-                    <SelectItem value="starter">Starter</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
                     <SelectItem value="premium">Premium</SelectItem>
+                    <SelectItem value="cents">CENTS</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
                 <Label>Status</Label>
-                <Select 
-                  value={editingPizzeria?.subscription_status || "active"} 
-                  onValueChange={(v) => setEditingPizzeria({...editingPizzeria, subscription_status: v})}
+                <Select
+                  value={editingPizzeria?.subscription_status || "active"}
+                  onValueChange={(v) => setEditingPizzeria({ ...editingPizzeria, subscription_status: v })}
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -197,32 +232,18 @@ export const SubscriptionsDashboard = () => {
                 </Select>
               </div>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label>Vencimento</Label>
-                <Input 
-                  type="date" 
-                  value={editingPizzeria?.subscription_expires_at ? format(new Date(editingPizzeria.subscription_expires_at), "yyyy-MM-dd") : ""}
-                  onChange={(e) => setEditingPizzeria({...editingPizzeria, subscription_expires_at: e.target.value})}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Valor Mensal (R$)</Label>
-                <Input 
-                  type="number" 
-                  step="0.01"
-                  value={editingPizzeria?.subscription_price || 0}
-                  onChange={(e) => setEditingPizzeria({...editingPizzeria, subscription_price: parseFloat(e.target.value)})}
-                />
-              </div>
+
+            <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
+              {editingPizzeria?.plan_type === "cents"
+                ? `Cobrança por pedido: R$ ${Number(centsPrice ?? 0).toFixed(2)} (definido globalmente nas configurações do Clube CENTS).`
+                : `Mensalidade fixa: R$ ${PREMIUM_PRICE.toFixed(2)}.`}
             </div>
 
             <div className="space-y-2">
               <Label>Observações Internas</Label>
-              <Textarea 
+              <Textarea
                 value={editingPizzeria?.internal_notes || ""}
-                onChange={(e) => setEditingPizzeria({...editingPizzeria, internal_notes: e.target.value})}
+                onChange={(e) => setEditingPizzeria({ ...editingPizzeria, internal_notes: e.target.value })}
                 placeholder="Notas visíveis apenas para admin..."
                 className="h-24"
               />
@@ -230,7 +251,7 @@ export const SubscriptionsDashboard = () => {
 
             <DialogFooter>
               <Button type="button" variant="ghost" onClick={() => setEditingPizzeria(null)}>Cancelar</Button>
-              <Button type="submit">Salvar Alterações</Button>
+              <Button type="submit" disabled={savingPlan}>{savingPlan ? "Salvando..." : "Salvar Alterações"}</Button>
             </DialogFooter>
           </form>
         </DialogContent>
@@ -238,5 +259,3 @@ export const SubscriptionsDashboard = () => {
     </div>
   );
 };
-
-

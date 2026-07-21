@@ -1474,6 +1474,7 @@ export type Database = {
           address: string | null
           api_key: string
           average_delivery_time: string | null
+          billing_model: string
           created_at: string
           delivery_fee: number | null
           description: string | null
@@ -1492,6 +1493,7 @@ export type Database = {
           owner_id: string | null
           payment_methods: Json | null
           phone: string | null
+          plan_type: string
           primary_color: string | null
           print_auto: boolean
           provision_error: string | null
@@ -1522,6 +1524,7 @@ export type Database = {
           address?: string | null
           api_key: string
           average_delivery_time?: string | null
+          billing_model?: string
           created_at?: string
           delivery_fee?: number | null
           description?: string | null
@@ -1540,6 +1543,7 @@ export type Database = {
           owner_id?: string | null
           payment_methods?: Json | null
           phone?: string | null
+          plan_type?: string
           primary_color?: string | null
           print_auto?: boolean
           provision_error?: string | null
@@ -1570,6 +1574,7 @@ export type Database = {
           address?: string | null
           api_key?: string
           average_delivery_time?: string | null
+          billing_model?: string
           created_at?: string
           delivery_fee?: number | null
           description?: string | null
@@ -1588,6 +1593,7 @@ export type Database = {
           owner_id?: string | null
           payment_methods?: Json | null
           phone?: string | null
+          plan_type?: string
           primary_color?: string | null
           print_auto?: boolean
           provision_error?: string | null
@@ -2034,6 +2040,10 @@ export type Database = {
       }
       club_close_cycle: { Args: { p_cycle_id: string }; Returns: undefined }
       club_close_due_cycles: { Args: never; Returns: number }
+      enroll_company_in_cents: {
+        Args: { p_club_id?: string; p_company_id: string }
+        Returns: undefined
+      }
       club_get_hall_of_fame: {
         Args: { p_club_id?: string; p_limit?: number }
         Returns: {

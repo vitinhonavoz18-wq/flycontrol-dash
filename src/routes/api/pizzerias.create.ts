@@ -40,6 +40,8 @@ export const Route = createFileRoute("/api/pizzerias/create")({
         const owner_name = String(body?.owner_name ?? "").trim();
         const business_type = String(body?.business_type ?? "pizzeria").trim();
         const selected_template = String(body?.selected_template ?? "default").trim();
+        const plan_type = body?.plan_type === "cents" ? "cents" : "premium";
+        const billing_model = plan_type === "cents" ? "per_order" : "fixed";
 
         if (!name || !slug) {
           return new Response(JSON.stringify({ error: "name e slug obrigatórios" }), { status: 400, headers: cors });
@@ -65,7 +67,10 @@ export const Route = createFileRoute("/api/pizzerias/create")({
           address: address || null,
           api_key,
           status: "active",
+          plan_type,
+          billing_model,
         };
+        if (plan_type === "premium") insertData.subscription_price = 375;
         if (owner_id) insertData.owner_id = owner_id;
 
         const { data, error } = await supabaseAdmin
@@ -76,6 +81,11 @@ export const Route = createFileRoute("/api/pizzerias/create")({
 
         if (error || !data) {
           return new Response(JSON.stringify({ error: error?.message ?? "Falha ao criar" }), { status: 500, headers: cors });
+        }
+
+        if (plan_type === "cents") {
+          const { error: enrollErr } = await supabaseAdmin.rpc("enroll_company_in_cents", { p_company_id: data.id });
+          if (enrollErr) console.error("[Provision] Failed to enroll in CENTS:", enrollErr);
         }
 
         // Auto-provision the restaurant in SiteCreatorFly.
