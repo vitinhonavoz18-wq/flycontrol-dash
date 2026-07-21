@@ -4,7 +4,7 @@ CREATE TABLE IF NOT EXISTS public.restaurant_tables (
     tenant_id UUID NOT NULL REFERENCES public.pizzerias(id) ON DELETE CASCADE,
     table_number TEXT NOT NULL,
     table_name TEXT,
-    public_token TEXT NOT NULL UNIQUE DEFAULT encode(gen_random_bytes(12), 'hex'),
+    public_token TEXT NOT NULL UNIQUE DEFAULT encode(extensions.gen_random_bytes(12), 'hex'),
     is_active BOOLEAN NOT NULL DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(),

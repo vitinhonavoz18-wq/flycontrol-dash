@@ -14,12 +14,12 @@ UPDATE public.table_sessions
  WHERE dining_session_id IS NULL;
 
 UPDATE public.table_sessions
-   SET customer_token = encode(gen_random_bytes(24), 'hex')
+   SET customer_token = encode(extensions.gen_random_bytes(24), 'hex')
  WHERE customer_token IS NULL;
 
 ALTER TABLE public.table_sessions
   ALTER COLUMN dining_session_id SET DEFAULT gen_random_uuid(),
-  ALTER COLUMN customer_token   SET DEFAULT encode(gen_random_bytes(24), 'hex'),
+  ALTER COLUMN customer_token   SET DEFAULT encode(extensions.gen_random_bytes(24), 'hex'),
   ALTER COLUMN dining_session_id SET NOT NULL,
   ALTER COLUMN customer_token   SET NOT NULL;
 

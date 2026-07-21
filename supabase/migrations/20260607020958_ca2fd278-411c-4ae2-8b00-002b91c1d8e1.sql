@@ -32,7 +32,7 @@ BEGIN
             NEW.id, 
             LPAD(i::text, 2, '0'), 
             'Mesa ' || LPAD(i::text, 2, '0'), 
-            encode(gen_random_bytes(16), 'hex'), 
+            encode(extensions.gen_random_bytes(16), 'hex'), 
             true
         );
     END LOOP;
@@ -85,7 +85,7 @@ BEGIN
                 piz_record.id, 
                 LPAD(i::text, 2, '0'), 
                 'Mesa ' || LPAD(i::text, 2, '0'), 
-                encode(gen_random_bytes(16), 'hex'), 
+                encode(extensions.gen_random_bytes(16), 'hex'), 
                 true
             );
         END LOOP;
