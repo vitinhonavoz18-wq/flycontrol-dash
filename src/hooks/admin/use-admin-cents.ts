@@ -76,6 +76,22 @@ export function useAdminCentsOverview() {
   return query;
 }
 
+export function useClubCentsAuditLog() {
+  return useQuery({
+    queryKey: ["admin-cents-audit-log"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("club_audit_logs")
+        .select("id, action, table_name, old_value, new_value, created_at, user_id")
+        .in("table_name", ["club_settings", "club_levels"])
+        .order("created_at", { ascending: false })
+        .limit(20);
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+}
+
 export async function updateClubSettings(patch: {
   default_price_per_order: number;
   gold_price_per_order: number;

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useAdminCentsOverview, updateClubSettings } from "@/hooks/admin/use-admin-cents";
+import { useAdminCentsOverview, updateClubSettings, useClubCentsAuditLog } from "@/hooks/admin/use-admin-cents";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,8 +23,30 @@ function Kpi({ label, value, icon: Icon }: { label: string; value: string | numb
   );
 }
 
+const FIELD_LABELS: Record<string, string> = {
+  default_price_per_order: "Preço padrão",
+  gold_price_per_order: "Preço Ouro",
+  goal_orders: "Meta de pedidos",
+  challenge_days: "Dias do desafio",
+  voucher_months: "Meses do voucher",
+  legend_streak_required: "Ciclos p/ LENDA",
+  name: "Nome do nível",
+  min_orders: "Pedidos mínimos",
+};
+
+function describeAuditChange(entry: { table_name: string; old_value: any; new_value: any }) {
+  const changed = Object.keys(entry.new_value ?? {}).filter(
+    (key) => key !== "updated_at" && entry.old_value?.[key] !== entry.new_value?.[key]
+  );
+  if (changed.length === 0) return "Nenhum campo alterado";
+  return changed
+    .map((key) => `${FIELD_LABELS[key] ?? key}: ${entry.old_value?.[key] ?? "—"} → ${entry.new_value?.[key] ?? "—"}`)
+    .join(", ");
+}
+
 export const ClubCentsDashboard = () => {
   const { data, isLoading, error } = useAdminCentsOverview();
+  const { data: auditLog } = useClubCentsAuditLog();
   const [search, setSearch] = useState("");
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Record<string, string> | null>(null);
@@ -115,6 +137,23 @@ export const ClubCentsDashboard = () => {
           )}
         </CardContent>
       </Card>
+
+      {auditLog && auditLog.length > 0 && (
+        <Card>
+          <CardHeader><CardTitle className="text-lg">Últimas alterações administrativas</CardTitle></CardHeader>
+          <CardContent className="space-y-2">
+            {auditLog.map((entry) => (
+              <div key={entry.id} className="text-xs border-b border-border last:border-0 pb-2 last:pb-0">
+                <span className="text-muted-foreground">
+                  {new Date(entry.created_at).toLocaleString("pt-BR")} —{" "}
+                  {entry.table_name === "club_settings" ? "Configurações do clube" : "Nível do clube"}:
+                </span>{" "}
+                {describeAuditChange(entry)}
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      )}
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-xl font-semibold">Empresas no Clube</h2>
