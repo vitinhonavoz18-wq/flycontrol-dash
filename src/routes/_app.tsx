@@ -198,11 +198,11 @@ function AppLayoutInner() {
     <div className="flex min-h-screen bg-background">
       {/* Sidebar Desktop */}
       <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-sidebar md:flex shadow-xl z-20 transition-all duration-300">
-        <Link to="/dashboard" className="flex h-32 items-center justify-center border-b border-sidebar-border px-8 overflow-hidden bg-primary/5">
+        <Link to="/dashboard" className="flex items-center justify-center border-b border-sidebar-border px-8 py-6">
           <img
             src={logo}
             alt="FlyControl"
-            className="h-28 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.3)] transition-all hover:scale-105 duration-300 dark:drop-shadow-[0_0_20px_rgba(255,122,0,0.6)]"
+            className="h-48 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.3)] transition-all hover:scale-105 duration-300 dark:drop-shadow-[0_0_20px_rgba(255,122,0,0.6)]"
           />
         </Link>
         
