@@ -820,9 +820,10 @@ function Dashboard() {
             key={o.id} 
             o={o} 
             onChange={changeStatus} 
-            onDelete={deleteOrder} 
-            onSee={markAsSeen} 
+            onDelete={deleteOrder}
+            onSee={markAsSeen}
             isRecentNew={recentNewOrderIds.includes(o.id)}
+            canDelete={isHardcodedAdmin}
           />
         ))}
 
@@ -861,12 +862,14 @@ function OrderCard({
   onDelete,
   onSee,
   isRecentNew,
+  canDelete,
 }: {
   o: Order;
   onChange: (o: Order, s: string) => void;
   onDelete: (o: Order) => void;
   onSee: (o: Order) => void;
   isRecentNew: boolean;
+  canDelete: boolean;
 }) {
   const isNew = o.status === "novo" && !o.is_seen;
   // A etiqueta visual de novo agora é controlada EXCLUSIVAMENTE por isRecentNew, vindo de setRecentNewOrderIds
@@ -1026,14 +1029,16 @@ function OrderCard({
             <Printer className="h-4 w-4" /> Imprimir
           </Button>
         </a>
-        <Button
-          size="sm"
-          variant="outline"
-          className="text-destructive hover:bg-destructive/10 border-destructive/20"
-          onClick={() => onDelete(o)}
-        >
-          <Trash2 className="h-4 w-4" />
-        </Button>
+        {canDelete && (
+          <Button
+            size="sm"
+            variant="outline"
+            className="text-destructive hover:bg-destructive/10 border-destructive/20"
+            onClick={() => onDelete(o)}
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </div>
   );
