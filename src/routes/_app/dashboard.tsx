@@ -7,6 +7,7 @@ import { Order, OrderItem } from "@/types/order";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   Bell,
@@ -786,27 +787,31 @@ function Dashboard() {
         </div>
       )}
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {[
-          { v: "ativos", l: "Em andamento" },
-          { v: "todos", l: "Todos" },
-          { v: "delivery", l: "Delivery" },
-          { v: "pickup", l: "Retirada" },
-          { v: "table", l: "Mesa" },
-          ...STATUSES.map((s) => ({ v: s.value, l: s.label })),
-        ].map((f) => (
-          <button
-            key={f.v}
-            onClick={() => setFilter(f.v)}
-            className={`rounded-full border px-4 py-2 text-xs font-bold transition-all duration-200 uppercase tracking-wider ${
-              filter === f.v
-                ? "border-primary bg-primary text-primary-foreground shadow-lg scale-105"
-                : "border-border text-muted-foreground hover:bg-muted hover:text-foreground"
-            }`}
-          >
-            {f.l}
-          </button>
-        ))}
+      <div className="mb-4">
+        <Select value={filter} onValueChange={setFilter}>
+          <SelectTrigger className="w-full max-w-xs">
+            <SelectValue placeholder="Filtrar pedidos" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectGroup>
+              <SelectLabel>Visão geral</SelectLabel>
+              <SelectItem value="ativos">Em andamento</SelectItem>
+              <SelectItem value="todos">Todos</SelectItem>
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel>Tipo de pedido</SelectLabel>
+              <SelectItem value="delivery">Delivery</SelectItem>
+              <SelectItem value="pickup">Retirada</SelectItem>
+              <SelectItem value="table">Mesa</SelectItem>
+            </SelectGroup>
+            <SelectGroup>
+              <SelectLabel>Status</SelectLabel>
+              {STATUSES.map((s) => (
+                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+              ))}
+            </SelectGroup>
+          </SelectContent>
+        </Select>
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
