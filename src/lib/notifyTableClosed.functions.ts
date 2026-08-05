@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { SIGNATURE_HEADER, signWebhookBody } from "@/lib/webhookSignature";
 
 const WEBHOOK_URL = "https://conectfly.com.br/api/public/flycontrol-table-closed";
 
@@ -37,13 +38,27 @@ export const notifyTableClosed = createServerFn({ method: "POST" })
       closed_at: data.closed_at,
     };
 
+    // Assina o corpo EXATO que vai na requisição: reserializar mudaria os
+    // bytes e o SiteCreatorFly recusaria o HMAC.
+    const rawBody = JSON.stringify(payload);
+    const signature = await signWebhookBody(rawBody);
+    if (!signature) {
+      console.warn("TABLE_CLOSED_WEBHOOK_UNSIGNED", {
+        ...ctx,
+        reason: "FL_WEBHOOK_SECRET not configured",
+      });
+    }
+
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 10_000);
     try {
       const res = await fetch(WEBHOOK_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers: {
+          "Content-Type": "application/json",
+          ...(signature ? { [SIGNATURE_HEADER]: signature } : {}),
+        },
+        body: rawBody,
         signal: controller.signal,
       });
       const bodyText = await res.text().catch(() => "");
