@@ -37,7 +37,10 @@ export function OrdersKanbanColumn({
   return (
     <section
       aria-label={`${config.label}: ${orders.length} ${orders.length === 1 ? "pedido" : "pedidos"}`}
-      className="flex w-[85vw] shrink-0 flex-col sm:w-[20rem] md:w-auto md:flex-1"
+      // A partir de 640px de largura as três colunas ficam lado a lado — é a
+      // largura de um celular deitado. Em retrato nenhum telefone chega a
+      // 640px, então a regra não altera o modo vertical.
+      className="flex w-[85vw] shrink-0 flex-col sm:w-[20rem] min-[640px]:w-auto min-[640px]:flex-1"
     >
       <header className="mb-2 overflow-hidden rounded-t-xl border border-b-0 border-border bg-card">
         <div className={`h-1 w-full ${config.accentBar}`} aria-hidden="true" />
@@ -52,9 +55,14 @@ export function OrdersKanbanColumn({
         </div>
       </header>
 
+      {/* A altura máxima usa `dvh` e um teto mínimo: com `calc(100vh - 22rem)`,
+          um celular deitado (360px de altura) resultava em colunas de 8px.
+          `max()` garante que a coluna nunca fique menor que 14rem, e em
+          paisagem compacta descontamos bem menos cromo porque o cabeçalho
+          encolhe e não há barra inferior. */}
       <div
         ref={setNodeRef}
-        className={`flex min-h-[12rem] flex-1 flex-col gap-2 rounded-b-xl border border-t-0 border-border bg-muted/20 p-2 transition-all md:max-h-[calc(100vh-22rem)] md:overflow-y-auto ${
+        className={`flex min-h-[12rem] flex-1 flex-col gap-2 rounded-b-xl border border-t-0 border-border bg-muted/20 p-2 transition-colors md:max-h-[max(14rem,calc(100dvh-22rem))] md:overflow-y-auto landscape-compact:max-h-[max(11rem,calc(100dvh-9rem))] ${
           highlight ? `ring-2 ring-inset ${config.accentDropRing}` : ""
         } ${isValidTarget && !isOver ? "border-dashed" : ""}`}
       >

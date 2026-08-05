@@ -83,13 +83,18 @@ export function BottomNav() {
               <li key={it.to}>
                 <Link
                   to={it.to}
-                  className={`flex flex-col items-center justify-center gap-1 min-h-14 py-2 text-[11px] font-medium transition-colors ${
+                  // Com o aparelho deitado o rótulo sai e a altura cai para 44px
+                  // (o mínimo de toque): 72px de barra em uma tela de 360px
+                  // custava 20% do espaço vertical. O `aria-label` mantém o
+                  // item identificável sem o texto visível.
+                  className={`flex min-h-14 flex-col items-center justify-center gap-1 py-2 text-[11px] font-medium transition-colors landscape-compact:min-h-11 landscape-compact:gap-0 landscape-compact:py-1 ${
                     active ? "text-primary" : "text-muted-foreground active:text-foreground"
                   }`}
                   aria-current={active ? "page" : undefined}
+                  aria-label={it.label}
                 >
-                  <it.icon className={`h-6 w-6 ${active ? "scale-110" : ""} transition-transform`} />
-                  <span className="truncate max-w-full px-1">{it.label}</span>
+                  <it.icon className={`h-6 w-6 landscape-compact:h-5 landscape-compact:w-5 ${active ? "scale-110" : ""} transition-transform`} />
+                  <span className="max-w-full truncate px-1 landscape-compact:hidden">{it.label}</span>
                 </Link>
               </li>
             );

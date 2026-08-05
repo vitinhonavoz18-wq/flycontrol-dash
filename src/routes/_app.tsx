@@ -152,21 +152,25 @@ function AppLayoutInner() {
   ];
 
   const NavItems = ({ className = "" }: { className?: string }) => (
-    <nav className={`flex-1 space-y-1 p-3 ${className}`}>
-      <div className="px-3 pb-1 pt-2 text-xs font-semibold uppercase text-muted-foreground/70">Menu Principal</div>
+    <nav className={`flex-1 space-y-1 p-3 landscape-compact:p-1.5 ${className}`}>
+      <div className="px-3 pb-1 pt-2 text-xs font-semibold uppercase text-muted-foreground/70 landscape-compact:hidden">Menu Principal</div>
       {items.map((it) => (
-        <Link 
-          key={it.to} 
+        <Link
+          key={it.to}
           to={it.to}
           onClick={() => setIsMobileMenuOpen(false)}
-          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
-            path === it.to 
-              ? "bg-primary/20 text-primary shadow-sm" 
-              : "text-sidebar-foreground hover:bg-sidebar-accent hover:translate-x-1"
+          // `title` e `aria-label` mantêm o item identificável quando o rótulo
+          // some no trilho — um ícone sozinho não diz nada a um leitor de tela.
+          title={it.label}
+          aria-label={it.label}
+          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 landscape-compact:h-11 landscape-compact:justify-center landscape-compact:px-0 ${
+            path === it.to
+              ? "bg-primary/20 text-primary shadow-sm"
+              : "text-sidebar-foreground hover:bg-sidebar-accent"
           }`}
         >
-          <it.icon className={`h-4 w-4 ${path === it.to ? "text-primary" : "text-muted-foreground"}`} /> 
-          {it.label}
+          <it.icon className={`h-4 w-4 shrink-0 landscape-compact:h-5 landscape-compact:w-5 ${path === it.to ? "text-primary" : "text-muted-foreground"}`} />
+          <span className="landscape-compact:hidden">{it.label}</span>
         </Link>
       ))}
       
@@ -178,15 +182,16 @@ function AppLayoutInner() {
               key={it.to} 
               to={it.to}
               onClick={() => setIsMobileMenuOpen(false)}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-all duration-200 ${
+              title={it.label}
+              aria-label={it.label}
+              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 landscape-compact:h-11 landscape-compact:justify-center landscape-compact:px-0 ${
                 path.startsWith(it.to)
-                  ? "bg-primary/20 text-primary shadow-sm" 
-
-                  : "text-sidebar-foreground hover:bg-sidebar-accent hover:translate-x-1"
+                  ? "bg-primary/20 text-primary shadow-sm"
+                  : "text-sidebar-foreground hover:bg-sidebar-accent"
               }`}
             >
-              <it.icon className={`h-4 w-4 ${path.startsWith(it.to) ? "text-primary" : "text-muted-foreground"}`} /> 
-              {it.label}
+              <it.icon className={`h-4 w-4 shrink-0 landscape-compact:h-5 landscape-compact:w-5 ${path.startsWith(it.to) ? "text-primary" : "text-muted-foreground"}`} />
+              <span className="landscape-compact:hidden">{it.label}</span>
             </Link>
           ))}
         </>
@@ -197,16 +202,25 @@ function AppLayoutInner() {
   return (
     <div className="flex min-h-screen bg-background">
       {/* Sidebar Desktop */}
-      <aside className="hidden w-72 shrink-0 flex-col border-r border-border bg-sidebar md:flex shadow-xl z-20 transition-all duration-300">
-        <Link to="/dashboard" className="flex items-center justify-center border-b border-sidebar-border px-8 py-6">
+      {/* Em paisagem de celular a sidebar vira um trilho de ícones: 288px de
+          largura e um logo de 192px de altura consumiam metade de uma tela de
+          360px. `overflow-y-auto` garante que os itens continuem alcançáveis
+          quando a altura é mínima. */}
+      <aside className="z-20 hidden w-72 shrink-0 flex-col overflow-y-auto border-r border-border bg-sidebar shadow-xl md:flex landscape-compact:w-[var(--landscape-rail-width)]">
+        <Link
+          to="/dashboard"
+          className="flex items-center justify-center border-b border-sidebar-border px-8 py-6 landscape-compact:px-2 landscape-compact:py-3"
+        >
           <img
             src={logo}
             alt="FlyControl"
-            className="h-48 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.3)] transition-all hover:scale-105 duration-300 dark:drop-shadow-[0_0_20px_rgba(255,122,0,0.6)]"
+            className="h-48 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.3)] dark:drop-shadow-[0_0_20px_rgba(255,122,0,0.6)] landscape-compact:h-8"
           />
         </Link>
-        
-        <div className="p-4 border-b border-sidebar-border flex items-center justify-between">
+
+        {/* O seletor de tema não cabe no trilho — continua acessível em
+            Configurações e no menu do cabeçalho. */}
+        <div className="flex items-center justify-between border-b border-sidebar-border p-4 landscape-compact:hidden">
           <div className="flex items-center gap-2">
             {theme === "dark" ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-orange-500" />}
             <Label htmlFor="theme-toggle" className="text-xs font-medium cursor-pointer">
@@ -222,25 +236,31 @@ function AppLayoutInner() {
         
         <NavItems />
 
-        <div className="mt-auto border-t border-border p-4 bg-sidebar-accent/30">
-          <div className="flex flex-col mb-3 px-2">
-            <span className="text-xs font-bold text-foreground truncate">{user.email?.split('@')[0]}</span>
-            <span className="text-[10px] text-muted-foreground truncate">{user.email}</span>
+        <div className="mt-auto border-t border-border bg-sidebar-accent/30 p-4 landscape-compact:p-1.5">
+          <div className="mb-3 flex flex-col px-2 landscape-compact:hidden">
+            <span className="truncate text-xs font-bold text-foreground">{user.email?.split('@')[0]}</span>
+            <span className="truncate text-[10px] text-muted-foreground">{user.email}</span>
           </div>
-          <Button 
-            variant="ghost" 
+          <Button
+            variant="ghost"
             size="sm"
-            className="w-full justify-start text-red-500 hover:text-red-600 hover:bg-red-500/10 transition-colors" 
+            title="Sair"
+            aria-label="Sair da conta"
+            className="w-full justify-start text-red-500 transition-colors hover:bg-red-500/10 hover:text-red-600 landscape-compact:h-11 landscape-compact:justify-center landscape-compact:px-0"
             onClick={async () => { await signOut(); nav({ to: "/" }); }}
           >
-            <LogOut className="h-4 w-4 mr-2" /> Sair
+            <LogOut className="h-4 w-4 landscape-compact:mr-0 mr-2" />
+            <span className="landscape-compact:hidden">Sair</span>
           </Button>
         </div>
       </aside>
 
       {/* Mobile Header & Sidebar */}
       <div className="flex-1 flex flex-col min-h-screen">
-        <header className="h-16 flex items-center justify-between px-4 border-b border-border bg-background md:hidden sticky top-0 z-30 shadow-sm">
+        {/* Cabeçalho mais baixo com o aparelho deitado: 64px de altura em uma
+            tela de 360px é 18% do espaço vertical. `safe-x` afasta o conteúdo
+            de recortes laterais, que só existem em paisagem. */}
+        <header className="safe-x sticky top-0 z-[var(--z-bottom-nav)] flex h-16 items-center justify-between border-b border-border bg-background px-4 shadow-sm md:hidden landscape-compact:h-[var(--landscape-header-height)]">
           <Link to="/dashboard" className="flex items-center gap-2">
             <img src={logo} alt="FlyControl" className="h-9 w-auto" />
             <span className="font-bold text-base tracking-tight text-primary">FlyControl</span>

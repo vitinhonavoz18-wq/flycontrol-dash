@@ -4,6 +4,13 @@
 
 @custom-variant dark (&:is(.dark *));
 
+/* Celular deitado: muita largura, pouca altura. O limite de 600px de altura
+   separa o telefone em paisagem (≈360–430px de altura) do tablet em paisagem
+   (≥768px), que tem espaço vertical de sobra e deve continuar usando o layout
+   completo. Usar `landscape-compact:` em vez de espalhar media queries
+   mantém a estratégia responsiva em um lugar só. */
+@custom-variant landscape-compact (@media (orientation: landscape) and (max-height: 600px));
+
 @theme inline {
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
@@ -238,6 +245,25 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   --control-height-sm: 2.5rem;  /* 40px — confortável só no desktop */
   --control-height-md: 2.75rem; /* 44px */
   --control-height-lg: 3rem;    /* 48px */
+
+  /* Modo paisagem compacto (celular deitado). */
+  --landscape-rail-width: 4.5rem; /* 72px — trilho de ícones no lugar da sidebar */
+  --landscape-header-height: 3rem;
+}
+
+/* Em paisagem de celular a sidebar vira um trilho, então o conteúdo não
+   precisa reservar altura para a barra inferior — ela não existe ali. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .pb-bottom-nav { padding-bottom: 1rem; }
+}
+
+/* Recortes laterais só existem em paisagem; em retrato os insets laterais são
+   zero e a regra não tem efeito. */
+@media (orientation: landscape) {
+  .safe-x {
+    padding-left: env(safe-area-inset-left, 0px);
+    padding-right: env(safe-area-inset-right, 0px);
+  }
 }
 
 /* Reserva o espaço da barra inferior. Aplicado em UM lugar só (o <main> do
