@@ -279,9 +279,10 @@ function AppLayoutInner() {
           </Sheet>
         </header>
 
-        <main
-          className="flex-1 overflow-x-hidden relative pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0"
-        >
+        {/* `pb-bottom-nav` reserva a altura da barra inferior + safe area a
+            partir do token global. Este é o ÚNICO lugar que aplica esse
+            padding — telas filhas não devem repeti-lo. */}
+        <main className="pb-bottom-nav relative flex-1 overflow-x-hidden">
           <Outlet />
         </main>
         <BottomNav />

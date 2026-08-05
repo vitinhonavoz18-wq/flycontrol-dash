@@ -105,8 +105,11 @@ export function InstallBanner() {
 
   return (
     <div
-      className="md:hidden fixed left-3 right-3 z-50 rounded-2xl border border-primary/30 bg-card/95 backdrop-blur shadow-2xl p-3 flex items-center gap-3"
-      style={{ bottom: "calc(env(safe-area-inset-bottom) + 80px)" }}
+      // Acima da barra inferior mas abaixo de drawers e modais, e sem
+      // `backdrop-blur` — o banner fica sobre conteúdo rolante, que é o pior
+      // caso para o filtro.
+      className="fixed left-3 right-3 z-[var(--z-dropdown)] flex items-center gap-3 rounded-2xl border border-primary/30 bg-card p-3 shadow-lg md:hidden"
+      style={{ bottom: "calc(var(--bottom-nav-offset) + 0.75rem)" }}
       role="dialog"
       aria-label="Instalar FlyControl"
     >

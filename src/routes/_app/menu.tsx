@@ -47,9 +47,12 @@ function MenuPage() {
   }
 
   if (loading) {
+    // `min-h-[50dvh]` e não `min-h-screen`: este bloco vive dentro do <main>,
+    // que já reserva a altura da barra inferior. A tela cheia criava uma
+    // segunda rolagem e empurrava o indicador para fora da área visível.
     return (
-      <div className="flex min-h-screen items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      <div className="flex min-h-[50dvh] items-center justify-center">
+        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary"></div>
       </div>
     );
   }
@@ -64,17 +67,24 @@ function MenuPage() {
   }
 
   return (
-    <div className="p-6 md:p-8 space-y-8 animate-in fade-in duration-500">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Cardápio</h1>
-          <p className="text-muted-foreground">Gerencie as categorias, produtos e preços da sua pizzaria.</p>
+    // Padding lateral menor no celular (16px) e animação de entrada mais curta:
+    // 500ms era tempo suficiente para o usuário ver a página "chegando".
+    <div className="space-y-6 p-4 duration-200 animate-in fade-in sm:p-6 md:space-y-8 md:p-8">
+      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+        <div className="min-w-0">
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Cardápio</h1>
+          <p className="text-sm text-muted-foreground sm:text-base">
+            Gerencie as categorias, produtos e preços da sua pizzaria.
+          </p>
         </div>
-        <PizzeriaSelector 
-          pizzerias={pizzerias} 
-          activeId={activeId} 
-          onSelect={setActiveId} 
-        />
+        {/* O seletor ocupa a largura toda no celular e encolhe no desktop. */}
+        <div className="w-full min-w-0 md:w-auto md:shrink-0">
+          <PizzeriaSelector
+            pizzerias={pizzerias}
+            activeId={activeId}
+            onSelect={setActiveId}
+          />
+        </div>
       </div>
 
       {activeId && <MenuManager pizzeriaId={activeId} />}

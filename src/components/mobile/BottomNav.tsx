@@ -68,7 +68,11 @@ export function BottomNav() {
     <>
       {/* Bottom Nav — mobile only */}
       <nav
-        className="md:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80"
+        // Fundo opaco no lugar do `backdrop-blur`: a barra é fixa e está sempre
+        // visível, então o filtro custava GPU o tempo todo em Android
+        // intermediário, inclusive durante a rolagem. No tema escuro a
+        // diferença visual é imperceptível.
+        className="fixed inset-x-0 bottom-0 z-[var(--z-bottom-nav)] border-t border-border bg-background md:hidden"
         style={{ paddingBottom: "max(env(safe-area-inset-bottom), 0px)" }}
         aria-label="Navegação principal"
       >

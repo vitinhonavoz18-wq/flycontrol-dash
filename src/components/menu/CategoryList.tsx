@@ -8,6 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, GripVertical, Loader2 } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
+import { SectionHeader } from "@/components/layout/SectionHeader";
 
 import {
   Dialog,
@@ -230,38 +231,68 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Categorias</h3>
-        <Button onClick={openCreate} className="gap-2">
-          <Plus className="h-4 w-4" /> Nova Categoria
-        </Button>
-      </div>
+      <SectionHeader
+        title="Categorias"
+        action={
+          <Button onClick={openCreate} className="h-11 gap-2">
+            <Plus className="h-4 w-4" aria-hidden="true" /> Nova Categoria
+          </Button>
+        }
+      />
 
       <div className="grid gap-3">
         {categories.map((cat) => (
-          <Card key={cat.id} className={`transition-all hover:border-primary/30 ${!cat.active ? 'opacity-60 bg-muted/30' : ''}`}>
-            <CardContent className="p-4 flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <GripVertical className="h-4 w-4 text-muted-foreground cursor-move" />
-                <div>
-                  <h4 className="font-bold">{cat.name}</h4>
-                  {cat.description && <p className="text-sm text-muted-foreground">{cat.description}</p>}
+          <Card key={cat.id} className={`transition-colors hover:border-primary/30 ${!cat.active ? 'opacity-60 bg-muted/30' : ''}`}>
+            {/* Duas faixas empilhadas no celular (identificação em cima, ações
+                embaixo) e uma linha só a partir de sm. O `min-w-0` em cascata
+                é o que faz o nome truncar em vez de empurrar as ações para
+                fora do card. */}
+            <CardContent className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex min-w-0 items-center gap-3">
+                <GripVertical
+                  className="h-5 w-5 shrink-0 cursor-move text-muted-foreground"
+                  aria-hidden="true"
+                />
+                <div className="min-w-0">
+                  <h4 className="truncate font-bold">{cat.name}</h4>
+                  {cat.description && (
+                    <p className="truncate text-sm text-muted-foreground">{cat.description}</p>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2 mr-4">
-                  <span className="text-xs text-muted-foreground">{cat.active ? 'Ativa' : 'Inativa'}</span>
-                  <Switch 
-                    checked={cat.active} 
-                    onCheckedChange={() => toggleActive(cat)} 
+
+              <div className="flex items-center justify-between gap-2 sm:justify-end sm:gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="whitespace-nowrap text-xs text-muted-foreground">
+                    {cat.active ? 'Ativa' : 'Inativa'}
+                  </span>
+                  <Switch
+                    checked={cat.active}
+                    onCheckedChange={() => toggleActive(cat)}
+                    aria-label={`${cat.active ? 'Desativar' : 'Ativar'} a categoria ${cat.name}`}
                   />
                 </div>
-                <Button variant="ghost" size="icon" onClick={() => openEdit(cat)}>
-                  <Pencil className="h-4 w-4" />
-                </Button>
-                <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleDelete(cat)}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+                {/* h-11 w-11 = 44px de área de toque, com o ícone menor dentro. */}
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-11 w-11"
+                    onClick={() => openEdit(cat)}
+                    aria-label={`Editar a categoria ${cat.name}`}
+                  >
+                    <Pencil className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-11 w-11 text-destructive"
+                    onClick={() => handleDelete(cat)}
+                    aria-label={`Excluir a categoria ${cat.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" aria-hidden="true" />
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>

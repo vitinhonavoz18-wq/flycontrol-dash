@@ -212,6 +212,79 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .no-print { display: none !important; }
 }
 
+/* === TOKENS DE LAYOUT =====================================================
+   Fonte única para a altura da barra inferior, a escala de z-index e as
+   alturas de controle. Antes disso, `72px` e `80px` estavam repetidos como
+   literais em quatro arquivos — mudar a barra exigia caçar todos.
+   ========================================================================= */
+:root {
+  /* Altura da barra de navegação inferior, sem contar a safe area. */
+  --bottom-nav-height: 4.5rem; /* 72px */
+
+  /* Espaço que o conteúdo precisa reservar para não ficar sob a barra. */
+  --bottom-nav-offset: calc(var(--bottom-nav-height) + env(safe-area-inset-bottom, 0px));
+
+  /* Escala de empilhamento. Os saltos entre valores são propositais: dá para
+     encaixar uma camada nova sem renumerar as existentes. */
+  --z-sticky-header: 20;
+  --z-bottom-nav: 30;
+  --z-dropdown: 40;
+  --z-overlay: 50;
+  --z-drawer: 60;
+  --z-modal: 80;
+  --z-toast: 90;
+
+  /* Alturas de controle, alinhadas ao mínimo de toque de 44px. */
+  --control-height-sm: 2.5rem;  /* 40px — confortável só no desktop */
+  --control-height-md: 2.75rem; /* 44px */
+  --control-height-lg: 3rem;    /* 48px */
+}
+
+/* Reserva o espaço da barra inferior. Aplicado em UM lugar só (o <main> do
+   layout autenticado), para o padding nunca ser somado duas vezes. */
+.pb-bottom-nav {
+  padding-bottom: calc(var(--bottom-nav-offset) + 1rem);
+}
+@media (min-width: 768px) {
+  .pb-bottom-nav { padding-bottom: 0; }
+}
+
+/* Faixa rolável na horizontal, sem barra visível. `pan-x` impede que o gesto
+   horizontal roube a rolagem vertical da página. */
+.scroll-x-hidden {
+  overflow-x: auto;
+  overflow-y: hidden;
+  touch-action: pan-x;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+.scroll-x-hidden::-webkit-scrollbar { display: none; }
+
+/* === MOVIMENTO REDUZIDO ===================================================
+   Respeita a preferência do sistema. Também funciona como alívio em aparelhos
+   fracos: muitos usuários de Android intermediário ligam essa opção
+   justamente por causa de travamentos.
+   ========================================================================= */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  /* Um indicador de carregamento parado não comunica nada. Em vez de
+     congelá-lo, giramos mais devagar. */
+  .animate-spin {
+    animation-duration: 1.5s !important;
+    animation-iteration-count: infinite !important;
+  }
+}
+
 /* === MOBILE-FIRST UX (≤ 767px) ============================================
    Aplica tipografia legível, touch-targets mínimos de 44–48px e cards mais
    confortáveis para uso com uma mão. Desktop fica inalterado.

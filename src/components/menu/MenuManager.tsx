@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ScrollableTabs, type ScrollableTabItem } from "@/components/layout/ScrollableTabs";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2, RefreshCw } from "lucide-react";
 import { CategoryList } from "./CategoryList";
@@ -16,6 +17,16 @@ interface MenuManagerProps {
 }
 
 const DEFAULT_SYNC_ENDPOINT = "https://watjejwgtieqfkpebkfz.supabase.co/functions/v1/menu-sync";
+
+/** Abas do cardápio, em um só lugar — a ordem aqui é a ordem na tela. */
+const MENU_TABS: readonly ScrollableTabItem[] = [
+  { value: "categories", label: "Categorias" },
+  { value: "products", label: "Sabores" },
+  { value: "pizza_sizes", label: "Tamanhos" },
+  { value: "beverages", label: "Bebidas" },
+  { value: "extras", label: "Bordas/Adic." },
+  { value: "config", label: "Config.", emphasis: true },
+];
 
 export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   const [activeTab, setActiveTab] = useState("categories");
@@ -78,17 +89,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-2">
-          <TabsList className="grid w-full grid-cols-2 lg:w-[900px] lg:grid-cols-6 bg-muted/50 p-1">
-            <TabsTrigger value="categories" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Categorias</TabsTrigger>
-            <TabsTrigger value="products" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Sabores</TabsTrigger>
-            <TabsTrigger value="pizza_sizes" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Tamanhos</TabsTrigger>
-            <TabsTrigger value="beverages" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Bebidas</TabsTrigger>
-            <TabsTrigger value="extras" className="data-[state=active]:bg-background data-[state=active]:shadow-sm">Bordas/Adic.</TabsTrigger>
-            <TabsTrigger value="config" className="data-[state=active]:bg-background data-[state=active]:shadow-sm text-primary font-semibold">Config.</TabsTrigger>
-          </TabsList>
-
-        </div>
+        <ScrollableTabs items={MENU_TABS} value={activeTab} className="mb-2" />
 
         <div className="mt-6">
           <TabsContent value="categories" className="m-0 focus-visible:outline-none">
