@@ -33,6 +33,8 @@ import {
 } from "@/components/flystatus/FlyStatusModal";
 import { ClubCentsCard } from "@/components/club/ClubCentsCard";
 import { HallOfFameStrip } from "@/components/club/HallOfFameStrip";
+import { OrdersKanban } from "@/components/orders/OrdersKanban";
+import { TERMINAL_STATUSES, isKanbanStatus } from "@/components/orders/orderStatusConfig";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
@@ -439,6 +441,26 @@ function Dashboard() {
     return base;
   }, [orders, filter]);
 
+  /**
+   * O quadro só tem colunas para `novo`, `preparando` e `saiu`. Quando o
+   * usuário pede explicitamente para ver tudo, ou filtra por um status
+   * finalizado, voltamos à lista — assim nenhum pedido fica inacessível.
+   */
+  const showKanban = useMemo(() => {
+    if (filter === "todos") return false;
+    return !(TERMINAL_STATUSES as readonly string[]).includes(filter);
+  }, [filter]);
+
+  /**
+   * Pedidos vindos de integrações podem chegar com status que não têm coluna
+   * (`pronto`, `pendente`, `saiu_entrega`…). Eles não somem: são contados aqui
+   * para que a tela ofereça o caminho até a lista completa.
+   */
+  const ordersOutsideBoard = useMemo(
+    () => (showKanban ? filtered.filter((o) => !isKanbanStatus(o.status)) : []),
+    [filtered, showKanban],
+  );
+
   async function deleteOrder(o: Order) {
     if (
       !confirm(
@@ -814,25 +836,56 @@ function Dashboard() {
         </Select>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        {filtered.map((o) => (
-          <OrderCard 
-            key={o.id} 
-            o={o} 
-            onChange={changeStatus} 
-            onDelete={deleteOrder}
-            onSee={markAsSeen}
-            isRecentNew={recentNewOrderIds.includes(o.id)}
-            canDelete={isHardcodedAdmin}
-          />
-        ))}
+      {ordersOutsideBoard.length > 0 && (
+        <div className="mb-4 flex flex-wrap items-center gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-700 dark:text-amber-400">
+          <span>
+            {ordersOutsideBoard.length}{" "}
+            {ordersOutsideBoard.length === 1 ? "pedido está" : "pedidos estão"} com um status que
+            não tem coluna no quadro (
+            {[...new Set(ordersOutsideBoard.map((o) => o.status))].join(", ")}).
+          </span>
+          <Button
+            size="sm"
+            variant="outline"
+            className="h-7 text-xs"
+            onClick={() => setFilter("todos")}
+          >
+            Ver na lista completa
+          </Button>
+        </div>
+      )}
 
-        {!filtered.length && (
-          <div className="col-span-full grid place-items-center rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
-            Nenhum pedido aqui. Aguardando…
-          </div>
-        )}
-      </div>
+      {showKanban ? (
+        <OrdersKanban
+          orders={filtered}
+          setOrders={setOrders}
+          tenantId={activeId}
+          recentNewIds={recentNewOrderIds}
+          canDelete={isHardcodedAdmin}
+          onDelete={deleteOrder}
+          onStatusApplied={openStatusArtModal}
+        />
+      ) : (
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          {filtered.map((o) => (
+            <OrderCard
+              key={o.id}
+              o={o}
+              onChange={changeStatus}
+              onDelete={deleteOrder}
+              onSee={markAsSeen}
+              isRecentNew={recentNewOrderIds.includes(o.id)}
+              canDelete={isHardcodedAdmin}
+            />
+          ))}
+
+          {!filtered.length && (
+            <div className="col-span-full grid place-items-center rounded-xl border border-dashed border-border py-16 text-sm text-muted-foreground">
+              Nenhum pedido aqui. Aguardando…
+            </div>
+          )}
+        </div>
+      )}
 
       <FlyStatusModal
         open={flyStatus.open}

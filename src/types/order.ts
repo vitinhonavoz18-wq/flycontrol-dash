@@ -50,4 +50,9 @@ export type Order = {
   mesa?: string | null;
   ticket_number?: string | null;
   payment_status?: string | null;
+  /** Canal de entrada do pedido: site, whatsapp, ifood, manual… */
+  source?: string | null;
+  /** Garçom responsável, quando o pedido veio do salão. */
+  waiter_id?: string | null;
+  updated_at?: string;
 };
