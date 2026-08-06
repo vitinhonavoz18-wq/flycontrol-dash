@@ -28,7 +28,7 @@ import { getPlanPricing, type BillingModel, type PlanCode } from "./plans";
  * Os valores em inglês e as variantes legadas existem porque pedidos entram
  * por integrações externas que não seguem o vocabulário interno.
  */
-const BILLABLE_STATUSES = new Set([
+export const BILLABLE_STATUSES: ReadonlySet<string> = new Set([
   "preparando",
   "saiu",
   "saiu_entrega",
