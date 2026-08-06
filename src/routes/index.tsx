@@ -92,7 +92,7 @@ function Landing() {
             Comece hoje, sem cartão de crédito. Configure em minutos.
           </p>
           <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link to="/signup">
+            <Link to="/signup" search={{ plan: undefined }}>
               <button
                 className="rounded-xl px-8 py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_rgba(255,90,0,0.6)]"
                 style={{

@@ -9,7 +9,7 @@ export const HeroButtons = memo(function HeroButtons() {
     <>
       <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:gap-4">
         {/* Primary CTA */}
-        <Link to="/signup" className="w-full sm:w-auto" aria-label="Criar conta gratuita no FlyControl">
+        <Link to="/signup" search={{ plan: undefined }} className="w-full sm:w-auto" aria-label="Criar conta gratuita no FlyControl">
           <button
             className="group relative h-13 w-full overflow-hidden rounded-xl px-8 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_16px_40px_-8px_rgba(255,90,0,0.65)] sm:w-auto"
             style={{

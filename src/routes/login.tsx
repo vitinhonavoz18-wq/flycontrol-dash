@@ -57,7 +57,7 @@ function Login() {
             <Link to="/plans">Conheça os planos</Link>
           </Button>
           <p className="text-xs text-muted-foreground">
-            <Link to="/signup" className="text-primary hover:underline">
+            <Link to="/signup" search={{ plan: undefined }} className="text-primary hover:underline">
               Criar minha conta
             </Link>
           </p>
