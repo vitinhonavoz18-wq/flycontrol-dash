@@ -28,6 +28,7 @@ export type QueryBuilder = {
   update: (values: unknown) => QueryBuilder;
   eq: (column: string, value: unknown) => QueryBuilder;
   neq: (column: string, value: unknown) => QueryBuilder;
+  lte: (column: string, value: unknown) => QueryBuilder;
   not: (column: string, operator: string, value: unknown) => QueryBuilder;
   maybeSingle: () => PromiseLike<QueryResult>;
 } & PromiseLike<QueryResult>;

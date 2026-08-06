@@ -41,6 +41,7 @@ import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin/finance
 import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizzerias'
 import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
+import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.close-cycles'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
 import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
@@ -210,6 +211,11 @@ const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const ApiBillingCloseCyclesRoute = ApiBillingCloseCyclesRouteImport.update({
+  id: '/api/billing/close-cycles',
+  path: '/api/billing/close-cycles',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPizzeriasCreateRoute = ApiPizzeriasCreateRouteImport.update({
   id: '/api/pizzerias/create',
   path: '/api/pizzerias/create',
@@ -290,6 +296,7 @@ export interface FileRoutesByFullPath {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -331,6 +338,7 @@ export interface FileRoutesByTo {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -375,6 +383,7 @@ export interface FileRoutesById {
   '/_app/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
+  '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -419,6 +428,7 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/api/billing/close-cycles'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -460,6 +470,7 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/api/billing/close-cycles'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -503,6 +514,7 @@ export interface FileRouteTypes {
     | '/_app/admin/pizzerias'
     | '/_app/admin/subscriptions'
     | '/_app/admin/users'
+    | '/api/billing/close-cycles'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -528,6 +540,7 @@ export interface RootRouteChildren {
   ApiOrdersRoute: typeof ApiOrdersRoute
   ApiSyncTableSessionsRoute: typeof ApiSyncTableSessionsRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
+  ApiBillingCloseCyclesRoute: typeof ApiBillingCloseCyclesRoute
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPizzeriasFiqonTestRoute: typeof ApiPizzeriasFiqonTestRoute
   ApiPizzeriasSyncMenuRoute: typeof ApiPizzeriasSyncMenuRoute
@@ -765,6 +778,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/api/billing/close-cycles': {
+      id: '/api/billing/close-cycles'
+      path: '/api/billing/close-cycles'
+      fullPath: '/api/billing/close-cycles'
+      preLoaderRoute: typeof ApiBillingCloseCyclesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pizzerias/create': {
       id: '/api/pizzerias/create'
       path: '/api/pizzerias/create'
@@ -902,6 +922,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOrdersRoute: ApiOrdersRoute,
   ApiSyncTableSessionsRoute: ApiSyncTableSessionsRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
+  ApiBillingCloseCyclesRoute: ApiBillingCloseCyclesRoute,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPizzeriasFiqonTestRoute: ApiPizzeriasFiqonTestRoute,
   ApiPizzeriasSyncMenuRoute: ApiPizzeriasSyncMenuRoute,
