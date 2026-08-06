@@ -16,6 +16,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
 import { isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
   hasErrors,
   normalizeEmail,
@@ -35,6 +36,8 @@ export type SignupInput = {
   owner: OwnerData;
   company: CompanyData;
   acceptedTerms: boolean;
+  /** Versão dos termos exibida na tela em que o aceite foi dado. */
+  termsVersion: string;
 };
 
 export type SignupResult = {
@@ -69,6 +72,15 @@ export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((d: SignupInput) => {
     if (!isPublicPlanCode(d?.planCode)) throw new Error("Selecione um plano válido.");
     if (!d?.acceptedTerms) throw new Error("É necessário aceitar os termos para continuar.");
+
+    // Aba aberta antes de uma publicação nova: o cliente aceitou um texto que
+    // não é mais o vigente. Registrar como se fosse tornaria o consentimento
+    // inútil justamente no caso em que ele importa.
+    if (d.termsVersion !== TERMS_VERSION) {
+      throw new Error(
+        "Os termos foram atualizados. Recarregue a página e revise antes de aceitar.",
+      );
+    }
 
     // A validação do cliente é conveniência; esta é a que decide. Um payload
     // montado à mão não passa por aqui.
@@ -221,9 +233,10 @@ export const createAccount = createServerFn({ method: "POST" })
         reason: "Cadastro realizado pelo próprio cliente",
         metadata: {
           plan_code: planCode,
-          // Registro do consentimento. A versão dos documentos entra aqui
-          // quando os textos oficiais existirem.
+          // Registro do consentimento: sem a versão, uma alteração futura nos
+          // termos tornaria impossível saber a que texto este cliente aceitou.
           accepted_terms_at: new Date().toISOString(),
+          accepted_terms_version: TERMS_VERSION,
         },
       });
 

@@ -15,6 +15,7 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as PresentationRouteImport } from './routes/presentation'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WaiterLoginRouteImport } from './routes/waiter-login'
 import { Route as WaiterPortalRouteImport } from './routes/waiter-portal'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
@@ -79,6 +80,11 @@ const PresentationRoute = PresentationRouteImport.update({
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WaiterLoginRoute = WaiterLoginRouteImport.update({
@@ -271,6 +277,7 @@ export interface FileRoutesByFullPath {
   '/plans': typeof PlansRoute
   '/presentation': typeof PresentationRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
   '/admin': typeof AppAdminRouteWithChildren
@@ -314,6 +321,7 @@ export interface FileRoutesByTo {
   '/plans': typeof PlansRoute
   '/presentation': typeof PresentationRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
   '/billing': typeof AppBillingRoute
@@ -358,6 +366,7 @@ export interface FileRoutesById {
   '/plans': typeof PlansRoute
   '/presentation': typeof PresentationRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
   '/_app/admin': typeof AppAdminRouteWithChildren
@@ -403,6 +412,7 @@ export interface FileRouteTypes {
     | '/plans'
     | '/presentation'
     | '/signup'
+    | '/terms'
     | '/waiter-login'
     | '/waiter-portal'
     | '/admin'
@@ -446,6 +456,7 @@ export interface FileRouteTypes {
     | '/plans'
     | '/presentation'
     | '/signup'
+    | '/terms'
     | '/waiter-login'
     | '/waiter-portal'
     | '/billing'
@@ -489,6 +500,7 @@ export interface FileRouteTypes {
     | '/plans'
     | '/presentation'
     | '/signup'
+    | '/terms'
     | '/waiter-login'
     | '/waiter-portal'
     | '/_app/admin'
@@ -534,6 +546,7 @@ export interface RootRouteChildren {
   PlansRoute: typeof PlansRoute
   PresentationRoute: typeof PresentationRoute
   SignupRoute: typeof SignupRoute
+  TermsRoute: typeof TermsRoute
   WaiterLoginRoute: typeof WaiterLoginRoute
   WaiterPortalRoute: typeof WaiterPortalRoute
   ApiHealthRoute: typeof ApiHealthRoute
@@ -594,6 +607,13 @@ declare module '@tanstack/react-router' {
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/waiter-login': {
@@ -916,6 +936,7 @@ const rootRouteChildren: RootRouteChildren = {
   PlansRoute: PlansRoute,
   PresentationRoute: PresentationRoute,
   SignupRoute: SignupRoute,
+  TermsRoute: TermsRoute,
   WaiterLoginRoute: WaiterLoginRoute,
   WaiterPortalRoute: WaiterPortalRoute,
   ApiHealthRoute: ApiHealthRoute,

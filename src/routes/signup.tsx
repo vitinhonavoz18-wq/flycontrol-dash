@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Clock, Loader2 } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, Clock, ExternalLink, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { TERMS_VERSION } from "@/lib/legal/terms";
 import { createAccount } from "@/lib/signup/signup.functions";
 import {
   BRAZILIAN_STATES,
@@ -144,7 +145,9 @@ function SignupWizard() {
     setSubmitting(true);
     try {
       const created = await createAccount({
-        data: { planCode, owner, company, acceptedTerms },
+        // A versão dos termos que esta tela exibiu vai junto: é o que foi
+        // aceito de fato. O servidor confere contra a versão vigente.
+        data: { planCode, owner, company, acceptedTerms, termsVersion: TERMS_VERSION },
       });
       setResult({
         companyName: created.companyName,
@@ -570,6 +573,24 @@ function SignupWizard() {
               </CardContent>
             </Card>
 
+            {/* O link fica acima da caixinha, e não dentro do rótulo: um link
+                dentro de um <label> clicável faz o toque abrir os termos ou
+                marcar o aceite dependendo de milímetros — no celular, marcar
+                sem querer é o resultado mais provável. Abre em nova aba para
+                não descartar o que já foi preenchido no wizard. */}
+            <p className="text-sm">
+              <Link
+                to="/terms"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 font-medium text-primary underline underline-offset-4"
+              >
+                Ler os termos de uso e as condições comerciais
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="sr-only">(abre em nova aba)</span>
+              </Link>
+            </p>
+
             <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 text-sm">
               <input
                 type="checkbox"
@@ -579,7 +600,7 @@ function SignupWizard() {
               />
               <span>
                 Li e aceito os termos de uso, a política de privacidade e as condições comerciais do
-                plano escolhido.
+                plano escolhido (versão {TERMS_VERSION}).
               </span>
             </label>
           </section>
