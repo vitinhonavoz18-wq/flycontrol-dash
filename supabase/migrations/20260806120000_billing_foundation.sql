@@ -146,9 +146,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS billing_cycles_one_open_per_subscription
 
 CREATE INDEX IF NOT EXISTS billing_cycles_company_idx ON public.billing_cycles(company_id, cycle_start DESC);
 
-ALTER TABLE public.subscriptions
-  ADD CONSTRAINT subscriptions_current_cycle_fkey
-  FOREIGN KEY (current_cycle_id) REFERENCES public.billing_cycles(id) ON DELETE SET NULL;
+-- A referência ao ciclo corrente só pode ser criada depois que billing_cycles
+-- existe, por isso ela vem aqui e não junto da tabela.
+--
+-- ADD CONSTRAINT não aceita IF NOT EXISTS, então a checagem é explícita. Sem
+-- ela, rodar esta migration uma segunda vez aborta em "constraint já existe"
+-- e tudo que vem depois deixa de ser aplicado.
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_constraint
+     WHERE conname = 'subscriptions_current_cycle_fkey'
+       AND conrelid = 'public.subscriptions'::regclass
+  ) THEN
+    ALTER TABLE public.subscriptions
+      ADD CONSTRAINT subscriptions_current_cycle_fkey
+      FOREIGN KEY (current_cycle_id) REFERENCES public.billing_cycles(id) ON DELETE SET NULL;
+  END IF;
+END $$;
 
 -- ---------------------------------------------------------------------------
 -- Eventos de uso
