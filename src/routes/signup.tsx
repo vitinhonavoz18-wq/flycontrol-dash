@@ -1,18 +1,28 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
-import { ArrowLeft, ArrowRight, Check, Clock, ExternalLink, Loader2 } from "lucide-react";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Check,
+  Clock,
+  ExternalLink,
+  FlaskConical,
+  Loader2,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 import { CHECKOUT_TOKEN_STORAGE_KEY } from "@/lib/billing/checkout";
 import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TERMS_VERSION } from "@/lib/legal/terms";
-import { createAccount } from "@/lib/signup/signup.functions";
+import { createAccount, getSignupOptions } from "@/lib/signup/signup.functions";
+import { PAYMENT_BYPASS_WARNING } from "@/lib/signup/paymentBypass";
 import {
   BRAZILIAN_STATES,
   formatCEP,
@@ -98,6 +108,7 @@ function Field({
 
 function SignupWizard() {
   const { plan: planFromUrl } = Route.useSearch();
+  const navigate = useNavigate();
 
   const [step, setStep] = useState(planFromUrl ? 1 : 0);
   const [planCode, setPlanCode] = useState<PlanCode | null>(planFromUrl ?? null);
@@ -111,6 +122,21 @@ function SignupWizard() {
   const [result, setResult] = useState<{ companyName: string; activationPending: boolean } | null>(
     null,
   );
+
+  // Atalho de teste. Quem responde se ele existe é o servidor — o navegador
+  // não enxerga variável de ambiente do Worker.
+  const [bypassAllowed, setBypassAllowed] = useState(false);
+  useEffect(() => {
+    let active = true;
+    void getSignupOptions()
+      .then((options) => active && setBypassAllowed(options.paymentBypassAllowed))
+      .catch(() => {
+        // Sem resposta, o atalho simplesmente não aparece.
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const pricing = planCode ? PLAN_PRICING[planCode] : null;
 
@@ -138,7 +164,7 @@ function SignupWizard() {
     }
   }
 
-  async function submit() {
+  async function submit(options: { bypassPayment?: boolean } = {}) {
     if (!planCode || submitting) return;
     if (!acceptedTerms) {
       toast.error("É necessário aceitar os termos para continuar.");
@@ -156,6 +182,7 @@ function SignupWizard() {
           acceptedTerms,
           termsVersion: TERMS_VERSION,
           privacyVersion: PRIVACY_VERSION,
+          bypassPayment: options.bypassPayment,
         },
       });
       // Checkout configurado: o cliente vai pagar agora. O token fica no
@@ -171,6 +198,24 @@ function SignupWizard() {
         // trazer o cliente para uma tela de cadastro já enviado.
         window.location.replace(created.checkout.url);
         return;
+      }
+
+      // Atalho de teste: entra direto na configuração da loja, que é o que se
+      // quer inspecionar. A senha acabou de ser digitada aqui, então não há
+      // motivo para pedir de novo.
+      if (created.paymentBypassed) {
+        const { error } = await supabase.auth.signInWithPassword({
+          email: owner.email.trim().toLowerCase(),
+          password: owner.password,
+        });
+
+        if (!error) {
+          await navigate({ to: "/my-store" });
+          return;
+        }
+        // Login automático falhou: a conta existe, então cai na tela de
+        // sucesso e o acesso é pelo login normal.
+        console.error("[signup] login automático falhou:", error);
       }
 
       setResult({
@@ -670,6 +715,29 @@ function SignupWizard() {
             </Button>
           )}
         </div>
+
+        {/* TEMPORÁRIO — atalho de teste.
+            Só aparece com SIGNUP_ALLOW_PAYMENT_BYPASS="true" no servidor, e o
+            servidor reconfere: forjar a requisição não adianta. Sai junto com
+            src/lib/signup/paymentBypass.ts quando a confirmação de pagamento
+            da InfinityPay estiver ligada. */}
+        {step === 3 && bypassAllowed && (
+          <div className="mt-4 space-y-2 rounded-lg border border-dashed border-amber-500/60 bg-amber-500/10 p-3">
+            <p className="flex items-start gap-2 text-sm text-muted-foreground">
+              <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
+              <span>{PAYMENT_BYPASS_WARNING}</span>
+            </p>
+            <Button
+              variant="outline"
+              className="h-11 w-full border-amber-500/60"
+              onClick={() => void submit({ bypassPayment: true })}
+              disabled={submitting || !acceptedTerms}
+            >
+              {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+              Criar conta sem pagamento e continuar
+            </Button>
+          </div>
+        )}
       </main>
     </div>
   );

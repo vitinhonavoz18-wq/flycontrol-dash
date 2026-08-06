@@ -24,6 +24,7 @@ import {
   resolveCheckoutConfig,
 } from "@/lib/billing/checkout";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
+import { PAYMENT_BYPASS_REASON, isPaymentBypassAllowed } from "./paymentBypass";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
   hasErrors,
@@ -47,20 +48,37 @@ export type SignupInput = {
   /** Versões dos documentos exibidas na tela em que o aceite foi dado. */
   termsVersion: string;
   privacyVersion: string;
+  /** Atalho temporário de teste. Só vale se o servidor também permitir. */
+  bypassPayment?: boolean;
 };
 
 export type SignupResult = {
   companyId: string;
   companyName: string;
   planCode: PlanCode;
-  subscriptionStatus: "pending_activation" | null;
+  subscriptionStatus: "pending_activation" | "active" | null;
   /**
    * Para onde mandar o cliente pagar, quando o checkout do plano está
    * configurado. Nulo mantém o fluxo anterior: cadastro concluído e ativação
    * combinada com a equipe.
    */
   checkout: { url: string; token: string } | null;
+  /** `true` quando a conta foi criada pelo atalho de teste, sem pagamento. */
+  paymentBypassed: boolean;
 };
+
+/**
+ * O que a tela de cadastro precisa saber sobre o ambiente.
+ *
+ * O botão de atalho não pode ser decidido pelo navegador: `import.meta.env`
+ * do cliente não enxerga variável de servidor, e deixar a decisão no bundle
+ * publicaria o atalho junto com o site.
+ */
+export const getSignupOptions = createServerFn({ method: "GET" }).handler(
+  async (): Promise<{ paymentBypassAllowed: boolean }> => ({
+    paymentBypassAllowed: isPaymentBypassAllowed(process.env),
+  }),
+);
 
 /**
  * Cria a intenção de checkout e devolve o token que vai para o navegador.
@@ -160,6 +178,14 @@ export const createAccount = createServerFn({ method: "POST" })
     const planCode = data.planCode as PlanCode;
     const email = normalizeEmail(data.owner.email);
 
+    // O pedido do navegador não decide nada: quem autoriza o atalho é o
+    // ambiente. Uma requisição forjada com bypassPayment: true cai aqui e
+    // segue pelo fluxo normal, com pagamento.
+    const bypassPayment = data.bypassPayment === true && isPaymentBypassAllowed(process.env);
+    if (data.bypassPayment === true && !bypassPayment) {
+      console.warn("[signup] atalho de pagamento pedido, mas desligado no ambiente. Ignorado.");
+    }
+
     // ---- 1. Usuário proprietário ------------------------------------------
     const { data: created, error: authError } = await supabaseAdmin.auth.admin.createUser({
       email,
@@ -211,8 +237,9 @@ export const createAccount = createServerFn({ method: "POST" })
           // CENTS não enxerga Mesas nem antes da ativação da cobrança.
           plan_type: planCode,
           // A assinatura ainda não foi ativada, e a empresa não deve operar
-          // como se tivesse sido.
-          subscription_status: "pending_activation",
+          // como se tivesse sido. O atalho de teste é a exceção: ele existe
+          // justamente para chegar ao que vem depois do pagamento.
+          subscription_status: bypassPayment ? "active" : "pending_activation",
           phone: onlyDigits(data.company.phone) || null,
           address:
             [data.company.address, data.company.city, data.company.state]
@@ -256,7 +283,8 @@ export const createAccount = createServerFn({ method: "POST" })
           subscriptionStatus: null,
           // A empresa existe e o cliente pode pagar; a assinatura é criada
           // pelo administrador depois.
-          checkout: await createCheckoutIntent(planCode, companyId, null),
+          checkout: bypassPayment ? null : await createCheckoutIntent(planCode, companyId, null),
+          paymentBypassed: bypassPayment,
         };
       }
 
@@ -276,7 +304,8 @@ export const createAccount = createServerFn({ method: "POST" })
           companyName: company.name,
           planCode,
           subscriptionStatus: null,
-          checkout: await createCheckoutIntent(planCode, companyId, null),
+          checkout: bypassPayment ? null : await createCheckoutIntent(planCode, companyId, null),
+          paymentBypassed: bypassPayment,
         };
       }
 
@@ -287,10 +316,15 @@ export const createAccount = createServerFn({ method: "POST" })
           plan_id: typedPlan.id,
           plan_price_version_id: (priceVersion as { id: string }).id,
           // Nunca nasce ativa. Sem gateway integrado, marcar como paga seria
-          // inventar um pagamento que não existe.
-          status: "pending_activation",
+          // inventar um pagamento que não existe — salvo no atalho de teste,
+          // que é explicitamente um ambiente onde isso é aceito.
+          status: bypassPayment ? "active" : "pending_activation",
           billing_model: typedPlan.billing_model,
           payment_provider: "manual",
+          ...(bypassPayment && {
+            activated_at: new Date().toISOString(),
+            billing_anchor_day: new Date().getUTCDate(),
+          }),
         })
         .select("id")
         .maybeSingle();
@@ -304,10 +338,10 @@ export const createAccount = createServerFn({ method: "POST" })
       await db.from("subscription_events").insert({
         subscription_id: (subscription as { id: string }).id,
         company_id: companyId,
-        event_type: "subscription_created",
-        new_status: "pending_activation",
+        event_type: bypassPayment ? "subscription_created_test_bypass" : "subscription_created",
+        new_status: bypassPayment ? "active" : "pending_activation",
         performed_by: userId,
-        reason: "Cadastro realizado pelo próprio cliente",
+        reason: bypassPayment ? PAYMENT_BYPASS_REASON : "Cadastro realizado pelo próprio cliente",
         metadata: {
           plan_code: planCode,
           // Registro do consentimento: sem a versão, uma alteração futura nos
@@ -315,6 +349,9 @@ export const createAccount = createServerFn({ method: "POST" })
           accepted_terms_at: new Date().toISOString(),
           accepted_terms_version: TERMS_VERSION,
           accepted_privacy_version: PRIVACY_VERSION,
+          // Marca permanente: esta conta nunca pagou. É o que permite
+          // encontrá-las depois para limpar ou cobrar.
+          payment_bypassed: bypassPayment,
         },
       });
 
@@ -322,12 +359,12 @@ export const createAccount = createServerFn({ method: "POST" })
         companyId,
         companyName: company.name,
         planCode,
-        subscriptionStatus: "pending_activation",
-        checkout: await createCheckoutIntent(
-          planCode,
-          companyId,
-          (subscription as { id: string }).id,
-        ),
+        subscriptionStatus: bypassPayment ? "active" : "pending_activation",
+        // No atalho não há para onde mandar pagar: é justamente o ponto dele.
+        checkout: bypassPayment
+          ? null
+          : await createCheckoutIntent(planCode, companyId, (subscription as { id: string }).id),
+        paymentBypassed: bypassPayment,
       };
     } catch (err) {
       // Erro já tratado acima relança com mensagem própria; qualquer outro
