@@ -6,7 +6,17 @@
 // acrescentar uma chave em PLAN_FEATURES. Para adicionar uma funcionalidade
 // controlável: acrescentar ao union `Feature` e listá-la nos planos que a têm.
 
-export type PlanType = "premium" | "cents";
+/**
+ * `legacy_full_access` é um plano INTERNO, não comercial.
+ *
+ * As empresas que já existiam antes do modelo de assinatura mantêm acesso
+ * completo até que um administrador as migre. Sem ele, ligar a cobrança
+ * bloquearia clientes em produção da noite para o dia.
+ *
+ * Ele nunca aparece na página pública: `PUBLIC_PLAN_CODES`, em
+ * `lib/billing/plans.ts`, lista somente PREMIUM e CENTS.
+ */
+export type PlanType = "premium" | "cents" | "legacy_full_access";
 
 export type Feature = "tables" | "waiters" | "commissions";
 
@@ -23,12 +33,23 @@ export const FEATURE_LABELS: Record<Feature, string> = {
 const PLAN_FEATURES: Record<PlanType, Feature[]> = {
   premium: ["tables", "waiters", "commissions"],
   cents: [],
+  legacy_full_access: ["tables", "waiters", "commissions"],
 };
 
-const DEFAULT_PLAN: PlanType = "premium";
+/**
+ * Um `plan_type` desconhecido cai em acesso completo, e não em bloqueio.
+ *
+ * A escolha é deliberada: as empresas atuais têm valores variados nesse campo,
+ * e derrubar o acesso de quem já paga por um valor inesperado é um estrago
+ * muito maior do que liberar demais até a migração administrativa acontecer.
+ * Só `cents` restringe, porque é o único plano vendido com restrição.
+ */
+const DEFAULT_PLAN: PlanType = "legacy_full_access";
 
 export function normalizePlanType(value: string | null | undefined): PlanType {
-  return value === "cents" ? "cents" : DEFAULT_PLAN;
+  if (value === "cents") return "cents";
+  if (value === "premium") return "premium";
+  return DEFAULT_PLAN;
 }
 
 export function planHasFeature(plan: string | null | undefined, feature: Feature): boolean {
