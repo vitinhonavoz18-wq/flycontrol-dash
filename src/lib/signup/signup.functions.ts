@@ -16,6 +16,13 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
 import { isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import {
+  CHECKOUT_INTENT_TTL_MS,
+  checkoutAmountCents,
+  generateIntentToken,
+  hashIntentToken,
+  resolveCheckoutConfig,
+} from "@/lib/billing/checkout";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
@@ -47,7 +54,66 @@ export type SignupResult = {
   companyName: string;
   planCode: PlanCode;
   subscriptionStatus: "pending_activation" | null;
+  /**
+   * Para onde mandar o cliente pagar, quando o checkout do plano está
+   * configurado. Nulo mantém o fluxo anterior: cadastro concluído e ativação
+   * combinada com a equipe.
+   */
+  checkout: { url: string; token: string } | null;
 };
+
+/**
+ * Cria a intenção de checkout e devolve o token que vai para o navegador.
+ *
+ * Nasce aqui, e não em um endpoint próprio, de propósito: um endpoint público
+ * que recebesse um `companyId` deixaria qualquer um emitir token para empresa
+ * alheia. Assim o token só existe para a empresa recém-criada nesta chamada.
+ *
+ * Falha aqui nunca derruba o cadastro — a conta já existe, e o pior caso é o
+ * cliente ver a tela de "combine a ativação com a equipe".
+ */
+async function createCheckoutIntent(
+  planCode: PlanCode,
+  companyId: string,
+  subscriptionId: string | null,
+): Promise<{ url: string; token: string } | null> {
+  const config = resolveCheckoutConfig(planCode, process.env);
+  if (!config.configured) {
+    console.info(`[signup] ${config.reason}`);
+    return null;
+  }
+
+  try {
+    const token = generateIntentToken();
+    const tokenHash = await hashIntentToken(token);
+
+    const { error } = await asBillingDb(supabaseAdmin)
+      .from("checkout_intents")
+      .insert({
+        token_hash: tokenHash,
+        company_id: companyId,
+        subscription_id: subscriptionId,
+        plan_code: planCode,
+        // O valor vem da tabela de preços do servidor. O navegador não opina
+        // sobre quanto custa.
+        expected_amount_cents: checkoutAmountCents(planCode),
+        checkout_url: config.url,
+        expires_at: new Date(Date.now() + CHECKOUT_INTENT_TTL_MS).toISOString(),
+      })
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      console.error("[signup] falha ao registrar intenção de checkout:", error);
+      return null;
+    }
+
+    return { url: config.url, token };
+  } catch (err) {
+    console.error("[signup] erro ao criar intenção de checkout:", err);
+    return null;
+  }
+}
 
 /** Slug único: acrescenta sufixo curto enquanto houver colisão. */
 async function reserveSlug(base: string): Promise<string> {
@@ -188,6 +254,9 @@ export const createAccount = createServerFn({ method: "POST" })
           companyName: company.name,
           planCode,
           subscriptionStatus: null,
+          // A empresa existe e o cliente pode pagar; a assinatura é criada
+          // pelo administrador depois.
+          checkout: await createCheckoutIntent(planCode, companyId, null),
         };
       }
 
@@ -202,7 +271,13 @@ export const createAccount = createServerFn({ method: "POST" })
 
       if (!priceVersion) {
         console.warn(`[signup] plano ${planCode} sem versão de preço ativa.`);
-        return { companyId, companyName: company.name, planCode, subscriptionStatus: null };
+        return {
+          companyId,
+          companyName: company.name,
+          planCode,
+          subscriptionStatus: null,
+          checkout: await createCheckoutIntent(planCode, companyId, null),
+        };
       }
 
       const { data: subscription, error: subError } = await db
@@ -248,6 +323,11 @@ export const createAccount = createServerFn({ method: "POST" })
         companyName: company.name,
         planCode,
         subscriptionStatus: "pending_activation",
+        checkout: await createCheckoutIntent(
+          planCode,
+          companyId,
+          (subscription as { id: string }).id,
+        ),
       };
     } catch (err) {
       // Erro já tratado acima relança com mensagem própria; qualquer outro

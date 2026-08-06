@@ -5,7 +5,7 @@
  * motivos diferentes, e versioná-los juntos obrigaria a invalidar o aceite de
  * um por causa de uma correção no outro.
  */
-export const PRIVACY_VERSION = "2026-08-06.1";
+export const PRIVACY_VERSION = "2026-08-06.2";
 
 export const PRIVACY_LAST_UPDATED = "6 de agosto de 2026";
 

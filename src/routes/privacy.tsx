@@ -160,12 +160,13 @@ function PrivacyPage() {
             estabelecimento, quando contratado. Os pedidos feitos por ele chegam ao painel com os
             dados do cliente final.
           </li>
+          <li>
+            <strong className="text-foreground">InfinityPay</strong> — processamento do pagamento da
+            assinatura. Ao contratar um plano, o responsável é levado ao ambiente de pagamento da
+            InfinityPay e fornece ali os seus dados de pagamento, que são tratados por ela. A
+            FlyControl não recebe nem armazena números de cartão.
+          </li>
         </ul>
-        <p>
-          A cobrança automática por PIX está em implantação. Quando o provedor de pagamento entrar
-          em operação, ele passará a receber os dados necessários à cobrança do estabelecimento — e
-          esta política será atualizada nomeando-o antes disso acontecer.
-        </p>
         <p>
           Fora esses casos, os dados só são compartilhados por determinação legal ou ordem de
           autoridade competente.

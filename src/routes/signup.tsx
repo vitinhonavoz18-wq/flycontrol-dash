@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { CHECKOUT_TOKEN_STORAGE_KEY } from "@/lib/billing/checkout";
 import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
@@ -157,6 +158,21 @@ function SignupWizard() {
           privacyVersion: PRIVACY_VERSION,
         },
       });
+      // Checkout configurado: o cliente vai pagar agora. O token fica no
+      // navegador para que o retorno possa ser amarrado a este cadastro — a
+      // URL de retorno é a mesma para todos e, sozinha, não identifica
+      // ninguém.
+      if (created.checkout) {
+        localStorage.setItem(
+          CHECKOUT_TOKEN_STORAGE_KEY,
+          JSON.stringify({ token: created.checkout.token, planCode }),
+        );
+        // `replace` e não `assign`: o botão "voltar" do checkout não deve
+        // trazer o cliente para uma tela de cadastro já enviado.
+        window.location.replace(created.checkout.url);
+        return;
+      }
+
       setResult({
         companyName: created.companyName,
         activationPending: created.subscriptionStatus === "pending_activation",

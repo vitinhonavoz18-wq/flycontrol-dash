@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { SubscriptionsDashboard } from "@/components/admin/dashboards/SubscriptionsDashboard";
 import { SubscriptionAdminPanel } from "@/components/admin/SubscriptionAdminPanel";
+import { CheckoutReturnLinks } from "@/components/admin/CheckoutReturnLinks";
 
 export const Route = createFileRoute("/_app/admin/subscriptions")({
   component: AdminSubscriptionsPage,
@@ -17,6 +18,13 @@ function AdminSubscriptionsPage() {
           deixaria essas empresas sem nenhuma gestão. Sai quando todas
           estiverem migradas. */}
       <SubscriptionAdminPanel />
+
+      <section className="border-t border-border pt-8">
+        <h2 className="mb-4 text-sm font-bold uppercase tracking-wide text-muted-foreground">
+          Configuração do checkout
+        </h2>
+        <CheckoutReturnLinks />
+      </section>
 
       <section className="border-t border-border pt-8">
         <h2 className="mb-1 text-sm font-bold uppercase tracking-wide text-muted-foreground">

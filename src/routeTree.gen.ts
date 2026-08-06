@@ -35,6 +35,7 @@ import { Route as AppWaitersRouteImport } from './routes/_app/waiters'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiSyncTableSessionsRouteImport } from './routes/api/sync-table-sessions'
+import { Route as PagamentoPlanoRouteImport } from './routes/pagamento.$plano'
 import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin/analytics'
@@ -183,6 +184,11 @@ const ApiSyncTableSessionsRoute = ApiSyncTableSessionsRouteImport.update({
   path: '/api/sync-table-sessions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PagamentoPlanoRoute = PagamentoPlanoRouteImport.update({
+  id: '/pagamento/$plano',
+  path: '/pagamento/$plano',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrintOrderIdRoute = PrintOrderIdRouteImport.update({
   id: '/print/$orderId',
   path: '/print/$orderId',
@@ -303,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
+  '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/cents': typeof AppAdminCentsRoute
@@ -347,6 +354,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
+  '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/cents': typeof AppAdminCentsRoute
@@ -394,6 +402,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
+  '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/cents': typeof AppAdminCentsRoute
@@ -441,6 +450,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
+    | '/pagamento/$plano'
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/cents'
@@ -485,6 +495,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
+    | '/pagamento/$plano'
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/cents'
@@ -531,6 +542,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
+    | '/pagamento/$plano'
     | '/print/$orderId'
     | '/_app/admin/analytics'
     | '/_app/admin/cents'
@@ -565,6 +577,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiOrdersRoute: typeof ApiOrdersRoute
   ApiSyncTableSessionsRoute: typeof ApiSyncTableSessionsRoute
+  PagamentoPlanoRoute: typeof PagamentoPlanoRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiBillingCloseCyclesRoute: typeof ApiBillingCloseCyclesRoute
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
@@ -760,6 +773,13 @@ declare module '@tanstack/react-router' {
       path: '/api/sync-table-sessions'
       fullPath: '/api/sync-table-sessions'
       preLoaderRoute: typeof ApiSyncTableSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pagamento/$plano': {
+      id: '/pagamento/$plano'
+      path: '/pagamento/$plano'
+      fullPath: '/pagamento/$plano'
+      preLoaderRoute: typeof PagamentoPlanoRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/print/$orderId': {
@@ -963,6 +983,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiOrdersRoute: ApiOrdersRoute,
   ApiSyncTableSessionsRoute: ApiSyncTableSessionsRoute,
+  PagamentoPlanoRoute: PagamentoPlanoRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiBillingCloseCyclesRoute: ApiBillingCloseCyclesRoute,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
