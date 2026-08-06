@@ -49,9 +49,19 @@ function Login() {
             {loading ? "Entrando..." : "Entrar"}
           </Button>
         </form>
-        <p className="mt-4 text-center text-sm text-muted-foreground">
-          Não tem conta? <Link to="/signup" className="text-primary hover:underline">Cadastre-se</Link>
-        </p>
+        {/* A conversão passa a começar pelos planos, e não pelo formulário:
+            quem ainda não é cliente precisa comparar preço antes de decidir. */}
+        <div className="mt-6 space-y-3 border-t border-border pt-5 text-center">
+          <p className="text-sm text-muted-foreground">Ainda não possui uma conta?</p>
+          <Button asChild variant="outline" className="h-11 w-full">
+            <Link to="/plans">Conheça os planos</Link>
+          </Button>
+          <p className="text-xs text-muted-foreground">
+            <Link to="/signup" search={{ plan: undefined }} className="text-primary hover:underline">
+              Criar minha conta
+            </Link>
+          </p>
+        </div>
       </div>
     </div>
   );

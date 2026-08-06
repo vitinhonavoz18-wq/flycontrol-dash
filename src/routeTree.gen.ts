@@ -12,11 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as PlansRouteImport } from './routes/plans'
 import { Route as PresentationRouteImport } from './routes/presentation'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SignupRouteImport } from './routes/signup'
+import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WaiterLoginRouteImport } from './routes/waiter-login'
 import { Route as WaiterPortalRouteImport } from './routes/waiter-portal'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as AppBillingRouteImport } from './routes/_app/billing'
 import { Route as AppCombosRouteImport } from './routes/_app/combos'
 import { Route as AppCommissionsRouteImport } from './routes/_app/commissions'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
@@ -31,6 +35,7 @@ import { Route as AppWaitersRouteImport } from './routes/_app/waiters'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiSyncTableSessionsRouteImport } from './routes/api/sync-table-sessions'
+import { Route as PagamentoPlanoRouteImport } from './routes/pagamento.$plano'
 import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin/analytics'
@@ -39,6 +44,7 @@ import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin/finance
 import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizzerias'
 import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
+import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.close-cycles'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
 import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
@@ -63,14 +69,29 @@ const LoginRoute = LoginRouteImport.update({
   path: '/login',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PlansRoute = PlansRouteImport.update({
+  id: '/plans',
+  path: '/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PresentationRoute = PresentationRouteImport.update({
   id: '/presentation',
   path: '/presentation',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SignupRoute = SignupRouteImport.update({
   id: '/signup',
   path: '/signup',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const TermsRoute = TermsRouteImport.update({
+  id: '/terms',
+  path: '/terms',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WaiterLoginRoute = WaiterLoginRouteImport.update({
@@ -86,6 +107,11 @@ const WaiterPortalRoute = WaiterPortalRouteImport.update({
 const AppAdminRoute = AppAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBillingRoute = AppBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCombosRoute = AppCombosRouteImport.update({
@@ -158,6 +184,11 @@ const ApiSyncTableSessionsRoute = ApiSyncTableSessionsRouteImport.update({
   path: '/api/sync-table-sessions',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PagamentoPlanoRoute = PagamentoPlanoRouteImport.update({
+  id: '/pagamento/$plano',
+  path: '/pagamento/$plano',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const PrintOrderIdRoute = PrintOrderIdRouteImport.update({
   id: '/print/$orderId',
   path: '/print/$orderId',
@@ -197,6 +228,11 @@ const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => AppAdminRoute,
+} as any)
+const ApiBillingCloseCyclesRoute = ApiBillingCloseCyclesRouteImport.update({
+  id: '/api/billing/close-cycles',
+  path: '/api/billing/close-cycles',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ApiPizzeriasCreateRoute = ApiPizzeriasCreateRouteImport.update({
   id: '/api/pizzerias/create',
@@ -250,11 +286,15 @@ const ApiPizzeriasIdProvisionRoute = ApiPizzeriasIdProvisionRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/presentation': typeof PresentationRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
   '/admin': typeof AppAdminRouteWithChildren
+  '/billing': typeof AppBillingRoute
   '/combos': typeof AppCombosRoute
   '/commissions': typeof AppCommissionsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -269,6 +309,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
+  '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/cents': typeof AppAdminCentsRoute
@@ -276,6 +317,7 @@ export interface FileRoutesByFullPath {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -290,10 +332,14 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/presentation': typeof PresentationRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
+  '/billing': typeof AppBillingRoute
   '/combos': typeof AppCombosRoute
   '/commissions': typeof AppCommissionsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -308,6 +354,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
+  '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/cents': typeof AppAdminCentsRoute
@@ -315,6 +362,7 @@ export interface FileRoutesByTo {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -331,11 +379,15 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
+  '/plans': typeof PlansRoute
   '/presentation': typeof PresentationRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
+  '/terms': typeof TermsRoute
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
   '/_app/admin': typeof AppAdminRouteWithChildren
+  '/_app/billing': typeof AppBillingRoute
   '/_app/combos': typeof AppCombosRoute
   '/_app/commissions': typeof AppCommissionsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -350,6 +402,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
+  '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/cents': typeof AppAdminCentsRoute
@@ -357,6 +410,7 @@ export interface FileRoutesById {
   '/_app/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
+  '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -373,11 +427,15 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/login'
+    | '/plans'
     | '/presentation'
+    | '/privacy'
     | '/signup'
+    | '/terms'
     | '/waiter-login'
     | '/waiter-portal'
     | '/admin'
+    | '/billing'
     | '/combos'
     | '/commissions'
     | '/dashboard'
@@ -392,6 +450,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
+    | '/pagamento/$plano'
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/cents'
@@ -399,6 +458,7 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/api/billing/close-cycles'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -413,10 +473,14 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/login'
+    | '/plans'
     | '/presentation'
+    | '/privacy'
     | '/signup'
+    | '/terms'
     | '/waiter-login'
     | '/waiter-portal'
+    | '/billing'
     | '/combos'
     | '/commissions'
     | '/dashboard'
@@ -431,6 +495,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
+    | '/pagamento/$plano'
     | '/print/$orderId'
     | '/admin/analytics'
     | '/admin/cents'
@@ -438,6 +503,7 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/api/billing/close-cycles'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -453,11 +519,15 @@ export interface FileRouteTypes {
     | '/'
     | '/_app'
     | '/login'
+    | '/plans'
     | '/presentation'
+    | '/privacy'
     | '/signup'
+    | '/terms'
     | '/waiter-login'
     | '/waiter-portal'
     | '/_app/admin'
+    | '/_app/billing'
     | '/_app/combos'
     | '/_app/commissions'
     | '/_app/dashboard'
@@ -472,6 +542,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
+    | '/pagamento/$plano'
     | '/print/$orderId'
     | '/_app/admin/analytics'
     | '/_app/admin/cents'
@@ -479,6 +550,7 @@ export interface FileRouteTypes {
     | '/_app/admin/pizzerias'
     | '/_app/admin/subscriptions'
     | '/_app/admin/users'
+    | '/api/billing/close-cycles'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -495,14 +567,19 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
+  PlansRoute: typeof PlansRoute
   PresentationRoute: typeof PresentationRoute
+  PrivacyRoute: typeof PrivacyRoute
   SignupRoute: typeof SignupRoute
+  TermsRoute: typeof TermsRoute
   WaiterLoginRoute: typeof WaiterLoginRoute
   WaiterPortalRoute: typeof WaiterPortalRoute
   ApiHealthRoute: typeof ApiHealthRoute
   ApiOrdersRoute: typeof ApiOrdersRoute
   ApiSyncTableSessionsRoute: typeof ApiSyncTableSessionsRoute
+  PagamentoPlanoRoute: typeof PagamentoPlanoRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
+  ApiBillingCloseCyclesRoute: typeof ApiBillingCloseCyclesRoute
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPizzeriasFiqonTestRoute: typeof ApiPizzeriasFiqonTestRoute
   ApiPizzeriasSyncMenuRoute: typeof ApiPizzeriasSyncMenuRoute
@@ -537,6 +614,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoginRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/plans': {
+      id: '/plans'
+      path: '/plans'
+      fullPath: '/plans'
+      preLoaderRoute: typeof PlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/presentation': {
       id: '/presentation'
       path: '/presentation'
@@ -544,11 +628,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PresentationRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/signup': {
       id: '/signup'
       path: '/signup'
       fullPath: '/signup'
       preLoaderRoute: typeof SignupRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/terms': {
+      id: '/terms'
+      path: '/terms'
+      fullPath: '/terms'
+      preLoaderRoute: typeof TermsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/waiter-login': {
@@ -570,6 +668,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/billing': {
+      id: '/_app/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof AppBillingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/combos': {
@@ -670,6 +775,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiSyncTableSessionsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pagamento/$plano': {
+      id: '/pagamento/$plano'
+      path: '/pagamento/$plano'
+      fullPath: '/pagamento/$plano'
+      preLoaderRoute: typeof PagamentoPlanoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/print/$orderId': {
       id: '/print/$orderId'
       path: '/print/$orderId'
@@ -725,6 +837,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/users'
       preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppAdminRoute
+    }
+    '/api/billing/close-cycles': {
+      id: '/api/billing/close-cycles'
+      path: '/api/billing/close-cycles'
+      fullPath: '/api/billing/close-cycles'
+      preLoaderRoute: typeof ApiBillingCloseCyclesRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/pizzerias/create': {
       id: '/api/pizzerias/create'
@@ -818,6 +937,7 @@ const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRouteWithChildren
+  AppBillingRoute: typeof AppBillingRoute
   AppCombosRoute: typeof AppCombosRoute
   AppCommissionsRoute: typeof AppCommissionsRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -833,6 +953,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRouteWithChildren,
+  AppBillingRoute: AppBillingRoute,
   AppCombosRoute: AppCombosRoute,
   AppCommissionsRoute: AppCommissionsRoute,
   AppDashboardRoute: AppDashboardRoute,
@@ -852,14 +973,19 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
+  PlansRoute: PlansRoute,
   PresentationRoute: PresentationRoute,
+  PrivacyRoute: PrivacyRoute,
   SignupRoute: SignupRoute,
+  TermsRoute: TermsRoute,
   WaiterLoginRoute: WaiterLoginRoute,
   WaiterPortalRoute: WaiterPortalRoute,
   ApiHealthRoute: ApiHealthRoute,
   ApiOrdersRoute: ApiOrdersRoute,
   ApiSyncTableSessionsRoute: ApiSyncTableSessionsRoute,
+  PagamentoPlanoRoute: PagamentoPlanoRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
+  ApiBillingCloseCyclesRoute: ApiBillingCloseCyclesRoute,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPizzeriasFiqonTestRoute: ApiPizzeriasFiqonTestRoute,
   ApiPizzeriasSyncMenuRoute: ApiPizzeriasSyncMenuRoute,

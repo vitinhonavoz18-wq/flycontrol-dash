@@ -177,7 +177,7 @@ function PresentationPage() {
 
           {slide.isLast && (
             <div className="mt-12 flex flex-col gap-4 sm:flex-row">
-              <Link to="/signup" className="w-full sm:w-auto">
+              <Link to="/signup" search={{ plan: undefined }} className="w-full sm:w-auto">
                 <Button size="lg" className="h-14 w-full px-8 text-lg font-bold shadow-lg shadow-primary/20 sm:w-auto">
                   Criar Conta Grátis
                   <ArrowRight className="ml-2 h-5 w-5" />

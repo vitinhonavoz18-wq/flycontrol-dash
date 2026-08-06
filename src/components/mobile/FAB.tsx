@@ -19,12 +19,14 @@ export const FAB = forwardRef<HTMLButtonElement, Props>(function FAB(
       ref={ref}
       {...rest}
       className={cn(
-        "fixed right-4 z-30 inline-flex items-center justify-center gap-2",
+        // Abaixo da barra inferior na escala de empilhamento: o FAB flutua
+        // sobre o conteúdo, nunca sobre a navegação.
+        "fixed right-4 z-[var(--z-sticky-header)] inline-flex items-center justify-center gap-2",
         "rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30",
-        "active:scale-95 transition-transform",
+        "transition-transform duration-150 active:scale-95",
         extended ? "h-14 px-5 text-base font-semibold" : "h-14 w-14",
-        // sit above bottom nav on mobile
-        "bottom-[calc(env(safe-area-inset-bottom)+72px)] md:bottom-6",
+        // Altura da barra vinda do token, em vez do 72px literal de antes.
+        "bottom-[calc(var(--bottom-nav-offset)+0.75rem)] md:bottom-6",
         className,
       )}
       aria-label={label}
