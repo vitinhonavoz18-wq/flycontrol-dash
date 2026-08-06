@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import { createAccount } from "@/lib/signup/signup.functions";
 import {
@@ -145,9 +146,16 @@ function SignupWizard() {
     setSubmitting(true);
     try {
       const created = await createAccount({
-        // A versão dos termos que esta tela exibiu vai junto: é o que foi
-        // aceito de fato. O servidor confere contra a versão vigente.
-        data: { planCode, owner, company, acceptedTerms, termsVersion: TERMS_VERSION },
+        // As versões que esta tela exibiu vão junto: é o que foi aceito de
+        // fato. O servidor confere ambas contra as vigentes.
+        data: {
+          planCode,
+          owner,
+          company,
+          acceptedTerms,
+          termsVersion: TERMS_VERSION,
+          privacyVersion: PRIVACY_VERSION,
+        },
       });
       setResult({
         companyName: created.companyName,
@@ -573,23 +581,33 @@ function SignupWizard() {
               </CardContent>
             </Card>
 
-            {/* O link fica acima da caixinha, e não dentro do rótulo: um link
-                dentro de um <label> clicável faz o toque abrir os termos ou
-                marcar o aceite dependendo de milímetros — no celular, marcar
-                sem querer é o resultado mais provável. Abre em nova aba para
-                não descartar o que já foi preenchido no wizard. */}
-            <p className="text-sm">
+            {/* Os links ficam acima da caixinha, e não dentro do rótulo: um
+                link dentro de um <label> clicável faz o toque abrir o
+                documento ou marcar o aceite dependendo de milímetros — no
+                celular, marcar sem querer é o resultado mais provável. Abrem
+                em nova aba para não descartar o que já foi preenchido. */}
+            <div className="flex flex-col gap-2 text-sm">
               <Link
                 to="/terms"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-1.5 font-medium text-primary underline underline-offset-4"
+                className="inline-flex w-fit items-center gap-1.5 font-medium text-primary underline underline-offset-4"
               >
                 Ler os termos de uso e as condições comerciais
                 <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
                 <span className="sr-only">(abre em nova aba)</span>
               </Link>
-            </p>
+              <Link
+                to="/privacy"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex w-fit items-center gap-1.5 font-medium text-primary underline underline-offset-4"
+              >
+                Ler a política de privacidade
+                <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+                <span className="sr-only">(abre em nova aba)</span>
+              </Link>
+            </div>
 
             <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-border p-3 text-sm">
               <input
@@ -599,8 +617,8 @@ function SignupWizard() {
                 onChange={(e) => setAcceptedTerms(e.target.checked)}
               />
               <span>
-                Li e aceito os termos de uso, a política de privacidade e as condições comerciais do
-                plano escolhido (versão {TERMS_VERSION}).
+                Li e aceito os termos de uso (versão {TERMS_VERSION}), a política de privacidade
+                (versão {PRIVACY_VERSION}) e as condições comerciais do plano escolhido.
               </span>
             </label>
           </section>

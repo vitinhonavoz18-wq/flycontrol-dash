@@ -14,6 +14,7 @@ import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as PresentationRouteImport } from './routes/presentation'
+import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
 import { Route as WaiterLoginRouteImport } from './routes/waiter-login'
@@ -75,6 +76,11 @@ const PlansRoute = PlansRouteImport.update({
 const PresentationRoute = PresentationRouteImport.update({
   id: '/presentation',
   path: '/presentation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrivacyRoute = PrivacyRouteImport.update({
+  id: '/privacy',
+  path: '/privacy',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SignupRoute = SignupRouteImport.update({
@@ -276,6 +282,7 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
   '/presentation': typeof PresentationRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/waiter-login': typeof WaiterLoginRoute
@@ -320,6 +327,7 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
   '/presentation': typeof PresentationRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/waiter-login': typeof WaiterLoginRoute
@@ -365,6 +373,7 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
   '/presentation': typeof PresentationRoute
+  '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
   '/waiter-login': typeof WaiterLoginRoute
@@ -411,6 +420,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/plans'
     | '/presentation'
+    | '/privacy'
     | '/signup'
     | '/terms'
     | '/waiter-login'
@@ -455,6 +465,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/plans'
     | '/presentation'
+    | '/privacy'
     | '/signup'
     | '/terms'
     | '/waiter-login'
@@ -499,6 +510,7 @@ export interface FileRouteTypes {
     | '/login'
     | '/plans'
     | '/presentation'
+    | '/privacy'
     | '/signup'
     | '/terms'
     | '/waiter-login'
@@ -545,6 +557,7 @@ export interface RootRouteChildren {
   LoginRoute: typeof LoginRoute
   PlansRoute: typeof PlansRoute
   PresentationRoute: typeof PresentationRoute
+  PrivacyRoute: typeof PrivacyRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
   WaiterLoginRoute: typeof WaiterLoginRoute
@@ -600,6 +613,13 @@ declare module '@tanstack/react-router' {
       path: '/presentation'
       fullPath: '/presentation'
       preLoaderRoute: typeof PresentationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/privacy': {
+      id: '/privacy'
+      path: '/privacy'
+      fullPath: '/privacy'
+      preLoaderRoute: typeof PrivacyRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/signup': {
@@ -935,6 +955,7 @@ const rootRouteChildren: RootRouteChildren = {
   LoginRoute: LoginRoute,
   PlansRoute: PlansRoute,
   PresentationRoute: PresentationRoute,
+  PrivacyRoute: PrivacyRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
   WaiterLoginRoute: WaiterLoginRoute,

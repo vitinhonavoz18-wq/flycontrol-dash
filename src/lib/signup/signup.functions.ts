@@ -16,6 +16,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
 import { isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
   hasErrors,
@@ -36,8 +37,9 @@ export type SignupInput = {
   owner: OwnerData;
   company: CompanyData;
   acceptedTerms: boolean;
-  /** Versão dos termos exibida na tela em que o aceite foi dado. */
+  /** Versões dos documentos exibidas na tela em que o aceite foi dado. */
   termsVersion: string;
+  privacyVersion: string;
 };
 
 export type SignupResult = {
@@ -76,9 +78,9 @@ export const createAccount = createServerFn({ method: "POST" })
     // Aba aberta antes de uma publicação nova: o cliente aceitou um texto que
     // não é mais o vigente. Registrar como se fosse tornaria o consentimento
     // inútil justamente no caso em que ele importa.
-    if (d.termsVersion !== TERMS_VERSION) {
+    if (d.termsVersion !== TERMS_VERSION || d.privacyVersion !== PRIVACY_VERSION) {
       throw new Error(
-        "Os termos foram atualizados. Recarregue a página e revise antes de aceitar.",
+        "Os documentos foram atualizados. Recarregue a página e revise antes de aceitar.",
       );
     }
 
@@ -237,6 +239,7 @@ export const createAccount = createServerFn({ method: "POST" })
           // termos tornaria impossível saber a que texto este cliente aceitou.
           accepted_terms_at: new Date().toISOString(),
           accepted_terms_version: TERMS_VERSION,
+          accepted_privacy_version: PRIVACY_VERSION,
         },
       });
 
