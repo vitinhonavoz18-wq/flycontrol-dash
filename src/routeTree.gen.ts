@@ -18,6 +18,7 @@ import { Route as SignupRouteImport } from './routes/signup'
 import { Route as WaiterLoginRouteImport } from './routes/waiter-login'
 import { Route as WaiterPortalRouteImport } from './routes/waiter-portal'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
+import { Route as AppBillingRouteImport } from './routes/_app/billing'
 import { Route as AppCombosRouteImport } from './routes/_app/combos'
 import { Route as AppCommissionsRouteImport } from './routes/_app/commissions'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
@@ -92,6 +93,11 @@ const WaiterPortalRoute = WaiterPortalRouteImport.update({
 const AppAdminRoute = AppAdminRouteImport.update({
   id: '/admin',
   path: '/admin',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppBillingRoute = AppBillingRouteImport.update({
+  id: '/billing',
+  path: '/billing',
   getParentRoute: () => AppRoute,
 } as any)
 const AppCombosRoute = AppCombosRouteImport.update({
@@ -262,6 +268,7 @@ export interface FileRoutesByFullPath {
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
   '/admin': typeof AppAdminRouteWithChildren
+  '/billing': typeof AppBillingRoute
   '/combos': typeof AppCombosRoute
   '/commissions': typeof AppCommissionsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -302,6 +309,7 @@ export interface FileRoutesByTo {
   '/signup': typeof SignupRoute
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
+  '/billing': typeof AppBillingRoute
   '/combos': typeof AppCombosRoute
   '/commissions': typeof AppCommissionsRoute
   '/dashboard': typeof AppDashboardRoute
@@ -345,6 +353,7 @@ export interface FileRoutesById {
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
   '/_app/admin': typeof AppAdminRouteWithChildren
+  '/_app/billing': typeof AppBillingRoute
   '/_app/combos': typeof AppCombosRoute
   '/_app/commissions': typeof AppCommissionsRoute
   '/_app/dashboard': typeof AppDashboardRoute
@@ -388,6 +397,7 @@ export interface FileRouteTypes {
     | '/waiter-login'
     | '/waiter-portal'
     | '/admin'
+    | '/billing'
     | '/combos'
     | '/commissions'
     | '/dashboard'
@@ -428,6 +438,7 @@ export interface FileRouteTypes {
     | '/signup'
     | '/waiter-login'
     | '/waiter-portal'
+    | '/billing'
     | '/combos'
     | '/commissions'
     | '/dashboard'
@@ -470,6 +481,7 @@ export interface FileRouteTypes {
     | '/waiter-login'
     | '/waiter-portal'
     | '/_app/admin'
+    | '/_app/billing'
     | '/_app/combos'
     | '/_app/commissions'
     | '/_app/dashboard'
@@ -590,6 +602,13 @@ declare module '@tanstack/react-router' {
       path: '/admin'
       fullPath: '/admin'
       preLoaderRoute: typeof AppAdminRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/billing': {
+      id: '/_app/billing'
+      path: '/billing'
+      fullPath: '/billing'
+      preLoaderRoute: typeof AppBillingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/combos': {
@@ -838,6 +857,7 @@ const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
 
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRouteWithChildren
+  AppBillingRoute: typeof AppBillingRoute
   AppCombosRoute: typeof AppCombosRoute
   AppCommissionsRoute: typeof AppCommissionsRoute
   AppDashboardRoute: typeof AppDashboardRoute
@@ -853,6 +873,7 @@ interface AppRouteChildren {
 
 const AppRouteChildren: AppRouteChildren = {
   AppAdminRoute: AppAdminRouteWithChildren,
+  AppBillingRoute: AppBillingRoute,
   AppCombosRoute: AppCombosRoute,
   AppCommissionsRoute: AppCommissionsRoute,
   AppDashboardRoute: AppDashboardRoute,

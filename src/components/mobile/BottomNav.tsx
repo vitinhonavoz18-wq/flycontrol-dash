@@ -39,6 +39,7 @@ const MORE_OWNER: Item[] = [
   { to: "/finance", label: "Relatórios", icon: BarChart3 },
   { to: "/commissions", label: "Comissões", icon: Wallet },
   { to: "/waiters", label: "Garçons", icon: UtensilsCrossed },
+  { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
   { to: "/settings", label: "Configurações", icon: Settings },
   { to: "/docs", label: "Documentação", icon: BookOpen },
 ];

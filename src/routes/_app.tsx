@@ -135,6 +135,7 @@ function AppLayoutInner() {
     { to: "/menu", label: "Cardápio", icon: Menu },
     { to: "/combos", label: "Combos", icon: PieChart },
     { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },
+    { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
     { to: "/settings", label: "Configurações", icon: Settings },
     { to: "/waiters", label: "Garçons", icon: UtensilsCrossed, feature: "waiters" },
     { to: "/commissions", label: "Comissões", icon: Wallet, feature: "commissions" },
