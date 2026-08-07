@@ -65,6 +65,28 @@ export const PLAN_PRICING: Readonly<Record<PlanCode, PlanPricing>> = {
 /** Ordem de exibição na página pública. */
 export const PUBLIC_PLAN_CODES: readonly PlanCode[] = ["premium", "cents"] as const;
 
+/**
+ * Valor de `pizzerias.billing_model` correspondente a cada plano.
+ *
+ * Atenção aos nomes: a coluna de `pizzerias` usa `fixed`/`per_order`, enquanto
+ * as tabelas de cobrança usam `monthly_fixed`/`usage_per_order`. São
+ * vocabulários diferentes para a mesma ideia.
+ *
+ * O banco exige o par correto (premium+fixed, cents+per_order). Como a coluna
+ * tem default `fixed`, esquecer de preenchê-la não dá "campo obrigatório
+ * faltando" — dá um par inválido, e só no CENTS. Foi assim que o cadastro
+ * quebrou: o PREMIUM passava e o CENTS não.
+ *
+ * A regra mora aqui para não ser reescrita à mão em cada lugar que grava um
+ * plano.
+ */
+export type CompanyBillingModel = "fixed" | "per_order";
+
+export const COMPANY_BILLING_MODEL: Readonly<Record<PlanCode, CompanyBillingModel>> = {
+  premium: "fixed",
+  cents: "per_order",
+} as const;
+
 export function getPlanPricing(code: PlanCode): PlanPricing {
   return PLAN_PRICING[code];
 }

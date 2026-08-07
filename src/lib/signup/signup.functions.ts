@@ -15,7 +15,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
-import { isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { COMPANY_BILLING_MODEL, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
 import {
   CHECKOUT_INTENT_TTL_MS,
   checkoutAmountCents,
@@ -253,6 +253,9 @@ export const createAccount = createServerFn({ method: "POST" })
           // O plano já vale para os entitlements desde a criação: uma conta
           // CENTS não enxerga Mesas nem antes da ativação da cobrança.
           plan_type: planCode,
+          // O banco exige o par plan_type + billing_model. Sem esta linha a
+          // coluna cai no default 'fixed' e todo cadastro no CENTS é recusado.
+          billing_model: COMPANY_BILLING_MODEL[planCode],
           // A assinatura ainda não foi ativada, e a empresa não deve operar
           // como se tivesse sido. O atalho de teste é a exceção: ele existe
           // justamente para chegar ao que vem depois do pagamento.
