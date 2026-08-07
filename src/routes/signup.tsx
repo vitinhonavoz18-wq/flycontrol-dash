@@ -224,8 +224,12 @@ function SignupWizard() {
       });
     } catch (err) {
       // A função do servidor já devolve mensagem em português e sem detalhe
-      // técnico. Nada de "constraint violation" na tela.
-      toast.error(err instanceof Error ? err.message : "Não foi possível concluir o cadastro.");
+      // técnico. Nada de "constraint violation" na tela — salvo no modo de
+      // teste, que anexa o erro do banco de propósito.
+      const message = err instanceof Error ? err.message : "Não foi possível concluir o cadastro.";
+      console.error("[signup]", err);
+      // Mensagem de diagnóstico é longa e precisa de tempo para ser lida.
+      toast.error(message, { duration: message.length > 120 ? 30_000 : 5_000 });
     } finally {
       setSubmitting(false);
     }
