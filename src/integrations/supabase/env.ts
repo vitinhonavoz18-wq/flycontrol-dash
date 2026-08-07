@@ -31,13 +31,22 @@ function unwrap(raw: string | undefined | null): string {
  *
  * Aceita `projeto.supabase.co` e completa o esquema: um domínio sozinho é o
  * erro de digitação mais comum, e recusá-lo não protege de nada.
+ *
+ * Conserta também o número de barras depois de `https:`. `https:/projeto...`
+ * derrubou o painel inteiro em produção: é verdadeiro, parece um endereço, e
+ * não é. Uma barra a menos nunca significa outra coisa, então corrigir é
+ * seguro.
+ *
  * Devolve `null` quando não sobra nada aproveitável.
  */
 export function normalizeSupabaseUrl(raw: string | undefined | null): string | null {
   const value = unwrap(raw);
   if (!value) return null;
 
-  const withScheme = /^https?:\/\//i.test(value) ? value : `https://${value}`;
+  // `https:/x`, `https:///x` e `https://x` chegam todos em `https://x`.
+  const repaired = value.replace(/^(https?):\/*/i, "$1://");
+
+  const withScheme = /^https?:\/\//i.test(repaired) ? repaired : `https://${repaired}`;
 
   let parsed: URL;
   try {
