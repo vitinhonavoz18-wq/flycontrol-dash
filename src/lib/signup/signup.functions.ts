@@ -154,6 +154,23 @@ function generateApiKey(): string {
   return "fc_" + Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+/**
+ * Anexa o erro do banco à mensagem, apenas no modo de teste.
+ *
+ * A mensagem em português é a certa para quem está se cadastrando: código de
+ * constraint e nome de coluna não ajudam o cliente e revelam a estrutura do
+ * banco. Mas no atalho de teste é justamente esse detalhe que se quer ver — e
+ * sem ele a única forma de descobrir a causa é abrir o log do servidor, o que
+ * transforma um erro de uma linha em uma investigação.
+ */
+function withDiagnostics(message: string, error: unknown, testMode: boolean): string {
+  if (!testMode || !error) return message;
+
+  const e = error as { code?: string; message?: string; details?: string; hint?: string };
+  const parts = [e.code, e.message, e.details, e.hint].filter(Boolean);
+  return parts.length > 0 ? `${message}\n\n[modo de teste] ${parts.join(" · ")}` : message;
+}
+
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((d: SignupInput) => {
     if (!isPublicPlanCode(d?.planCode)) throw new Error("Selecione um plano válido.");
@@ -252,7 +269,13 @@ export const createAccount = createServerFn({ method: "POST" })
       if (companyError || !company) {
         console.error("[signup] falha ao criar empresa:", companyError);
         await rollback("empresa");
-        throw new Error("Não foi possível criar o estabelecimento. Tente novamente.");
+        throw new Error(
+          withDiagnostics(
+            "Não foi possível criar o estabelecimento. Tente novamente.",
+            companyError,
+            bypassPayment,
+          ),
+        );
       }
 
       companyId = company.id;
@@ -332,7 +355,13 @@ export const createAccount = createServerFn({ method: "POST" })
       if (subError || !subscription) {
         console.error("[signup] falha ao criar assinatura:", subError);
         await rollback("assinatura");
-        throw new Error("Não foi possível concluir o cadastro. Tente novamente.");
+        throw new Error(
+          withDiagnostics(
+            "Não foi possível concluir o cadastro. Tente novamente.",
+            subError,
+            bypassPayment,
+          ),
+        );
       }
 
       await db.from("subscription_events").insert({
@@ -372,6 +401,12 @@ export const createAccount = createServerFn({ method: "POST" })
       if (err instanceof Error && /Não foi possível/.test(err.message)) throw err;
       console.error("[signup] erro inesperado:", err);
       await rollback("inesperado");
-      throw new Error("Não foi possível concluir o cadastro. Tente novamente.");
+      throw new Error(
+        withDiagnostics(
+          "Não foi possível concluir o cadastro. Tente novamente.",
+          err instanceof Error ? { message: err.message } : err,
+          bypassPayment,
+        ),
+      );
     }
   });
