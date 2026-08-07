@@ -13,7 +13,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { initialUnitPriceCents } from "./billingEngine";
-import { isPublicPlanCode, type PlanCode } from "./plans";
+import { COMPANY_BILLING_MODEL, isPublicPlanCode, type PlanCode } from "./plans";
 import { asBillingDb, type BillingDb } from "./supabaseBridge";
 import { canTransition, isSubscriptionStatus, type SubscriptionStatus } from "./subscriptionStatus";
 
@@ -226,10 +226,24 @@ export const changeSubscriptionPlan = createServerFn({ method: "POST" })
     // `pizzerias.plan_type` continua sendo o que os entitlements consultam.
     // Mantê-lo em sincronia é o que faz o bloqueio de Mesas/Garçons/Comissões
     // valer imediatamente, na interface e no plan-guard do servidor.
-    await supabase
+    //
+    // `billing_model` vai junto por obrigação do banco: a constraint exige o
+    // par correto, e atualizar só o plan_type faz a troca para o CENTS ser
+    // recusada.
+    const { error: companyError } = await supabase
       .from("pizzerias")
-      .update({ plan_type: planCode })
+      .update({ plan_type: planCode, billing_model: COMPANY_BILLING_MODEL[planCode] })
       .eq("id", subscription.company_id);
+
+    if (companyError) {
+      // A assinatura já mudou de plano acima. Deixar a empresa para trás
+      // significaria cobrar por um plano e liberar as telas de outro.
+      console.error("[billing] falha ao sincronizar plano da empresa:", companyError);
+      throw new Error(
+        "O plano da assinatura foi alterado, mas as permissões da empresa não. " +
+          "Avise o suporte antes de continuar.",
+      );
+    }
 
     await recordEvent(supabase, {
       subscriptionId: subscription.id,
