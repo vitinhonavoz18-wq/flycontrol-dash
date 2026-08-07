@@ -33,6 +33,21 @@ describe("limpeza do endereço", () => {
     expect(normalizeSupabaseUrl("knhenchgntttraaeewlj.supabase.co")).toBe(OK);
   });
 
+  it("conserta a barra faltando depois de https:", () => {
+    // Caso real de produção: o valor tinha 39 caracteres em vez de 40, com
+    // "https:/" no lugar de "https://". Derrubou o painel inteiro — é
+    // verdadeiro, parece endereço, e não é.
+    const comUmaBarra = "https:/knhenchgntttraaeewlj.supabase.co";
+    expect(comUmaBarra).toHaveLength(39);
+    expect(OK).toHaveLength(40);
+    expect(normalizeSupabaseUrl(comUmaBarra)).toBe(OK);
+  });
+
+  it("conserta barras a mais também", () => {
+    expect(normalizeSupabaseUrl("https:///knhenchgntttraaeewlj.supabase.co")).toBe(OK);
+    expect(normalizeSupabaseUrl("https:knhenchgntttraaeewlj.supabase.co")).toBe(OK);
+  });
+
   it("tira a barra final", () => {
     // Barra sobrando quebra a montagem de algumas rotas do supabase-js.
     expect(normalizeSupabaseUrl(`${OK}/`)).toBe(OK);
