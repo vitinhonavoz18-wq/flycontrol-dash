@@ -14,6 +14,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
 import { isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { scheduleProvisioning } from "@/lib/provisioning/ensureProvisioned.server";
 import {
   hashIntentToken,
   shouldTrustCheckoutReturn,
@@ -183,6 +184,13 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
         .from("pizzerias")
         .update({ subscription_status: "active" })
         .eq("id", intent.company_id);
+
+      // Onboarding concluído: pagamento aceito e estabelecimento criado. Este
+      // é o momento de o cardápio nascer, sem o cliente pedir nada.
+      //
+      // Sem esperar: o cliente está olhando esta tela, e o provisionamento
+      // pode ser refeito depois se o SiteCreatorFly estiver lento ou fora.
+      scheduleProvisioning(intent.company_id);
     }
 
     return { recognized: true, companyName, planCode, activated: trustReturn };
