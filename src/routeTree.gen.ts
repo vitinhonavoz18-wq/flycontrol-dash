@@ -48,6 +48,7 @@ import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
 import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
+import { Route as ApiProvisioningRetryRouteImport } from './routes/api/provisioning.retry'
 import { Route as ApiPublicCreateOrderRouteImport } from './routes/api/public/create-order'
 import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public/create-pizzeria'
 import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/public/open-table-session'
@@ -249,6 +250,11 @@ const ApiPizzeriasSyncMenuRoute = ApiPizzeriasSyncMenuRouteImport.update({
   path: '/api/pizzerias/sync-menu',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiProvisioningRetryRoute = ApiProvisioningRetryRouteImport.update({
+  id: '/api/provisioning/retry',
+  path: '/api/provisioning/retry',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPublicCreateOrderRoute = ApiPublicCreateOrderRouteImport.update({
   id: '/api/public/create-order',
   path: '/api/public/create-order',
@@ -321,6 +327,7 @@ export interface FileRoutesByFullPath {
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
+  '/api/provisioning/retry': typeof ApiProvisioningRetryRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
@@ -366,6 +373,7 @@ export interface FileRoutesByTo {
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
+  '/api/provisioning/retry': typeof ApiProvisioningRetryRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
@@ -414,6 +422,7 @@ export interface FileRoutesById {
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
+  '/api/provisioning/retry': typeof ApiProvisioningRetryRoute
   '/api/public/create-order': typeof ApiPublicCreateOrderRoute
   '/api/public/create-pizzeria': typeof ApiPublicCreatePizzeriaRoute
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
@@ -462,6 +471,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
+    | '/api/provisioning/retry'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
     | '/api/public/open-table-session'
@@ -507,6 +517,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
+    | '/api/provisioning/retry'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
     | '/api/public/open-table-session'
@@ -554,6 +565,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
+    | '/api/provisioning/retry'
     | '/api/public/create-order'
     | '/api/public/create-pizzeria'
     | '/api/public/open-table-session'
@@ -583,6 +595,7 @@ export interface RootRouteChildren {
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPizzeriasFiqonTestRoute: typeof ApiPizzeriasFiqonTestRoute
   ApiPizzeriasSyncMenuRoute: typeof ApiPizzeriasSyncMenuRoute
+  ApiProvisioningRetryRoute: typeof ApiProvisioningRetryRoute
   ApiPublicCreateOrderRoute: typeof ApiPublicCreateOrderRoute
   ApiPublicCreatePizzeriaRoute: typeof ApiPublicCreatePizzeriaRoute
   ApiPublicOpenTableSessionRoute: typeof ApiPublicOpenTableSessionRoute
@@ -866,6 +879,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPizzeriasSyncMenuRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/provisioning/retry': {
+      id: '/api/provisioning/retry'
+      path: '/api/provisioning/retry'
+      fullPath: '/api/provisioning/retry'
+      preLoaderRoute: typeof ApiProvisioningRetryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/public/create-order': {
       id: '/api/public/create-order'
       path: '/api/public/create-order'
@@ -989,6 +1009,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPizzeriasFiqonTestRoute: ApiPizzeriasFiqonTestRoute,
   ApiPizzeriasSyncMenuRoute: ApiPizzeriasSyncMenuRoute,
+  ApiProvisioningRetryRoute: ApiProvisioningRetryRoute,
   ApiPublicCreateOrderRoute: ApiPublicCreateOrderRoute,
   ApiPublicCreatePizzeriaRoute: ApiPublicCreatePizzeriaRoute,
   ApiPublicOpenTableSessionRoute: ApiPublicOpenTableSessionRoute,

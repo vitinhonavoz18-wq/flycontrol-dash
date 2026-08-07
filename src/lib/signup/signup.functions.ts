@@ -24,6 +24,7 @@ import {
   resolveCheckoutConfig,
 } from "@/lib/billing/checkout";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
+import { scheduleProvisioning } from "@/lib/provisioning/ensureProvisioned.server";
 import { PAYMENT_BYPASS_REASON, isPaymentBypassAllowed } from "./paymentBypass";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
@@ -386,6 +387,10 @@ export const createAccount = createServerFn({ method: "POST" })
           payment_bypassed: bypassPayment,
         },
       });
+
+      // O atalho de teste ativa a conta na hora, então o cardápio nasce junto
+      // — é justamente o fluxo completo que se quer inspecionar.
+      if (bypassPayment) scheduleProvisioning(companyId);
 
       return {
         companyId,

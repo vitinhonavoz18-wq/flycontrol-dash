@@ -37,7 +37,14 @@ export async function provisionRestaurantInSF(payload: ProvisionPayload): Promis
   };
   if (internalToken) headers["Authorization"] = `Bearer ${internalToken}`;
 
-  console.log("[Provision] POST", url, "flycontrol_id:", payload.flycontrol_id, "slug:", payload.slug);
+  console.log(
+    "[Provision] POST",
+    url,
+    "flycontrol_id:",
+    payload.flycontrol_id,
+    "slug:",
+    payload.slug,
+  );
 
   try {
     const resp = await fetch(url, {
@@ -50,20 +57,37 @@ export async function provisionRestaurantInSF(payload: ProvisionPayload): Promis
     if (!resp.ok) {
       return { ok: false, error: `sf_http_${resp.status}: ${text.slice(0, 200)}` };
     }
-    let parsed: any = null;
-    try { parsed = text ? JSON.parse(text) : null; } catch {
+    // Resposta do outro sistema: campos opcionais e nomes que já variaram
+    // entre versões. Tipar como desconhecido e ler com `?.` é mais honesto do
+    // que fingir um contrato fixo.
+    let parsed: Record<string, unknown> | null = null;
+    try {
+      parsed = text ? (JSON.parse(text) as Record<string, unknown>) : null;
+    } catch {
       return { ok: false, error: "sf_invalid_json_response" };
     }
+    /** Lê o primeiro campo presente que seja texto. */
+    const texto = (...chaves: string[]): string | undefined => {
+      for (const chave of chaves) {
+        const valor = parsed?.[chave];
+        if (typeof valor === "string" && valor.trim()) return valor;
+      }
+      return undefined;
+    };
+
     return {
       ok: true,
-      sf_restaurant_id: parsed?.sf_restaurant_id ?? parsed?.restaurant_id ?? parsed?.id,
-      menu_sync_token: parsed?.menu_sync_token ?? parsed?.token,
-      public_url: parsed?.public_url ?? parsed?.url,
-      sync_endpoint: parsed?.sync_endpoint,
-      already_existed: !!(parsed?.already_existed ?? parsed?.existed),
+      sf_restaurant_id: texto("sf_restaurant_id", "restaurant_id", "id"),
+      menu_sync_token: texto("menu_sync_token", "token"),
+      public_url: texto("public_url", "url"),
+      sync_endpoint: texto("sync_endpoint"),
+      // O SiteCreatorFly responde `already_exists`. As outras grafias ficam
+      // por compatibilidade com versões publicadas antes desta correção — o
+      // valor errado aqui não quebra nada, mas confunde o log de auditoria.
+      already_existed: !!(parsed?.already_exists ?? parsed?.already_existed ?? parsed?.existed),
     };
-  } catch (err: any) {
+  } catch (err) {
     console.error("[Provision] fetch error:", err);
-    return { ok: false, error: err?.message || "network_error" };
+    return { ok: false, error: err instanceof Error ? err.message : "network_error" };
   }
 }
