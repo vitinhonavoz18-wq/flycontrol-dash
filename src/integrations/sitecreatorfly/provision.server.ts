@@ -51,6 +51,10 @@ export async function provisionRestaurantInSF(payload: ProvisionPayload): Promis
       method: "POST",
       headers,
       body: JSON.stringify(payload),
+      // Quem chama está no meio de um cadastro e espera a resposta. Sem teto,
+      // o outro sistema lento faria o cliente olhar para uma tela travada. A
+      // repescagem cobre o que estourar o prazo.
+      signal: AbortSignal.timeout(20_000),
     });
     const text = await resp.text();
     console.log("[Provision] status:", resp.status, "body:", text.slice(0, 500));

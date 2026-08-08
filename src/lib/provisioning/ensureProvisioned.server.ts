@@ -170,14 +170,23 @@ export async function ensureRestaurantProvisioned(companyId: string): Promise<En
 }
 
 /**
- * Dispara o provisionamento sem prender quem chamou.
+ * Provisiona e espera terminar, sem deixar erro vazar para quem chamou.
  *
- * Usado nos caminhos em que o cliente está esperando uma tela: a ativação não
- * pode demorar porque o outro sistema está lento, e o provisionamento sempre
- * pode ser refeito depois.
+ * NÃO troque por "dispara e esquece" (`void promise`). Nos Cloudflare Workers
+ * o isolamento é encerrado assim que a resposta é enviada, e qualquer promessa
+ * ainda pendente é descartada no meio — foi exatamente o que aconteceu na
+ * primeira versão: o cadastro terminava, o provisionamento morria antes da
+ * primeira gravação, e o estabelecimento ficava com tudo nulo, sem sequer uma
+ * falha registrada.
+ *
+ * O jeito certo de não bloquear seria `ctx.waitUntil`, que não está disponível
+ * aqui. Então esperamos mesmo — a chamada é uma só, tem prazo máximo de 20s, e
+ * nunca lança.
  */
-export function scheduleProvisioning(companyId: string): void {
-  void ensureRestaurantProvisioned(companyId).catch((err) => {
+export async function provisionAndForget(companyId: string): Promise<void> {
+  try {
+    await ensureRestaurantProvisioned(companyId);
+  } catch (err) {
     console.error("[provisionamento] erro não tratado:", companyId, err);
-  });
+  }
 }

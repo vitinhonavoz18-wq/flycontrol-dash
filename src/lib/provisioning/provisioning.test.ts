@@ -116,7 +116,21 @@ describe("ligação nos pontos de conclusão do onboarding", () => {
 
   it.each(caminhos)("%s dispara o provisionamento", (_nome, arquivo) => {
     const fonte = readFileSync(arquivo, "utf8");
-    expect(fonte).toMatch(/scheduleProvisioning|ensureRestaurantProvisioned/);
+    expect(fonte).toMatch(/provisionAndForget|ensureRestaurantProvisioned/);
+  });
+
+  it.each(caminhos)("%s espera o provisionamento terminar", (_nome, arquivo) => {
+    // Promessa solta em Cloudflare Worker é descartada assim que a resposta
+    // sai: o provisionamento morria antes da primeira gravação e o
+    // estabelecimento ficava com tudo nulo, sem nem uma falha registrada.
+    // Aconteceu em produção — daí o teste.
+    const fonte = readFileSync(arquivo, "utf8");
+    expect(fonte, `${arquivo}: chamada solta com void`).not.toMatch(
+      /\bvoid\s+(provisionAndForget|ensureRestaurantProvisioned)\(/,
+    );
+    expect(fonte, `${arquivo}: falta await`).toMatch(
+      /await (provisionAndForget|ensureRestaurantProvisioned)\(/,
+    );
   });
 
   it("o vínculo é o id do estabelecimento, e não nome ou slug", () => {
