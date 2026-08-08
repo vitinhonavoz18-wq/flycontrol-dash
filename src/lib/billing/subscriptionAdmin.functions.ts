@@ -14,7 +14,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { initialUnitPriceCents } from "./billingEngine";
 import { COMPANY_BILLING_MODEL, isPublicPlanCode, type PlanCode } from "./plans";
-import { scheduleProvisioning } from "@/lib/provisioning/ensureProvisioned.server";
+import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { asBillingDb, type BillingDb } from "./supabaseBridge";
 import { canTransition, isSubscriptionStatus, type SubscriptionStatus } from "./subscriptionStatus";
 
@@ -155,9 +155,9 @@ export const changeSubscriptionStatus = createServerFn({ method: "POST" })
       // já que a confirmação automática da InfinityPay ainda não está ligada.
       // É aqui, portanto, que o cardápio precisa nascer.
       //
-      // Sem esperar: o administrador está numa tela, e o provisionamento é
-      // idempotente e tem repescagem.
-      scheduleProvisioning(subscription.company_id);
+      // Esperamos terminar: promessa solta em Worker é descartada quando a
+      // resposta sai. A chamada tem prazo de 20s e nunca lança.
+      await provisionAndForget(subscription.company_id);
     }
 
     return { status: target, billingCycleId: cycleId };
