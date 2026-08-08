@@ -1480,6 +1480,9 @@ export type Database = {
           description: string | null
           fiqon_enabled: boolean | null
           fiqon_webhook_url: string | null
+          hero_image_url: string | null
+          hero_media_type: string
+          hero_video_url: string | null
           id: string
           instagram_url: string | null
           internal_notes: string | null
@@ -1530,6 +1533,9 @@ export type Database = {
           description?: string | null
           fiqon_enabled?: boolean | null
           fiqon_webhook_url?: string | null
+          hero_image_url?: string | null
+          hero_media_type?: string
+          hero_video_url?: string | null
           id?: string
           instagram_url?: string | null
           internal_notes?: string | null
@@ -1580,6 +1586,9 @@ export type Database = {
           description?: string | null
           fiqon_enabled?: boolean | null
           fiqon_webhook_url?: string | null
+          hero_image_url?: string | null
+          hero_media_type?: string
+          hero_video_url?: string | null
           id?: string
           instagram_url?: string | null
           internal_notes?: string | null

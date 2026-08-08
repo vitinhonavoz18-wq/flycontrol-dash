@@ -175,7 +175,25 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
 
       const restId = normalizeExternalId(externalId);
 
-      if (action === 'create') {
+      // A loja em si é um recurso único: existe uma só por chave de API, então
+      // a URL não leva ID (…/menu-sync/restaurant) e nunca é criada nem
+      // apagada por aqui — só atualizada.
+      const isSingleton = externalType === 'restaurant';
+
+      if (isSingleton) {
+        url = `${base}/${resourcePath}`;
+        if (action === 'status') {
+          url = `${base}/${resourcePath}/status`;
+          method = 'PATCH';
+          bodyObj = { active: data?.value };
+        } else if (action === 'delete') {
+          console.error('[SyncExternal] restaurant não suporta delete.');
+          return { success: false, error: 'unsupported_action' };
+        } else {
+          method = 'PUT';
+          bodyObj = prepareDataForExternal(externalType, data);
+        }
+      } else if (action === 'create') {
         url = `${base}/${resourcePath}`;
         method = 'POST';
         bodyObj = prepareDataForExternal(externalType, data);
@@ -385,12 +403,46 @@ function prepareDataForExternal(type: MenuType, data: any) {
   }
 
   if (type === 'restaurant') {
-    return {
-      name: data.name,
-      is_open: data.is_open,
-      status: data.status,
-      opening_hours: data.opening_hours,
+    // Só vai para o site o que o dono realmente preencheu. Um campo ausente é
+    // omitido em vez de virar vazio, para não apagar no site algo que ainda
+    // não foi configurado no FlyControl.
+    const out: Record<string, any> = {};
+    // put: envia inclusive vazio (o dono pode querer tirar a imagem do site).
+    const put = (key: string, value: any) => {
+      if (value !== undefined) out[key] = value;
     };
+    // putFilled: só envia se estiver preenchido — assim um campo em branco no
+    // FlyControl não apaga o que já estava escrito no site.
+    const putFilled = (key: string, value: any) => {
+      if (value !== undefined && value !== null && String(value).trim() !== '') {
+        out[key] = value;
+      }
+    };
+
+    putFilled('name', data.name);
+    put('logo_url', data.logo_url ?? null);
+    putFilled('primary_color', data.primary_color);
+    putFilled('tagline', data.short_message);
+    putFilled('whatsapp_number', data.phone);
+    putFilled('address', data.address);
+
+    // Horário só é enviado quando é texto; quando está em formato estruturado
+    // o site não sabe exibir e é melhor não sobrescrever o que já está lá.
+    if (typeof data.opening_hours === 'string') putFilled('hours', data.opening_hours);
+
+    // Capa (hero) do cardápio: imagem ou vídeo.
+    const heroType = data.hero_media_type === 'video' ? 'video' : 'image';
+    if (data.hero_media_type !== undefined) put('hero_media_type', heroType);
+    put('hero_image_url', data.hero_image_url);
+    // Quando a capa é imagem, o vídeo é desligado no site para não continuar
+    // tocando por cima da foto nova.
+    if (data.hero_media_type !== undefined && heroType === 'image') {
+      out.hero_video_url = null;
+    } else {
+      put('hero_video_url', data.hero_video_url);
+    }
+
+    return out;
   }
 
   return data;

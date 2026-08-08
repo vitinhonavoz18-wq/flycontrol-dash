@@ -11,25 +11,20 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ui/image-upload";
-import { 
-  Store, 
-  Settings, 
-  CreditCard, 
-  Share2, 
-  Save, 
-  Loader2, 
-  Camera, 
-  Phone, 
-  MapPin, 
-  Clock, 
+import { MediaUpload } from "@/components/ui/media-upload";
+import {
+  Store,
+  CreditCard,
+  Save,
+  Loader2,
+  Phone,
+  MapPin,
+  Clock,
   Image as ImageIcon,
-  CheckCircle2,
-  XCircle,
-  Plus,
-  Trash2,
-  Package,
-  LayoutGrid,
-  Heart
+  Film,
+  Monitor,
+  Heart,
+  AlertTriangle,
 } from "lucide-react";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 import { syncToExternal } from "@/utils/menuSync";
@@ -42,9 +37,8 @@ export default function MyStore() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pizzeria, setPizzeria] = useState<any>(null);
-  const [products, setProducts] = useState<any[]>([]);
-  const [categories, setCategories] = useState<any[]>([]);
-  
+  const [syncWarning, setSyncWarning] = useState<string | null>(null);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -60,15 +54,6 @@ export default function MyStore() {
       
       if (pizzeriasData) {
         setPizzeria(pizzeriasData);
-        
-        // Load menu data
-        const [prodRes, catRes] = await Promise.all([
-          supabase.from("menu_products").select("*").eq("pizzeria_id", pizzeriasData.id).order("name"),
-          supabase.from("menu_categories").select("*").eq("pizzeria_id", pizzeriasData.id).order("order_index")
-        ]);
-        
-        setProducts(prodRes.data || []);
-        setCategories(catRes.data || []);
       }
     } catch (error: any) {
       toast.error("Erro ao carregar dados: " + error.message);
@@ -81,12 +66,14 @@ export default function MyStore() {
     if (user) loadData();
   }, [user]);
 
-  const handleSaveStore = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSaveStore = async (e?: React.FormEvent) => {
+    e?.preventDefault();
     if (!pizzeria) return;
-    
+
     setSaving(true);
     try {
+      const heroMediaType = pizzeria.hero_media_type === "video" ? "video" : "image";
+
       const { error } = await supabase
         .from("pizzerias")
         .update({
@@ -104,49 +91,59 @@ export default function MyStore() {
           average_delivery_time: pizzeria.average_delivery_time,
           payment_methods: pizzeria.payment_methods,
           short_message: pizzeria.short_message,
+          hero_media_type: heroMediaType,
+          hero_image_url: pizzeria.hero_image_url || null,
+          hero_video_url: pizzeria.hero_video_url || null,
         })
         .eq("id", pizzeria.id);
 
       if (error) throw error;
       toast.success("Alterações salvas com sucesso!");
 
-      // Sync status to SiteCreatorFly
-      if (pizzeria.slug && pizzeria.api_key) {
-        console.log("Sincronizando status da loja com o SiteCreatorFly...");
-        syncToExternal({
-          type: 'restaurant',
-          action: 'update',
-          id: pizzeria.id,
-          pizzeriaSlug: pizzeria.slug,
-          pizzeriaApiKey: pizzeria.api_key,
-          data: {
-            name: pizzeria.name,
-            is_open: pizzeria.is_open,
-            status: pizzeria.status,
-            opening_hours: pizzeria.opening_hours
-          }
-        }).catch(err => console.error("Erro ao sincronizar status:", err));
+      // Leva a identidade visual (logo, capa, cores, contato) para o cardápio
+      // digital do SiteCreatorFly.
+      if (!pizzeria.sync_endpoint) {
+        setSyncWarning(
+          "As alterações foram salvas no FlyControl, mas o cardápio digital ainda não está conectado. " +
+            "Conecte o site em Cardápio → Sincronização para que logo e capa apareçam para o cliente."
+        );
+        return;
+      }
+
+      const result = await syncToExternal({
+        type: "restaurant",
+        action: "update",
+        pizzeriaSlug: pizzeria.slug,
+        pizzeriaApiKey: pizzeria.api_key,
+        syncEndpoint: pizzeria.sync_endpoint,
+        data: {
+          name: pizzeria.name,
+          logo_url: pizzeria.logo_url || null,
+          primary_color: pizzeria.primary_color,
+          short_message: pizzeria.short_message,
+          phone: pizzeria.phone,
+          address: pizzeria.address,
+          opening_hours: pizzeria.opening_hours,
+          hero_media_type: heroMediaType,
+          hero_image_url: pizzeria.hero_image_url || null,
+          hero_video_url: heroMediaType === "video" ? pizzeria.hero_video_url || null : null,
+        },
+      });
+
+      if (result.success) {
+        setSyncWarning(null);
+        toast.success("Cardápio digital atualizado.");
+      } else {
+        setSyncWarning(
+          "As alterações foram salvas no FlyControl, mas não chegaram ao cardápio digital " +
+            `(motivo: ${result.error || "desconhecido"}). Verifique a conexão em Cardápio → Sincronização.`
+        );
+        toast.error("Salvo, mas o cardápio digital não foi atualizado.");
       }
     } catch (error: any) {
       toast.error("Erro ao salvar: " + error.message);
     } finally {
       setSaving(false);
-    }
-  };
-
-  const handleUpdateProduct = async (productId: string, patch: any) => {
-    try {
-      const { error } = await supabase
-        .from("menu_products")
-        .update(patch)
-        .eq("id", productId);
-        
-      if (error) throw error;
-      
-      setProducts(prev => prev.map(p => p.id === productId ? { ...p, ...patch } : p));
-      toast.success("Produto atualizado");
-    } catch (error: any) {
-      toast.error("Erro ao atualizar produto: " + error.message);
     }
   };
 
@@ -202,6 +199,15 @@ export default function MyStore() {
         </CardContent>
       </Card>
 
+      {syncWarning && (
+        <Card className="border-2 border-amber-500/50 bg-amber-500/5">
+          <CardContent className="flex items-start gap-3 p-4">
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+            <p className="text-sm">{syncWarning}</p>
+          </CardContent>
+        </Card>
+      )}
+
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Configurações da Loja</h1>
@@ -214,9 +220,12 @@ export default function MyStore() {
       </div>
 
       <Tabs defaultValue="identity" className="w-full">
-        <TabsList className="grid w-full grid-cols-3 mb-8">
+        <TabsList className="grid w-full grid-cols-2 mb-8 md:grid-cols-4">
           <TabsTrigger value="identity" className="gap-2">
             <Store className="h-4 w-4" /> Identidade
+          </TabsTrigger>
+          <TabsTrigger value="menu-site" className="gap-2">
+            <Monitor className="h-4 w-4" /> Cardápio Digital
           </TabsTrigger>
           <TabsTrigger value="service" className="gap-2">
             <Clock className="h-4 w-4" /> Atendimento
@@ -229,65 +238,165 @@ export default function MyStore() {
         <TabsContent value="identity" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Identidade da Loja</CardTitle>
-              <CardDescription>Dados visuais e de marca do seu delivery.</CardDescription>
+              <CardTitle>Marca</CardTitle>
+              <CardDescription>
+                Nome, logo e cor da loja. É o que o cliente vê primeiro no cardápio digital.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="store-name">Nome Comercial</Label>
-                  <Input 
-                    id="store-name" 
-                    value={pizzeria.name || ""} 
-                    onChange={e => setPizzeria({...pizzeria, name: e.target.value})} 
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="instagram">Instagram (URL)</Label>
-                  <div className="flex items-center gap-2">
-                    <Heart className="h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="instagram" 
-                      placeholder="https://instagram.com/sualoja"
-                      value={pizzeria.instagram_url || ""} 
-                      onChange={e => setPizzeria({...pizzeria, instagram_url: e.target.value})} 
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Logo da Pizzaria</Label>
-                  <ImageUpload
-                    value={pizzeria.logo_url || ""}
-                    onChange={(url) => setPizzeria({ ...pizzeria, logo_url: url ?? "" })}
-                    folder="logos"
+                  <Input
+                    id="store-name"
+                    value={pizzeria.name || ""}
+                    onChange={e => setPizzeria({...pizzeria, name: e.target.value})}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="primary-color">Cor Principal (Hex)</Label>
                   <div className="flex gap-2">
-                    <Input 
-                      id="primary-color" 
+                    <Input
+                      id="primary-color"
                       type="color"
                       className="w-12 p-1 h-9"
-                      value={pizzeria.primary_color || "#FF7A00"} 
-                      onChange={e => setPizzeria({...pizzeria, primary_color: e.target.value})} 
+                      value={pizzeria.primary_color || "#FF7A00"}
+                      onChange={e => setPizzeria({...pizzeria, primary_color: e.target.value})}
                     />
-                    <Input 
-                      value={pizzeria.primary_color || "#FF7A00"} 
-                      onChange={e => setPizzeria({...pizzeria, primary_color: e.target.value})} 
+                    <Input
+                      value={pizzeria.primary_color || "#FF7A00"}
+                      onChange={e => setPizzeria({...pizzeria, primary_color: e.target.value})}
                     />
                   </div>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="short-message">Mensagem Curta (Aparece no topo do cardápio)</Label>
-                <Input 
-                  id="short-message" 
+                <Label className="flex items-center gap-2">
+                  <ImageIcon className="h-4 w-4 text-muted-foreground" /> Logo da Loja
+                </Label>
+                <ImageUpload
+                  value={pizzeria.logo_url || ""}
+                  onChange={(url) => setPizzeria({ ...pizzeria, logo_url: url ?? "" })}
+                  folder="logos"
+                />
+                <p className="text-xs text-muted-foreground">
+                  A logo aparece no topo do cardápio digital assim que você clicar em Salvar Alterações.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Redes Sociais</CardTitle>
+              <CardDescription>Onde o cliente encontra sua loja fora do cardápio.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="instagram">Instagram (URL)</Label>
+                <div className="flex items-center gap-2">
+                  <Heart className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="instagram"
+                    placeholder="https://instagram.com/sualoja"
+                    value={pizzeria.instagram_url || ""}
+                    onChange={e => setPizzeria({...pizzeria, instagram_url: e.target.value})}
+                  />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="menu-site" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Capa do Cardápio Digital</CardTitle>
+              <CardDescription>
+                É a imagem ou o vídeo grande que preenche o topo do cardápio, atrás da sua logo.
+                Escolha um dos dois — o que não estiver selecionado fica desligado no site.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Tipo de mídia</Label>
+                <div className="grid grid-cols-2 gap-2 max-w-md">
+                  <Button
+                    type="button"
+                    variant={pizzeria.hero_media_type === "video" ? "outline" : "default"}
+                    className="gap-2"
+                    onClick={() => setPizzeria({ ...pizzeria, hero_media_type: "image" })}
+                  >
+                    <ImageIcon className="h-4 w-4" /> Foto
+                  </Button>
+                  <Button
+                    type="button"
+                    variant={pizzeria.hero_media_type === "video" ? "default" : "outline"}
+                    className="gap-2"
+                    onClick={() => setPizzeria({ ...pizzeria, hero_media_type: "video" })}
+                  >
+                    <Film className="h-4 w-4" /> Vídeo
+                  </Button>
+                </div>
+              </div>
+
+              {pizzeria.hero_media_type === "video" ? (
+                <div className="space-y-2">
+                  <Label>Vídeo de capa</Label>
+                  <MediaUpload
+                    kind="video"
+                    value={pizzeria.hero_video_url || ""}
+                    onChange={(url) => setPizzeria({ ...pizzeria, hero_video_url: url })}
+                    folder="hero"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    O vídeo toca sozinho, sem som e em looping. Prefira algo curto (até 10 segundos):
+                    vídeo pesado deixa o cardápio lento no celular do cliente.
+                  </p>
+                  <div className="space-y-2 pt-2">
+                    <Label>Foto de reserva</Label>
+                    <MediaUpload
+                      kind="image"
+                      value={pizzeria.hero_image_url || ""}
+                      onChange={(url) => setPizzeria({ ...pizzeria, hero_image_url: url })}
+                      folder="hero"
+                    />
+                    <p className="text-xs text-muted-foreground">
+                      Aparece enquanto o vídeo carrega, e no lugar dele em celulares que bloqueiam
+                      vídeo automático.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <Label>Foto de capa</Label>
+                  <MediaUpload
+                    kind="image"
+                    value={pizzeria.hero_image_url || ""}
+                    onChange={(url) => setPizzeria({ ...pizzeria, hero_image_url: url })}
+                    folder="hero"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Use uma foto larga e bem iluminada — o nome e a logo ficam por cima dela.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Frase de Destaque</CardTitle>
+              <CardDescription>Texto curto que aparece logo abaixo da logo, no topo do cardápio.</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <Label htmlFor="short-message">Mensagem Curta</Label>
+                <Input
+                  id="short-message"
                   placeholder="Ex: A melhor pizza da região!"
-                  value={pizzeria.short_message || ""} 
-                  onChange={e => setPizzeria({...pizzeria, short_message: e.target.value})} 
+                  value={pizzeria.short_message || ""}
+                  onChange={e => setPizzeria({...pizzeria, short_message: e.target.value})}
                 />
               </div>
             </CardContent>
@@ -316,19 +425,12 @@ export default function MyStore() {
                   </div>
                 </div>
                 <div className="space-y-2">
-                  <Label>Disponibilidade no Cardápio</Label>
-                  <div className="flex flex-col gap-2 pt-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch 
-                        checked={pizzeria.is_open} 
-                        onCheckedChange={checked => setPizzeria({...pizzeria, is_open: checked})}
-                      />
-                      <Label className="font-bold">{pizzeria.is_open ? "Aberta (Recebendo pedidos)" : "Fechada (Apenas visualização)"}</Label>
-                    </div>
-                    <p className="text-[10px] text-muted-foreground">
-                      Quando fechado, o cardápio continua visível, mas os clientes não conseguem finalizar pedidos.
-                    </p>
-                  </div>
+                  <Label htmlFor="neighborhood">Bairro/Região Base</Label>
+                  <Input
+                    id="neighborhood"
+                    value={pizzeria.neighborhood || ""}
+                    onChange={e => setPizzeria({...pizzeria, neighborhood: e.target.value})}
+                  />
                 </div>
               </div>
               <div className="grid gap-4 md:grid-cols-2">
@@ -342,14 +444,6 @@ export default function MyStore() {
                       onChange={e => setPizzeria({...pizzeria, address: e.target.value})} 
                     />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="neighborhood">Bairro/Região Base</Label>
-                  <Input 
-                    id="neighborhood" 
-                    value={pizzeria.neighborhood || ""} 
-                    onChange={e => setPizzeria({...pizzeria, neighborhood: e.target.value})} 
-                  />
                 </div>
               </div>
               <div className="space-y-2">
