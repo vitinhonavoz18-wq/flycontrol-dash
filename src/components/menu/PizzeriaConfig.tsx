@@ -6,10 +6,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Clock, Truck, FileText, Globe, Key } from "lucide-react";
+import { syncToExternal } from "@/utils/menuSync";
 
 interface PizzeriaConfigProps {
   pizzeriaId: string;
 }
+
+// Campos desta tela que `prepareDataForExternal('restaurant', ...)` (em
+// utils/menuSync.ts) sabe traduzir para o SiteCreatorFly. Campos fora deste
+// conjunto (taxa de entrega, slug, chave de API) são só do FlyControl e não
+// têm correspondente no site público.
+const RESTAURANT_SYNC_FIELDS = new Set(["description", "opening_hours"]);
 
 export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
   const [pizzeria, setPizzeria] = useState<any>(null);
@@ -45,10 +52,36 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
 
     if (error) {
       toast.error("Erro ao salvar: " + error.message);
-    } else {
-      toast.success("Configuração atualizada");
-      loadPizzeria();
+      setSaving(false);
+      return;
     }
+
+    // Alguns destes campos aparecem no site público (ex.: "Descrição do
+    // Site", "Horário de Funcionamento" no rodapé) — sem isto, a mudança
+    // ficava só no FlyControl e nunca chegava ao SiteCreatorFly.
+    if (RESTAURANT_SYNC_FIELDS.has(field) && pizzeria?.slug && pizzeria?.api_key) {
+      const syncResult = await syncToExternal({
+        type: "restaurant",
+        action: "update",
+        id: pizzeriaId,
+        pizzeriaSlug: pizzeria.slug,
+        pizzeriaApiKey: pizzeria.api_key,
+        syncEndpoint: pizzeria.sync_endpoint,
+        data: { [field]: value },
+      });
+
+      if (!syncResult.success) {
+        toast.error(
+          "Salvo no FlyControl, mas não foi possível atualizar o site público. Tente novamente em instantes.",
+        );
+        setSaving(false);
+        loadPizzeria();
+        return;
+      }
+    }
+
+    toast.success("Configuração atualizada");
+    loadPizzeria();
     setSaving(false);
   }
 
@@ -71,15 +104,17 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="delivery-fee">Taxa de Entrega Padrão (R$)</Label>
-            <Input 
+            <Input
               id="delivery-fee"
-              type="number" 
-              step="0.01" 
+              type="number"
+              step="0.01"
               defaultValue={pizzeria?.delivery_fee || 0}
-              onBlur={(e) => handleUpdate('delivery_fee', parseFloat(e.target.value) || 0)}
+              onBlur={(e) => handleUpdate("delivery_fee", parseFloat(e.target.value) || 0)}
               placeholder="0,00"
             />
-            <p className="text-[10px] text-muted-foreground">Valor cobrado por padrão em cada pedido.</p>
+            <p className="text-[10px] text-muted-foreground">
+              Valor cobrado por padrão em cada pedido.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -93,20 +128,24 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="hours">Horário de Funcionamento</Label>
-            <Input 
+            <Input
               id="hours"
-              placeholder="Ex: Seg a Sex: 18h às 23h" 
-              defaultValue={typeof pizzeria?.opening_hours === 'string' ? pizzeria?.opening_hours : JSON.stringify(pizzeria?.opening_hours)}
+              placeholder="Ex: Seg a Sex: 18h às 23h"
+              defaultValue={
+                typeof pizzeria?.opening_hours === "string"
+                  ? pizzeria?.opening_hours
+                  : JSON.stringify(pizzeria?.opening_hours)
+              }
               onBlur={(e) => {
                 let val = e.target.value;
                 try {
-                  if (val.startsWith('[') || val.startsWith('{')) {
-                    handleUpdate('opening_hours', JSON.parse(val));
+                  if (val.startsWith("[") || val.startsWith("{")) {
+                    handleUpdate("opening_hours", JSON.parse(val));
                   } else {
-                    handleUpdate('opening_hours', val);
+                    handleUpdate("opening_hours", val);
                   }
                 } catch {
-                  handleUpdate('opening_hours', val);
+                  handleUpdate("opening_hours", val);
                 }
               }}
             />
@@ -124,12 +163,12 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="description">Descrição do Site</Label>
-            <textarea 
+            <textarea
               id="description"
               className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
               placeholder="Fale um pouco sobre a qualidade e tradição da sua pizzaria..."
               defaultValue={pizzeria?.description || ""}
-              onBlur={(e) => handleUpdate('description', e.target.value)}
+              onBlur={(e) => handleUpdate("description", e.target.value)}
             />
           </div>
         </CardContent>
@@ -144,13 +183,15 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="slug">Slug do Site (identificador único)</Label>
-            <Input 
+            <Input
               id="slug"
-              placeholder="ex: pizzaria-do-joao" 
+              placeholder="ex: pizzaria-do-joao"
               defaultValue={pizzeria?.slug || ""}
-              onBlur={(e) => handleUpdate('slug', e.target.value)}
+              onBlur={(e) => handleUpdate("slug", e.target.value)}
             />
-            <p className="text-[10px] text-muted-foreground">O slug deve ser idêntico ao configurado no SiteCreatorFly.</p>
+            <p className="text-[10px] text-muted-foreground">
+              O slug deve ser idêntico ao configurado no SiteCreatorFly.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -164,14 +205,16 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="api_key">Chave de API (x-api-key)</Label>
-            <Input 
+            <Input
               id="api_key"
               type="password"
-              placeholder="Sua chave de API" 
+              placeholder="Sua chave de API"
               defaultValue={pizzeria?.api_key || ""}
-              onBlur={(e) => handleUpdate('api_key', e.target.value)}
+              onBlur={(e) => handleUpdate("api_key", e.target.value)}
             />
-            <p className="text-[10px] text-muted-foreground">Necessária para validar a sincronização segura dos dados.</p>
+            <p className="text-[10px] text-muted-foreground">
+              Necessária para validar a sincronização segura dos dados.
+            </p>
           </div>
         </CardContent>
       </Card>

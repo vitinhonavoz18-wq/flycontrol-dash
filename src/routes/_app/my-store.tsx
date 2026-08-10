@@ -11,17 +11,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ui/image-upload";
-import { 
-  Store, 
-  Settings, 
-  CreditCard, 
-  Share2, 
-  Save, 
-  Loader2, 
-  Camera, 
-  Phone, 
-  MapPin, 
-  Clock, 
+import {
+  Store,
+  Settings,
+  CreditCard,
+  Share2,
+  Save,
+  Loader2,
+  Camera,
+  Phone,
+  MapPin,
+  Clock,
   Image as ImageIcon,
   CheckCircle2,
   XCircle,
@@ -29,11 +29,10 @@ import {
   Trash2,
   Package,
   LayoutGrid,
-  Heart
+  Heart,
 } from "lucide-react";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 import { syncToExternal } from "@/utils/menuSync";
-
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
@@ -44,29 +43,40 @@ export default function MyStore() {
   const [pizzeria, setPizzeria] = useState<any>(null);
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  
+
   const loadData = async () => {
     setLoading(true);
     try {
       let query = supabase.from("pizzerias").select("*").neq("status", "deleted");
-      
+
       if (!isSuperAdmin && user?.id) {
         query = query.eq("owner_id", user.id);
       }
-      
-      const { data: pizzeriasData, error: pError } = await query.order("created_at").limit(1).maybeSingle();
-      
+
+      const { data: pizzeriasData, error: pError } = await query
+        .order("created_at")
+        .limit(1)
+        .maybeSingle();
+
       if (pError) throw pError;
-      
+
       if (pizzeriasData) {
         setPizzeria(pizzeriasData);
-        
+
         // Load menu data
         const [prodRes, catRes] = await Promise.all([
-          supabase.from("menu_products").select("*").eq("pizzeria_id", pizzeriasData.id).order("name"),
-          supabase.from("menu_categories").select("*").eq("pizzeria_id", pizzeriasData.id).order("order_index")
+          supabase
+            .from("menu_products")
+            .select("*")
+            .eq("pizzeria_id", pizzeriasData.id)
+            .order("name"),
+          supabase
+            .from("menu_categories")
+            .select("*")
+            .eq("pizzeria_id", pizzeriasData.id)
+            .order("order_index"),
         ]);
-        
+
         setProducts(prodRes.data || []);
         setCategories(catRes.data || []);
       }
@@ -84,7 +94,7 @@ export default function MyStore() {
   const handleSaveStore = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!pizzeria) return;
-    
+
     setSaving(true);
     try {
       const { error } = await supabase
@@ -108,24 +118,39 @@ export default function MyStore() {
         .eq("id", pizzeria.id);
 
       if (error) throw error;
-      toast.success("Alterações salvas com sucesso!");
 
-      // Sync status to SiteCreatorFly
+      // Sync para o SiteCreatorFly. Aguardamos o resultado para poder
+      // avisar de verdade quando a mudança não chegar ao site público —
+      // antes essa chamada era "atire e esqueça" e o aviso de sucesso
+      // aparecia mesmo quando o SiteCreatorFly nunca recebia os dados.
       if (pizzeria.slug && pizzeria.api_key) {
-        console.log("Sincronizando status da loja com o SiteCreatorFly...");
-        syncToExternal({
-          type: 'restaurant',
-          action: 'update',
+        const syncResult = await syncToExternal({
+          type: "restaurant",
+          action: "update",
           id: pizzeria.id,
           pizzeriaSlug: pizzeria.slug,
           pizzeriaApiKey: pizzeria.api_key,
+          syncEndpoint: pizzeria.sync_endpoint,
           data: {
             name: pizzeria.name,
             is_open: pizzeria.is_open,
             status: pizzeria.status,
-            opening_hours: pizzeria.opening_hours
-          }
-        }).catch(err => console.error("Erro ao sincronizar status:", err));
+            opening_hours: pizzeria.opening_hours,
+            description: pizzeria.description,
+            logo_url: pizzeria.logo_url,
+          },
+        });
+
+        if (syncResult.success) {
+          toast.success("Alterações salvas e publicadas no site.");
+        } else {
+          toast.error(
+            "Salvo no FlyControl, mas não foi possível atualizar o site público. " +
+              "Tente novamente em instantes.",
+          );
+        }
+      } else {
+        toast.success("Alterações salvas com sucesso!");
       }
     } catch (error: any) {
       toast.error("Erro ao salvar: " + error.message);
@@ -136,14 +161,11 @@ export default function MyStore() {
 
   const handleUpdateProduct = async (productId: string, patch: any) => {
     try {
-      const { error } = await supabase
-        .from("menu_products")
-        .update(patch)
-        .eq("id", productId);
-        
+      const { error } = await supabase.from("menu_products").update(patch).eq("id", productId);
+
       if (error) throw error;
-      
-      setProducts(prev => prev.map(p => p.id === productId ? { ...p, ...patch } : p));
+
+      setProducts((prev) => prev.map((p) => (p.id === productId ? { ...p, ...patch } : p)));
       toast.success("Produto atualizado");
     } catch (error: any) {
       toast.error("Erro ao atualizar produto: " + error.message);
@@ -163,7 +185,9 @@ export default function MyStore() {
       <div className="p-8 text-center">
         <Store className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
         <h2 className="text-xl font-bold">Nenhuma loja encontrada</h2>
-        <p className="text-muted-foreground mt-2">Você precisa vincular uma pizzaria nas Configurações primeiro.</p>
+        <p className="text-muted-foreground mt-2">
+          Você precisa vincular uma pizzaria nas Configurações primeiro.
+        </p>
       </div>
     );
   }
@@ -171,32 +195,37 @@ export default function MyStore() {
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8">
       {/* Barra de Status Rápido */}
-      <Card className={`border-2 ${pizzeria.is_open ? 'border-green-500/50 bg-green-500/5' : 'border-red-500/50 bg-red-500/5'}`}>
+      <Card
+        className={`border-2 ${pizzeria.is_open ? "border-green-500/50 bg-green-500/5" : "border-red-500/50 bg-red-500/5"}`}
+      >
         <CardContent className="flex flex-col md:flex-row items-center justify-between p-4 gap-4">
           <div className="flex items-center gap-4">
-            <div className={`h-12 w-12 rounded-full flex items-center justify-center ${pizzeria.is_open ? 'bg-green-500 text-white' : 'bg-red-500 text-white'}`}>
+            <div
+              className={`h-12 w-12 rounded-full flex items-center justify-center ${pizzeria.is_open ? "bg-green-500 text-white" : "bg-red-500 text-white"}`}
+            >
               <Store className="h-6 w-6" />
             </div>
             <div>
               <h3 className="text-lg font-bold">
-                Status da Loja: <span className={pizzeria.is_open ? 'text-green-600' : 'text-red-600'}>
-                  {pizzeria.is_open ? 'ABERTA' : 'FECHADA'}
+                Status da Loja:{" "}
+                <span className={pizzeria.is_open ? "text-green-600" : "text-red-600"}>
+                  {pizzeria.is_open ? "ABERTA" : "FECHADA"}
                 </span>
               </h3>
               <p className="text-sm text-muted-foreground">
-                {pizzeria.is_open 
-                  ? "Sua loja está recebendo pedidos normalmente." 
+                {pizzeria.is_open
+                  ? "Sua loja está recebendo pedidos normalmente."
                   : "Clientes podem ver o cardápio, mas não conseguem finalizar pedidos."}
               </p>
             </div>
           </div>
           <div className="flex items-center gap-3 bg-background/50 p-2 rounded-lg border">
-            <Switch 
-              checked={pizzeria.is_open} 
-              onCheckedChange={checked => setPizzeria({...pizzeria, is_open: checked})}
+            <Switch
+              checked={pizzeria.is_open}
+              onCheckedChange={(checked) => setPizzeria({ ...pizzeria, is_open: checked })}
             />
             <Label className="font-semibold cursor-pointer">
-              {pizzeria.is_open ? 'Fechar Loja Agora' : 'Abrir Loja Agora'}
+              {pizzeria.is_open ? "Fechar Loja Agora" : "Abrir Loja Agora"}
             </Label>
           </div>
         </CardContent>
@@ -205,7 +234,9 @@ export default function MyStore() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">Configurações da Loja</h1>
-          <p className="text-muted-foreground">Gerencie os dados operacionais e cardápio do seu delivery.</p>
+          <p className="text-muted-foreground">
+            Gerencie os dados operacionais e cardápio do seu delivery.
+          </p>
         </div>
         <Button onClick={handleSaveStore} disabled={saving} className="gap-2">
           {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
@@ -236,21 +267,21 @@ export default function MyStore() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="store-name">Nome Comercial</Label>
-                  <Input 
-                    id="store-name" 
-                    value={pizzeria.name || ""} 
-                    onChange={e => setPizzeria({...pizzeria, name: e.target.value})} 
+                  <Input
+                    id="store-name"
+                    value={pizzeria.name || ""}
+                    onChange={(e) => setPizzeria({ ...pizzeria, name: e.target.value })}
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="instagram">Instagram (URL)</Label>
                   <div className="flex items-center gap-2">
                     <Heart className="h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="instagram" 
+                    <Input
+                      id="instagram"
                       placeholder="https://instagram.com/sualoja"
-                      value={pizzeria.instagram_url || ""} 
-                      onChange={e => setPizzeria({...pizzeria, instagram_url: e.target.value})} 
+                      value={pizzeria.instagram_url || ""}
+                      onChange={(e) => setPizzeria({ ...pizzeria, instagram_url: e.target.value })}
                     />
                   </div>
                 </div>
@@ -267,27 +298,27 @@ export default function MyStore() {
                 <div className="space-y-2">
                   <Label htmlFor="primary-color">Cor Principal (Hex)</Label>
                   <div className="flex gap-2">
-                    <Input 
-                      id="primary-color" 
+                    <Input
+                      id="primary-color"
                       type="color"
                       className="w-12 p-1 h-9"
-                      value={pizzeria.primary_color || "#FF7A00"} 
-                      onChange={e => setPizzeria({...pizzeria, primary_color: e.target.value})} 
+                      value={pizzeria.primary_color || "#FF7A00"}
+                      onChange={(e) => setPizzeria({ ...pizzeria, primary_color: e.target.value })}
                     />
-                    <Input 
-                      value={pizzeria.primary_color || "#FF7A00"} 
-                      onChange={e => setPizzeria({...pizzeria, primary_color: e.target.value})} 
+                    <Input
+                      value={pizzeria.primary_color || "#FF7A00"}
+                      onChange={(e) => setPizzeria({ ...pizzeria, primary_color: e.target.value })}
                     />
                   </div>
                 </div>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="short-message">Mensagem Curta (Aparece no topo do cardápio)</Label>
-                <Input 
-                  id="short-message" 
+                <Input
+                  id="short-message"
                   placeholder="Ex: A melhor pizza da região!"
-                  value={pizzeria.short_message || ""} 
-                  onChange={e => setPizzeria({...pizzeria, short_message: e.target.value})} 
+                  value={pizzeria.short_message || ""}
+                  onChange={(e) => setPizzeria({ ...pizzeria, short_message: e.target.value })}
                 />
               </div>
             </CardContent>
@@ -300,7 +331,9 @@ export default function MyStore() {
           <Card>
             <CardHeader>
               <CardTitle>Dados de Atendimento</CardTitle>
-              <CardDescription>Como os clientes entram em contato e onde você atende.</CardDescription>
+              <CardDescription>
+                Como os clientes entram em contato e onde você atende.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
@@ -308,10 +341,10 @@ export default function MyStore() {
                   <Label htmlFor="whatsapp">WhatsApp (com DDD)</Label>
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="whatsapp" 
-                      value={pizzeria.phone || ""} 
-                      onChange={e => setPizzeria({...pizzeria, phone: e.target.value})} 
+                    <Input
+                      id="whatsapp"
+                      value={pizzeria.phone || ""}
+                      onChange={(e) => setPizzeria({ ...pizzeria, phone: e.target.value })}
                     />
                   </div>
                 </div>
@@ -319,14 +352,21 @@ export default function MyStore() {
                   <Label>Disponibilidade no Cardápio</Label>
                   <div className="flex flex-col gap-2 pt-2">
                     <div className="flex items-center space-x-2">
-                      <Switch 
-                        checked={pizzeria.is_open} 
-                        onCheckedChange={checked => setPizzeria({...pizzeria, is_open: checked})}
+                      <Switch
+                        checked={pizzeria.is_open}
+                        onCheckedChange={(checked) =>
+                          setPizzeria({ ...pizzeria, is_open: checked })
+                        }
                       />
-                      <Label className="font-bold">{pizzeria.is_open ? "Aberta (Recebendo pedidos)" : "Fechada (Apenas visualização)"}</Label>
+                      <Label className="font-bold">
+                        {pizzeria.is_open
+                          ? "Aberta (Recebendo pedidos)"
+                          : "Fechada (Apenas visualização)"}
+                      </Label>
                     </div>
                     <p className="text-[10px] text-muted-foreground">
-                      Quando fechado, o cardápio continua visível, mas os clientes não conseguem finalizar pedidos.
+                      Quando fechado, o cardápio continua visível, mas os clientes não conseguem
+                      finalizar pedidos.
                     </p>
                   </div>
                 </div>
@@ -336,36 +376,40 @@ export default function MyStore() {
                   <Label htmlFor="address">Endereço Completo</Label>
                   <div className="flex items-center gap-2">
                     <MapPin className="h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      id="address" 
-                      value={pizzeria.address || ""} 
-                      onChange={e => setPizzeria({...pizzeria, address: e.target.value})} 
+                    <Input
+                      id="address"
+                      value={pizzeria.address || ""}
+                      onChange={(e) => setPizzeria({ ...pizzeria, address: e.target.value })}
                     />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="neighborhood">Bairro/Região Base</Label>
-                  <Input 
-                    id="neighborhood" 
-                    value={pizzeria.neighborhood || ""} 
-                    onChange={e => setPizzeria({...pizzeria, neighborhood: e.target.value})} 
+                  <Input
+                    id="neighborhood"
+                    value={pizzeria.neighborhood || ""}
+                    onChange={(e) => setPizzeria({ ...pizzeria, neighborhood: e.target.value })}
                   />
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="opening-hours">Horário de Funcionamento (Texto livre ou JSON)</Label>
-                <Textarea 
-                  id="opening-hours" 
+                <Label htmlFor="opening-hours">
+                  Horário de Funcionamento (Texto livre ou JSON)
+                </Label>
+                <Textarea
+                  id="opening-hours"
                   rows={4}
-                  value={typeof pizzeria.opening_hours === 'string' ? pizzeria.opening_hours : JSON.stringify(pizzeria.opening_hours, null, 2)} 
-                  onChange={e => setPizzeria({...pizzeria, opening_hours: e.target.value})} 
+                  value={
+                    typeof pizzeria.opening_hours === "string"
+                      ? pizzeria.opening_hours
+                      : JSON.stringify(pizzeria.opening_hours, null, 2)
+                  }
+                  onChange={(e) => setPizzeria({ ...pizzeria, opening_hours: e.target.value })}
                 />
               </div>
             </CardContent>
           </Card>
         </TabsContent>
-
-
 
         <TabsContent value="delivery" className="space-y-6">
           <Card>
@@ -377,39 +421,54 @@ export default function MyStore() {
               <div className="grid gap-4 md:grid-cols-2">
                 <div className="space-y-2">
                   <Label htmlFor="delivery-fee">Taxa de Entrega Padrão (R$)</Label>
-                  <Input 
-                    id="delivery-fee" 
-                    type="number" 
+                  <Input
+                    id="delivery-fee"
+                    type="number"
                     step="0.01"
-                    value={pizzeria.delivery_fee || 0} 
-                    onChange={e => setPizzeria({...pizzeria, delivery_fee: parseFloat(e.target.value) || 0})} 
+                    value={pizzeria.delivery_fee || 0}
+                    onChange={(e) =>
+                      setPizzeria({ ...pizzeria, delivery_fee: parseFloat(e.target.value) || 0 })
+                    }
                   />
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="delivery-time">Tempo Médio de Entrega</Label>
-                  <Input 
-                    id="delivery-time" 
+                  <Input
+                    id="delivery-time"
                     placeholder="Ex: 40-50 min"
-                    value={pizzeria.average_delivery_time || ""} 
-                    onChange={e => setPizzeria({...pizzeria, average_delivery_time: e.target.value})} 
+                    value={pizzeria.average_delivery_time || ""}
+                    onChange={(e) =>
+                      setPizzeria({ ...pizzeria, average_delivery_time: e.target.value })
+                    }
                   />
                 </div>
               </div>
               <div className="space-y-2">
                 <Label>Formas de Pagamento Aceitas</Label>
                 <div className="grid grid-cols-2 gap-2 mt-2">
-                  {['Pix', 'Cartão de Crédito', 'Cartão de Débito', 'Dinheiro', 'Vale Refeição'].map(method => {
-                    const methods = Array.isArray(pizzeria.payment_methods) ? pizzeria.payment_methods : [];
+                  {[
+                    "Pix",
+                    "Cartão de Crédito",
+                    "Cartão de Débito",
+                    "Dinheiro",
+                    "Vale Refeição",
+                  ].map((method) => {
+                    const methods = Array.isArray(pizzeria.payment_methods)
+                      ? pizzeria.payment_methods
+                      : [];
                     const isChecked = methods.includes(method);
                     return (
-                      <div key={method} className="flex items-center space-x-2 border rounded-md p-2">
-                        <Switch 
+                      <div
+                        key={method}
+                        className="flex items-center space-x-2 border rounded-md p-2"
+                      >
+                        <Switch
                           checked={isChecked}
-                          onCheckedChange={checked => {
-                            const newMethods = checked 
+                          onCheckedChange={(checked) => {
+                            const newMethods = checked
                               ? [...methods, method]
                               : methods.filter((m: any) => m !== method);
-                            setPizzeria({...pizzeria, payment_methods: newMethods});
+                            setPizzeria({ ...pizzeria, payment_methods: newMethods });
                           }}
                         />
                         <Label className="text-sm cursor-pointer">{method}</Label>
@@ -421,7 +480,6 @@ export default function MyStore() {
             </CardContent>
           </Card>
         </TabsContent>
-
       </Tabs>
     </div>
   );

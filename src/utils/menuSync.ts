@@ -1,10 +1,18 @@
 import { toast } from "sonner";
 
-type MenuType = 'category' | 'product' | 'beverage' | 'border' | 'additional' | 'combo' | 'pizza_size' | 'restaurant';
+type MenuType =
+  | "category"
+  | "product"
+  | "beverage"
+  | "border"
+  | "additional"
+  | "combo"
+  | "pizza_size"
+  | "restaurant";
 
 interface SyncParams {
   type: string;
-  action: 'create' | 'update' | 'delete' | 'status';
+  action: "create" | "update" | "delete" | "status";
   id?: string;
   externalId?: string;
   data?: any;
@@ -13,19 +21,19 @@ interface SyncParams {
   syncEndpoint?: string;
 }
 
-type Protocol = 'rest' | 'legacy';
+type Protocol = "rest" | "legacy";
 
 // Map FlyControl resource type → REST URL segment.
 // SiteCreatorFly REST routes use kebab-case (e.g. /pizza-size).
 const REST_RESOURCE_PATH: Record<MenuType, string> = {
-  product: 'product',
-  category: 'category',
-  beverage: 'beverage',
-  border: 'border',
-  additional: 'additional',
-  combo: 'combo',
-  pizza_size: 'pizza-size',
-  restaurant: 'restaurant',
+  product: "product",
+  category: "category",
+  beverage: "beverage",
+  border: "border",
+  additional: "additional",
+  combo: "combo",
+  pizza_size: "pizza-size",
+  restaurant: "restaurant",
 };
 
 /**
@@ -36,15 +44,15 @@ const REST_RESOURCE_PATH: Record<MenuType, string> = {
 function detectProtocol(endpoint: string): Protocol {
   try {
     const u = new URL(endpoint);
-    const pathname = u.pathname.replace(/\/+$/, '');
+    const pathname = u.pathname.replace(/\/+$/, "");
     // REST: explicit /api/menu-sync, or any public read-only endpoint
     // (/api/public/menu-sync/{slug}/{token}) — writes will be redirected
     // to the authenticated REST base derived from the same origin.
-    if (/\/api\/menu-sync$/i.test(pathname)) return 'rest';
-    if (/\/api\/public\/menu-sync(\/|$)/i.test(pathname)) return 'rest';
-    return 'legacy';
+    if (/\/api\/menu-sync$/i.test(pathname)) return "rest";
+    if (/\/api\/public\/menu-sync(\/|$)/i.test(pathname)) return "rest";
+    return "legacy";
   } catch {
-    return 'legacy';
+    return "legacy";
   }
 }
 
@@ -57,31 +65,31 @@ function detectProtocol(endpoint: string): Protocol {
 function deriveRestBase(endpoint: string): string {
   try {
     const u = new URL(endpoint);
-    let pathname = u.pathname.replace(/\/+$/, '');
+    let pathname = u.pathname.replace(/\/+$/, "");
     const publicMatch = pathname.match(/^(.*)\/api\/public\/menu-sync(?:\/.*)?$/i);
     if (publicMatch) {
       pathname = `${publicMatch[1]}/api/menu-sync`;
     } else if (!/\/api\/menu-sync$/i.test(pathname)) {
       // Fall back to appending /api/menu-sync at the origin.
-      pathname = `${pathname}`.replace(/\/api\/menu-sync\/.*$/i, '/api/menu-sync');
+      pathname = `${pathname}`.replace(/\/api\/menu-sync\/.*$/i, "/api/menu-sync");
       if (!/\/api\/menu-sync$/i.test(pathname)) {
-        pathname = '/api/menu-sync';
+        pathname = "/api/menu-sync";
       }
     }
     return `${u.origin}${pathname}`;
   } catch {
-    return endpoint.replace(/\/+$/, '');
+    return endpoint.replace(/\/+$/, "");
   }
 }
 
 const SF_ID_PREFIXES = [
-  'sf_prod_',
-  'sf_cat_',
-  'sf_combo_',
-  'sf_border_',
-  'sf_add_',
-  'sf_bev_',
-  'sf_size_',
+  "sf_prod_",
+  "sf_cat_",
+  "sf_combo_",
+  "sf_border_",
+  "sf_add_",
+  "sf_bev_",
+  "sf_size_",
 ];
 
 /**
@@ -101,56 +109,58 @@ function normalizeExternalId(externalId?: string): string | undefined {
 }
 
 function mapExternalType(type: string, data?: any): MenuType {
-  if (type === 'category') return 'category';
-  if (type === 'beverage') return 'beverage';
-  if (type === 'combo') return 'combo';
-  if (type === 'pizza_size') return 'pizza_size';
-  if (type === 'restaurant') return 'restaurant';
-  if (type === 'additional' || type === 'adicional') return 'additional';
-  if (type === 'extra' || type === 'border' || type === 'borda') {
-    if (type === 'extra' && data?.extra_type) {
-      return data.extra_type === 'borda' ? 'border' : 'additional';
+  if (type === "category") return "category";
+  if (type === "beverage") return "beverage";
+  if (type === "combo") return "combo";
+  if (type === "pizza_size") return "pizza_size";
+  if (type === "restaurant") return "restaurant";
+  if (type === "additional" || type === "adicional") return "additional";
+  if (type === "extra" || type === "border" || type === "borda") {
+    if (type === "extra" && data?.extra_type) {
+      return data.extra_type === "borda" ? "border" : "additional";
     }
-    return 'border';
+    return "border";
   }
   // standard | product | flavor | unknown
-  return 'product';
+  return "product";
 }
 
-export async function syncToExternal(params: SyncParams): Promise<{ success: boolean; externalId?: string; error?: string }> {
+export async function syncToExternal(
+  params: SyncParams,
+): Promise<{ success: boolean; externalId?: string; error?: string }> {
   const { type, action, externalId, data, pizzeriaSlug, pizzeriaApiKey, syncEndpoint } = params;
 
   const externalType = mapExternalType(type, data);
 
-  const rawEndpoint = (syncEndpoint || '').trim();
+  const rawEndpoint = (syncEndpoint || "").trim();
 
   // Endpoint validation — no fallback to obsolete Supabase Function.
   if (!rawEndpoint) {
-    console.error('[SyncExternal] Missing SiteCreatorFly sync endpoint.');
-    return { success: false, error: 'Missing SiteCreatorFly sync endpoint.' };
+    console.error("[SyncExternal] Missing SiteCreatorFly sync endpoint.");
+    return { success: false, error: "Missing SiteCreatorFly sync endpoint." };
   }
 
   const protocol = detectProtocol(rawEndpoint);
 
   console.log(`--- [SyncExternal] Início da Ação: ${action} ---`);
-  console.log('Protocolo selecionado:', protocol);
-  console.log('Endpoint base:', rawEndpoint);
-  console.log('Tipo do item:', externalType);
-  console.log('Ação:', action);
-  console.log('Slug usado:', pizzeriaSlug);
-  console.log('ID/External ID usado:', externalId);
+  console.log("Protocolo selecionado:", protocol);
+  console.log("Endpoint base:", rawEndpoint);
+  console.log("Tipo do item:", externalType);
+  console.log("Ação:", action);
+  console.log("Slug usado:", pizzeriaSlug);
+  console.log("ID/External ID usado:", externalId);
   console.log(
-    'Headers: { Content-Type: application/json, x-api-key: ' +
+    "Headers: { Content-Type: application/json, x-api-key: " +
       (pizzeriaApiKey
         ? `${pizzeriaApiKey.substring(0, 4)}...${pizzeriaApiKey.substring(pizzeriaApiKey.length - 4)}`
-        : 'missing') +
-      ', Authorization: Bearer <api_key> }'
+        : "missing") +
+      ", Authorization: Bearer <api_key> }",
   );
 
   // Dual auth headers throughout migration period.
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json',
-    'x-api-key': pizzeriaApiKey,
+    "Content-Type": "application/json",
+    "x-api-key": pizzeriaApiKey,
     Authorization: `Bearer ${pizzeriaApiKey}`,
   };
 
@@ -159,110 +169,116 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
     let method: string;
     let bodyObj: any | undefined;
 
-    if (protocol === 'rest') {
+    if (protocol === "rest") {
       const resourcePath = REST_RESOURCE_PATH[externalType] ?? externalType;
       const base = deriveRestBase(rawEndpoint);
 
-      if (base !== rawEndpoint.replace(/\/+$/, '')) {
+      if (base !== rawEndpoint.replace(/\/+$/, "")) {
         console.warn(
-          '[SyncExternal] Invalid write endpoint.\n' +
-            'Public menu-sync endpoints are read-only.\n' +
-            'Switching automatically to REST endpoint.\n' +
+          "[SyncExternal] Invalid write endpoint.\n" +
+            "Public menu-sync endpoints are read-only.\n" +
+            "Switching automatically to REST endpoint.\n" +
             `  configured: ${rawEndpoint}\n` +
-            `  rewritten:  ${base}`
+            `  rewritten:  ${base}`,
         );
       }
 
       const restId = normalizeExternalId(externalId);
 
-      if (action === 'create') {
+      if (action === "create") {
         url = `${base}/${resourcePath}`;
-        method = 'POST';
+        method = "POST";
         bodyObj = prepareDataForExternal(externalType, data);
-      } else if (action === 'update') {
+      } else if (action === "update") {
+        if (externalType === "restaurant") {
+          // SiteCreatorFly resolve o restaurante pela própria API key da
+          // requisição — não existe (nem faz sentido existir) um ID de
+          // recurso na URL para "atualizar meus próprios dados".
+          url = `${base}/${resourcePath}`;
+        } else {
+          if (!restId) {
+            console.error("[SyncExternal] REST update requer externalId.");
+            return { success: false, error: "missing_external_id" };
+          }
+          url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
+        }
+        method = "PUT";
+        bodyObj = prepareDataForExternal(externalType, data);
+      } else if (action === "status") {
         if (!restId) {
-          console.error('[SyncExternal] REST update requer externalId.');
-          return { success: false, error: 'missing_external_id' };
+          console.error("[SyncExternal] REST status requer externalId.");
+          return { success: false, error: "missing_external_id" };
         }
         url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
-        method = 'PUT';
-        bodyObj = prepareDataForExternal(externalType, data);
-      } else if (action === 'status') {
-        if (!restId) {
-          console.error('[SyncExternal] REST status requer externalId.');
-          return { success: false, error: 'missing_external_id' };
-        }
-        url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
-        method = 'PATCH';
+        method = "PATCH";
         bodyObj = { active: data?.value };
       } else {
         // delete
         if (!restId) {
-          console.error('[SyncExternal] REST delete requer externalId.');
-          return { success: false, error: 'missing_external_id' };
+          console.error("[SyncExternal] REST delete requer externalId.");
+          return { success: false, error: "missing_external_id" };
         }
         url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
-        method = 'DELETE';
+        method = "DELETE";
         bodyObj = undefined;
       }
 
-
       // Safety net: never write to a public read-only path.
       if (/\/api\/public\/menu-sync\//i.test(url)) {
-        console.error('[SyncExternal] Refusing to write to public read-only endpoint:', url);
-        return { success: false, error: 'invalid_write_endpoint' };
+        console.error("[SyncExternal] Refusing to write to public read-only endpoint:", url);
+        return { success: false, error: "invalid_write_endpoint" };
       }
     } else {
       // ============ LEGACY (unchanged behavior) ============
       url = rawEndpoint;
-      method = 'POST';
+      method = "POST";
       const legacyBody: any = {
         action,
         type: externalType,
         slug: pizzeriaSlug,
       };
       if (externalId) legacyBody.id = externalId;
-      if (action === 'status') {
+      if (action === "status") {
         legacyBody.active = data?.value;
-      } else if (action === 'create' || action === 'update') {
+      } else if (action === "create" || action === "update") {
         legacyBody.data = prepareDataForExternal(externalType, data);
       }
       bodyObj = legacyBody;
     }
 
-    console.log('URL final:', url);
-    console.log('Método HTTP:', method);
-    console.log('Payload enviado:', bodyObj ? JSON.stringify(bodyObj, null, 2) : '<no body>');
+    console.log("URL final:", url);
+    console.log("Método HTTP:", method);
+    console.log("Payload enviado:", bodyObj ? JSON.stringify(bodyObj, null, 2) : "<no body>");
 
     const init: RequestInit = { method, headers };
     if (bodyObj !== undefined) init.body = JSON.stringify(bodyObj);
 
     const response = await fetch(url, init);
-    console.log('Status HTTP recebido:', response.status);
+    console.log("Status HTTP recebido:", response.status);
 
     if (response.status === 404) {
-      console.error('[SyncExternal] 404 - Endpoint não encontrado');
-      return { success: false, error: '404' };
+      console.error("[SyncExternal] 404 - Endpoint não encontrado");
+      return { success: false, error: "404" };
     }
     if (response.status === 401 || response.status === 403) {
-      console.error('[SyncExternal] 401/403 - Autorização negada');
-      return { success: false, error: 'auth_error' };
+      console.error("[SyncExternal] 401/403 - Autorização negada");
+      return { success: false, error: "auth_error" };
     }
 
     // 204 No Content — common for DELETE/PATCH in REST.
     if (response.status === 204) {
-      console.log('Resposta: 204 No Content');
+      console.log("Resposta: 204 No Content");
       return { success: true, externalId };
     }
 
-    const contentType = response.headers.get('content-type') || '';
+    const contentType = response.headers.get("content-type") || "";
     const text = await response.text();
-    console.log('Resposta bruta recebida:', text);
+    console.log("Resposta bruta recebida:", text);
 
     // Any successful 2xx response is considered a sync success.
     if (response.ok) {
       let parsed: any = null;
-      if (contentType.includes('application/json') && text) {
+      if (contentType.includes("application/json") && text) {
         try {
           parsed = JSON.parse(text);
         } catch {
@@ -271,12 +287,12 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
         }
       }
 
-      if (protocol === 'legacy') {
+      if (protocol === "legacy") {
         // Legacy contract historically returns { success, data:{ id } }.
         // Preserve old semantics when explicit success:false is returned.
         if (parsed && parsed.success === false) {
-          const errorMsg = parsed.message || parsed.error || 'Erro desconhecido na API externa';
-          console.error('[SyncExternal] Erro retornado pela API legacy:', errorMsg);
+          const errorMsg = parsed.message || parsed.error || "Erro desconhecido na API externa";
+          console.error("[SyncExternal] Erro retornado pela API legacy:", errorMsg);
           return { success: false, error: `api_error:${errorMsg}` };
         }
         const newId = parsed?.data?.id ?? parsed?.id ?? externalId;
@@ -284,43 +300,39 @@ export async function syncToExternal(params: SyncParams): Promise<{ success: boo
       }
 
       // REST: any 2xx = success. Extract id from common shapes if present.
-      const newId =
-        parsed?.id ??
-        parsed?.data?.id ??
-        parsed?.[externalType]?.id ??
-        externalId;
+      const newId = parsed?.id ?? parsed?.data?.id ?? parsed?.[externalType]?.id ?? externalId;
       return { success: true, externalId: newId };
     }
 
     // Non-2xx that isn't 401/403/404 — try to surface API error message.
-    if (contentType.includes('application/json') && text) {
+    if (contentType.includes("application/json") && text) {
       try {
         const parsed = JSON.parse(text);
         const errorMsg = parsed.message || parsed.error || `HTTP ${response.status}`;
-        console.error('[SyncExternal] Erro HTTP:', errorMsg);
+        console.error("[SyncExternal] Erro HTTP:", errorMsg);
         return { success: false, error: `api_error:${errorMsg}` };
       } catch {
         // fallthrough
       }
     }
-    if (!contentType.includes('application/json')) {
-      console.error('[SyncExternal] Resposta não é JSON');
-      return { success: false, error: 'html_response' };
+    if (!contentType.includes("application/json")) {
+      console.error("[SyncExternal] Resposta não é JSON");
+      return { success: false, error: "html_response" };
     }
     return { success: false, error: `api_error:HTTP ${response.status}` };
   } catch (error: any) {
-    console.error('[SyncExternal] Erro na chamada:', error);
-    if (error instanceof TypeError && error.message.includes('fetch')) {
-      return { success: false, error: 'cors_error' };
+    console.error("[SyncExternal] Erro na chamada:", error);
+    if (error instanceof TypeError && error.message.includes("fetch")) {
+      return { success: false, error: "cors_error" };
     }
-    return { success: false, error: error.message || 'network_error' };
+    return { success: false, error: error.message || "network_error" };
   } finally {
     console.log(`--- [SyncExternal] Fim da Ação: ${action} ---`);
   }
 }
 
 function prepareDataForExternal(type: MenuType, data: any) {
-  if (type === 'category') {
+  if (type === "category") {
     return {
       name: data.name,
       active: data.active !== undefined ? data.active : true,
@@ -328,7 +340,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
     };
   }
 
-  if (type === 'product') {
+  if (type === "product") {
     const normalizedCategoryId = normalizeExternalId(data.external_category_id);
     return {
       name: data.name,
@@ -340,7 +352,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
     };
   }
 
-  if (type === 'beverage') {
+  if (type === "beverage") {
     return {
       name: data.name,
       price: data.price,
@@ -349,7 +361,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
     };
   }
 
-  if (type === 'border' || type === 'additional') {
+  if (type === "border" || type === "additional") {
     return {
       name: data.name,
       price: data.price,
@@ -357,7 +369,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
     };
   }
 
-  if (type === 'combo') {
+  if (type === "combo") {
     return {
       name: data.name,
       description: data.description,
@@ -373,7 +385,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
     };
   }
 
-  if (type === 'pizza_size') {
+  if (type === "pizza_size") {
     return {
       name: data.name,
       price: data.price,
@@ -384,12 +396,19 @@ function prepareDataForExternal(type: MenuType, data: any) {
     };
   }
 
-  if (type === 'restaurant') {
+  if (type === "restaurant") {
+    // SiteCreatorFly recebe o corpo bruto (sem remapear chaves) e só grava
+    // os campos que reconhece pelo nome exato — por isso `opening_hours` do
+    // FlyControl precisa virar `hours`, e o nome/descrição/logo precisam ir
+    // com os mesmos nomes usados na tabela `restaurants` do SiteCreatorFly.
     return {
       name: data.name,
       is_open: data.is_open,
       status: data.status,
       opening_hours: data.opening_hours,
+      hours: data.opening_hours,
+      description: data.description,
+      logo_url: data.logo_url,
     };
   }
 
