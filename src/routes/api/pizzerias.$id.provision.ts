@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { provisionRestaurantInSF } from "@/integrations/sitecreatorfly/provision.server";
+import { requireBearerCaller } from "@/integrations/supabase/adminGuard.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -16,10 +17,24 @@ export const Route = createFileRoute("/api/pizzerias/$id/provision")({
       OPTIONS: async () =>
         new Response(JSON.stringify({ success: true }), { status: 200, headers: cors }),
 
-      POST: async ({ params }) => {
+      POST: async ({ request, params }) => {
         const id = String(params.id || "").trim();
         if (!id) {
-          return new Response(JSON.stringify({ error: "missing_id" }), { status: 400, headers: cors });
+          return new Response(JSON.stringify({ error: "missing_id" }), {
+            status: 400,
+            headers: cors,
+          });
+        }
+
+        // Reprovisionar dispara uma chamada real para o SiteCreatorFly e
+        // mexe nos dados da empresa — só quem é dono desta pizzaria ou
+        // administrador da plataforma pode pedir isso.
+        let caller;
+        try {
+          caller = await requireBearerCaller(request, cors);
+        } catch (guardResponse) {
+          if (guardResponse instanceof Response) return guardResponse;
+          throw guardResponse;
         }
 
         console.log("[Reprovision] START pizzeria:", id);
@@ -32,7 +47,20 @@ export const Route = createFileRoute("/api/pizzerias/$id/provision")({
 
         if (pzErr || !pz) {
           console.error("[Reprovision] pizzeria not found:", pzErr);
-          return new Response(JSON.stringify({ error: "pizzeria_not_found" }), { status: 404, headers: cors });
+          return new Response(JSON.stringify({ error: "pizzeria_not_found" }), {
+            status: 404,
+            headers: cors,
+          });
+        }
+
+        if ((pz as any).owner_id !== caller.userId) {
+          const { data: isAdmin } = await caller.supabase.rpc("is_admin");
+          if (!isAdmin) {
+            return new Response(JSON.stringify({ error: "forbidden" }), {
+              status: 403,
+              headers: cors,
+            });
+          }
         }
 
         // Mark as pending, clear last error.
@@ -75,19 +103,24 @@ export const Route = createFileRoute("/api/pizzerias/$id/provision")({
           if (provision.sync_endpoint) update.sync_endpoint = provision.sync_endpoint;
 
           const { error: updErr } = await supabaseAdmin
-            .from("pizzerias").update(update).eq("id", id);
+            .from("pizzerias")
+            .update(update)
+            .eq("id", id);
           if (updErr) console.error("[Reprovision] persist error:", updErr);
 
           console.log("[Reprovision] SUCCESS", id, "already_existed:", provision.already_existed);
-          return new Response(JSON.stringify({
-            success: true,
-            provision_status: "provisioned",
-            already_existed: !!provision.already_existed,
-            sf_restaurant_id: provision.sf_restaurant_id ?? (pz as any).sf_restaurant_id ?? null,
-            menu_sync_token: provision.menu_sync_token ?? null,
-            public_url: provision.public_url ?? null,
-            sync_endpoint: provision.sync_endpoint ?? null,
-          }), { status: 200, headers: cors });
+          return new Response(
+            JSON.stringify({
+              success: true,
+              provision_status: "provisioned",
+              already_existed: !!provision.already_existed,
+              sf_restaurant_id: provision.sf_restaurant_id ?? (pz as any).sf_restaurant_id ?? null,
+              menu_sync_token: provision.menu_sync_token ?? null,
+              public_url: provision.public_url ?? null,
+              sync_endpoint: provision.sync_endpoint ?? null,
+            }),
+            { status: 200, headers: cors },
+          );
         }
 
         console.error("[Reprovision] FAILED", id, provision.error);
@@ -96,11 +129,14 @@ export const Route = createFileRoute("/api/pizzerias/$id/provision")({
           .update({ provision_status: "failed", provision_error: provision.error } as any)
           .eq("id", id);
 
-        return new Response(JSON.stringify({
-          success: false,
-          provision_status: "failed",
-          error: provision.error,
-        }), { status: 502, headers: cors });
+        return new Response(
+          JSON.stringify({
+            success: false,
+            provision_status: "failed",
+            error: provision.error,
+          }),
+          { status: 502, headers: cors },
+        );
       },
     },
   },

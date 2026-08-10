@@ -1,6 +1,14 @@
 import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
@@ -20,9 +28,15 @@ export function CreatePizzeriaDialog({ onSuccess }: { onSuccess: () => void }) {
     const fd = new FormData(e.currentTarget);
 
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const res = await fetch("/api/pizzerias/create", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({
           name: fd.get("name"),
           phone: fd.get("phone"),
@@ -72,19 +86,27 @@ export function CreatePizzeriaDialog({ onSuccess }: { onSuccess: () => void }) {
           </div>
           <div className="space-y-2">
             <Label>Escolha do Plano</Label>
-            <RadioGroup value={planType} onValueChange={(v) => setPlanType(v as PlanType)} className="gap-3">
+            <RadioGroup
+              value={planType}
+              onValueChange={(v) => setPlanType(v as PlanType)}
+              className="gap-3"
+            >
               <label className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 hover:bg-muted/50">
                 <RadioGroupItem value="premium" id="plan-premium" className="mt-0.5" />
                 <div>
                   <div className="font-medium">Plano Premium</div>
-                  <div className="text-xs text-muted-foreground">Mensalidade fixa de R$ 375,00 — pedidos ilimitados, sem Clube CENTS.</div>
+                  <div className="text-xs text-muted-foreground">
+                    Mensalidade fixa de R$ 375,00 — pedidos ilimitados, sem Clube CENTS.
+                  </div>
                 </div>
               </label>
               <label className="flex cursor-pointer items-start gap-2 rounded-lg border p-3 hover:bg-muted/50">
                 <RadioGroupItem value="cents" id="plan-cents" className="mt-0.5" />
                 <div>
                   <div className="font-medium">Plano CENTS</div>
-                  <div className="text-xs text-muted-foreground">Sem mensalidade — cobrança por pedido, participa do Clube CENTS.</div>
+                  <div className="text-xs text-muted-foreground">
+                    Sem mensalidade — cobrança por pedido, participa do Clube CENTS.
+                  </div>
                 </div>
               </label>
             </RadioGroup>

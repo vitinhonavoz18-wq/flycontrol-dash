@@ -12,6 +12,14 @@ interface MenuSyncSectionProps {
   onSyncSuccess?: () => void;
 }
 
+/** Bearer do usuário logado, exigido pelas rotas de proxy/reprovisionamento. */
+async function authHeader(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+}
+
 export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionProps) {
   const [syncEndpoint, setSyncEndpoint] = useState("");
   const [loading, setLoading] = useState(true);
@@ -146,7 +154,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
 
       const response = await fetch(testUrl, {
         method: "GET",
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", ...(await authHeader()) },
       });
       console.log("MENU_SYNC_HTTP_STATUS", response.status);
 
@@ -248,7 +256,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
 
       const response = await fetch(proxyUrl, {
         method: "GET",
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", ...(await authHeader()) },
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
@@ -387,7 +395,10 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     setReprovisioning(true);
     const toastId = toast.loading("Provisionando restaurante no SiteCreatorFly...");
     try {
-      const resp = await fetch(`/api/pizzerias/${pizzeriaId}/provision`, { method: "POST" });
+      const resp = await fetch(`/api/pizzerias/${pizzeriaId}/provision`, {
+        method: "POST",
+        headers: await authHeader(),
+      });
       const json = await resp.json().catch(() => ({}));
       if (resp.ok && json?.success) {
         toast.success(
