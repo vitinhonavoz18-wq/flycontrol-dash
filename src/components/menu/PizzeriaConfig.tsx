@@ -4,8 +4,20 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Clock, Truck, FileText, Globe, Key, Image as ImageIcon } from "lucide-react";
+import {
+  Loader2,
+  Clock,
+  Truck,
+  FileText,
+  Globe,
+  Key,
+  Image as ImageIcon,
+  Store,
+  Phone,
+  ShoppingBag,
+} from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { VideoUpload } from "@/components/ui/video-upload";
@@ -13,6 +25,20 @@ import { VideoUpload } from "@/components/ui/video-upload";
 interface PizzeriaConfigProps {
   pizzeriaId: string;
 }
+
+// Mesma lista usada no formulário equivalente do SiteCreatorFly — mantém os
+// dois lados com as mesmas opções.
+const BUSINESS_TYPES = [
+  "Pizzaria",
+  "Pastelaria",
+  "Hamburgueria",
+  "Restaurante",
+  "Lanchonete",
+  "Açaíteria",
+  "Farmácia",
+  "Mercado",
+  "Outro",
+];
 
 // Campos desta tela que `prepareDataForExternal('restaurant', ...)` (em
 // utils/menuSync.ts) sabe traduzir para o SiteCreatorFly. Campos fora deste
@@ -24,7 +50,26 @@ const RESTAURANT_SYNC_FIELDS = new Set([
   "hero_image_url",
   "hero_media_type",
   "hero_video_url",
+  "business_type",
+  "tagline",
+  "city",
+  "address",
+  "phone",
+  "whatsapp_display",
+  "logo_url",
+  "delivery_enabled",
+  "pickup_enabled",
+  "table_enabled",
 ]);
+
+function formatPhoneMask(value: string): string {
+  const digits = value.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10)
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
 
 export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
   const [pizzeria, setPizzeria] = useState<any>(null);
@@ -177,6 +222,142 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
               placeholder="Fale um pouco sobre a qualidade e tradição da sua pizzaria..."
               defaultValue={pizzeria?.description || ""}
               onBlur={(e) => handleUpdate("description", e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <Store className="h-4 w-4 text-primary" /> Identidade
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="business-type">Tipo de Negócio</Label>
+            <select
+              id="business-type"
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              defaultValue={pizzeria?.business_type || "Pizzaria"}
+              onChange={(e) => handleUpdate("business_type", e.target.value)}
+            >
+              {BUSINESS_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tagline">Slogan curto</Label>
+            <Input
+              id="tagline"
+              placeholder="Ex: A melhor pizza da região"
+              defaultValue={pizzeria?.tagline || ""}
+              onBlur={(e) => handleUpdate("tagline", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="city">Cidade</Label>
+            <Input
+              id="city"
+              placeholder="Ex: Salvador, BA"
+              defaultValue={pizzeria?.city || ""}
+              onBlur={(e) => handleUpdate("city", e.target.value)}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label>Logo</Label>
+            <ImageUpload
+              value={pizzeria?.logo_url}
+              onChange={(url) => handleUpdate("logo_url", url)}
+              folder="logo"
+              disabled={saving}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <Phone className="h-4 w-4 text-primary" /> WhatsApp & Endereço
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="phone">WhatsApp de Pedidos (com DDD)</Label>
+            <Input
+              id="phone"
+              placeholder="5571986182819"
+              inputMode="numeric"
+              defaultValue={pizzeria?.phone || ""}
+              onBlur={(e) => handleUpdate("phone", e.target.value.replace(/\D/g, ""))}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Só números, com código do país. Ex: 5571986182819.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="whatsapp-display">WhatsApp exibido no rodapé</Label>
+            <Input
+              id="whatsapp-display"
+              placeholder="(71) 98618-2819"
+              defaultValue={pizzeria?.whatsapp_display || ""}
+              onBlur={(e) => handleUpdate("whatsapp_display", formatPhoneMask(e.target.value))}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="address">Endereço</Label>
+            <Input
+              id="address"
+              placeholder="Rua, número, bairro"
+              defaultValue={pizzeria?.address || ""}
+              onBlur={(e) => handleUpdate("address", e.target.value)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <ShoppingBag className="h-4 w-4 text-primary" /> Modos de Atendimento
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-[10px] text-muted-foreground">
+            Como o cliente pode comprar no site público.
+          </p>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Delivery</p>
+              <p className="text-[10px] text-muted-foreground">Entrega</p>
+            </div>
+            <Switch
+              checked={pizzeria?.delivery_enabled ?? true}
+              onCheckedChange={(checked) => handleUpdate("delivery_enabled", checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Retirada</p>
+              <p className="text-[10px] text-muted-foreground">Cliente busca no local</p>
+            </div>
+            <Switch
+              checked={pizzeria?.pickup_enabled ?? false}
+              onCheckedChange={(checked) => handleUpdate("pickup_enabled", checked)}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Consumo Local</p>
+              <p className="text-[10px] text-muted-foreground">Mesa / Comanda</p>
+            </div>
+            <Switch
+              checked={pizzeria?.table_enabled ?? false}
+              onCheckedChange={(checked) => handleUpdate("table_enabled", checked)}
             />
           </div>
         </CardContent>

@@ -73,6 +73,41 @@ describe("syncToExternal — restaurant (loja)", () => {
     expect(body.hero_image_url).toBe("https://x/hero.jpg");
   });
 
+  it("envia identidade, contato e modos de atendimento com os nomes que o SiteCreatorFly espera (phone vira whatsapp_number)", async () => {
+    await syncToExternal({
+      type: "restaurant",
+      action: "update",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "chave-123",
+      syncEndpoint: REST_ENDPOINT,
+      data: {
+        business_type: "Hamburgueria",
+        tagline: "O melhor burger da região",
+        city: "Salvador, BA",
+        address: "Rua Teste, 123",
+        phone: "5571986182819",
+        whatsapp_display: "(71) 98618-2819",
+        delivery_enabled: true,
+        pickup_enabled: false,
+        table_enabled: true,
+      },
+    });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    const body = JSON.parse(init?.body as string);
+    expect(body.business_type).toBe("Hamburgueria");
+    expect(body.tagline).toBe("O melhor burger da região");
+    expect(body.city).toBe("Salvador, BA");
+    expect(body.address).toBe("Rua Teste, 123");
+    expect(body.whatsapp_number).toBe("5571986182819");
+    expect(body.whatsapp_display).toBe("(71) 98618-2819");
+    expect(body.delivery_enabled).toBe(true);
+    expect(body.pickup_enabled).toBe(false);
+    expect(body.table_enabled).toBe(true);
+    // "phone" não é um nome que o SiteCreatorFly reconhece — só whatsapp_number deve ir.
+    expect(body.phone).toBeUndefined();
+  });
+
   it("continua exigindo externalId para atualizar um produto (não é a loja)", async () => {
     const result = await syncToExternal({
       type: "product",

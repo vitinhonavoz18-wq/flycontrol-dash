@@ -1469,7 +1469,10 @@ export type Database = {
           api_key: string;
           average_delivery_time: string | null;
           billing_model: string;
+          business_type: string | null;
+          city: string | null;
           created_at: string;
+          delivery_enabled: boolean;
           delivery_fee: number | null;
           description: string | null;
           fiqon_enabled: boolean | null;
@@ -1490,6 +1493,7 @@ export type Database = {
           owner_id: string | null;
           payment_methods: Json | null;
           phone: string | null;
+          pickup_enabled: boolean;
           plan_type: string;
           primary_color: string | null;
           print_auto: boolean;
@@ -1514,15 +1518,21 @@ export type Database = {
           subscription_price: number | null;
           subscription_status: string | null;
           sync_endpoint: string | null;
+          table_enabled: boolean;
+          tagline: string | null;
           updated_at: string;
           waiter_commission_percent: number;
+          whatsapp_display: string | null;
         };
         Insert: {
           address?: string | null;
           api_key: string;
           average_delivery_time?: string | null;
           billing_model?: string;
+          business_type?: string | null;
+          city?: string | null;
           created_at?: string;
+          delivery_enabled?: boolean;
           delivery_fee?: number | null;
           description?: string | null;
           fiqon_enabled?: boolean | null;
@@ -1543,6 +1553,7 @@ export type Database = {
           owner_id?: string | null;
           payment_methods?: Json | null;
           phone?: string | null;
+          pickup_enabled?: boolean;
           plan_type?: string;
           primary_color?: string | null;
           print_auto?: boolean;
@@ -1567,15 +1578,21 @@ export type Database = {
           subscription_price?: number | null;
           subscription_status?: string | null;
           sync_endpoint?: string | null;
+          table_enabled?: boolean;
+          tagline?: string | null;
           updated_at?: string;
           waiter_commission_percent?: number;
+          whatsapp_display?: string | null;
         };
         Update: {
           address?: string | null;
           api_key?: string;
           average_delivery_time?: string | null;
           billing_model?: string;
+          business_type?: string | null;
+          city?: string | null;
           created_at?: string;
+          delivery_enabled?: boolean;
           delivery_fee?: number | null;
           description?: string | null;
           fiqon_enabled?: boolean | null;
@@ -1596,6 +1613,7 @@ export type Database = {
           owner_id?: string | null;
           payment_methods?: Json | null;
           phone?: string | null;
+          pickup_enabled?: boolean;
           plan_type?: string;
           primary_color?: string | null;
           print_auto?: boolean;
@@ -1620,8 +1638,11 @@ export type Database = {
           subscription_price?: number | null;
           subscription_status?: string | null;
           sync_endpoint?: string | null;
+          table_enabled?: boolean;
+          tagline?: string | null;
           updated_at?: string;
           waiter_commission_percent?: number;
+          whatsapp_display?: string | null;
         };
         Relationships: [];
       };

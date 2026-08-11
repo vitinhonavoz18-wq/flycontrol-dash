@@ -399,8 +399,9 @@ function prepareDataForExternal(type: MenuType, data: any) {
   if (type === "restaurant") {
     // SiteCreatorFly recebe o corpo bruto (sem remapear chaves) e só grava
     // os campos que reconhece pelo nome exato — por isso `opening_hours` do
-    // FlyControl precisa virar `hours`, e o nome/descrição/logo precisam ir
-    // com os mesmos nomes usados na tabela `restaurants` do SiteCreatorFly.
+    // FlyControl precisa virar `hours`, `phone` precisa virar
+    // `whatsapp_number`, e os demais precisam ir com os mesmos nomes usados
+    // na tabela `restaurants` do SiteCreatorFly.
     return {
       name: data.name,
       is_open: data.is_open,
@@ -412,6 +413,15 @@ function prepareDataForExternal(type: MenuType, data: any) {
       hero_image_url: data.hero_image_url,
       hero_media_type: data.hero_media_type,
       hero_video_url: data.hero_video_url,
+      business_type: data.business_type,
+      tagline: data.tagline,
+      city: data.city,
+      address: data.address,
+      whatsapp_number: data.phone,
+      whatsapp_display: data.whatsapp_display,
+      delivery_enabled: data.delivery_enabled,
+      pickup_enabled: data.pickup_enabled,
+      table_enabled: data.table_enabled,
     };
   }
 
