@@ -1,5 +1,12 @@
 import { useAdminPizzerias } from "@/hooks/admin/use-admin-pizzerias";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -7,19 +14,28 @@ import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { ExternalLink, Store, Copy, Check } from "lucide-react";
 import { toast } from "sonner";
+import { StoreLifecycleActions } from "@/components/admin/StoreLifecycleActions";
+
+type StatusFilter = "all" | "active" | "inactive";
 
 export const PizzeriasDashboard = () => {
-  const { data, isLoading, error } = useAdminPizzerias();
+  const { data, isLoading, error, refetch } = useAdminPizzerias();
   const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
   const filteredData = useMemo(() => {
     if (!data) return [];
-    return data.filter(p => 
-      p.pizzeria_name?.toLowerCase().includes(search.toLowerCase()) ||
-      p.pizzeria_id?.toLowerCase().includes(search.toLowerCase())
-    );
-  }, [data, search]);
+    return data.filter((p) => {
+      const matchesSearch =
+        p.pizzeria_name?.toLowerCase().includes(search.toLowerCase()) ||
+        p.pizzeria_id?.toLowerCase().includes(search.toLowerCase());
+      const isActive = (p.status ?? "active") === "active";
+      const matchesStatus =
+        statusFilter === "all" || (statusFilter === "active" ? isActive : !isActive);
+      return matchesSearch && matchesStatus;
+    });
+  }, [data, search, statusFilter]);
 
   const copyLink = (slug: string, id: string) => {
     const url = `https://sitecreatorfly.lovable.app/${slug}`;
@@ -29,19 +45,45 @@ export const PizzeriasDashboard = () => {
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  if (isLoading) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
+  if (isLoading)
+    return (
+      <div className="p-8">
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
   if (error) return <div className="p-8 text-destructive">Erro ao carregar lojas.</div>;
 
   return (
     <div className="p-8">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
         <h1 className="text-3xl font-bold">FlyPizzarias</h1>
-        <Input 
-          placeholder="Buscar por nome ou ID..." 
-          className="max-w-xs"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex gap-1 rounded-md border p-1">
+            {(
+              [
+                { value: "all", label: "Todas" },
+                { value: "active", label: "Ativas" },
+                { value: "inactive", label: "Desativadas" },
+              ] as const
+            ).map((opt) => (
+              <Button
+                key={opt.value}
+                type="button"
+                size="sm"
+                variant={statusFilter === opt.value ? "default" : "ghost"}
+                onClick={() => setStatusFilter(opt.value)}
+              >
+                {opt.label}
+              </Button>
+            ))}
+          </div>
+          <Input
+            placeholder="Buscar por nome ou ID..."
+            className="max-w-xs"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="bg-card border rounded-lg shadow-sm overflow-x-auto">
@@ -65,8 +107,11 @@ export const PizzeriasDashboard = () => {
                 </TableCell>
                 <TableCell>
                   <div className="flex flex-col gap-1">
-                    <Badge variant={p.status === "active" ? "default" : "secondary"} className="w-fit">
-                      {p.status === "active" ? "Ativa" : "Inativa"}
+                    <Badge
+                      variant={p.status === "active" ? "default" : "secondary"}
+                      className="w-fit"
+                    >
+                      {p.status === "active" ? "🟢 Ativa" : "🔴 Desativada"}
                     </Badge>
                   </div>
                 </TableCell>
@@ -84,23 +129,42 @@ export const PizzeriasDashboard = () => {
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
                     <Button variant="outline" size="icon" asChild title="Abrir Cardápio">
-                      <a href={`https://sitecreatorfly.lovable.app/${p.pizzeria_id}`} target="_blank" rel="noreferrer">
+                      <a
+                        href={`https://sitecreatorfly.lovable.app/${p.pizzeria_id}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
                         <ExternalLink className="h-4 w-4" />
                       </a>
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="icon" 
+                    <Button
+                      variant="outline"
+                      size="icon"
                       onClick={() => copyLink(p.pizzeria_id || "", p.pizzeria_id || "")}
                       title="Copiar Link"
                     >
-                      {copiedId === p.pizzeria_id ? <Check className="h-4 w-4 text-emerald-500" /> : <Copy className="h-4 w-4" />}
+                      {copiedId === p.pizzeria_id ? (
+                        <Check className="h-4 w-4 text-emerald-500" />
+                      ) : (
+                        <Copy className="h-4 w-4" />
+                      )}
                     </Button>
                     <Button variant="outline" size="icon" asChild title="Ver no Painel">
                       <a href={`/dashboard?pizzeriaId=${p.pizzeria_id}`}>
                         <Store className="h-4 w-4" />
                       </a>
                     </Button>
+                    <StoreLifecycleActions
+                      pizzeria={{
+                        id: p.pizzeria_id || "",
+                        name: p.pizzeria_name || "",
+                        status: p.status,
+                        owner_name: p.owner_name,
+                        plan_type: p.plan_type,
+                      }}
+                      onChanged={() => refetch()}
+                      variant="icons"
+                    />
                   </div>
                 </TableCell>
               </TableRow>
@@ -118,5 +182,3 @@ export const PizzeriasDashboard = () => {
     </div>
   );
 };
-
-

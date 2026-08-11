@@ -101,7 +101,11 @@ export default function MyStore() {
   const loadData = async () => {
     setLoading(true);
     try {
-      let query = supabase.from("pizzerias").select("*").neq("status", "deleted");
+      let query = supabase
+        .from("pizzerias")
+        .select("*")
+        .neq("status", "deleted")
+        .neq("status", "inactive");
 
       if (!isSuperAdmin && user?.id) {
         query = query.eq("owner_id", user.id);

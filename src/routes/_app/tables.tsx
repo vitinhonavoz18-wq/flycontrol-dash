@@ -25,16 +25,20 @@ function TablesPageInner() {
   useEffect(() => {
     async function loadPizzeria() {
       if (!user) return;
-      
+
       try {
-        let query = supabase.from("pizzerias").select("*").neq("status", "deleted");
-        
+        let query = supabase
+          .from("pizzerias")
+          .select("*")
+          .neq("status", "deleted")
+          .neq("status", "inactive");
+
         if (!isSuperAdmin && user?.id) {
           query = query.eq("owner_id", user.id);
         }
-        
+
         const { data, error } = await query.order("created_at").limit(1).maybeSingle();
-        
+
         if (error) throw error;
         setPizzeria(data);
       } catch (error: any) {

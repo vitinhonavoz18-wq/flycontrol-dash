@@ -1,7 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { planHasFeature, type Feature, type PlanType, normalizePlanType } from "@/lib/planPermissions";
+import {
+  planHasFeature,
+  type Feature,
+  type PlanType,
+  normalizePlanType,
+} from "@/lib/planPermissions";
 
 interface PlanCtx {
   companyId: string | null;
@@ -36,7 +41,12 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       let query = supabase.from("pizzerias").select("id, plan_type");
       query = pizzeriaId
         ? query.eq("id", pizzeriaId)
-        : query.eq("owner_id", user!.id).neq("status", "deleted").order("created_at").limit(1);
+        : query
+            .eq("owner_id", user!.id)
+            .neq("status", "deleted")
+            .neq("status", "inactive")
+            .order("created_at")
+            .limit(1);
 
       const { data, error } = await query.maybeSingle();
       if (cancelled) return;
@@ -48,7 +58,9 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     }
 
     void loadCompanyPlan();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user, isSuperAdmin, authLoading]);
 
   // Reage a alterações de plano feitas pelo admin em tempo real — sem logout,
@@ -63,11 +75,13 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         (payload) => {
           const next = (payload.new as { plan_type?: string })?.plan_type;
           if (next) setPlanType(normalizePlanType(next));
-        }
+        },
       )
       .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [companyId]);
 
   return (

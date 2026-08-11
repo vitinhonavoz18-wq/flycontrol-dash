@@ -54,7 +54,10 @@ import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public
 import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/public/open-table-session'
 import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/public/request-close-table'
 import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
+import { Route as ApiPizzeriasIdDeactivateRouteImport } from './routes/api/pizzerias.$id.deactivate'
+import { Route as ApiPizzeriasIdDeleteRouteImport } from './routes/api/pizzerias.$id.delete'
 import { Route as ApiPizzeriasIdProvisionRouteImport } from './routes/api/pizzerias.$id.provision'
+import { Route as ApiPizzeriasIdReactivateRouteImport } from './routes/api/pizzerias.$id.reactivate'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -283,11 +286,28 @@ const ApiPublicTableSessionStatusRoute =
     path: '/api/public/table-session-status',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPizzeriasIdDeactivateRoute =
+  ApiPizzeriasIdDeactivateRouteImport.update({
+    id: '/api/pizzerias/$id/deactivate',
+    path: '/api/pizzerias/$id/deactivate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPizzeriasIdDeleteRoute = ApiPizzeriasIdDeleteRouteImport.update({
+  id: '/api/pizzerias/$id/delete',
+  path: '/api/pizzerias/$id/delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPizzeriasIdProvisionRoute = ApiPizzeriasIdProvisionRouteImport.update({
   id: '/api/pizzerias/$id/provision',
   path: '/api/pizzerias/$id/provision',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPizzeriasIdReactivateRoute =
+  ApiPizzeriasIdReactivateRouteImport.update({
+    id: '/api/pizzerias/$id/reactivate',
+    path: '/api/pizzerias/$id/reactivate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -334,7 +354,10 @@ export interface FileRoutesByFullPath {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/admin/': typeof AppAdminIndexRoute
+  '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
+  '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
+  '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -380,7 +403,10 @@ export interface FileRoutesByTo {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/admin': typeof AppAdminIndexRoute
+  '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
+  '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
+  '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -429,7 +455,10 @@ export interface FileRoutesById {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/_app/admin/': typeof AppAdminIndexRoute
+  '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
+  '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
+  '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -478,7 +507,10 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/admin/'
+    | '/api/pizzerias/$id/deactivate'
+    | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
+    | '/api/pizzerias/$id/reactivate'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -524,7 +556,10 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/admin'
+    | '/api/pizzerias/$id/deactivate'
+    | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
+    | '/api/pizzerias/$id/reactivate'
   id:
     | '__root__'
     | '/'
@@ -572,7 +607,10 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/_app/admin/'
+    | '/api/pizzerias/$id/deactivate'
+    | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
+    | '/api/pizzerias/$id/reactivate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -601,7 +639,10 @@ export interface RootRouteChildren {
   ApiPublicOpenTableSessionRoute: typeof ApiPublicOpenTableSessionRoute
   ApiPublicRequestCloseTableRoute: typeof ApiPublicRequestCloseTableRoute
   ApiPublicTableSessionStatusRoute: typeof ApiPublicTableSessionStatusRoute
+  ApiPizzeriasIdDeactivateRoute: typeof ApiPizzeriasIdDeactivateRoute
+  ApiPizzeriasIdDeleteRoute: typeof ApiPizzeriasIdDeleteRoute
   ApiPizzeriasIdProvisionRoute: typeof ApiPizzeriasIdProvisionRoute
+  ApiPizzeriasIdReactivateRoute: typeof ApiPizzeriasIdReactivateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -921,11 +962,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTableSessionStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/pizzerias/$id/deactivate': {
+      id: '/api/pizzerias/$id/deactivate'
+      path: '/api/pizzerias/$id/deactivate'
+      fullPath: '/api/pizzerias/$id/deactivate'
+      preLoaderRoute: typeof ApiPizzeriasIdDeactivateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pizzerias/$id/delete': {
+      id: '/api/pizzerias/$id/delete'
+      path: '/api/pizzerias/$id/delete'
+      fullPath: '/api/pizzerias/$id/delete'
+      preLoaderRoute: typeof ApiPizzeriasIdDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pizzerias/$id/provision': {
       id: '/api/pizzerias/$id/provision'
       path: '/api/pizzerias/$id/provision'
       fullPath: '/api/pizzerias/$id/provision'
       preLoaderRoute: typeof ApiPizzeriasIdProvisionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pizzerias/$id/reactivate': {
+      id: '/api/pizzerias/$id/reactivate'
+      path: '/api/pizzerias/$id/reactivate'
+      fullPath: '/api/pizzerias/$id/reactivate'
+      preLoaderRoute: typeof ApiPizzeriasIdReactivateRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -1015,7 +1077,10 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOpenTableSessionRoute: ApiPublicOpenTableSessionRoute,
   ApiPublicRequestCloseTableRoute: ApiPublicRequestCloseTableRoute,
   ApiPublicTableSessionStatusRoute: ApiPublicTableSessionStatusRoute,
+  ApiPizzeriasIdDeactivateRoute: ApiPizzeriasIdDeactivateRoute,
+  ApiPizzeriasIdDeleteRoute: ApiPizzeriasIdDeleteRoute,
   ApiPizzeriasIdProvisionRoute: ApiPizzeriasIdProvisionRoute,
+  ApiPizzeriasIdReactivateRoute: ApiPizzeriasIdReactivateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

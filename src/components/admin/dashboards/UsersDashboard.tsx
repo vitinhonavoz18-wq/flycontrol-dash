@@ -1,12 +1,20 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { Search, Loader2, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { StoreLifecycleActions } from "@/components/admin/StoreLifecycleActions";
 
 interface AdminUser {
   id: string;
@@ -18,26 +26,35 @@ interface AdminUser {
   created_at: string;
   last_sign_in_at: string | null;
   restaurant_name: string;
+  restaurant_id: string | null;
+  restaurant_status: string | null;
+  restaurant_plan: string | null;
 }
 
 export const UsersDashboard = () => {
   const [searchTerm, setSearchTerm] = useState("");
+  const queryClient = useQueryClient();
 
-  const { data: users, isLoading, error } = useQuery({
+  const {
+    data: users,
+    isLoading,
+    error,
+  } = useQuery({
     queryKey: ["admin-users-list"],
     queryFn: async () => {
-      const { data, error } = await supabase.functions.invoke('admin-list-users');
+      const { data, error } = await supabase.functions.invoke("admin-list-users");
       if (error) throw error;
-      if (!data.success) throw new Error(data.error || 'Failed to fetch users');
+      if (!data.success) throw new Error(data.error || "Failed to fetch users");
       return data.users as AdminUser[];
     },
   });
 
-  const filteredUsers = users?.filter(user => 
-    user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.restaurant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    user.roles.some(role => role.toLowerCase().includes(searchTerm.toLowerCase()))
+  const filteredUsers = users?.filter(
+    (user) =>
+      user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.restaurant_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      user.roles.some((role) => role.toLowerCase().includes(searchTerm.toLowerCase())),
   );
 
   if (isLoading) {
@@ -92,8 +109,10 @@ export const UsersDashboard = () => {
               <TableHead>Perfil</TableHead>
               <TableHead>Restaurante</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Loja</TableHead>
               <TableHead>Criado em</TableHead>
               <TableHead>Último Acesso</TableHead>
+              <TableHead className="text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -118,23 +137,49 @@ export const UsersDashboard = () => {
                   </TableCell>
                   <TableCell>{u.restaurant_name}</TableCell>
                   <TableCell>
-                    <Badge variant={u.status === 'active' ? 'outline' : 'destructive'}>
-                      {u.status === 'active' ? 'Ativo' : 'Pendente'}
+                    <Badge variant={u.status === "active" ? "outline" : "destructive"}>
+                      {u.status === "active" ? "Ativo" : "Pendente"}
                     </Badge>
+                  </TableCell>
+                  <TableCell>
+                    {u.restaurant_id ? (
+                      <Badge variant={u.restaurant_status === "active" ? "default" : "secondary"}>
+                        {u.restaurant_status === "active" ? "🟢 Ativa" : "🔴 Desativada"}
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">Sem loja</span>
+                    )}
                   </TableCell>
                   <TableCell className="text-sm">
                     {new Date(u.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell className="text-sm">
-                    {u.last_sign_in_at 
-                      ? new Date(u.last_sign_in_at).toLocaleString() 
-                      : "Nunca"}
+                    {u.last_sign_in_at ? new Date(u.last_sign_in_at).toLocaleString() : "Nunca"}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {u.restaurant_id && (
+                      <div className="flex justify-end">
+                        <StoreLifecycleActions
+                          pizzeria={{
+                            id: u.restaurant_id,
+                            name: u.restaurant_name,
+                            status: u.restaurant_status,
+                            owner_email: u.email,
+                            plan_type: u.restaurant_plan,
+                          }}
+                          onChanged={() =>
+                            queryClient.invalidateQueries({ queryKey: ["admin-users-list"] })
+                          }
+                          variant="icons"
+                        />
+                      </div>
+                    )}
                   </TableCell>
                 </TableRow>
               ))
             ) : (
               <TableRow>
-                <TableCell colSpan={7} className="h-32 text-center text-muted-foreground">
+                <TableCell colSpan={9} className="h-32 text-center text-muted-foreground">
                   Nenhum usuário encontrado.
                 </TableCell>
               </TableRow>

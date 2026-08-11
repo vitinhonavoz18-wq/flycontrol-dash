@@ -27,6 +27,7 @@ export const HeroBackground = memo(function HeroBackground({
         .eq("is_active", true)
         .not("slug", "is", null)
         .neq("status", "deleted")
+        .neq("status", "inactive")
         .order("created_at", { ascending: false })
         .limit(60);
 
@@ -40,7 +41,9 @@ export const HeroBackground = memo(function HeroBackground({
     }
 
     void load();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   return (
@@ -67,16 +70,124 @@ export const HeroBackground = memo(function HeroBackground({
 
 // Demo cards when no real data is available (empty DB or anonymous)
 const DEMO_CARDS: PizzeriaCard[] = [
-  { id: "d1", name: "Pizzaria Bella Napoli", slug: "bella-napoli", logo_url: null, neighborhood: "Centro", address: "São Paulo, SP", public_url: null, primary_color: "#e63946" },
-  { id: "d2", name: "Burger House", slug: "burger-house", logo_url: null, neighborhood: "Pinheiros", address: "São Paulo, SP", public_url: null, primary_color: "#f4a261" },
-  { id: "d3", name: "Sushi & Co", slug: "sushi-co", logo_url: null, neighborhood: "Moema", address: "São Paulo, SP", public_url: null, primary_color: "#2a9d8f" },
-  { id: "d4", name: "Taco Loco", slug: "taco-loco", logo_url: null, neighborhood: "Vila Madalena", address: "São Paulo, SP", public_url: null, primary_color: "#e9c46a" },
-  { id: "d5", name: "Churrascaria do Zé", slug: "churrascaria-ze", logo_url: null, neighborhood: "Itaim Bibi", address: "São Paulo, SP", public_url: null, primary_color: "#e76f51" },
-  { id: "d6", name: "La Pasta Fresca", slug: "la-pasta", logo_url: null, neighborhood: "Jardins", address: "São Paulo, SP", public_url: null, primary_color: "#457b9d" },
-  { id: "d7", name: "Esfiha Express", slug: "esfiha-express", logo_url: null, neighborhood: "Liberdade", address: "São Paulo, SP", public_url: null, primary_color: "#a8dadc" },
-  { id: "d8", name: "Açaí & Cia", slug: "acai-cia", logo_url: null, neighborhood: "Bela Vista", address: "São Paulo, SP", public_url: null, primary_color: "#6a0572" },
-  { id: "d9", name: "Hot Dog Gourmet", slug: "hotdog-gourmet", logo_url: null, neighborhood: "Santana", address: "São Paulo, SP", public_url: null, primary_color: "#ffb703" },
-  { id: "d10", name: "Crepe & Arte", slug: "crepe-arte", logo_url: null, neighborhood: "Consolação", address: "São Paulo, SP", public_url: null, primary_color: "#fb8500" },
-  { id: "d11", name: "Bar do Pedrinho", slug: "bar-pedrinho", logo_url: null, neighborhood: "Lapa", address: "São Paulo, SP", public_url: null, primary_color: "#219ebc" },
-  { id: "d12", name: "Marmita Fit", slug: "marmita-fit", logo_url: null, neighborhood: "Saúde", address: "São Paulo, SP", public_url: null, primary_color: "#52b788" },
+  {
+    id: "d1",
+    name: "Pizzaria Bella Napoli",
+    slug: "bella-napoli",
+    logo_url: null,
+    neighborhood: "Centro",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#e63946",
+  },
+  {
+    id: "d2",
+    name: "Burger House",
+    slug: "burger-house",
+    logo_url: null,
+    neighborhood: "Pinheiros",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#f4a261",
+  },
+  {
+    id: "d3",
+    name: "Sushi & Co",
+    slug: "sushi-co",
+    logo_url: null,
+    neighborhood: "Moema",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#2a9d8f",
+  },
+  {
+    id: "d4",
+    name: "Taco Loco",
+    slug: "taco-loco",
+    logo_url: null,
+    neighborhood: "Vila Madalena",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#e9c46a",
+  },
+  {
+    id: "d5",
+    name: "Churrascaria do Zé",
+    slug: "churrascaria-ze",
+    logo_url: null,
+    neighborhood: "Itaim Bibi",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#e76f51",
+  },
+  {
+    id: "d6",
+    name: "La Pasta Fresca",
+    slug: "la-pasta",
+    logo_url: null,
+    neighborhood: "Jardins",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#457b9d",
+  },
+  {
+    id: "d7",
+    name: "Esfiha Express",
+    slug: "esfiha-express",
+    logo_url: null,
+    neighborhood: "Liberdade",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#a8dadc",
+  },
+  {
+    id: "d8",
+    name: "Açaí & Cia",
+    slug: "acai-cia",
+    logo_url: null,
+    neighborhood: "Bela Vista",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#6a0572",
+  },
+  {
+    id: "d9",
+    name: "Hot Dog Gourmet",
+    slug: "hotdog-gourmet",
+    logo_url: null,
+    neighborhood: "Santana",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#ffb703",
+  },
+  {
+    id: "d10",
+    name: "Crepe & Arte",
+    slug: "crepe-arte",
+    logo_url: null,
+    neighborhood: "Consolação",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#fb8500",
+  },
+  {
+    id: "d11",
+    name: "Bar do Pedrinho",
+    slug: "bar-pedrinho",
+    logo_url: null,
+    neighborhood: "Lapa",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#219ebc",
+  },
+  {
+    id: "d12",
+    name: "Marmita Fit",
+    slug: "marmita-fit",
+    logo_url: null,
+    neighborhood: "Saúde",
+    address: "São Paulo, SP",
+    public_url: null,
+    primary_color: "#52b788",
+  },
 ];

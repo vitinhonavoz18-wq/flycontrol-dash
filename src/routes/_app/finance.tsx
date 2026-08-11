@@ -39,7 +39,7 @@ import {
   History,
   ArrowUpRight,
   ArrowDownRight,
-  LayoutGrid
+  LayoutGrid,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,10 +66,29 @@ import {
   PieChart,
   Pie,
 } from "recharts";
-import { format, startOfDay, endOfDay, subDays, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isWithinInterval, subMonths, eachDayOfInterval } from "date-fns";
+import {
+  format,
+  startOfDay,
+  endOfDay,
+  subDays,
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  isWithinInterval,
+  subMonths,
+  eachDayOfInterval,
+} from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 
 export const Route = createFileRoute("/_app/finance")({ component: Finance });
 
@@ -111,7 +130,7 @@ const periodLabel = (p: Period) =>
     "30days": "Últimos 30 dias",
     month: "Este mês",
     last_month: "Mês passado",
-  }[p]);
+  })[p];
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
@@ -119,7 +138,8 @@ const fmtBRL = (v: number) =>
 function getRange(p: Period): { start: Date; end: Date } {
   const now = new Date();
   if (p === "today") return { start: startOfDay(now), end: endOfDay(now) };
-  if (p === "yesterday") return { start: startOfDay(subDays(now, 1)), end: endOfDay(subDays(now, 1)) };
+  if (p === "yesterday")
+    return { start: startOfDay(subDays(now, 1)), end: endOfDay(subDays(now, 1)) };
   if (p === "7days") return { start: startOfDay(subDays(now, 6)), end: endOfDay(now) };
   if (p === "30days") return { start: startOfDay(subDays(now, 29)), end: endOfDay(now) };
   if (p === "month") return { start: startOfMonth(now), end: endOfMonth(now) };
@@ -142,7 +162,8 @@ function normalizePaymentMethod(method: string | null): string {
   if (!method) return "Outros";
   const m = method.toLowerCase();
   if (m.includes("pix")) return "PIX";
-  if (m.includes("cartão") || m.includes("cartao") || m.includes("crédito") || m.includes("débito")) return "Cartão";
+  if (m.includes("cartão") || m.includes("cartao") || m.includes("crédito") || m.includes("débito"))
+    return "Cartão";
   if (m.includes("dinheiro")) return "Dinheiro";
   return "Outros";
 }
@@ -170,24 +191,27 @@ function Finance() {
   const loadPizzerias = useCallback(async () => {
     if (!user) return;
     let query = supabase.from("pizzerias").select("id, name, owner_id, status");
-    
+
     // Only filter by owner_id if NOT a super admin
     if (!isSuperAdmin) {
       query = query.eq("owner_id", user.id);
     }
-    
+
     const { data, error } = await query.order("name");
-    
+
     if (error) {
       toast.error("Erro ao carregar pizzarias");
       return;
     }
-    
+
     setPizzerias(data || []);
-    
+
     if (data && data.length > 0) {
       // If the currently selected ID is "all" but the user is not a super admin, select the first one
-      if (!isSuperAdmin && (selectedPizzeriaId === "all" || !data.find(p => p.id === selectedPizzeriaId))) {
+      if (
+        !isSuperAdmin &&
+        (selectedPizzeriaId === "all" || !data.find((p) => p.id === selectedPizzeriaId))
+      ) {
         setSelectedPizzeriaId(data[0].id);
       }
     }
@@ -201,9 +225,12 @@ function Finance() {
       const from = startOfDay(subDays(new Date(), 90)).toISOString();
       let q = supabase
         .from("orders")
-        .select("id, tenant_id, total, subtotal, delivery_fee, discount, status, payment_method, created_at, items, order_number, customer_name, order_type, service_mode, table_number, customer_address")
+        .select(
+          "id, tenant_id, total, subtotal, delivery_fee, discount, status, payment_method, created_at, items, order_number, customer_name, order_type, service_mode, table_number, customer_address",
+        )
         .gte("created_at", from)
-        .neq("status", "deleted") // Deleted is treated as cancelled
+        .neq("status", "deleted")
+        .neq("status", "inactive") // Deleted is treated as cancelled
         .order("created_at", { ascending: false })
         .limit(10000);
 
@@ -212,7 +239,7 @@ function Finance() {
         q = q.eq("tenant_id", selectedPizzeriaId);
       } else if (!isSuperAdmin) {
         // If "all" is selected but user is NOT super admin, we need to limit to their pizzerias
-        const myPizzeriaIds = pizzerias.map(p => p.id);
+        const myPizzeriaIds = pizzerias.map((p) => p.id);
         if (myPizzeriaIds.length > 0) {
           q = q.in("tenant_id", myPizzeriaIds);
         } else {
@@ -225,13 +252,15 @@ function Finance() {
 
       const { data, error } = await q;
       if (error) throw error;
-      setOrders((data || []).map(o => ({
-        ...o,
-        total: Number(o.total || 0),
-        subtotal: Number(o.subtotal || 0),
-        delivery_fee: Number(o.delivery_fee || 0),
-        discount: Number(o.discount || 0)
-      })) as OrderRow[]);
+      setOrders(
+        (data || []).map((o) => ({
+          ...o,
+          total: Number(o.total || 0),
+          subtotal: Number(o.subtotal || 0),
+          delivery_fee: Number(o.delivery_fee || 0),
+          discount: Number(o.discount || 0),
+        })) as OrderRow[],
+      );
     } catch (e: unknown) {
       console.error("Finance load error:", e);
       toast.error("Erro ao carregar dados financeiros");
@@ -252,7 +281,10 @@ function Finance() {
   const range = useMemo(() => getRange(period), [period]);
   const prevRange = useMemo(() => {
     const span = range.end.getTime() - range.start.getTime();
-    return { start: new Date(range.start.getTime() - span - 1), end: new Date(range.start.getTime() - 1) };
+    return {
+      start: new Date(range.start.getTime() - span - 1),
+      end: new Date(range.start.getTime() - 1),
+    };
   }, [range]);
 
   const inRange = (o: OrderRow, r: { start: Date; end: Date }) => {
@@ -262,17 +294,23 @@ function Finance() {
 
   // Applied filters on top of the date range
   const filteredOrders = useMemo(() => {
-    return orders.filter(o => {
-      const matchesPayment = paymentFilter === "all" || normalizePaymentMethod(o.payment_method) === paymentFilter;
+    return orders.filter((o) => {
+      const matchesPayment =
+        paymentFilter === "all" || normalizePaymentMethod(o.payment_method) === paymentFilter;
       const matchesStatus = statusFilter === "all" || o.status === statusFilter;
       const matchesType = typeFilter === "all" || normalizeOrderType(o) === typeFilter;
       return matchesPayment && matchesStatus && matchesType;
     });
   }, [orders, paymentFilter, statusFilter, typeFilter]);
 
-
-  const ordersInPeriod = useMemo(() => filteredOrders.filter((o) => inRange(o, range)), [filteredOrders, range]);
-  const ordersPrev = useMemo(() => filteredOrders.filter((o) => inRange(o, prevRange)), [filteredOrders, prevRange]);
+  const ordersInPeriod = useMemo(
+    () => filteredOrders.filter((o) => inRange(o, range)),
+    [filteredOrders, range],
+  );
+  const ordersPrev = useMemo(
+    () => filteredOrders.filter((o) => inRange(o, prevRange)),
+    [filteredOrders, prevRange],
+  );
 
   const calculateMetrics = (arr: OrderRow[]) => {
     const revenue = arr.reduce((acc, o) => acc + o.total, 0);
@@ -280,10 +318,10 @@ function Finance() {
     const subtotal = arr.reduce((acc, o) => acc + o.subtotal, 0);
     const count = arr.length;
     const ticket = count > 0 ? revenue / count : 0;
-    
+
     // Payment method breakdown
     const payments = new Map<string, number>();
-    arr.forEach(o => {
+    arr.forEach((o) => {
       const method = normalizePaymentMethod(o.payment_method);
       payments.set(method, (payments.get(method) || 0) + 1);
     });
@@ -305,15 +343,18 @@ function Finance() {
   // Chart series — group by day across current period
   const chartData = useMemo(() => {
     const days = eachDayOfInterval({ start: range.start, end: range.end });
-    const buckets = new Map<string, { day: string; faturamento: number; pedidos: number; dateObj: Date }>();
-    
-    days.forEach(d => {
+    const buckets = new Map<
+      string,
+      { day: string; faturamento: number; pedidos: number; dateObj: Date }
+    >();
+
+    days.forEach((d) => {
       const key = format(d, "yyyy-MM-dd");
-      buckets.set(key, { 
-        day: format(d, days.length > 31 ? "MM/yy" : "dd/MM"), 
-        faturamento: 0, 
-        pedidos: 0, 
-        dateObj: d 
+      buckets.set(key, {
+        day: format(d, days.length > 31 ? "MM/yy" : "dd/MM"),
+        faturamento: 0,
+        pedidos: 0,
+        dateObj: d,
       });
     });
 
@@ -335,23 +376,26 @@ function Finance() {
       PIX: "#10b981",
       Cartão: "#3b82f6",
       Dinheiro: "#f59e0b",
-      Outros: "#94a3b8"
+      Outros: "#94a3b8",
     };
-    
+
     currentMetrics.payments.forEach((count, method) => {
-      data.push({ 
-        name: method, 
-        value: count, 
-        color: colors[method as keyof typeof colors] || colors.Outros 
+      data.push({
+        name: method,
+        value: count,
+        color: colors[method as keyof typeof colors] || colors.Outros,
       });
     });
-    
+
     return data.sort((a, b) => b.value - a.value);
   }, [currentMetrics.payments]);
 
   // Rankings
   const rankings = useMemo(() => {
-    const map = new Map<string, { name: string; qty: number; revenue: number; type: "pizza" | "bebida" | "outro" }>();
+    const map = new Map<
+      string,
+      { name: string; qty: number; revenue: number; type: "pizza" | "bebida" | "outro" }
+    >();
     ordersInPeriod.forEach((o) => {
       (o.items || []).forEach((it) => {
         const name = (it.name || "").trim();
@@ -368,7 +412,9 @@ function Finance() {
     const all = Array.from(map.values());
     const totalRevAll = all.reduce((a, b) => a + b.revenue, 0) || 1;
     const decorate = (arr: typeof all) =>
-      arr.map((x) => ({ ...x, share: (x.revenue / totalRevAll) * 100 })).sort((a, b) => b.qty - a.qty);
+      arr
+        .map((x) => ({ ...x, share: (x.revenue / totalRevAll) * 100 }))
+        .sort((a, b) => b.qty - a.qty);
     return {
       pizzas: decorate(all.filter((x) => x.type === "pizza")).slice(0, 5),
       bebidas: decorate(all.filter((x) => x.type === "bebida")).slice(0, 5),
@@ -387,9 +433,9 @@ function Finance() {
   }, [ordersInPeriod]);
 
   const peakHour = useMemo(() => {
-    const max = Math.max(...hourlyData.map(d => d.count));
+    const max = Math.max(...hourlyData.map((d) => d.count));
     if (max === 0) return null;
-    const item = hourlyData.find(d => d.count === max);
+    const item = hourlyData.find((d) => d.count === max);
     return item ? { hour: item.hour, count: max } : null;
   }, [hourlyData]);
 
@@ -414,7 +460,11 @@ function Finance() {
 
   const lastOrder = orders[0];
   const healthStatus: "Saudável" | "Atenção" | "Baixo movimento" =
-    currentMetrics.revenue > 1000 ? "Saudável" : currentMetrics.revenue > 200 ? "Atenção" : "Baixo movimento";
+    currentMetrics.revenue > 1000
+      ? "Saudável"
+      : currentMetrics.revenue > 200
+        ? "Atenção"
+        : "Baixo movimento";
 
   return (
     <div className="p-4 md:p-8 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
@@ -429,9 +479,12 @@ function Finance() {
                 <Wallet className="h-6 w-6" />
               </div>
               <div>
-                <h1 className="text-2xl md:text-3xl font-black tracking-tight">Gestão Financeira</h1>
+                <h1 className="text-2xl md:text-3xl font-black tracking-tight">
+                  Gestão Financeira
+                </h1>
                 <p className="text-sm text-muted-foreground max-w-xl">
-                  Controle total do seu delivery. Acompanhe faturamento, ticket médio e desempenho de produtos em tempo real.
+                  Controle total do seu delivery. Acompanhe faturamento, ticket médio e desempenho
+                  de produtos em tempo real.
                 </p>
               </div>
             </div>
@@ -441,7 +494,9 @@ function Finance() {
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
                 </span>
-                <span className="text-xs font-semibold text-muted-foreground">Atualizado agora</span>
+                <span className="text-xs font-semibold text-muted-foreground">
+                  Atualizado agora
+                </span>
               </div>
               {selectedPizzeria && selectedPizzeriaId !== "all" && (
                 <Badge variant="secondary" className="bg-primary/10 text-primary border-primary/20">
@@ -456,16 +511,24 @@ function Finance() {
             {isSuperAdmin && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 bg-background/50 backdrop-blur-sm border-border/60"
+                  >
                     <Activity className="h-4 w-4" />
-                    {selectedPizzeriaId === "all" ? "Todas as Pizzarias" : selectedPizzeria?.name || "Selecionar"}
+                    {selectedPizzeriaId === "all"
+                      ? "Todas as Pizzarias"
+                      : selectedPizzeria?.name || "Selecionar"}
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56 max-h-72 overflow-auto">
                   <DropdownMenuLabel>Filtrar por Restaurante</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => setSelectedPizzeriaId("all")}>Todas as Pizzarias</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setSelectedPizzeriaId("all")}>
+                    Todas as Pizzarias
+                  </DropdownMenuItem>
                   {pizzerias.map((p) => (
                     <DropdownMenuItem key={p.id} onClick={() => setSelectedPizzeriaId(p.id)}>
                       {p.name}
@@ -474,57 +537,96 @@ function Finance() {
                 </DropdownMenuContent>
               </DropdownMenu>
             )}
-            
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 bg-background/50 backdrop-blur-sm border-border/60"
+                >
                   <Activity className="h-4 w-4" />
                   Status: {statusFilter === "all" ? "Todos" : statusFilter}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setStatusFilter("all")}>Todos os Status</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("all")}>
+                  Todos os Status
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setStatusFilter("novo")}>Novo</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setStatusFilter("entregue")}>Entregue</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setStatusFilter("entregue")}>
+                  Entregue
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 bg-background/50 backdrop-blur-sm border-border/60"
+                >
                   <Filter className="h-4 w-4" />
                   Pagamento: {paymentFilter === "all" ? "Todos" : paymentFilter}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setPaymentFilter("all")}>Todos os Métodos</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPaymentFilter("all")}>
+                  Todos os Métodos
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPaymentFilter("PIX")}>PIX</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPaymentFilter("Cartão")}>Cartão</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPaymentFilter("Dinheiro")}>Dinheiro</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPaymentFilter("Cartão")}>
+                  Cartão
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPaymentFilter("Dinheiro")}>
+                  Dinheiro
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 bg-background/50 backdrop-blur-sm border-border/60"
+                >
                   <LayoutGrid className="h-4 w-4" />
-                  Tipo: {typeFilter === "all" ? "Todos" : (typeFilter === "delivery" ? "Delivery" : typeFilter === "pickup" ? "Retirada" : "Mesa")}
+                  Tipo:{" "}
+                  {typeFilter === "all"
+                    ? "Todos"
+                    : typeFilter === "delivery"
+                      ? "Delivery"
+                      : typeFilter === "pickup"
+                        ? "Retirada"
+                        : "Mesa"}
                   <ChevronDown className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setTypeFilter("all")}>Todos os Tipos</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTypeFilter("delivery")}>Delivery</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTypeFilter("pickup")}>Retirada</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("all")}>
+                  Todos os Tipos
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("delivery")}>
+                  Delivery
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTypeFilter("pickup")}>
+                  Retirada
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setTypeFilter("table")}>Mesa</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2 bg-background/50 backdrop-blur-sm border-border/60">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="gap-2 bg-background/50 backdrop-blur-sm border-border/60"
+                >
                   <History className="h-4 w-4" />
                   {periodLabel(period)}
                   <ChevronDown className="h-4 w-4" />
@@ -533,14 +635,25 @@ function Finance() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onClick={() => setPeriod("today")}>Hoje</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPeriod("yesterday")}>Ontem</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPeriod("7days")}>Últimos 7 dias</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPeriod("30days")}>Últimos 30 dias</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPeriod("7days")}>
+                  Últimos 7 dias
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPeriod("30days")}>
+                  Últimos 30 dias
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => setPeriod("month")}>Este mês</DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setPeriod("last_month")}>Mês passado</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPeriod("last_month")}>
+                  Mês passado
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
 
-            <Button size="sm" className="gap-2 shadow-lg shadow-primary/20" onClick={loadOrders} disabled={loading}>
+            <Button
+              size="sm"
+              className="gap-2 shadow-lg shadow-primary/20"
+              onClick={loadOrders}
+              disabled={loading}
+            >
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
               <span className="hidden sm:inline">Sincronizar</span>
             </Button>
@@ -560,7 +673,7 @@ function Finance() {
               value={fmtBRL(currentMetrics.revenue)}
               trend={revenueGrowth}
               icon={TrendingUp}
-              description={`Comparado a: ${periodLabel(period === 'month' ? 'last_month' : period)}`}
+              description={`Comparado a: ${periodLabel(period === "month" ? "last_month" : period)}`}
               highlight
             />
             <KpiCard
@@ -587,54 +700,75 @@ function Finance() {
 
           {/* ========== TABLE KPI ========== */}
           <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-             <Card className="border-border/60 shadow-sm bg-purple-500/5">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-2xl bg-purple-500 text-white shadow-lg shadow-purple-500/20">
-                      <LayoutGrid className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Vendas em Mesas</p>
-                      <h3 className="text-2xl font-black">{fmtBRL(ordersInPeriod.filter(o => normalizeOrderType(o) === 'table').reduce((acc, o) => acc + o.total, 0))}</h3>
-                      <p className="text-[10px] text-purple-600 font-bold uppercase tracking-wider mt-0.5">
-                        {ordersInPeriod.filter(o => normalizeOrderType(o) === 'table').length} pedidos
-                      </p>
-                    </div>
+            <Card className="border-border/60 shadow-sm bg-purple-500/5">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-2xl bg-purple-500 text-white shadow-lg shadow-purple-500/20">
+                    <LayoutGrid className="h-6 w-6" />
                   </div>
-                </CardContent>
-             </Card>
-             <Card className="border-border/60 shadow-sm bg-blue-500/5">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-2xl bg-blue-500 text-white shadow-lg shadow-blue-500/20">
-                      <ShoppingBag className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Vendas Retirada</p>
-                      <h3 className="text-2xl font-black">{fmtBRL(ordersInPeriod.filter(o => normalizeOrderType(o) === 'pickup').reduce((acc, o) => acc + o.total, 0))}</h3>
-                      <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider mt-0.5">
-                        {ordersInPeriod.filter(o => normalizeOrderType(o) === 'pickup').length} pedidos
-                      </p>
-                    </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Vendas em Mesas</p>
+                    <h3 className="text-2xl font-black">
+                      {fmtBRL(
+                        ordersInPeriod
+                          .filter((o) => normalizeOrderType(o) === "table")
+                          .reduce((acc, o) => acc + o.total, 0),
+                      )}
+                    </h3>
+                    <p className="text-[10px] text-purple-600 font-bold uppercase tracking-wider mt-0.5">
+                      {ordersInPeriod.filter((o) => normalizeOrderType(o) === "table").length}{" "}
+                      pedidos
+                    </p>
                   </div>
-                </CardContent>
-             </Card>
-             <Card className="border-border/60 shadow-sm bg-orange-500/5">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-500/20">
-                      <Truck className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium text-muted-foreground">Vendas Delivery</p>
-                      <h3 className="text-2xl font-black">{fmtBRL(ordersInPeriod.filter(o => normalizeOrderType(o) === 'delivery').reduce((acc, o) => acc + o.total, 0))}</h3>
-                      <p className="text-[10px] text-orange-600 font-bold uppercase tracking-wider mt-0.5">
-                        {ordersInPeriod.filter(o => normalizeOrderType(o) === 'delivery').length} pedidos
-                      </p>
-                    </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-border/60 shadow-sm bg-blue-500/5">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-2xl bg-blue-500 text-white shadow-lg shadow-blue-500/20">
+                    <ShoppingBag className="h-6 w-6" />
                   </div>
-                </CardContent>
-             </Card>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Vendas Retirada</p>
+                    <h3 className="text-2xl font-black">
+                      {fmtBRL(
+                        ordersInPeriod
+                          .filter((o) => normalizeOrderType(o) === "pickup")
+                          .reduce((acc, o) => acc + o.total, 0),
+                      )}
+                    </h3>
+                    <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider mt-0.5">
+                      {ordersInPeriod.filter((o) => normalizeOrderType(o) === "pickup").length}{" "}
+                      pedidos
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="border-border/60 shadow-sm bg-orange-500/5">
+              <CardContent className="p-6">
+                <div className="flex items-center gap-4">
+                  <div className="p-3 rounded-2xl bg-orange-500 text-white shadow-lg shadow-orange-500/20">
+                    <Truck className="h-6 w-6" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">Vendas Delivery</p>
+                    <h3 className="text-2xl font-black">
+                      {fmtBRL(
+                        ordersInPeriod
+                          .filter((o) => normalizeOrderType(o) === "delivery")
+                          .reduce((acc, o) => acc + o.total, 0),
+                      )}
+                    </h3>
+                    <p className="text-[10px] text-orange-600 font-bold uppercase tracking-wider mt-0.5">
+                      {ordersInPeriod.filter((o) => normalizeOrderType(o) === "delivery").length}{" "}
+                      pedidos
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
           </section>
 
           {/* ========== CHARTS SECTION ========== */}
@@ -652,7 +786,9 @@ function Finance() {
                 <div className="flex items-center gap-4">
                   <div className="flex items-center gap-1.5">
                     <div className="h-3 w-3 rounded-full bg-primary" />
-                    <span className="text-[10px] font-bold text-muted-foreground uppercase">Faturamento</span>
+                    <span className="text-[10px] font-bold text-muted-foreground uppercase">
+                      Faturamento
+                    </span>
                   </div>
                 </div>
               </CardHeader>
@@ -666,30 +802,41 @@ function Finance() {
                           <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} opacity={0.5} />
-                      <XAxis 
-                        dataKey="day" 
-                        stroke="hsl(var(--muted-foreground))" 
-                        fontSize={11} 
-                        tickLine={false} 
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="hsl(var(--border))"
+                        vertical={false}
+                        opacity={0.5}
+                      />
+                      <XAxis
+                        dataKey="day"
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={11}
+                        tickLine={false}
                         axisLine={false}
                         interval="preserveStartEnd"
                       />
-                      <YAxis 
-                        stroke="hsl(var(--muted-foreground))" 
-                        fontSize={11} 
-                        tickLine={false} 
-                        axisLine={false} 
-                        tickFormatter={(v) => `R$${v >= 1000 ? (v/1000).toFixed(1) + 'k' : v}`}
+                      <YAxis
+                        stroke="hsl(var(--muted-foreground))"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(v) => `R$${v >= 1000 ? (v / 1000).toFixed(1) + "k" : v}`}
                       />
                       <RTooltip
                         content={({ active, payload }) => {
                           if (active && payload && payload.length) {
                             return (
                               <div className="bg-background border border-border shadow-xl rounded-xl p-3 text-xs">
-                                <p className="font-bold mb-1 text-muted-foreground">{payload[0].payload.day}</p>
-                                <p className="text-primary font-black text-sm">{fmtBRL(payload[0].value as number)}</p>
-                                <p className="text-muted-foreground mt-0.5">{payload[0].payload.pedidos} pedidos</p>
+                                <p className="font-bold mb-1 text-muted-foreground">
+                                  {payload[0].payload.day}
+                                </p>
+                                <p className="text-primary font-black text-sm">
+                                  {fmtBRL(payload[0].value as number)}
+                                </p>
+                                <p className="text-muted-foreground mt-0.5">
+                                  {payload[0].payload.pedidos} pedidos
+                                </p>
                               </div>
                             );
                           }
@@ -737,16 +884,31 @@ function Finance() {
                   </ResponsiveContainer>
                   <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
                     <span className="text-2xl font-black">{currentMetrics.count}</span>
-                    <span className="text-[10px] text-muted-foreground font-bold uppercase">Total</span>
+                    <span className="text-[10px] text-muted-foreground font-bold uppercase">
+                      Total
+                    </span>
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-3 mt-4">
                   {paymentChartData.map((item) => (
-                    <div key={item.name} className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-border/40">
-                      <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+                    <div
+                      key={item.name}
+                      className="flex items-center gap-2 p-2 rounded-lg bg-muted/30 border border-border/40"
+                    >
+                      <div
+                        className="h-2 w-2 rounded-full"
+                        style={{ backgroundColor: item.color }}
+                      />
                       <div className="min-w-0">
-                        <div className="text-[10px] font-bold text-muted-foreground truncate uppercase">{item.name}</div>
-                        <div className="text-sm font-black">{item.value} <span className="text-[10px] font-normal text-muted-foreground">({((item.value / (currentMetrics.count || 1)) * 100).toFixed(0)}%)</span></div>
+                        <div className="text-[10px] font-bold text-muted-foreground truncate uppercase">
+                          {item.name}
+                        </div>
+                        <div className="text-sm font-black">
+                          {item.value}{" "}
+                          <span className="text-[10px] font-normal text-muted-foreground">
+                            ({((item.value / (currentMetrics.count || 1)) * 100).toFixed(0)}%)
+                          </span>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -763,7 +925,7 @@ function Finance() {
               items={rankings.top}
               emptyText="Nenhum produto vendido no período."
             />
-            
+
             <div className="grid gap-6">
               <Card className="border-border/60 shadow-sm">
                 <CardHeader className="pb-3">
@@ -781,7 +943,9 @@ function Finance() {
                         {peakHour ? `${String(peakHour.hour).padStart(2, "0")}:00h` : "—"}
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-0.5 font-bold uppercase">
-                        {peakHour ? `${peakHour.count} pedidos nesta hora` : "Sem dados suficientes"}
+                        {peakHour
+                          ? `${peakHour.count} pedidos nesta hora`
+                          : "Sem dados suficientes"}
                       </div>
                     </div>
                     <div className="p-4 rounded-2xl bg-muted/30 border border-border/40">
@@ -789,9 +953,15 @@ function Finance() {
                         <Star className="h-3.5 w-3.5" /> Saúde Financeira
                       </div>
                       <div className="flex items-center gap-2">
-                        <div className={`h-2.5 w-2.5 rounded-full ${
-                          healthStatus === "Saudável" ? "bg-green-500" : healthStatus === "Atenção" ? "bg-yellow-500" : "bg-red-500"
-                        }`} />
+                        <div
+                          className={`h-2.5 w-2.5 rounded-full ${
+                            healthStatus === "Saudável"
+                              ? "bg-green-500"
+                              : healthStatus === "Atenção"
+                                ? "bg-yellow-500"
+                                : "bg-red-500"
+                          }`}
+                        />
                         <span className="text-lg font-black">{healthStatus}</span>
                       </div>
                       <div className="text-[10px] text-muted-foreground mt-0.5 font-bold uppercase truncate">
@@ -799,11 +969,24 @@ function Finance() {
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="space-y-3 pt-2">
-                    <SummaryRow icon={DollarSign} label="Subtotal de Vendas" value={fmtBRL(currentMetrics.subtotal)} />
-                    <SummaryRow icon={Truck} label="Taxas de Entrega" value={fmtBRL(currentMetrics.deliveryFees)} />
-                    <SummaryRow icon={ShoppingBag} label="Faturamento Total" value={fmtBRL(currentMetrics.revenue)} highlight />
+                    <SummaryRow
+                      icon={DollarSign}
+                      label="Subtotal de Vendas"
+                      value={fmtBRL(currentMetrics.subtotal)}
+                    />
+                    <SummaryRow
+                      icon={Truck}
+                      label="Taxas de Entrega"
+                      value={fmtBRL(currentMetrics.deliveryFees)}
+                    />
+                    <SummaryRow
+                      icon={ShoppingBag}
+                      label="Faturamento Total"
+                      value={fmtBRL(currentMetrics.revenue)}
+                      highlight
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -817,11 +1000,19 @@ function Finance() {
                 <CardContent className="space-y-3">
                   <InsightCard
                     icon={Flame}
-                    text={rankings.top[0] ? `Seu carro-chefe é ${rankings.top[0].name}. Considere criar combos em torno dele.` : "Analise seus produtos mais vendidos para criar ofertas matadoras."}
+                    text={
+                      rankings.top[0]
+                        ? `Seu carro-chefe é ${rankings.top[0].name}. Considere criar combos em torno dele.`
+                        : "Analise seus produtos mais vendidos para criar ofertas matadoras."
+                    }
                   />
                   <InsightCard
                     icon={Zap}
-                    text={currentMetrics.ticket < 60 ? "Seu ticket médio pode subir! Experimente sugerir bebidas ou sobremesas no checkout." : "Seu ticket médio está excelente! Continue mantendo a qualidade do mix."}
+                    text={
+                      currentMetrics.ticket < 60
+                        ? "Seu ticket médio pode subir! Experimente sugerir bebidas ou sobremesas no checkout."
+                        : "Seu ticket médio está excelente! Continue mantendo a qualidade do mix."
+                    }
                   />
                   {peakHour && (
                     <InsightCard
@@ -842,7 +1033,7 @@ function Finance() {
               </h2>
               <Badge variant="outline">{ordersInPeriod.length} resultados</Badge>
             </div>
-            
+
             <Card className="border-border/60 shadow-sm overflow-hidden">
               <Table>
                 <TableHeader>
@@ -858,21 +1049,30 @@ function Finance() {
                 <TableBody>
                   {ordersInPeriod.slice(0, 10).map((order) => (
                     <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
-                      <TableCell className="font-bold text-primary">#{order.order_number}</TableCell>
-                      <TableCell className="font-semibold">{order.customer_name || "Cliente Final"}</TableCell>
+                      <TableCell className="font-bold text-primary">
+                        #{order.order_number}
+                      </TableCell>
+                      <TableCell className="font-semibold">
+                        {order.customer_name || "Cliente Final"}
+                      </TableCell>
                       <TableCell className="text-muted-foreground text-xs whitespace-nowrap">
                         {format(new Date(order.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
                       </TableCell>
                       <TableCell>
-                        <Badge variant="secondary" className="font-normal text-[10px] uppercase tracking-wider">
+                        <Badge
+                          variant="secondary"
+                          className="font-normal text-[10px] uppercase tracking-wider"
+                        >
                           {normalizePaymentMethod(order.payment_method)}
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Badge 
-                          variant="outline" 
+                        <Badge
+                          variant="outline"
                           className={`text-[10px] uppercase font-bold ${
-                            order.status === "entregue" ? "border-green-500 text-green-600" : "border-blue-500 text-blue-600"
+                            order.status === "entregue"
+                              ? "border-green-500 text-green-600"
+                              : "border-blue-500 text-blue-600"
                           }`}
                         >
                           {order.status}
@@ -892,7 +1092,9 @@ function Finance() {
               </Table>
               {ordersInPeriod.length > 10 && (
                 <div className="p-4 text-center border-t border-border/60">
-                  <p className="text-xs text-muted-foreground">Exibindo os 10 pedidos mais recentes de um total de {ordersInPeriod.length}.</p>
+                  <p className="text-xs text-muted-foreground">
+                    Exibindo os 10 pedidos mais recentes de um total de {ordersInPeriod.length}.
+                  </p>
                 </div>
               )}
             </Card>
@@ -921,21 +1123,33 @@ function KpiCard({
   highlight?: boolean;
 }) {
   return (
-    <Card className={`overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 border-border/60 ${highlight ? 'bg-primary/5 border-primary/20' : ''}`}>
+    <Card
+      className={`overflow-hidden transition-all hover:shadow-lg hover:-translate-y-0.5 border-border/60 ${highlight ? "bg-primary/5 border-primary/20" : ""}`}
+    >
       <CardContent className="p-6">
         <div className="flex justify-between items-start mb-4">
-          <div className={`p-2.5 rounded-2xl ${highlight ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/30' : 'bg-muted/50 text-foreground'}`}>
+          <div
+            className={`p-2.5 rounded-2xl ${highlight ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "bg-muted/50 text-foreground"}`}
+          >
             <Icon className="h-5 w-5" />
           </div>
           {trend !== undefined && trend !== null && (
-            <div className={`flex items-center gap-0.5 text-[10px] font-black px-2 py-1 rounded-full ${trend >= 0 ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'}`}>
-              {trend >= 0 ? <ArrowUpRight className="h-3 w-3" /> : <ArrowDownRight className="h-3 w-3" />}
+            <div
+              className={`flex items-center gap-0.5 text-[10px] font-black px-2 py-1 rounded-full ${trend >= 0 ? "bg-green-500/10 text-green-600" : "bg-red-500/10 text-red-600"}`}
+            >
+              {trend >= 0 ? (
+                <ArrowUpRight className="h-3 w-3" />
+              ) : (
+                <ArrowDownRight className="h-3 w-3" />
+              )}
               {Math.abs(trend).toFixed(1)}%
             </div>
           )}
         </div>
         <div className="space-y-1">
-          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{title}</p>
+          <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+            {title}
+          </p>
           <p className="text-2xl font-black tracking-tight">{value}</p>
           <p className="text-[11px] text-muted-foreground leading-tight mt-1">{description}</p>
         </div>
@@ -971,18 +1185,26 @@ function RankingCard({
               <div key={it.name} className="p-4 hover:bg-muted/20 transition-colors">
                 <div className="flex items-center justify-between gap-4 mb-2">
                   <div className="flex items-center gap-3 min-w-0">
-                    <div className={`flex h-6 w-6 items-center justify-center rounded-lg text-[10px] font-black shrink-0 ${
-                      i === 0 ? "bg-yellow-400 text-yellow-950 shadow-sm" : 
-                      i === 1 ? "bg-slate-300 text-slate-800" : 
-                      i === 2 ? "bg-amber-700 text-white" : "bg-muted text-muted-foreground"
-                    }`}>
+                    <div
+                      className={`flex h-6 w-6 items-center justify-center rounded-lg text-[10px] font-black shrink-0 ${
+                        i === 0
+                          ? "bg-yellow-400 text-yellow-950 shadow-sm"
+                          : i === 1
+                            ? "bg-slate-300 text-slate-800"
+                            : i === 2
+                              ? "bg-amber-700 text-white"
+                              : "bg-muted text-muted-foreground"
+                      }`}
+                    >
                       {i + 1}
                     </div>
                     <span className="font-bold text-sm truncate">{it.name}</span>
                   </div>
                   <div className="text-right shrink-0">
                     <div className="text-sm font-black text-primary">{it.qty}x</div>
-                    <div className="text-[10px] font-bold text-muted-foreground uppercase">{fmtBRL(it.revenue)}</div>
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase">
+                      {fmtBRL(it.revenue)}
+                    </div>
                   </div>
                 </div>
                 <div className="flex items-center gap-2">
@@ -1009,7 +1231,7 @@ function SummaryRow({
   label,
   value,
   icon: Icon,
-  highlight
+  highlight,
 }: {
   label: string;
   value: string;
@@ -1017,12 +1239,16 @@ function SummaryRow({
   highlight?: boolean;
 }) {
   return (
-    <div className={`flex items-center justify-between p-3 rounded-xl ${highlight ? 'bg-primary/5 border border-primary/20' : 'bg-muted/20 border border-border/40'}`}>
+    <div
+      className={`flex items-center justify-between p-3 rounded-xl ${highlight ? "bg-primary/5 border border-primary/20" : "bg-muted/20 border border-border/40"}`}
+    >
       <div className="flex items-center gap-2 text-xs font-bold text-muted-foreground uppercase tracking-tight">
-        <Icon className={`h-4 w-4 ${highlight ? 'text-primary' : ''}`} />
+        <Icon className={`h-4 w-4 ${highlight ? "text-primary" : ""}`} />
         {label}
       </div>
-      <span className={`text-sm font-black ${highlight ? 'text-primary text-lg' : ''}`}>{value}</span>
+      <span className={`text-sm font-black ${highlight ? "text-primary text-lg" : ""}`}>
+        {value}
+      </span>
     </div>
   );
 }
@@ -1054,7 +1280,8 @@ function EmptyState() {
       <div className="space-y-2 max-w-md">
         <h3 className="text-2xl font-black tracking-tight">Painel pronto para decolar!</h3>
         <p className="text-sm text-muted-foreground">
-          Assim que seus primeiros pedidos forem recebidos, este dashboard se transformará em uma central de inteligência financeira com gráficos, rankings e métricas reais.
+          Assim que seus primeiros pedidos forem recebidos, este dashboard se transformará em uma
+          central de inteligência financeira com gráficos, rankings e métricas reais.
         </p>
       </div>
       <Button variant="outline" className="rounded-xl" onClick={() => window.location.reload()}>
@@ -1063,5 +1290,3 @@ function EmptyState() {
     </div>
   );
 }
-
-

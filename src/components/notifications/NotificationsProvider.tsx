@@ -38,15 +38,13 @@ export function NotificationsProvider() {
         .from("pizzerias")
         .select("id")
         .eq("owner_id", user.id)
-        .neq("status", "deleted");
+        .neq("status", "deleted")
+        .neq("status", "inactive");
       if (cancelled) return;
       if (error) {
         attempt += 1;
         const delay = Math.min(30000, 1000 * 2 ** Math.min(attempt, 5));
-        console.error(
-          `[NotificationsProvider] pizzerias load error (retry in ${delay}ms):`,
-          error
-        );
+        console.error(`[NotificationsProvider] pizzerias load error (retry in ${delay}ms):`, error);
         retryTimer = setTimeout(() => {
           if (!cancelled) void load();
         }, delay);
@@ -67,31 +65,24 @@ export function NotificationsProvider() {
     if (!pizzeriaIds) return;
     const channel = supabase
       .channel("orders-notify-global")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "orders" },
-        (payload) => {
-          const row: any = payload.new;
-          if (!row?.id || seenOrderIds.current.has(row.id)) return;
-          if (
-            pizzeriaIds !== "__all__" &&
-            !pizzeriaIds.includes(row.tenant_id)
-          ) {
-            return;
-          }
-          seenOrderIds.current.add(row.id);
-          playSound("new_order");
-          const tipo = row.table_number
-            ? `Mesa ${row.table_number}`
-            : row.order_type === "pickup" || row.service_mode === "pickup"
+      .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (payload) => {
+        const row: any = payload.new;
+        if (!row?.id || seenOrderIds.current.has(row.id)) return;
+        if (pizzeriaIds !== "__all__" && !pizzeriaIds.includes(row.tenant_id)) {
+          return;
+        }
+        seenOrderIds.current.add(row.id);
+        playSound("new_order");
+        const tipo = row.table_number
+          ? `Mesa ${row.table_number}`
+          : row.order_type === "pickup" || row.service_mode === "pickup"
             ? "Retirada"
             : "Delivery";
-          toast.success(`Novo pedido — ${tipo}`, {
-            description: row.customer_name || undefined,
-          });
-          if (isAudioBlocked()) setAudioBlocked(true);
-        }
-      )
+        toast.success(`Novo pedido — ${tipo}`, {
+          description: row.customer_name || undefined,
+        });
+        if (isAudioBlocked()) setAudioBlocked(true);
+      })
       .subscribe();
     return () => {
       supabase.removeChannel(channel);

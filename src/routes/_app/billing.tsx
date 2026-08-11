@@ -89,6 +89,7 @@ function BillingPage() {
       .select("id, name")
       .eq("owner_id", user.id)
       .neq("status", "deleted")
+      .neq("status", "inactive")
       .limit(1)
       .maybeSingle();
 

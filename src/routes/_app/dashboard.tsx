@@ -7,7 +7,15 @@ import { Order, OrderItem } from "@/types/order";
 
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectLabel, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   Bell,
@@ -55,7 +63,6 @@ type Pizzeria = {
   status_text_entregue?: string | null;
 };
 
-
 type PizzeriaForm = {
   name: string;
   slug: string;
@@ -89,9 +96,6 @@ const STATUSES = [
 ];
 
 // normalizeOrderType agora é importado de @/utils/order-utils
-
-
-
 
 function playBeep() {
   try {
@@ -139,7 +143,6 @@ function Dashboard() {
   const initialLoad = useRef(true);
   const soundOnRef = useRef(soundOn);
 
-
   useEffect(() => {
     soundOnRef.current = soundOn;
     localStorage.setItem("flycontrol_sound_on", String(soundOn));
@@ -152,7 +155,7 @@ function Dashboard() {
   }, []);
 
   const newOrdersCount = useMemo(() => {
-    return orders.filter(o => o.status === "novo" && !o.is_seen).length;
+    return orders.filter((o) => o.status === "novo" && !o.is_seen).length;
   }, [orders]);
 
   useEffect(() => {
@@ -178,7 +181,12 @@ function Dashboard() {
   }, [loading, user, isSuperAdmin]);
 
   async function loadPizzerias() {
-    let query = supabase.from("pizzerias").select("*").neq("status", "deleted").order("created_at");
+    let query = supabase
+      .from("pizzerias")
+      .select("*")
+      .neq("status", "deleted")
+      .neq("status", "inactive")
+      .order("created_at");
 
     // Se não for super admin (ou o admin fixo), filtra apenas as pizzarias do dono
     if (!hasGlobalAccess && user?.id) {
@@ -216,9 +224,12 @@ function Dashboard() {
     const load = () =>
       supabase
         .from("orders")
-        .select("id, tenant_id, total, delivery_fee, status, created_at, order_number, customer_name, customer_phone, customer_address, neighborhood, items, payment_method, change_for, notes, order_type, service_mode, table_number, ticket_number, payment_status")
+        .select(
+          "id, tenant_id, total, delivery_fee, status, created_at, order_number, customer_name, customer_phone, customer_address, neighborhood, items, payment_method, change_for, notes, order_type, service_mode, table_number, ticket_number, payment_status",
+        )
         .eq("tenant_id", pizzeriaId)
         .neq("status", "deleted")
+        .neq("status", "inactive")
         .order("created_at", { ascending: false })
         .limit(200);
 
@@ -238,9 +249,9 @@ function Dashboard() {
     } else {
       const ordersData = (data ?? []) as Order[];
       setOrders(ordersData);
-      
+
       // Initialize knownOrderIds with currently loaded orders
-      setKnownOrderIds(new Set(ordersData.map(o => o.id)));
+      setKnownOrderIds(new Set(ordersData.map((o) => o.id)));
     }
 
     initialLoad.current = false;
@@ -270,24 +281,24 @@ function Dashboard() {
   };
 
   const markAsSeen = (order: Order) => {
-    setOrders(prev => prev.map(o => o.id === order.id ? { ...o, is_seen: true } : o));
+    setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, is_seen: true } : o)));
   };
 
   async function handleTableOrder(order: Order) {
     const type = normalizeOrderType(order);
-    if (type !== 'table') return;
+    if (type !== "table") return;
 
     // Check if table_id is provided, otherwise try to find it by table_number
     let tableId = (order as any).table_id;
     if (!tableId && order.table_number) {
       const { data: tableData } = await supabase
-        .from('restaurant_tables')
-        .select('id')
-        .eq('tenant_id', order.tenant_id)
-        .eq('table_number', order.table_number)
-        .eq('is_active', true)
+        .from("restaurant_tables")
+        .select("id")
+        .eq("tenant_id", order.tenant_id)
+        .eq("table_number", order.table_number)
+        .eq("is_active", true)
         .maybeSingle();
-      
+
       if (tableData) tableId = tableData.id;
     }
 
@@ -295,11 +306,11 @@ function Dashboard() {
 
     // Find active session for this table
     const { data: sessionData } = await supabase
-      .from('table_sessions')
-      .select('id, total_amount')
+      .from("table_sessions")
+      .select("id, total_amount")
       .or(`tenant_id.eq.${order.tenant_id},restaurant_id.eq.${order.tenant_id}`)
-      .eq('table_id', tableId)
-      .eq('status', 'open')
+      .eq("table_id", tableId)
+      .eq("status", "open")
       .maybeSingle();
 
     let sessionId = sessionData?.id;
@@ -307,37 +318,35 @@ function Dashboard() {
     if (!sessionId) {
       // Create new session
       const { data: newSession, error: sessionError } = await supabase
-        .from('table_sessions')
+        .from("table_sessions")
         .insert({
           restaurant_id: order.tenant_id,
           tenant_id: order.tenant_id,
           table_id: tableId,
-          table_number: order.table_number || '?',
-          status: 'open',
-          total_amount: order.total
+          table_number: order.table_number || "?",
+          status: "open",
+          total_amount: order.total,
         } as any)
         .select()
         .single();
-      
+
       if (!sessionError) sessionId = newSession.id;
     } else if (sessionData) {
       // Update session amount
       await supabase
-        .from('table_sessions')
-        .update({ 
-          total_amount: Number(sessionData.total_amount || 0) + Number(order.total || 0) 
+        .from("table_sessions")
+        .update({
+          total_amount: Number(sessionData.total_amount || 0) + Number(order.total || 0),
         } as any)
-        .eq('id', sessionId);
+        .eq("id", sessionId);
     }
 
     if (sessionId) {
       // Link order to session
-      await supabase
-        .from('table_session_orders')
-        .insert({
-          table_session_id: sessionId,
-          order_id: order.id
-        });
+      await supabase.from("table_session_orders").insert({
+        table_session_id: sessionId,
+        order_id: order.id,
+      });
     }
   }
 
@@ -354,31 +363,33 @@ function Dashboard() {
         },
         (p) => {
           const o = p.new as Order;
-          
-          // O processamento de Table/Comanda agora é feito de forma centralizada 
+
+          // O processamento de Table/Comanda agora é feito de forma centralizada
           // via TablesManagement ou via trigger no banco para garantir consistência.
           // handleTableOrder(o);
 
           // Não processar se o pedido já foi processado (evitar duplicatas no canal)
           setOrders((prev) => {
             if (prev.some((x) => x.id === o.id)) return prev;
-            
+
             if (!initialLoad.current) {
               // DETECÇÃO DE NOVO PEDIDO (FRONT-END ONLY)
-              setKnownOrderIds(prevKnown => {
+              setKnownOrderIds((prevKnown) => {
                 if (!prevKnown.has(o.id)) {
                   // É realmente novo para esta sessão
                   if (soundOnRef.current) playBeep();
                   toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
                   showNotification(o);
 
-                  console.log(`NEW_BADGE_DEBUG: Pedido #${o.order_number} (${o.id}) detectado como novo. Adicionando badge.`);
-                  setRecentNewOrderIds(prevIds => [...prevIds, o.id]);
-                  
+                  console.log(
+                    `NEW_BADGE_DEBUG: Pedido #${o.order_number} (${o.id}) detectado como novo. Adicionando badge.`,
+                  );
+                  setRecentNewOrderIds((prevIds) => [...prevIds, o.id]);
+
                   setTimeout(() => {
-                    setRecentNewOrderIds(prevIds => {
+                    setRecentNewOrderIds((prevIds) => {
                       console.log(`NEW_BADGE_DEBUG: Removendo badge do pedido ${o.id} após 5s.`);
-                      return prevIds.filter(id => id !== o.id);
+                      return prevIds.filter((id) => id !== o.id);
                     });
                   }, 5000);
 
@@ -391,8 +402,6 @@ function Dashboard() {
             }
             return [o, ...prev];
           });
-
-
         },
       )
       .on(
@@ -417,9 +426,10 @@ function Dashboard() {
 
     // Filtrar "pedidos fantasmas" que são apenas eventos de abertura de mesa
     base = base.filter((o) => {
-      const isGhost = (Number(o.total) === 0 || o.total === null) && 
-                      (o.customer_name === "Cliente Site" || !o.customer_name) &&
-                      (!o.items || (Array.isArray(o.items) && o.items.length === 0));
+      const isGhost =
+        (Number(o.total) === 0 || o.total === null) &&
+        (o.customer_name === "Cliente Site" || !o.customer_name) &&
+        (!o.items || (Array.isArray(o.items) && o.items.length === 0));
       return !isGhost;
     });
 
@@ -427,7 +437,7 @@ function Dashboard() {
       base = base.filter((o) => !["entregue", "cancelado"].includes(o.status));
     } else if (filter !== "todos") {
       // Se o filtro for um status específico
-      if (STATUSES.some(s => s.value === filter)) {
+      if (STATUSES.some((s) => s.value === filter)) {
         base = base.filter((o) => o.status === filter);
       }
       // Se o filtro for um tipo de atendimento (order_type)
@@ -707,11 +717,11 @@ function Dashboard() {
             </select>
           )}
           {active && (
-            <Badge 
-              variant="outline" 
+            <Badge
+              variant="outline"
               className={`ml-1 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider ${
-                active.is_open 
-                  ? "bg-green-500/10 text-green-600 border-green-500/30" 
+                active.is_open
+                  ? "bg-green-500/10 text-green-600 border-green-500/30"
                   : "bg-red-500/10 text-red-600 border-red-500/30"
               }`}
             >
@@ -732,15 +742,12 @@ function Dashboard() {
             title={soundOn ? "Desativar som" : "Ativar som"}
           >
             {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
-            <span className="hidden sm:inline ml-2">{soundOn ? "Som ligado" : "Som desligado"}</span>
+            <span className="hidden sm:inline ml-2">
+              {soundOn ? "Som ligado" : "Som desligado"}
+            </span>
           </Button>
 
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={playBeep}
-            title="Testar som"
-          >
+          <Button variant="outline" size="sm" onClick={playBeep} title="Testar som">
             <Play className="h-4 w-4" />
             <span className="hidden sm:inline ml-2">Testar som</span>
           </Button>
@@ -829,7 +836,9 @@ function Dashboard() {
             <SelectGroup>
               <SelectLabel>Status</SelectLabel>
               {STATUSES.map((s) => (
-                <SelectItem key={s.value} value={s.value}>{s.label}</SelectItem>
+                <SelectItem key={s.value} value={s.value}>
+                  {s.label}
+                </SelectItem>
               ))}
             </SelectGroup>
           </SelectContent>
@@ -933,20 +942,18 @@ function OrderCard({
 
   if (isRecentNew) {
     const normType = normalizeOrderType(o);
-    console.log(`ORDER_TABLE_DEBUG: id=${o.id}, order_type=${o.order_type}, service_mode=${o.service_mode}, fulfillment_type=${o.fulfillment_type}, delivery_type=${o.delivery_type}, table_number=${o.table_number}, tableNumber=${o.tableNumber}, mesa=${o.mesa}, address=${o.customer_address}, normalized_type=${normType}`);
+    console.log(
+      `ORDER_TABLE_DEBUG: id=${o.id}, order_type=${o.order_type}, service_mode=${o.service_mode}, fulfillment_type=${o.fulfillment_type}, delivery_type=${o.delivery_type}, table_number=${o.table_number}, tableNumber=${o.tableNumber}, mesa=${o.mesa}, address=${o.customer_address}, normalized_type=${normType}`,
+    );
   }
-
-
 
   // formatItemName e getItemPrice agora são importados de @/utils/order-utils
 
-
   return (
-    <div 
+    <div
       className={`rounded-xl border bg-card p-5 transition-all duration-300 group relative overflow-hidden ${
-        isRecentNew 
-          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.3)] scale-[1.02]" 
-
+        isRecentNew
+          ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.3)] scale-[1.02]"
           : "border-border hover:border-primary/50 hover:shadow-lg"
       }`}
     >
@@ -955,7 +962,6 @@ function OrderCard({
           <Badge className="rounded-none rounded-bl-lg bg-primary text-white font-black px-4 py-1 animate-pulse">
             NOVO
           </Badge>
-
         </div>
       )}
 
@@ -964,13 +970,28 @@ function OrderCard({
           <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
             Pedido
             {orderType === "pickup" && (
-              <Badge variant="outline" className="h-5 bg-blue-500/10 text-blue-600 border-blue-500/20 text-[9px] font-black py-0">RETIRADA</Badge>
+              <Badge
+                variant="outline"
+                className="h-5 bg-blue-500/10 text-blue-600 border-blue-500/20 text-[9px] font-black py-0"
+              >
+                RETIRADA
+              </Badge>
             )}
             {orderType === "table" && (
-              <Badge variant="outline" className="h-5 bg-purple-500/10 text-purple-600 border-purple-500/20 text-[9px] font-black py-0">MESA</Badge>
+              <Badge
+                variant="outline"
+                className="h-5 bg-purple-500/10 text-purple-600 border-purple-500/20 text-[9px] font-black py-0"
+              >
+                MESA
+              </Badge>
             )}
             {orderType === "delivery" && (
-              <Badge variant="outline" className="h-5 bg-orange-500/10 text-orange-600 border-orange-500/20 text-[9px] font-black py-0">DELIVERY</Badge>
+              <Badge
+                variant="outline"
+                className="h-5 bg-orange-500/10 text-orange-600 border-orange-500/20 text-[9px] font-black py-0"
+              >
+                DELIVERY
+              </Badge>
             )}
           </div>
           <div className="text-xl font-black text-foreground group-hover:text-primary transition-colors flex items-center gap-2">
@@ -980,7 +1001,9 @@ function OrderCard({
             )}
             {orderType === "table" && (
               <span className="text-sm font-bold text-purple-600">
-                {o.table_number || o.tableNumber || o.mesa ? `Mesa: ${o.table_number || o.tableNumber || o.mesa}` : "Mesa não identificada"}
+                {o.table_number || o.tableNumber || o.mesa
+                  ? `Mesa: ${o.table_number || o.tableNumber || o.mesa}`
+                  : "Mesa não identificada"}
               </span>
             )}
           </div>
@@ -1020,7 +1043,10 @@ function OrderCard({
         {orderType === "table" && (
           <div className="flex items-center gap-2 text-purple-600 bg-purple-50/50 p-2 rounded-lg text-xs font-bold">
             <Clock className="h-3.5 w-3.5" />
-            Consumo no local / {o.table_number || o.tableNumber || o.mesa ? `Mesa ${o.table_number || o.tableNumber || o.mesa}` : "Mesa não identificada"}
+            Consumo no local /{" "}
+            {o.table_number || o.tableNumber || o.mesa
+              ? `Mesa ${o.table_number || o.tableNumber || o.mesa}`
+              : "Mesa não identificada"}
           </div>
         )}
         <div className="flex items-center gap-1 text-xs text-muted-foreground">

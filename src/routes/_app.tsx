@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
-import { 
-  LayoutDashboard, 
-  Store, 
-  BarChart3, 
-  Users, 
-  LogOut, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Store,
+  BarChart3,
+  Users,
+  LogOut,
+  Settings,
   BookOpen,
   Menu,
   X,
@@ -21,7 +21,7 @@ import {
   Search,
   UtensilsCrossed,
   Wallet,
-  Trophy
+  Trophy,
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -49,7 +49,10 @@ function AppLayoutInner() {
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [pizzeriaStatus, setPizzeriaStatus] = useState<{ is_active: boolean; subscription_status: string } | null>(null);
+  const [pizzeriaStatus, setPizzeriaStatus] = useState<{
+    is_active: boolean;
+    subscription_status: string;
+  } | null>(null);
 
   useEffect(() => {
     if (!loading && !user) nav({ to: "/login" });
@@ -71,7 +74,12 @@ function AppLayoutInner() {
       if (pizzeriaId) {
         query = query.eq("id", pizzeriaId);
       } else {
-        query = query.eq("owner_id", user.id).neq("status", "deleted").order("created_at").limit(1);
+        query = query
+          .eq("owner_id", user.id)
+          .neq("status", "deleted")
+          .neq("status", "inactive")
+          .order("created_at")
+          .limit(1);
       }
 
       const { data, error } = await query.maybeSingle();
@@ -80,25 +88,33 @@ function AppLayoutInner() {
       if (!error && data) {
         setPizzeriaStatus({
           is_active: data.is_active ?? true,
-          subscription_status: data.subscription_status ?? 'active',
+          subscription_status: data.subscription_status ?? "active",
         });
       }
     }
 
     void checkPizzeriaStatus();
-    return () => { cancelled = true; };
+    return () => {
+      cancelled = true;
+    };
   }, [user, isSuperAdmin, loading]);
 
   if (loading || !user) {
-    return <div className="grid min-h-screen place-items-center text-muted-foreground">Carregando...</div>;
+    return (
+      <div className="grid min-h-screen place-items-center text-muted-foreground">
+        Carregando...
+      </div>
+    );
   }
 
   // Block access if inactive and not super admin
   const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
-  const isSuspended = pizzeriaStatus && (pizzeriaStatus.subscription_status === "suspended" || !pizzeriaStatus.is_active);
+  const isSuspended =
+    pizzeriaStatus &&
+    (pizzeriaStatus.subscription_status === "suspended" || !pizzeriaStatus.is_active);
   const isBlocked = isSuspended && !isSuperAdmin && !isHardcodedAdmin;
   const isPublicRoute = ["/docs", "/settings"].includes(path); // Settings is restricted but we might want them to see it? User said block main functions.
-  
+
   // We block if inactive, not super admin, and trying to access anything other than docs or if explicitly blocked
   const shouldBlock = isBlocked && !path.startsWith("/admin") && path !== "/docs";
 
@@ -110,11 +126,15 @@ function AppLayoutInner() {
         </div>
         <h1 className="mb-2 text-2xl font-bold">Loja Suspensa</h1>
         <p className="mb-8 max-w-md text-muted-foreground">
-          Esta loja está temporariamente suspensa. Entre em contato com o suporte da Conectfly para regularizar o acesso.
+          Esta loja está temporariamente suspensa. Entre em contato com o suporte da Conectfly para
+          regularizar o acesso.
         </p>
-        <Button 
-          variant="outline" 
-          onClick={async () => { await signOut(); nav({ to: "/login" }); }}
+        <Button
+          variant="outline"
+          onClick={async () => {
+            await signOut();
+            nav({ to: "/login" });
+          }}
         >
           <LogOut className="mr-2 h-4 w-4" /> Sair da conta
         </Button>
@@ -123,7 +143,11 @@ function AppLayoutInner() {
   }
 
   if (loading || !user) {
-    return <div className="grid min-h-screen place-items-center text-muted-foreground">Carregando...</div>;
+    return (
+      <div className="grid min-h-screen place-items-center text-muted-foreground">
+        Carregando...
+      </div>
+    );
   }
 
   type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; feature?: Feature };
@@ -154,7 +178,9 @@ function AppLayoutInner() {
 
   const NavItems = ({ className = "" }: { className?: string }) => (
     <nav className={`flex-1 space-y-1 p-3 landscape-compact:p-1.5 ${className}`}>
-      <div className="px-3 pb-1 pt-2 text-xs font-semibold uppercase text-muted-foreground/70 landscape-compact:hidden">Menu Principal</div>
+      <div className="px-3 pb-1 pt-2 text-xs font-semibold uppercase text-muted-foreground/70 landscape-compact:hidden">
+        Menu Principal
+      </div>
       {items.map((it) => (
         <Link
           key={it.to}
@@ -170,17 +196,21 @@ function AppLayoutInner() {
               : "text-sidebar-foreground hover:bg-sidebar-accent"
           }`}
         >
-          <it.icon className={`h-4 w-4 shrink-0 landscape-compact:h-5 landscape-compact:w-5 ${path === it.to ? "text-primary" : "text-muted-foreground"}`} />
+          <it.icon
+            className={`h-4 w-4 shrink-0 landscape-compact:h-5 landscape-compact:w-5 ${path === it.to ? "text-primary" : "text-muted-foreground"}`}
+          />
           <span className="landscape-compact:hidden">{it.label}</span>
         </Link>
       ))}
-      
+
       {(isSuperAdmin || isHardcodedAdmin) && (
         <>
-          <div className="px-3 pb-1 pt-6 text-xs font-semibold uppercase text-muted-foreground/70 border-t border-sidebar-border mt-4">Painel Admin</div>
+          <div className="px-3 pb-1 pt-6 text-xs font-semibold uppercase text-muted-foreground/70 border-t border-sidebar-border mt-4">
+            Painel Admin
+          </div>
           {adminItems.map((it) => (
-            <Link 
-              key={it.to} 
+            <Link
+              key={it.to}
               to={it.to}
               onClick={() => setIsMobileMenuOpen(false)}
               title={it.label}
@@ -191,7 +221,9 @@ function AppLayoutInner() {
                   : "text-sidebar-foreground hover:bg-sidebar-accent"
               }`}
             >
-              <it.icon className={`h-4 w-4 shrink-0 landscape-compact:h-5 landscape-compact:w-5 ${path.startsWith(it.to) ? "text-primary" : "text-muted-foreground"}`} />
+              <it.icon
+                className={`h-4 w-4 shrink-0 landscape-compact:h-5 landscape-compact:w-5 ${path.startsWith(it.to) ? "text-primary" : "text-muted-foreground"}`}
+              />
               <span className="landscape-compact:hidden">{it.label}</span>
             </Link>
           ))}
@@ -223,23 +255,29 @@ function AppLayoutInner() {
             Configurações e no menu do cabeçalho. */}
         <div className="flex items-center justify-between border-b border-sidebar-border p-4 landscape-compact:hidden">
           <div className="flex items-center gap-2">
-            {theme === "dark" ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-orange-500" />}
+            {theme === "dark" ? (
+              <Moon className="h-4 w-4 text-primary" />
+            ) : (
+              <Sun className="h-4 w-4 text-orange-500" />
+            )}
             <Label htmlFor="theme-toggle" className="text-xs font-medium cursor-pointer">
               {theme === "dark" ? "Modo Escuro" : "Modo Claro"}
             </Label>
           </div>
-          <Switch 
+          <Switch
             id="theme-toggle"
             checked={theme === "dark"}
             onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
           />
         </div>
-        
+
         <NavItems />
 
         <div className="mt-auto border-t border-border bg-sidebar-accent/30 p-4 landscape-compact:p-1.5">
           <div className="mb-3 flex flex-col px-2 landscape-compact:hidden">
-            <span className="truncate text-xs font-bold text-foreground">{user.email?.split('@')[0]}</span>
+            <span className="truncate text-xs font-bold text-foreground">
+              {user.email?.split("@")[0]}
+            </span>
             <span className="truncate text-[10px] text-muted-foreground">{user.email}</span>
           </div>
           <Button
@@ -248,7 +286,10 @@ function AppLayoutInner() {
             title="Sair"
             aria-label="Sair da conta"
             className="w-full justify-start text-red-500 transition-colors hover:bg-red-500/10 hover:text-red-600 landscape-compact:h-11 landscape-compact:justify-center landscape-compact:px-0"
-            onClick={async () => { await signOut(); nav({ to: "/" }); }}
+            onClick={async () => {
+              await signOut();
+              nav({ to: "/" });
+            }}
           >
             <LogOut className="h-4 w-4 landscape-compact:mr-0 mr-2" />
             <span className="landscape-compact:hidden">Sair</span>
@@ -266,7 +307,7 @@ function AppLayoutInner() {
             <img src={logo} alt="FlyControl" className="h-9 w-auto" />
             <span className="font-bold text-base tracking-tight text-primary">FlyControl</span>
           </Link>
-          
+
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="md:hidden">
@@ -278,8 +319,12 @@ function AppLayoutInner() {
                 <div className="h-16 flex items-center justify-between px-6 border-b border-sidebar-border bg-primary/5">
                   <span className="font-bold text-lg text-primary">FlyControl</span>
                   <div className="flex items-center gap-2">
-                    {theme === "dark" ? <Moon className="h-4 w-4 text-primary" /> : <Sun className="h-4 w-4 text-orange-500" />}
-                    <Switch 
+                    {theme === "dark" ? (
+                      <Moon className="h-4 w-4 text-primary" />
+                    ) : (
+                      <Sun className="h-4 w-4 text-orange-500" />
+                    )}
+                    <Switch
                       checked={theme === "dark"}
                       onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
                     />
@@ -287,10 +332,13 @@ function AppLayoutInner() {
                 </div>
                 <NavItems className="py-4" />
                 <div className="mt-auto border-t border-sidebar-border p-4">
-                  <Button 
-                    variant="outline" 
-                    className="w-full justify-start border-primary/20 text-primary" 
-                    onClick={async () => { await signOut(); nav({ to: "/" }); }}
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start border-primary/20 text-primary"
+                    onClick={async () => {
+                      await signOut();
+                      nav({ to: "/" });
+                    }}
                   >
                     <LogOut className="h-4 w-4 mr-2" /> Sair
                   </Button>

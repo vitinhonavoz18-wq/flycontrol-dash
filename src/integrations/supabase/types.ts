@@ -33,6 +33,39 @@ export type Database = {
   };
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action: string;
+          admin_user_id: string | null;
+          created_at: string;
+          details: Json | null;
+          id: string;
+          status: string;
+          target_store_id: string | null;
+          target_user_id: string | null;
+        };
+        Insert: {
+          action: string;
+          admin_user_id?: string | null;
+          created_at?: string;
+          details?: Json | null;
+          id?: string;
+          status: string;
+          target_store_id?: string | null;
+          target_user_id?: string | null;
+        };
+        Update: {
+          action?: string;
+          admin_user_id?: string | null;
+          created_at?: string;
+          details?: Json | null;
+          id?: string;
+          status?: string;
+          target_store_id?: string | null;
+          target_user_id?: string | null;
+        };
+        Relationships: [];
+      };
       blocked_emails: {
         Row: {
           created_at: string;
