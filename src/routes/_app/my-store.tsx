@@ -125,6 +125,35 @@ export default function MyStore() {
     if (user) loadData();
   }, [user]);
 
+  // Lojas cadastradas antes de o FlyControl conectar automaticamente ao
+  // SiteCreatorFly no momento do cadastro ficaram sem o "endereço" de
+  // sincronização (sync_endpoint) — é como um cliente que fez cadastro antes
+  // de existir o número de mesa automático: os dados dele existem, só falta
+  // essa etiqueta. Busca essa etiqueta agora, na hora do primeiro salvamento,
+  // em vez de deixar o dono da loja precisar achar um botão em outra tela.
+  async function ensureSyncEndpoint(pz: any): Promise<string | undefined> {
+    if (pz.sync_endpoint) return pz.sync_endpoint;
+
+    const {
+      data: { session },
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) return undefined;
+
+    try {
+      const resp = await fetch(`/api/pizzerias/${pz.id}/provision`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${session.access_token}` },
+      });
+      const json = await resp.json().catch(() => null);
+      if (resp.ok && json?.success && json?.sync_endpoint) {
+        return json.sync_endpoint as string;
+      }
+    } catch {
+      // Segue sem endpoint — quem chamou decide como avisar.
+    }
+    return undefined;
+  }
+
   // Cada campo salva e sincroniza com o SiteCreatorFly assim que é editado
   // (ao sair do campo, ou na hora, pros interruptores) — não existe mais um
   // botão único de "Salvar" que junta tudo: cada mudança já vale sozinha, e
@@ -145,14 +174,36 @@ export default function MyStore() {
 
     setPizzeria((prev: any) => ({ ...prev, [field]: value }));
 
-    if (RESTAURANT_SYNC_FIELDS.has(field) && pizzeria.slug && pizzeria.api_key) {
+    if (RESTAURANT_SYNC_FIELDS.has(field) && pizzeria.slug) {
+      if (!pizzeria.api_key) {
+        toast.error("Salvo no FlyControl, mas esta loja ainda não está conectada ao site público.");
+        setSaving(false);
+        return;
+      }
+
+      let syncEndpoint = pizzeria.sync_endpoint;
+      if (!syncEndpoint) {
+        syncEndpoint = await ensureSyncEndpoint(pizzeria);
+        if (syncEndpoint) {
+          setPizzeria((prev: any) => ({ ...prev, sync_endpoint: syncEndpoint }));
+        }
+      }
+
+      if (!syncEndpoint) {
+        toast.error(
+          "Salvo no FlyControl, mas não consegui conectar esta loja ao site público agora. Tente novamente em instantes.",
+        );
+        setSaving(false);
+        return;
+      }
+
       const syncResult = await syncToExternal({
         type: "restaurant",
         action: "update",
         id: pizzeria.id,
         pizzeriaSlug: pizzeria.slug,
         pizzeriaApiKey: pizzeria.api_key,
-        syncEndpoint: pizzeria.sync_endpoint,
+        syncEndpoint,
         data: { [field]: value },
       });
 
