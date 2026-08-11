@@ -422,6 +422,13 @@ function prepareDataForExternal(type: MenuType, data: any) {
       delivery_enabled: data.delivery_enabled,
       pickup_enabled: data.pickup_enabled,
       table_enabled: data.table_enabled,
+      primary_color: data.primary_color,
+      secondary_color: data.secondary_color,
+      selected_template: data.selected_template,
+      show_item_images: data.show_item_images,
+      // O SiteCreatorFly mescla isto com o que já tem salvo (não substitui
+      // a coluna inteira) — ver mergeJsonbSettings no repositório dele.
+      site_settings: data.site_settings,
     };
   }
 

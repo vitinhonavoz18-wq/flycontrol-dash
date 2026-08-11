@@ -17,6 +17,8 @@ import {
   Store,
   Phone,
   ShoppingBag,
+  Palette,
+  LayoutGrid,
 } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
 import { ImageUpload } from "@/components/ui/image-upload";
@@ -40,6 +42,16 @@ const BUSINESS_TYPES = [
   "Outro",
 ];
 
+// Os 5 modelos visuais que o SiteCreatorFly já sabe renderizar
+// (TemplateRenderer.tsx). O id é o que vai salvo em `selected_template`.
+const TEMPLATES = [
+  { id: "black", name: "Black Premium", desc: "Escuro, elegante e gastronômico." },
+  { id: "white", name: "White Clean", desc: "Versão clara, leve e moderna." },
+  { id: "pizza_hut_style", name: "Pizza Red", desc: "Estilo fast-food, visual vermelho." },
+  { id: "burger_style", name: "Burger Showcase", desc: "Moderno, foco em hamburguerias." },
+  { id: "bar_prime", name: "Bar Prime", desc: "Visual moderno para bares, drinks e eventos." },
+];
+
 // Campos desta tela que `prepareDataForExternal('restaurant', ...)` (em
 // utils/menuSync.ts) sabe traduzir para o SiteCreatorFly. Campos fora deste
 // conjunto (taxa de entrega, slug, chave de API) são só do FlyControl e não
@@ -60,6 +72,11 @@ const RESTAURANT_SYNC_FIELDS = new Set([
   "delivery_enabled",
   "pickup_enabled",
   "table_enabled",
+  "primary_color",
+  "secondary_color",
+  "selected_template",
+  "show_item_images",
+  "site_settings",
 ]);
 
 function formatPhoneMask(value: string): string {
@@ -136,6 +153,14 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
     toast.success("Configuração atualizada");
     loadPizzeria();
     setSaving(false);
+  }
+
+  // `site_settings` é uma coluna única no banco (um "pacotinho" de várias
+  // configurações juntas) — por isso, ao mudar uma só, primeiro juntamos
+  // ela com o que já estava salvo nas outras, para não apagar as demais.
+  function handleSiteSettingUpdate(key: string, value: any) {
+    const merged = { ...(pizzeria?.site_settings || {}), [key]: value };
+    handleUpdate("site_settings", merged);
   }
 
   if (loading) {
@@ -358,6 +383,150 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
             <Switch
               checked={pizzeria?.table_enabled ?? false}
               onCheckedChange={(checked) => handleUpdate("table_enabled", checked)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="md:col-span-2 lg:col-span-3">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <Palette className="h-4 w-4 text-primary" /> Aparência
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label>Modelo Visual do Site</Label>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+              {TEMPLATES.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => handleUpdate("selected_template", t.id)}
+                  disabled={saving}
+                  className={`rounded-lg border-2 p-3 text-left transition-colors ${
+                    (pizzeria?.selected_template || "black") === t.id
+                      ? "border-primary bg-primary/5"
+                      : "border-input hover:border-primary/40"
+                  }`}
+                >
+                  <p className="text-sm font-bold">{t.name}</p>
+                  <p className="text-[10px] text-muted-foreground">{t.desc}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="primary-color">Cor Primária (HSL)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="primary-color"
+                  placeholder='Ex: "0 84% 55%"'
+                  defaultValue={pizzeria?.primary_color || ""}
+                  onBlur={(e) => handleUpdate("primary_color", e.target.value)}
+                  className="flex-1"
+                />
+                <span
+                  className="h-9 w-9 shrink-0 rounded-md border"
+                  style={{
+                    background: pizzeria?.primary_color
+                      ? `hsl(${pizzeria.primary_color})`
+                      : undefined,
+                  }}
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="secondary-color">Cor Secundária (HSL)</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="secondary-color"
+                  placeholder='Ex: "45 93% 58%"'
+                  defaultValue={pizzeria?.secondary_color || ""}
+                  onBlur={(e) => handleUpdate("secondary_color", e.target.value)}
+                  className="flex-1"
+                />
+                <span
+                  className="h-9 w-9 shrink-0 rounded-md border"
+                  style={{
+                    background: pizzeria?.secondary_color
+                      ? `hsl(${pizzeria.secondary_color})`
+                      : undefined,
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Exibir fotos nos sabores/itens</p>
+              <p className="text-[10px] text-muted-foreground">
+                Habilita o anexo de fotos no cardápio público
+              </p>
+            </div>
+            <Switch
+              checked={pizzeria?.show_item_images ?? true}
+              onCheckedChange={(checked) => handleUpdate("show_item_images", checked)}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="md:col-span-2 lg:col-span-3">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <LayoutGrid className="h-4 w-4 text-primary" /> Comportamento do Cardápio
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="entry-mode">Modo de Navegação</Label>
+              <select
+                id="entry-mode"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                defaultValue={pizzeria?.site_settings?.entry_mode || "navigation"}
+                onChange={(e) => handleSiteSettingUpdate("entry_mode", e.target.value)}
+              >
+                <option value="navigation">Navegação por Categorias</option>
+                <option value="direct">Exibição Direta (rolagem única)</option>
+                <option value="cards">Cards de Categoria</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="combos-visibility">Visibilidade dos Combos</Label>
+              <select
+                id="combos-visibility"
+                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                defaultValue={pizzeria?.site_settings?.combos_visibility || "auto"}
+                onChange={(e) => handleSiteSettingUpdate("combos_visibility", e.target.value)}
+              >
+                <option value="auto">Automático (só se existir combo)</option>
+                <option value="always">Sempre mostrar</option>
+                <option value="hide">Ocultar</option>
+              </select>
+            </div>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="hero-button-text">Texto do Botão Principal</Label>
+            <Input
+              id="hero-button-text"
+              placeholder="Ex: Explorar Cardápio"
+              defaultValue={pizzeria?.site_settings?.hero_button_text || ""}
+              onBlur={(e) => handleSiteSettingUpdate("hero_button_text", e.target.value)}
+            />
+          </div>
+          <div className="flex items-center justify-between rounded-lg border p-3">
+            <div>
+              <p className="text-sm font-medium">Exibir botão "Ir pra sacola" (carrinho)</p>
+              <p className="text-[10px] text-muted-foreground">
+                Mostra ou oculta o acesso ao carrinho no site público
+              </p>
+            </div>
+            <Switch
+              checked={pizzeria?.site_settings?.show_cart_button !== false}
+              onCheckedChange={(checked) => handleSiteSettingUpdate("show_cart_button", checked)}
             />
           </div>
         </CardContent>

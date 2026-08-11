@@ -108,6 +108,33 @@ describe("syncToExternal — restaurant (loja)", () => {
     expect(body.phone).toBeUndefined();
   });
 
+  it("envia aparência (modelo, cores, fotos) e comportamento do cardápio (site_settings)", async () => {
+    await syncToExternal({
+      type: "restaurant",
+      action: "update",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "chave-123",
+      syncEndpoint: REST_ENDPOINT,
+      data: {
+        selected_template: "burger_style",
+        primary_color: "35 100% 43%",
+        secondary_color: "0 0% 100%",
+        show_item_images: false,
+        site_settings: { entry_mode: "cards", show_cart_button: false },
+      },
+    });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    const body = JSON.parse(init?.body as string);
+    expect(body.selected_template).toBe("burger_style");
+    expect(body.primary_color).toBe("35 100% 43%");
+    expect(body.secondary_color).toBe("0 0% 100%");
+    expect(body.show_item_images).toBe(false);
+    // site_settings vai como veio — quem mescla com o resto é o
+    // SiteCreatorFly (mergeJsonbSettings), não o FlyControl.
+    expect(body.site_settings).toEqual({ entry_mode: "cards", show_cart_button: false });
+  });
+
   it("continua exigindo externalId para atualizar um produto (não é a loja)", async () => {
     const result = await syncToExternal({
       type: "product",
