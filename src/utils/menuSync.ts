@@ -409,6 +409,9 @@ function prepareDataForExternal(type: MenuType, data: any) {
       hours: data.opening_hours,
       description: data.description,
       logo_url: data.logo_url,
+      hero_image_url: data.hero_image_url,
+      hero_media_type: data.hero_media_type,
+      hero_video_url: data.hero_video_url,
     };
   }
 

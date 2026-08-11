@@ -33,7 +33,7 @@ describe("syncToExternal — restaurant (loja)", () => {
     const [url, init] = vi.mocked(fetch).mock.calls[0];
     // Sem segmento de ID: PUT .../api/menu-sync/restaurant, não .../restaurant/undefined
     expect(url).toBe("https://conectfly.com.br/api/menu-sync/restaurant");
-    expect(init.method).toBe("PUT");
+    expect(init?.method).toBe("PUT");
   });
 
   it("traduz opening_hours do FlyControl para hours, que é o nome usado no SiteCreatorFly", async () => {
@@ -47,9 +47,30 @@ describe("syncToExternal — restaurant (loja)", () => {
     });
 
     const [, init] = vi.mocked(fetch).mock.calls[0];
-    const body = JSON.parse(init.body);
+    const body = JSON.parse(init?.body as string);
     expect(body.hours).toBe("Seg a Sex: 18h às 23h");
     expect(body.logo_url).toBe("https://x/logo.png");
+  });
+
+  it("envia a mídia do hero (imagem ou vídeo de capa) com os mesmos nomes que o SiteCreatorFly espera", async () => {
+    await syncToExternal({
+      type: "restaurant",
+      action: "update",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "chave-123",
+      syncEndpoint: REST_ENDPOINT,
+      data: {
+        hero_media_type: "video",
+        hero_video_url: "https://x/hero.mp4",
+        hero_image_url: "https://x/hero.jpg",
+      },
+    });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    const body = JSON.parse(init?.body as string);
+    expect(body.hero_media_type).toBe("video");
+    expect(body.hero_video_url).toBe("https://x/hero.mp4");
+    expect(body.hero_image_url).toBe("https://x/hero.jpg");
   });
 
   it("continua exigindo externalId para atualizar um produto (não é a loja)", async () => {

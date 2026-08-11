@@ -5,8 +5,10 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Clock, Truck, FileText, Globe, Key } from "lucide-react";
+import { Loader2, Clock, Truck, FileText, Globe, Key, Image as ImageIcon } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
+import { ImageUpload } from "@/components/ui/image-upload";
+import { VideoUpload } from "@/components/ui/video-upload";
 
 interface PizzeriaConfigProps {
   pizzeriaId: string;
@@ -16,7 +18,13 @@ interface PizzeriaConfigProps {
 // utils/menuSync.ts) sabe traduzir para o SiteCreatorFly. Campos fora deste
 // conjunto (taxa de entrega, slug, chave de API) são só do FlyControl e não
 // têm correspondente no site público.
-const RESTAURANT_SYNC_FIELDS = new Set(["description", "opening_hours"]);
+const RESTAURANT_SYNC_FIELDS = new Set([
+  "description",
+  "opening_hours",
+  "hero_image_url",
+  "hero_media_type",
+  "hero_video_url",
+]);
 
 export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
   const [pizzeria, setPizzeria] = useState<any>(null);
@@ -171,6 +179,55 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
               onBlur={(e) => handleUpdate("description", e.target.value)}
             />
           </div>
+        </CardContent>
+      </Card>
+
+      <Card className="md:col-span-2 lg:col-span-3">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-sm font-bold flex items-center gap-2">
+            <ImageIcon className="h-4 w-4 text-primary" /> Capa do Cardápio (Hero)
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant={(pizzeria?.hero_media_type ?? "image") !== "video" ? "default" : "outline"}
+              onClick={() => handleUpdate("hero_media_type", "image")}
+              disabled={saving}
+            >
+              Imagem
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant={pizzeria?.hero_media_type === "video" ? "default" : "outline"}
+              onClick={() => handleUpdate("hero_media_type", "video")}
+              disabled={saving}
+            >
+              Vídeo
+            </Button>
+          </div>
+
+          {pizzeria?.hero_media_type === "video" ? (
+            <VideoUpload
+              value={pizzeria?.hero_video_url}
+              onChange={(url) => handleUpdate("hero_video_url", url)}
+              folder="hero"
+              disabled={saving}
+            />
+          ) : (
+            <ImageUpload
+              value={pizzeria?.hero_image_url}
+              onChange={(url) => handleUpdate("hero_image_url", url)}
+              folder="hero"
+              disabled={saving}
+            />
+          )}
+          <p className="text-[10px] text-muted-foreground">
+            Imagem ou vídeo que aparece no topo do site, atrás do nome da loja.
+          </p>
         </CardContent>
       </Card>
 
