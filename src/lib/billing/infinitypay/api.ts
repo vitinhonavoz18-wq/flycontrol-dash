@@ -89,13 +89,28 @@ export async function createInfinityPayCheckoutLink(
     const text = await resp.text();
     console.log("[infinitypay] POST /links status:", resp.status, "body:", text.slice(0, 500));
 
-    if (!resp.ok) return { ok: false, error: `infinitypay_http_${resp.status}` };
-
     let parsed: Record<string, unknown> | null;
     try {
       parsed = await parseJsonBody(text);
     } catch {
-      return { ok: false, error: "infinitypay_invalid_json" };
+      return {
+        ok: false,
+        error: !resp.ok ? `infinitypay_http_${resp.status}` : "infinitypay_invalid_json",
+      };
+    }
+
+    if (!resp.ok) {
+      // A InfinityPay manda o motivo em `message` (ex.: "param is missing or
+      // the value is empty or invalid: handle"). Sem isso no retorno, o único
+      // jeito de descobrir por que um cadastro caiu no modo manual seria ler
+      // o corpo bruto no log do servidor.
+      const reason = firstText(parsed, "message", "error");
+      return {
+        ok: false,
+        error: reason
+          ? `infinitypay_http_${resp.status}: ${reason}`
+          : `infinitypay_http_${resp.status}`,
+      };
     }
 
     // O nome exato do campo de retorno não está documentado publicamente;
@@ -157,13 +172,24 @@ export async function checkInfinityPayPayment(
       text.slice(0, 500),
     );
 
-    if (!resp.ok) return { ok: false, error: `infinitypay_http_${resp.status}` };
-
     let parsed: Record<string, unknown> | null;
     try {
       parsed = await parseJsonBody(text);
     } catch {
-      return { ok: false, error: "infinitypay_invalid_json" };
+      return {
+        ok: false,
+        error: !resp.ok ? `infinitypay_http_${resp.status}` : "infinitypay_invalid_json",
+      };
+    }
+
+    if (!resp.ok) {
+      const reason = firstText(parsed, "message", "error");
+      return {
+        ok: false,
+        error: reason
+          ? `infinitypay_http_${resp.status}: ${reason}`
+          : `infinitypay_http_${resp.status}`,
+      };
     }
 
     if (parsed?.success === false) {

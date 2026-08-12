@@ -131,6 +131,37 @@ describe("createInfinityPayCheckoutLink", () => {
 
     expect(result).toEqual({ ok: false, error: "infinitypay_http_500" });
   });
+
+  it("inclui o motivo da InfinityPay quando o erro vem em JSON", async () => {
+    // A InfinityPay responde erro como {success:false, message:"..."} — sem
+    // ler esse campo, o log fica só com o código HTTP e nada mais.
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response(
+            JSON.stringify({
+              success: false,
+              message: "param is missing or the value is empty or invalid: handle",
+            }),
+            { status: 400 },
+          ),
+      ),
+    );
+
+    const result = await createInfinityPayCheckoutLink({
+      orderNsu: "intent-5",
+      amountCents: 1000,
+      description: "teste",
+      redirectUrl: "https://app.exemplo/pagamento/cents",
+      webhookUrl: "https://app.exemplo/api/webhooks/infinitypay",
+    });
+
+    expect(result).toEqual({
+      ok: false,
+      error: "infinitypay_http_400: param is missing or the value is empty or invalid: handle",
+    });
+  });
 });
 
 describe("checkInfinityPayPayment", () => {
