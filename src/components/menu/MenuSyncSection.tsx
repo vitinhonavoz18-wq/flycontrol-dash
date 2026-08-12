@@ -508,6 +508,25 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
                 )}
                 Sincronizar Cardápio
               </Button>
+              {/* "Conectado com sucesso" só quer dizer que a loja existe do
+                outro lado — não garante que todos os dados dela (como o
+                endereço para onde mandar os pedidos) estão completos. Este
+                botão sempre disponível permite consertar isso sem precisar
+                que o status vire "falha" primeiro. */}
+              <Button
+                variant="outline"
+                onClick={handleReprovision}
+                disabled={reprovisioning}
+                title="Reenvia os dados da loja para o SiteCreatorFly — útil se o cardápio abre mas os pedidos não chegam."
+                className="gap-2"
+              >
+                {reprovisioning ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Reconectar com o SiteCreatorFly
+              </Button>
             </div>
           </div>
         ) : (
