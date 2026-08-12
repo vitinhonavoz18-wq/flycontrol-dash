@@ -108,6 +108,7 @@ export function VideoUpload({
             <VideoIcon className="h-8 w-8" />
             <span className="text-sm font-medium">Clique para enviar um vídeo</span>
             <span className="text-xs">MP4, WEBM ou MOV • até 25MB</span>
+            <span className="text-xs">Resolução ideal: 1920×1080 (Full HD), na horizontal</span>
           </div>
         )}
         <input
