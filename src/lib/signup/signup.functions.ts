@@ -15,14 +15,22 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
-import { COMPANY_BILLING_MODEL, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import {
+  COMPANY_BILLING_MODEL,
+  PLAN_PRICING,
+  isPublicPlanCode,
+  type PlanCode,
+} from "@/lib/billing/plans";
 import {
   CHECKOUT_INTENT_TTL_MS,
   checkoutAmountCents,
+  checkoutReturnUrl,
   generateIntentToken,
   hashIntentToken,
+  infinityPayWebhookUrl,
   resolveCheckoutConfig,
 } from "@/lib/billing/checkout";
+import { createInfinityPayCheckoutLink, infinityPayHandle } from "@/lib/billing/infinitypay/api";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { PAYMENT_BYPASS_REASON, isPaymentBypassAllowed } from "./paymentBypass";
@@ -82,11 +90,66 @@ export const getSignupOptions = createServerFn({ method: "GET" }).handler(
 );
 
 /**
+ * Grava a intenção de checkout. `id` explícito permite que o chamador saiba
+ * o identificador antes da gravação — necessário para repassá-lo à
+ * InfinityPay como `order_nsu` antes mesmo de a linha existir no banco.
+ */
+async function insertCheckoutIntent(params: {
+  id?: string;
+  tokenHash: string;
+  companyId: string;
+  subscriptionId: string | null;
+  planCode: PlanCode;
+  amountCents: number;
+  checkoutUrl: string;
+  expiresAt: string;
+}): Promise<boolean> {
+  const row: Record<string, unknown> = {
+    token_hash: params.tokenHash,
+    company_id: params.companyId,
+    subscription_id: params.subscriptionId,
+    plan_code: params.planCode,
+    // O valor vem da tabela de preços do servidor. O navegador não opina
+    // sobre quanto custa.
+    expected_amount_cents: params.amountCents,
+    checkout_url: params.checkoutUrl,
+    expires_at: params.expiresAt,
+  };
+  if (params.id) row.id = params.id;
+
+  try {
+    const { error } = await asBillingDb(supabaseAdmin)
+      .from("checkout_intents")
+      .insert(row)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      console.error("[signup] falha ao registrar intenção de checkout:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[signup] erro ao criar intenção de checkout:", err);
+    return false;
+  }
+}
+
+/**
  * Cria a intenção de checkout e devolve o token que vai para o navegador.
  *
  * Nasce aqui, e não em um endpoint próprio, de propósito: um endpoint público
  * que recebesse um `companyId` deixaria qualquer um emitir token para empresa
  * alheia. Assim o token só existe para a empresa recém-criada nesta chamada.
+ *
+ * Dois caminhos, nesta ordem:
+ *
+ * 1. Automático: com `INFINITYPAY_HANDLE` configurado, gera um link de
+ *    pagamento novo para este cadastro, com o aviso de pagamento
+ *    (`webhook_url`) já apontando para o nosso endpoint. É o que permite
+ *    ativar a assinatura sozinho, sem depender de conferência manual.
+ * 2. Manual (compatibilidade): sem a variável, cai no link fixo colado à mão
+ *    no painel da InfinityPay — o fluxo original, que continua funcionando.
  *
  * Falha aqui nunca derruba o cadastro — a conta já existe, e o pior caso é o
  * cliente ver a tela de "combine a ativação com a equipe".
@@ -96,42 +159,57 @@ async function createCheckoutIntent(
   companyId: string,
   subscriptionId: string | null,
 ): Promise<{ url: string; token: string } | null> {
+  const amountCents = checkoutAmountCents(planCode);
+  const token = generateIntentToken();
+  const tokenHash = await hashIntentToken(token);
+  const expiresAt = new Date(Date.now() + CHECKOUT_INTENT_TTL_MS).toISOString();
+  const publicUrl = (process.env.FLYCONTROL_PUBLIC_URL || "").trim().replace(/\/+$/, "");
+
+  if (infinityPayHandle() && publicUrl) {
+    const intentId = crypto.randomUUID();
+    const link = await createInfinityPayCheckoutLink({
+      orderNsu: intentId,
+      amountCents,
+      description: `FlyControl - plano ${PLAN_PRICING[planCode].name}`,
+      redirectUrl: checkoutReturnUrl(publicUrl, planCode),
+      webhookUrl: infinityPayWebhookUrl(publicUrl),
+    });
+
+    if (link.ok) {
+      const inserted = await insertCheckoutIntent({
+        id: intentId,
+        tokenHash,
+        companyId,
+        subscriptionId,
+        planCode,
+        amountCents,
+        checkoutUrl: link.url,
+        expiresAt,
+      });
+      if (inserted) return { url: link.url, token };
+      // Falhou ao gravar a intenção com o link já criado: cai para o modo
+      // manual abaixo em vez de deixar o cliente sem para onde ir.
+    } else {
+      console.warn(`[signup] link dinâmico da InfinityPay indisponível: ${link.error}`);
+    }
+  }
+
   const config = resolveCheckoutConfig(planCode, process.env);
   if (!config.configured) {
     console.info(`[signup] ${config.reason}`);
     return null;
   }
 
-  try {
-    const token = generateIntentToken();
-    const tokenHash = await hashIntentToken(token);
-
-    const { error } = await asBillingDb(supabaseAdmin)
-      .from("checkout_intents")
-      .insert({
-        token_hash: tokenHash,
-        company_id: companyId,
-        subscription_id: subscriptionId,
-        plan_code: planCode,
-        // O valor vem da tabela de preços do servidor. O navegador não opina
-        // sobre quanto custa.
-        expected_amount_cents: checkoutAmountCents(planCode),
-        checkout_url: config.url,
-        expires_at: new Date(Date.now() + CHECKOUT_INTENT_TTL_MS).toISOString(),
-      })
-      .select("id")
-      .maybeSingle();
-
-    if (error) {
-      console.error("[signup] falha ao registrar intenção de checkout:", error);
-      return null;
-    }
-
-    return { url: config.url, token };
-  } catch (err) {
-    console.error("[signup] erro ao criar intenção de checkout:", err);
-    return null;
-  }
+  const inserted = await insertCheckoutIntent({
+    tokenHash,
+    companyId,
+    subscriptionId,
+    planCode,
+    amountCents,
+    checkoutUrl: config.url,
+    expiresAt,
+  });
+  return inserted ? { url: config.url, token } : null;
 }
 
 /** Slug único: acrescenta sufixo curto enquanto houver colisão. */

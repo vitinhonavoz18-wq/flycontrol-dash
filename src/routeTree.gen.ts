@@ -54,6 +54,7 @@ import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public
 import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/public/open-table-session'
 import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/public/request-close-table'
 import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
+import { Route as ApiWebhooksInfinitypayRouteImport } from './routes/api/webhooks.infinitypay'
 import { Route as ApiPizzeriasIdDeactivateRouteImport } from './routes/api/pizzerias.$id.deactivate'
 import { Route as ApiPizzeriasIdDeleteRouteImport } from './routes/api/pizzerias.$id.delete'
 import { Route as ApiPizzeriasIdProvisionRouteImport } from './routes/api/pizzerias.$id.provision'
@@ -286,6 +287,11 @@ const ApiPublicTableSessionStatusRoute =
     path: '/api/public/table-session-status',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiWebhooksInfinitypayRoute = ApiWebhooksInfinitypayRouteImport.update({
+  id: '/api/webhooks/infinitypay',
+  path: '/api/webhooks/infinitypay',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPizzeriasIdDeactivateRoute =
   ApiPizzeriasIdDeactivateRouteImport.update({
     id: '/api/pizzerias/$id/deactivate',
@@ -353,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
+  '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/admin/': typeof AppAdminIndexRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -402,6 +409,7 @@ export interface FileRoutesByTo {
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
+  '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/admin': typeof AppAdminIndexRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -454,6 +462,7 @@ export interface FileRoutesById {
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
+  '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/_app/admin/': typeof AppAdminIndexRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -506,6 +515,7 @@ export interface FileRouteTypes {
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
+    | '/api/webhooks/infinitypay'
     | '/admin/'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -555,6 +565,7 @@ export interface FileRouteTypes {
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
+    | '/api/webhooks/infinitypay'
     | '/admin'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -606,6 +617,7 @@ export interface FileRouteTypes {
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
+    | '/api/webhooks/infinitypay'
     | '/_app/admin/'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -639,6 +651,7 @@ export interface RootRouteChildren {
   ApiPublicOpenTableSessionRoute: typeof ApiPublicOpenTableSessionRoute
   ApiPublicRequestCloseTableRoute: typeof ApiPublicRequestCloseTableRoute
   ApiPublicTableSessionStatusRoute: typeof ApiPublicTableSessionStatusRoute
+  ApiWebhooksInfinitypayRoute: typeof ApiWebhooksInfinitypayRoute
   ApiPizzeriasIdDeactivateRoute: typeof ApiPizzeriasIdDeactivateRoute
   ApiPizzeriasIdDeleteRoute: typeof ApiPizzeriasIdDeleteRoute
   ApiPizzeriasIdProvisionRoute: typeof ApiPizzeriasIdProvisionRoute
@@ -962,6 +975,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTableSessionStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/infinitypay': {
+      id: '/api/webhooks/infinitypay'
+      path: '/api/webhooks/infinitypay'
+      fullPath: '/api/webhooks/infinitypay'
+      preLoaderRoute: typeof ApiWebhooksInfinitypayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pizzerias/$id/deactivate': {
       id: '/api/pizzerias/$id/deactivate'
       path: '/api/pizzerias/$id/deactivate'
@@ -1077,6 +1097,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOpenTableSessionRoute: ApiPublicOpenTableSessionRoute,
   ApiPublicRequestCloseTableRoute: ApiPublicRequestCloseTableRoute,
   ApiPublicTableSessionStatusRoute: ApiPublicTableSessionStatusRoute,
+  ApiWebhooksInfinitypayRoute: ApiWebhooksInfinitypayRoute,
   ApiPizzeriasIdDeactivateRoute: ApiPizzeriasIdDeactivateRoute,
   ApiPizzeriasIdDeleteRoute: ApiPizzeriasIdDeleteRoute,
   ApiPizzeriasIdProvisionRoute: ApiPizzeriasIdProvisionRoute,
