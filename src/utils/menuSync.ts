@@ -299,7 +299,15 @@ export async function syncToExternal(
         return { success: true, externalId: newId };
       }
 
-      // REST: any 2xx = success. Extract id from common shapes if present.
+      // REST: um 2xx com corpo dizendo explicitamente success:false não é
+      // sucesso — o SiteCreatorFly usa 200 em alguns retornos de validação,
+      // então confiar só no status HTTP escondia o erro de verdade atrás de
+      // um "deu certo" falso.
+      if (parsed && parsed.success === false) {
+        const errorMsg = parsed.message || parsed.error || "Erro desconhecido na API externa";
+        console.error("[SyncExternal] Erro retornado pela API REST:", errorMsg);
+        return { success: false, error: `api_error:${errorMsg}` };
+      }
       const newId = parsed?.id ?? parsed?.data?.id ?? parsed?.[externalType]?.id ?? externalId;
       return { success: true, externalId: newId };
     }

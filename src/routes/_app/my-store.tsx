@@ -213,7 +213,7 @@ export default function MyStore() {
 
       if (!syncResult.success) {
         toast.error(
-          "Salvo no FlyControl, mas não foi possível atualizar o site público. Tente novamente em instantes.",
+          `Salvo no FlyControl, mas não foi possível atualizar o site público${syncResult.error ? ` (${syncResult.error})` : ""}. Tente novamente em instantes.`,
         );
         setSaving(false);
         return;
