@@ -37,6 +37,22 @@ export async function provisionRestaurantInSF(payload: ProvisionPayload): Promis
   };
   if (internalToken) headers["Authorization"] = `Bearer ${internalToken}`;
 
+  // O SiteCreatorFly precisa saber para onde mandar os pedidos de volta — é
+  // o "endereço de entrega" que ele grava como flycontrol_base_url. Sem
+  // isso, a loja é criada normalmente mas todo pedido falha com
+  // "Configuração incompleta no painel", porque não existe endereço
+  // nenhum salvo para enviar o pedido. Vem daqui, não de quem chama, para
+  // não precisar repetir essa configuração em cada lugar que provisiona.
+  const flycontrolBaseUrl = (process.env.FLYCONTROL_PUBLIC_URL || "").trim().replace(/\/+$/, "");
+  const outgoingPayload: ProvisionPayload & { flycontrol_base_url?: string } = flycontrolBaseUrl
+    ? { ...payload, flycontrol_base_url: flycontrolBaseUrl }
+    : payload;
+  if (!flycontrolBaseUrl) {
+    console.warn(
+      "[Provision] FLYCONTROL_PUBLIC_URL not configured — a loja será criada, mas pedidos vão falhar até isso ser preenchido.",
+    );
+  }
+
   console.log(
     "[Provision] POST",
     url,
@@ -50,7 +66,7 @@ export async function provisionRestaurantInSF(payload: ProvisionPayload): Promis
     const resp = await fetch(url, {
       method: "POST",
       headers,
-      body: JSON.stringify(payload),
+      body: JSON.stringify(outgoingPayload),
       // Quem chama está no meio de um cadastro e espera a resposta. Sem teto,
       // o outro sistema lento faria o cliente olhar para uma tela travada. A
       // repescagem cobre o que estourar o prazo.
