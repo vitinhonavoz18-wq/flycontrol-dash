@@ -254,7 +254,7 @@ function AppLayoutInner() {
           <img
             src={logo}
             alt="FlyControl"
-            className="h-48 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,122,0,0.3)] dark:drop-shadow-[0_0_20px_rgba(255,122,0,0.6)] landscape-compact:h-8"
+            className="h-48 w-auto object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.6)] dark:drop-shadow-[0_0_20px_rgba(255,122,0,0.6)] landscape-compact:h-8"
           />
         </Link>
 

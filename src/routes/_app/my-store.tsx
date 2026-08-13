@@ -26,6 +26,7 @@ import {
   ShoppingBag,
   ShieldCheck,
 } from "lucide-react";
+import { FlyStatusSettings } from "@/components/flystatus/FlyStatusSettings";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { syncToExternal } from "@/utils/menuSync";
@@ -578,6 +579,15 @@ function StoreEditor({
                   disabled={saving}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="pt-6">
+              <FlyStatusSettings
+                pizzeria={pizzeria}
+                onUpdated={(patch) => setPizzeria((prev: any) => ({ ...prev, ...patch }))}
+              />
             </CardContent>
           </Card>
         </TabsContent>

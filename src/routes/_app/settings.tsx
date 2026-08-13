@@ -15,9 +15,8 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { FlyStatusSettings } from "@/components/flystatus/FlyStatusSettings";
-import { FiqonSettings } from "@/components/pizzerias/FiqonSettings";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
+import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
@@ -125,49 +124,37 @@ function AddPizzeriaDialog({ onSuccess }: { onSuccess: () => void }) {
   );
 }
 
-function Settings() {
-  const { user, isSuperAdmin } = useAuth();
-  const [pizzerias, setPizzerias] = useState<any[]>([]);
-  const [testing, setTesting] = useState<string | null>(null);
+/**
+ * Configurações de UMA pizzaria específica.
+ *
+ * Não decide sozinha qual loja é essa — quem chama informa `pizzeria`, do
+ * mesmo jeito que StoreEditor em my-store.tsx. É o que permite mostrar só a
+ * loja escolhida no seletor, em vez de empilhar as configurações de todas.
+ */
+function PizzeriaSettingsPanel({
+  pizzeria: p,
+  origin,
+  onUpdated,
+}: {
+  pizzeria: any;
+  origin: string;
+  onUpdated: (patch: any) => void;
+}) {
+  const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);
-  const [origin, setOrigin] = useState("");
 
-  const loadPizzerias = async () => {
-    let query = supabase
-      .from("pizzerias")
-      .select("*")
-      .neq("status", "deleted")
-      .neq("status", "inactive")
-      .order("created_at");
-
-    // Se não for super admin, filtra apenas as pizzarias do dono
-    if (!isSuperAdmin && user?.id) {
-      query = query.eq("owner_id", user.id);
+  async function update(patch: any) {
+    const { error } = await supabase.from("pizzerias").update(patch).eq("id", p.id);
+    if (error) {
+      toast.error(error.message);
+      return;
     }
-
-    const { data } = await query;
-    setPizzerias(data ?? []);
-  };
-
-  useEffect(() => {
-    setOrigin(typeof window !== "undefined" ? window.location.origin : "");
-  }, []);
-
-  useEffect(() => {
-    if (user) loadPizzerias();
-  }, [user]);
-
-  async function update(id: string, patch: any) {
-    const { error } = await supabase.from("pizzerias").update(patch).eq("id", id);
-    if (error) toast.error(error.message);
-    else {
-      toast.success("Salvo");
-      loadPizzerias();
-    }
+    toast.success("Salvo");
+    onUpdated(patch);
   }
 
-  async function testOrder(p: any) {
-    setTesting(p.id);
+  async function testOrder() {
+    setTesting(true);
     setTestResult(null);
     try {
       const payload = {
@@ -199,11 +186,7 @@ function Settings() {
       });
 
       const data = await res.json();
-      setTestResult({
-        status: res.status,
-        ok: res.ok,
-        data,
-      });
+      setTestResult({ status: res.status, ok: res.ok, data });
 
       if (res.ok) {
         toast.success("Pedido de teste enviado com sucesso!");
@@ -212,20 +195,277 @@ function Settings() {
       }
     } catch (err: any) {
       console.error(err);
-      setTestResult({
-        status: "ERRO",
-        ok: false,
-        error: err.message,
-      });
+      setTestResult({ status: "ERRO", ok: false, error: err.message });
       toast.error("Falha na conexão: " + err.message);
     } finally {
-      setTesting(null);
+      setTesting(false);
     }
+  }
+
+  return (
+    <div className="rounded-xl border border-border bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
+        <div>
+          <div className="font-bold text-lg">{p.name}</div>
+          <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
+            ID: {p.id}
+          </div>
+        </div>
+        <Badge variant={p.status === "active" ? "default" : "secondary"}>
+          {p.status === "active" ? "Ativo" : "Pausado"}
+        </Badge>
+      </div>
+      <div className="mt-3 grid gap-2 md:grid-cols-2">
+        <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-background p-3 text-sm">
+          <span>Som ao receber pedido</span>
+          <input
+            type="checkbox"
+            defaultChecked={p.sound_enabled}
+            onChange={(e) => update({ sound_enabled: e.target.checked })}
+          />
+        </label>
+        <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-background p-3 text-sm">
+          <span>Status do estabelecimento</span>
+          <select
+            defaultValue={p.status}
+            className="rounded bg-background px-2 py-1"
+            onChange={(e) => update({ status: e.target.value })}
+          >
+            <option value="active">Ativo</option>
+            <option value="paused">Pausado</option>
+          </select>
+        </label>
+      </div>
+
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="space-y-2">
+          <Label className="text-xs font-medium uppercase text-muted-foreground">
+            Descrição da Pizzaria
+          </Label>
+          <textarea
+            className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            placeholder="Conte um pouco sobre a sua pizzaria..."
+            defaultValue={p.description || ""}
+            onBlur={(e) => update({ description: e.target.value })}
+          />
+        </div>
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-xs font-medium uppercase text-muted-foreground">
+              Taxa de Entrega (R$)
+            </Label>
+            <Input
+              type="number"
+              step="0.01"
+              placeholder="0.00"
+              defaultValue={p.delivery_fee || 0}
+              onBlur={(e) => update({ delivery_fee: parseFloat(e.target.value) || 0 })}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-medium uppercase text-muted-foreground">
+              Taxa de Serviço (%) — 0 a 30
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              max={30}
+              step={0.5}
+              placeholder="10"
+              defaultValue={p.service_fee_percent ?? 10}
+              onBlur={(e) => {
+                let val = parseFloat(e.target.value);
+                if (isNaN(val)) val = 10;
+                if (val < 0) val = 0;
+                if (val > 30) val = 30;
+                // arredonda para múltiplo de 0.5
+                val = Math.round(val * 2) / 2;
+                e.target.value = String(val);
+                update({ service_fee_percent: val });
+              }}
+            />
+            <p className="text-[10px] text-muted-foreground">
+              Aplicada a novas mesas abertas. Mesas já fechadas não são alteradas.
+            </p>
+          </div>
+          <div className="space-y-2">
+            <Label className="text-xs font-medium uppercase text-muted-foreground">
+              Horários de Funcionamento
+            </Label>
+            <Input
+              placeholder="Ex: Seg a Sex: 18h às 23h"
+              defaultValue={
+                typeof p.opening_hours === "string"
+                  ? p.opening_hours
+                  : JSON.stringify(p.opening_hours)
+              }
+              onBlur={(e) => {
+                const val = e.target.value;
+                try {
+                  if (val.startsWith("[") || val.startsWith("{")) {
+                    update({ opening_hours: JSON.parse(val) });
+                  } else {
+                    update({ opening_hours: val });
+                  }
+                } catch {
+                  update({ opening_hours: val });
+                }
+              }}
+            />
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-border pt-4">
+        <div className="space-y-2">
+          <Label className="text-xs font-medium uppercase text-muted-foreground">
+            Endpoint de sincronização do site público
+          </Label>
+          <div className="flex items-center gap-2">
+            <Input
+              placeholder="https://watjejwgtieqfkpebkfz.supabase.co/functions/v1/menu-sync"
+              defaultValue={p.sync_endpoint || ""}
+              onBlur={(e) => update({ sync_endpoint: e.target.value })}
+            />
+          </div>
+          <p className="text-[10px] text-muted-foreground">
+            URL da Edge Function que fornece os dados do cardápio para sincronização.
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-border pt-4">
+        <div className="mb-2 flex items-center justify-between">
+          <span className="text-sm font-medium">API Key Principal</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-[10px] px-2"
+            onClick={async () => {
+              const apiKey =
+                "fc_" +
+                Array.from(crypto.getRandomValues(new Uint8Array(32)))
+                  .map((b) => b.toString(16).padStart(2, "0"))
+                  .join("");
+              await update({ api_key: apiKey });
+            }}
+          >
+            Redefinir
+          </Button>
+        </div>
+        <div className="flex items-center gap-2">
+          <Input value={p.api_key} readOnly className="h-9 bg-muted text-xs" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              navigator.clipboard.writeText(p.api_key);
+              toast.success("Chave copiada");
+            }}
+          >
+            <Copy className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      <div className="mt-6 border-t border-border pt-4">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-sm font-semibold flex items-center gap-2">
+            <Play className="h-4 w-4 text-primary" />
+            Teste de Recebimento
+          </h3>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => void testOrder()}
+            disabled={testing}
+            className="gap-2"
+          >
+            {testing ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Play className="h-3.5 w-3.5" />
+            )}
+            Enviar Pedido Teste
+          </Button>
+        </div>
+
+        {testResult && !testing && (
+          <div
+            className={`rounded-md p-3 text-xs font-mono overflow-auto max-h-40 ${testResult.ok ? "bg-green-500/10 text-green-600 border border-green-500/20" : "bg-red-500/10 text-red-600 border border-red-500/20"}`}
+          >
+            <div className="font-bold mb-1">Status: {testResult.status}</div>
+            <pre>{JSON.stringify(testResult.data || testResult.error, null, 2)}</pre>
+          </div>
+        )}
+
+        <div className="mt-3 text-[11px] text-muted-foreground flex items-center gap-1.5">
+          <ExternalLink className="h-3 w-3" />O pedido teste aparecerá no Dashboard se for
+          bem-sucedido.
+        </div>
+      </div>
+
+      <PizzeriaPromotion pizzeria={p} />
+    </div>
+  );
+}
+
+function Settings() {
+  const { user, isSuperAdmin } = useAuth();
+  const [pizzerias, setPizzerias] = useState<any[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("");
+
+  const loadPizzerias = async () => {
+    let query = supabase
+      .from("pizzerias")
+      .select("*")
+      .neq("status", "deleted")
+      .neq("status", "inactive")
+      .order("created_at");
+
+    // Se não for super admin, filtra apenas as pizzarias do dono
+    if (!isSuperAdmin && user?.id) {
+      query = query.eq("owner_id", user.id);
+    }
+
+    const { data } = await query;
+    const list = data ?? [];
+    setPizzerias(list);
+
+    if (list.length) {
+      const params = new URLSearchParams(window.location.search);
+      const pId = params.get("pizzeriaId");
+      setActiveId((current) => {
+        if (current && list.some((p) => p.id === current)) return current;
+        if (pId && list.some((p) => p.id === pId)) return pId;
+        return list[0].id;
+      });
+    } else {
+      setActiveId(null);
+    }
+  };
+
+  useEffect(() => {
+    setOrigin(typeof window !== "undefined" ? window.location.origin : "");
+  }, []);
+
+  useEffect(() => {
+    if (user) loadPizzerias();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  function handleSelect(id: string) {
+    setActiveId(id);
+    const url = new URL(window.location.href);
+    url.searchParams.set("pizzeriaId", id);
+    window.history.replaceState({}, "", url);
   }
 
   const baseUrl = origin;
   const createEndpoint = `${origin}/api/pizzerias/create`;
   const ordersEndpoint = `${origin}/api/orders`;
+  const activePizzeria = pizzerias.find((p) => p.id === activeId) ?? null;
 
   return (
     <div className="p-6 md:p-8">
@@ -271,231 +511,31 @@ function Settings() {
         <NotificationSettings />
       </div>
 
-      <h2 className="mb-3 text-xl font-semibold">Suas pizzarias</h2>
-      <div className="space-y-6">
-        {pizzerias.map((p) => (
-          <div key={p.id} className="rounded-xl border border-border bg-card p-4 shadow-sm">
-            <div className="flex items-center justify-between border-b border-border pb-3 mb-4">
-              <div>
-                <div className="font-bold text-lg">{p.name}</div>
-                <div className="text-[10px] uppercase tracking-wider text-muted-foreground font-mono">
-                  ID: {p.id}
-                </div>
-              </div>
-              <Badge variant={p.status === "active" ? "default" : "secondary"}>
-                {p.status === "active" ? "Ativo" : "Pausado"}
-              </Badge>
-            </div>
-            <div className="mt-3 grid gap-2 md:grid-cols-2">
-              <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-background p-3 text-sm">
-                <span>Som ao receber pedido</span>
-                <input
-                  type="checkbox"
-                  defaultChecked={p.sound_enabled}
-                  onChange={(e) => update(p.id, { sound_enabled: e.target.checked })}
-                />
-              </label>
-              <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-background p-3 text-sm">
-                <span>Status do estabelecimento</span>
-                <select
-                  defaultValue={p.status}
-                  className="rounded bg-background px-2 py-1"
-                  onChange={(e) => update(p.id, { status: e.target.value })}
-                >
-                  <option value="active">Ativo</option>
-                  <option value="paused">Pausado</option>
-                </select>
-              </label>
-            </div>
-
-            <div className="mt-6 grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium uppercase text-muted-foreground">
-                  Descrição da Pizzaria
-                </Label>
-                <textarea
-                  className="flex min-h-[80px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                  placeholder="Conte um pouco sobre a sua pizzaria..."
-                  defaultValue={p.description || ""}
-                  onBlur={(e) => update(p.id, { description: e.target.value })}
-                />
-              </div>
-              <div className="space-y-4">
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium uppercase text-muted-foreground">
-                    Taxa de Entrega (R$)
-                  </Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0.00"
-                    defaultValue={p.delivery_fee || 0}
-                    onBlur={(e) => update(p.id, { delivery_fee: parseFloat(e.target.value) || 0 })}
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium uppercase text-muted-foreground">
-                    Taxa de Serviço (%) — 0 a 30
-                  </Label>
-                  <Input
-                    type="number"
-                    min={0}
-                    max={30}
-                    step={0.5}
-                    placeholder="10"
-                    defaultValue={p.service_fee_percent ?? 10}
-                    onBlur={(e) => {
-                      let val = parseFloat(e.target.value);
-                      if (isNaN(val)) val = 10;
-                      if (val < 0) val = 0;
-                      if (val > 30) val = 30;
-                      // arredonda para múltiplo de 0.5
-                      val = Math.round(val * 2) / 2;
-                      e.target.value = String(val);
-                      update(p.id, { service_fee_percent: val });
-                    }}
-                  />
-                  <p className="text-[10px] text-muted-foreground">
-                    Aplicada a novas mesas abertas. Mesas já fechadas não são alteradas.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label className="text-xs font-medium uppercase text-muted-foreground">
-                    Horários de Funcionamento
-                  </Label>
-                  <Input
-                    placeholder="Ex: Seg a Sex: 18h às 23h"
-                    defaultValue={
-                      typeof p.opening_hours === "string"
-                        ? p.opening_hours
-                        : JSON.stringify(p.opening_hours)
-                    }
-                    onBlur={(e) => {
-                      let val = e.target.value;
-                      try {
-                        if (val.startsWith("[") || val.startsWith("{")) {
-                          update(p.id, { opening_hours: JSON.parse(val) });
-                        } else {
-                          update(p.id, { opening_hours: val });
-                        }
-                      } catch {
-                        update(p.id, { opening_hours: val });
-                      }
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-border pt-4">
-              <div className="space-y-2">
-                <Label className="text-xs font-medium uppercase text-muted-foreground">
-                  Endpoint de sincronização do site público
-                </Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    placeholder="https://watjejwgtieqfkpebkfz.supabase.co/functions/v1/menu-sync"
-
-                    defaultValue={p.sync_endpoint || ""}
-                    onBlur={(e) => update(p.id, { sync_endpoint: e.target.value })}
-                  />
-                </div>
-                <p className="text-[10px] text-muted-foreground">
-                  URL da Edge Function que fornece os dados do cardápio para sincronização.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-border pt-4">
-              <div className="mb-2 flex items-center justify-between">
-                <span className="text-sm font-medium">API Key Principal</span>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 text-[10px] px-2"
-                  onClick={async () => {
-                    const apiKey =
-                      "fc_" +
-                      Array.from(crypto.getRandomValues(new Uint8Array(32)))
-                        .map((b) => b.toString(16).padStart(2, "0"))
-                        .join("");
-                    await update(p.id, { api_key: apiKey });
-                  }}
-                >
-                  Redefinir
-                </Button>
-              </div>
-              <div className="flex items-center gap-2">
-                <Input value={p.api_key} readOnly className="h-9 bg-muted text-xs" />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    navigator.clipboard.writeText(p.api_key);
-                    toast.success("Chave copiada");
-                  }}
-                >
-                  <Copy className="h-3.5 w-3.5" />
-                </Button>
-              </div>
-            </div>
-
-            <div className="mt-6 border-t border-border pt-4">
-              <div className="mb-3 flex items-center justify-between">
-                <h3 className="text-sm font-semibold flex items-center gap-2">
-                  <Play className="h-4 w-4 text-primary" />
-                  Teste de Recebimento
-                </h3>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => testOrder(p)}
-                  disabled={testing === p.id}
-                  className="gap-2"
-                >
-                  {testing === p.id ? (
-                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                  ) : (
-                    <Play className="h-3.5 w-3.5" />
-                  )}
-                  Enviar Pedido Teste
-                </Button>
-              </div>
-
-              {testResult && testing === null && pizzerias.find((x) => x.id === p.id) && (
-                <div
-                  className={`rounded-md p-3 text-xs font-mono overflow-auto max-h-40 ${testResult.ok ? "bg-green-500/10 text-green-600 border border-green-500/20" : "bg-red-500/10 text-red-600 border border-red-500/20"}`}
-                >
-                  <div className="font-bold mb-1">Status: {testResult.status}</div>
-                  <pre>{JSON.stringify(testResult.data || testResult.error, null, 2)}</pre>
-                </div>
-              )}
-
-              <div className="mt-3 text-[11px] text-muted-foreground flex items-center gap-1.5">
-                <ExternalLink className="h-3 w-3" />O pedido teste aparecerá no Dashboard se for
-                bem-sucedido.
-              </div>
-            </div>
-
-            <FlyStatusSettings
-              pizzeria={p}
-              onUpdated={(patch) =>
-                setPizzerias((prev) => prev.map((x) => (x.id === p.id ? { ...x, ...patch } : x)))
-              }
-            />
-            <FiqonSettings
-              pizzeria={p}
-              onUpdated={(patch) =>
-                setPizzerias((prev) => prev.map((x) => (x.id === p.id ? { ...x, ...patch } : x)))
-              }
-            />
-            <PizzeriaPromotion pizzeria={p} />
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <h2 className="text-xl font-semibold">Suas pizzarias</h2>
+        {pizzerias.length > 0 && (
+          <div className="w-full sm:w-auto">
+            <PizzeriaSelector pizzerias={pizzerias} activeId={activeId} onSelect={handleSelect} />
           </div>
-        ))}
-        {!pizzerias.length && (
-          <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>
         )}
       </div>
+
+      {!pizzerias.length && (
+        <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>
+      )}
+
+      {activePizzeria && (
+        <PizzeriaSettingsPanel
+          key={activePizzeria.id}
+          pizzeria={activePizzeria}
+          origin={origin}
+          onUpdated={(patch) =>
+            setPizzerias((prev) =>
+              prev.map((x) => (x.id === activePizzeria.id ? { ...x, ...patch } : x)),
+            )
+          }
+        />
+      )}
     </div>
   );
 }
