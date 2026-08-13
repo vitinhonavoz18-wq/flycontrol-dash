@@ -24,7 +24,12 @@ import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 
-type Item = { to: string; label: string; icon: React.ComponentType<{ className?: string }>; match?: (p: string) => boolean };
+type Item = {
+  to: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  match?: (p: string) => boolean;
+};
 
 const PRIMARY: Item[] = [
   { to: "/dashboard", label: "Início", icon: LayoutDashboard },
@@ -45,11 +50,36 @@ const MORE_OWNER: Item[] = [
 ];
 
 const MORE_ADMIN: Item[] = [
-  { to: "/admin/pizzerias", label: "FlyPizzarias", icon: Store, match: (p) => p.startsWith("/admin/pizzerias") },
-  { to: "/admin/analytics", label: "Insights Globais", icon: PieChart, match: (p) => p.startsWith("/admin/analytics") },
-  { to: "/admin/finance", label: "Financeiro Global", icon: BarChart3, match: (p) => p.startsWith("/admin/finance") },
-  { to: "/admin/users", label: "Usuários", icon: Users, match: (p) => p.startsWith("/admin/users") },
-  { to: "/admin/subscriptions", label: "Planos", icon: CreditCard, match: (p) => p.startsWith("/admin/subscriptions") },
+  {
+    to: "/admin/pizzerias",
+    label: "FlyPizzarias",
+    icon: Store,
+    match: (p) => p.startsWith("/admin/pizzerias"),
+  },
+  {
+    to: "/admin/analytics",
+    label: "Insights Globais",
+    icon: PieChart,
+    match: (p) => p.startsWith("/admin/analytics"),
+  },
+  {
+    to: "/admin/finance",
+    label: "Financeiro Global",
+    icon: BarChart3,
+    match: (p) => p.startsWith("/admin/finance"),
+  },
+  {
+    to: "/admin/users",
+    label: "Usuários",
+    icon: Users,
+    match: (p) => p.startsWith("/admin/users"),
+  },
+  {
+    to: "/admin/subscriptions",
+    label: "Planos",
+    icon: CreditCard,
+    match: (p) => p.startsWith("/admin/subscriptions"),
+  },
 ];
 
 export function BottomNav() {
@@ -60,10 +90,16 @@ export function BottomNav() {
   const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
   const showAdmin = isSuperAdmin || isHardcodedAdmin;
 
+  // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
+  // não assinam a própria plataforma, então o item some para eles.
+  const ownerItems = MORE_OWNER.filter((it) => !(it.to === "/billing" && showAdmin));
+
   const isActive = (it: Item) => (it.match ? it.match(path) : path === it.to);
   const moreIsActive =
     !PRIMARY.some(isActive) &&
-    [...MORE_OWNER, ...(showAdmin ? MORE_ADMIN : [])].some((i) => (i.match ? i.match(path) : path === i.to));
+    [...ownerItems, ...(showAdmin ? MORE_ADMIN : [])].some((i) =>
+      i.match ? i.match(path) : path === i.to,
+    );
 
   return (
     <>
@@ -94,8 +130,12 @@ export function BottomNav() {
                   aria-current={active ? "page" : undefined}
                   aria-label={it.label}
                 >
-                  <it.icon className={`h-6 w-6 landscape-compact:h-5 landscape-compact:w-5 ${active ? "scale-110" : ""} transition-transform`} />
-                  <span className="max-w-full truncate px-1 landscape-compact:hidden">{it.label}</span>
+                  <it.icon
+                    className={`h-6 w-6 landscape-compact:h-5 landscape-compact:w-5 ${active ? "scale-110" : ""} transition-transform`}
+                  />
+                  <span className="max-w-full truncate px-1 landscape-compact:hidden">
+                    {it.label}
+                  </span>
                 </Link>
               </li>
             );
@@ -134,7 +174,7 @@ export function BottomNav() {
 
           <div className="p-3">
             <SectionLabel>Gestão</SectionLabel>
-            <Grid items={MORE_OWNER} path={path} onPick={() => setOpenMore(false)} />
+            <Grid items={ownerItems} path={path} onPick={() => setOpenMore(false)} />
 
             {showAdmin && (
               <>
@@ -169,9 +209,17 @@ export function BottomNav() {
   );
 }
 
-function SectionLabel({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+function SectionLabel({
+  children,
+  className = "",
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <div className={`px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ${className}`}>
+    <div
+      className={`px-3 pb-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground ${className}`}
+    >
       {children}
     </div>
   );
@@ -193,7 +241,9 @@ function Grid({ items, path, onPick }: { items: Item[]; path: string; onPick: ()
                 : "border-border bg-card hover:bg-muted"
             }`}
           >
-            <div className={`h-10 w-10 grid place-items-center rounded-lg ${active ? "bg-primary/15" : "bg-muted"}`}>
+            <div
+              className={`h-10 w-10 grid place-items-center rounded-lg ${active ? "bg-primary/15" : "bg-muted"}`}
+            >
               <it.icon className={`h-5 w-5 ${active ? "text-primary" : "text-foreground"}`} />
             </div>
             <span className="text-sm font-semibold leading-tight">{it.label}</span>

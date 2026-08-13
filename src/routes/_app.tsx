@@ -172,7 +172,14 @@ function AppLayoutInner() {
     { to: "/commissions", label: "Comissões", icon: Wallet, feature: "commissions" },
     { to: "/docs", label: "Documentação", icon: BookOpen },
   ];
-  const items = allItems.filter((it) => !it.feature || hasFeature(it.feature));
+  // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
+  // não assinam a própria plataforma, então o item some para eles. Quem
+  // administra assinaturas de todo mundo usa "Clientes e Planos", no Painel
+  // Admin.
+  const showAdmin = isSuperAdmin || isHardcodedAdmin;
+  const items = allItems.filter(
+    (it) => (!it.feature || hasFeature(it.feature)) && !(it.to === "/billing" && showAdmin),
+  );
 
   const adminItems = [
     { to: "/admin/pizzerias", label: "FlyPizzarias", icon: Store },
@@ -210,7 +217,7 @@ function AppLayoutInner() {
         </Link>
       ))}
 
-      {(isSuperAdmin || isHardcodedAdmin) && (
+      {showAdmin && (
         <>
           <div className="px-3 pb-1 pt-6 text-xs font-semibold uppercase text-muted-foreground/70 border-t border-sidebar-border mt-4">
             Painel Admin
