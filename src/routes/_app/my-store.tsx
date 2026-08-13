@@ -24,8 +24,10 @@ import {
   Palette,
   LayoutGrid,
   ShoppingBag,
+  ShieldCheck,
 } from "lucide-react";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
+import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { syncToExternal } from "@/utils/menuSync";
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
@@ -92,8 +94,21 @@ function formatPhoneMask(value: string): string {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
-export default function MyStore() {
-  const { user, isSuperAdmin } = useAuth();
+/**
+ * Formulário de "Minha Loja" de uma pizzaria específica.
+ *
+ * Não decide sozinho QUAL loja é essa — quem chama informa `pizzeriaId`. É o
+ * que permite reaproveitar exatamente a mesma tela tanto para o dono (a loja
+ * dele, sempre a mesma) quanto para um administrador (a loja que ele
+ * escolheu no seletor, podendo trocar a qualquer momento).
+ */
+function StoreEditor({
+  pizzeriaId,
+  isAdminEditing,
+}: {
+  pizzeriaId: string;
+  isAdminEditing: boolean;
+}) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pizzeria, setPizzeria] = useState<any>(null);
@@ -101,23 +116,14 @@ export default function MyStore() {
   const loadData = async () => {
     setLoading(true);
     try {
-      let query = supabase
+      const { data: pizzeriaData, error: pError } = await supabase
         .from("pizzerias")
         .select("*")
-        .neq("status", "deleted")
-        .neq("status", "inactive");
-
-      if (!isSuperAdmin && user?.id) {
-        query = query.eq("owner_id", user.id);
-      }
-
-      const { data: pizzeriasData, error: pError } = await query
-        .order("created_at")
-        .limit(1)
+        .eq("id", pizzeriaId)
         .maybeSingle();
 
       if (pError) throw pError;
-      setPizzeria(pizzeriasData);
+      setPizzeria(pizzeriaData);
     } catch (error: any) {
       toast.error("Erro ao carregar dados: " + error.message);
     } finally {
@@ -126,8 +132,9 @@ export default function MyStore() {
   };
 
   useEffect(() => {
-    if (user) loadData();
-  }, [user]);
+    loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pizzeriaId]);
 
   // Lojas cadastradas antes de o FlyControl conectar automaticamente ao
   // SiteCreatorFly no momento do cadastro ficaram sem o "endereço" de
@@ -254,6 +261,20 @@ export default function MyStore() {
 
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8">
+      {/* Aviso de que quem está editando é um administrador, não o dono da
+          loja — sem isso, um clique errado no seletor mudaria os dados de
+          outra pizzaria sem ninguém perceber a troca de contexto. */}
+      {isAdminEditing && (
+        <div className="flex items-center gap-3 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm">
+          <ShieldCheck className="h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400" />
+          <p className="text-amber-800 dark:text-amber-300">
+            <strong>Modo administrador:</strong> você está editando a loja{" "}
+            <strong>{pizzeria.name}</strong>, não a sua própria conta. Toda alteração aqui já salva
+            e publica no site público dessa loja na hora.
+          </p>
+        </div>
+      )}
+
       {/* Barra de Status Rápido */}
       <Card
         className={`border-2 ${pizzeria.is_open ? "border-green-500/50 bg-green-500/5" : "border-red-500/50 bg-red-500/5"}`}
@@ -837,6 +858,118 @@ export default function MyStore() {
           </Card>
         </TabsContent>
       </Tabs>
+    </div>
+  );
+}
+
+type PizzeriaOption = { id: string; name: string; slug: string; status: string };
+
+/**
+ * Dono de loja: cai direto na própria loja, como sempre foi.
+ *
+ * Administrador: primeiro escolhe, no mesmo seletor já usado em Cardápio e
+ * Combos, qual loja quer editar — sem isso ele sempre caía na loja mais
+ * antiga cadastrada, sem chance de escolher outra.
+ */
+export default function MyStore() {
+  const { user, isSuperAdmin } = useAuth();
+  const [pizzerias, setPizzerias] = useState<PizzeriaOption[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (user) loadPizzerias();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
+
+  async function loadPizzerias() {
+    setLoading(true);
+    let query = supabase
+      .from("pizzerias")
+      .select("id, name, slug, status")
+      .neq("status", "deleted")
+      .order("name");
+
+    if (!isSuperAdmin && user?.id) {
+      query = query.eq("owner_id", user.id);
+    }
+
+    const { data, error } = await query;
+    if (error) {
+      toast.error("Erro ao carregar lojas: " + error.message);
+      setLoading(false);
+      return;
+    }
+
+    setPizzerias(data ?? []);
+
+    if (!isSuperAdmin) {
+      // Dono só tem a própria loja: entra direto, sem seletor.
+      setActiveId(data?.[0]?.id ?? null);
+    } else if (data && data.length) {
+      const params = new URLSearchParams(window.location.search);
+      const pId = params.get("pizzeriaId");
+      // Só usa o id da URL se ele realmente estiver na lista — evita ficar
+      // preso numa loja excluída ou de outro administrador que não existe
+      // mais aqui.
+      setActiveId(pId && data.some((p) => p.id === pId) ? pId : null);
+    }
+
+    setLoading(false);
+  }
+
+  function handleSelect(id: string) {
+    setActiveId(id);
+    const url = new URL(window.location.href);
+    url.searchParams.set("pizzeriaId", id);
+    window.history.replaceState({}, "", url);
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-[400px] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!pizzerias.length) {
+    return (
+      <div className="p-8 text-center">
+        <Store className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
+        <h2 className="text-xl font-bold">Nenhuma loja encontrada</h2>
+        <p className="text-muted-foreground mt-2">
+          Você precisa vincular uma pizzaria nas Configurações primeiro.
+        </p>
+      </div>
+    );
+  }
+
+  if (isSuperAdmin && !activeId) {
+    return (
+      <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold">Minha Loja</h1>
+          <p className="text-muted-foreground">Escolha qual loja você quer visualizar e editar.</p>
+        </div>
+        <PizzeriaSelector pizzerias={pizzerias} activeId={activeId} onSelect={handleSelect} />
+      </div>
+    );
+  }
+
+  if (!activeId) return null;
+
+  return (
+    <div className="space-y-6">
+      {isSuperAdmin && (
+        <div className="mx-auto flex max-w-6xl flex-col gap-3 px-6 pt-6 sm:flex-row sm:items-center sm:justify-between md:px-8 md:pt-8">
+          <p className="text-sm text-muted-foreground">Editando como administrador:</p>
+          <div className="w-full sm:w-auto">
+            <PizzeriaSelector pizzerias={pizzerias} activeId={activeId} onSelect={handleSelect} />
+          </div>
+        </div>
+      )}
+      <StoreEditor pizzeriaId={activeId} isAdminEditing={isSuperAdmin} />
     </div>
   );
 }
