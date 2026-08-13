@@ -84,6 +84,15 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
 
     const intent = (found ?? null) as IntentRow | null;
 
+    // Já confirmada e do mesmo plano: quase sempre é o aviso de pagamento
+    // (webhook) da InfinityPay, que roda em paralelo e pode terminar antes de
+    // o cliente ser trazido de volta pra esta tela. Não é reuso suspeito — é
+    // o caminho automático já tendo funcionado. Tratar isso como recusa
+    // assustaria quem, na verdade, já está com a assinatura ativa.
+    if (intent && intent.status === "confirmed" && intent.plan_code === planCode) {
+      return reportAlreadyConfirmed(intent, planCode);
+    }
+
     const verdict = validateIntentForReturn(
       intent && {
         planCode: intent.plan_code,
@@ -106,14 +115,6 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
       };
     }
 
-    const { data: companyRow } = await supabaseAdmin
-      .from("pizzerias")
-      .select("name")
-      .eq("id", intent.company_id)
-      .maybeSingle();
-
-    const companyName = (companyRow as { name?: string } | null)?.name ?? "seu estabelecimento";
-
     // Sem confirmação da InfinityPay, ativar é uma decisão de risco explícita
     // de quem opera — ver shouldTrustCheckoutReturn.
     const trustReturn = shouldTrustCheckoutReturn(process.env);
@@ -135,6 +136,22 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
       .maybeSingle();
 
     if (!claimed) {
+      // Ninguém mais tinha essa intenção com este status um instante atrás,
+      // na leitura acima — mas o aviso de pagamento pode ter reivindicado
+      // ela bem no meio desta chamada. Reconfere antes de recusar: se agora
+      // está confirmada, é a mesma boa notícia do caso de cima, só que
+      // chegou uma fração de segundo mais tarde.
+      const { data: recheck } = await db
+        .from("checkout_intents")
+        .select("id, company_id, subscription_id, plan_code, status, expires_at")
+        .eq("id", intent.id)
+        .maybeSingle();
+      const recheckedIntent = recheck as IntentRow | null;
+
+      if (recheckedIntent?.status === "confirmed" && recheckedIntent.plan_code === planCode) {
+        return reportAlreadyConfirmed(recheckedIntent, planCode);
+      }
+
       return {
         recognized: false,
         code: "already_used",
@@ -194,5 +211,27 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
       await provisionAndForget(intent.company_id);
     }
 
+    const { data: companyRow } = await supabaseAdmin
+      .from("pizzerias")
+      .select("name")
+      .eq("id", intent.company_id)
+      .maybeSingle();
+    const companyName = (companyRow as { name?: string } | null)?.name ?? "seu estabelecimento";
+
     return { recognized: true, companyName, planCode, activated: trustReturn };
   });
+
+/** Monta a resposta de sucesso para uma intenção que já estava confirmada. */
+async function reportAlreadyConfirmed(
+  intent: IntentRow,
+  planCode: PlanCode,
+): Promise<ConfirmReturnResult> {
+  const { data: companyRow } = await supabaseAdmin
+    .from("pizzerias")
+    .select("name")
+    .eq("id", intent.company_id)
+    .maybeSingle();
+  const companyName = (companyRow as { name?: string } | null)?.name ?? "seu estabelecimento";
+
+  return { recognized: true, companyName, planCode, activated: true };
+}
