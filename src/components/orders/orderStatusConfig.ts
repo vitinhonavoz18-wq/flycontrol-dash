@@ -133,14 +133,23 @@ export function formatElapsed(createdAt: string | Date, now: number): string {
 export type MoveCheck = { allowed: true } | { allowed: false; reason: string };
 
 /**
+ * Todo destino que o quadro aceita soltar um card em cima: as três colunas,
+ * mais o botão "Finalizar pedido" que aparece durante o arraste. `"entregue"`
+ * não tem coluna própria — ao virar esse status o pedido some do quadro e
+ * passa a existir só no histórico.
+ */
+export type MoveTarget = KanbanStatus | "entregue";
+
+/**
  * Regra de movimentação. O fluxo natural é
- * `novo → preparando → saiu`, mas voltar uma etapa é permitido — um pedido
- * devolvido pela cozinha precisa voltar para "Em preparo".
+ * `novo → preparando → saiu → entregue`, mas voltar uma etapa é permitido —
+ * um pedido devolvido pela cozinha precisa voltar para "Em preparo", e um
+ * pedido saiu para entrega errado pode ser finalizado direto.
  *
  * Só é bloqueado o que não faz sentido: soltar o card na coluna em que ele
  * já está, ou mover um pedido já finalizado/cancelado.
  */
-export function canMoveOrder(from: string, to: KanbanStatus): MoveCheck {
+export function canMoveOrder(from: string, to: MoveTarget): MoveCheck {
   if (from === to) {
     return { allowed: false, reason: "O pedido já está nesta etapa." };
   }

@@ -72,6 +72,12 @@ describe("regras de movimentação", () => {
     expect(canMoveOrder("novo", "saiu")).toEqual({ allowed: true });
   });
 
+  it("permite finalizar direto de qualquer coluna do quadro", () => {
+    expect(canMoveOrder("novo", "entregue")).toEqual({ allowed: true });
+    expect(canMoveOrder("preparando", "entregue")).toEqual({ allowed: true });
+    expect(canMoveOrder("saiu", "entregue")).toEqual({ allowed: true });
+  });
+
   it("recusa soltar o card na coluna em que ele já está", () => {
     const result = canMoveOrder("preparando", "preparando");
     expect(result.allowed).toBe(false);

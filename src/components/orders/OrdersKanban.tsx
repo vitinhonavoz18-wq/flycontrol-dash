@@ -15,6 +15,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import type { Order } from "@/types/order";
 import { useUpdateOrderStatus } from "@/hooks/useUpdateOrderStatus";
+import { FinalizeDropZone } from "./FinalizeDropZone";
 import { OrderCardOverlay } from "./OrderCardOverlay";
 import { OrderDetailsDrawer } from "./OrderDetailsDrawer";
 import { OrdersKanbanColumn } from "./OrdersKanbanColumn";
@@ -24,7 +25,13 @@ import {
   getStatusLabel,
   isKanbanStatus,
   type KanbanStatus,
+  type MoveTarget,
 } from "./orderStatusConfig";
+
+/** Todo id de destino que o quadro reconhece ao soltar um card. */
+function isMoveTarget(id: string): id is MoveTarget {
+  return isKanbanStatus(id) || id === "entregue";
+}
 
 export type OrdersKanbanProps = {
   /** Pedidos já filtrados pela tela. */
@@ -144,7 +151,7 @@ export function OrdersKanban({
       if (!over) return;
 
       const target = String(over.id);
-      if (!isKanbanStatus(target)) return;
+      if (!isMoveTarget(target)) return;
 
       const order = orders.find((o) => o.id === String(active.id));
       if (!order) return;
@@ -171,12 +178,12 @@ export function OrdersKanban({
           : "Pedido selecionado.";
       },
       onDragOver: ({ over }) =>
-        over && isKanbanStatus(String(over.id))
-          ? `Sobre a coluna ${getStatusLabel(String(over.id))}.`
+        over && isMoveTarget(String(over.id))
+          ? `Sobre ${getStatusLabel(String(over.id))}.`
           : "Fora de qualquer coluna.",
       onDragEnd: ({ active, over }) => {
         const order = orders.find((o) => o.id === String(active.id));
-        if (!over || !isKanbanStatus(String(over.id))) {
+        if (!over || !isMoveTarget(String(over.id))) {
           return "Movimentação cancelada, o pedido permanece na etapa atual.";
         }
         return `Pedido ${order?.order_number ?? ""} movido para ${getStatusLabel(String(over.id))}.`;
@@ -219,6 +226,8 @@ export function OrdersKanban({
         <DragOverlay dropAnimation={null}>
           {activeOrder ? <OrderCardOverlay order={activeOrder} now={now} /> : null}
         </DragOverlay>
+
+        <FinalizeDropZone visible={activeOrder !== null} />
       </DndContext>
 
       <OrderDetailsDrawer

@@ -5,7 +5,7 @@ import type { Order } from "@/types/order";
 import {
   canMoveOrder,
   getStatusLabel,
-  type KanbanStatus,
+  type MoveTarget,
 } from "@/components/orders/orderStatusConfig";
 
 /**
@@ -90,7 +90,7 @@ export function useUpdateOrderStatus({
    * ressincronizado em vez de sobrescrever a alteração mais recente.
    */
   const moveOrder = useCallback(
-    async (order: Order, toStatus: KanbanStatus): Promise<MoveResult> => {
+    async (order: Order, toStatus: MoveTarget): Promise<MoveResult> => {
       if (inFlight.current.has(order.id)) return { ok: false };
 
       const fromStatus = order.status;
