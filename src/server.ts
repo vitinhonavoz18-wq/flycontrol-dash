@@ -12,7 +12,7 @@ let serverEntryPromise: Promise<ServerEntry> | undefined;
 async function getServerEntry(): Promise<ServerEntry> {
   if (!serverEntryPromise) {
     serverEntryPromise = import("@tanstack/react-start/server-entry").then(
-      (m) => ((m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry)),
+      (m) => (m as { default?: ServerEntry }).default ?? (m as unknown as ServerEntry),
     );
   }
   return serverEntryPromise;
@@ -66,6 +66,35 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   return brandedErrorResponse();
 }
 
+/**
+ * Disparo diário do Cloudflare Cron Trigger (ver wrangler.jsonc).
+ *
+ * Não repete a lógica de fechamento aqui — chama o próprio endpoint HTTP
+ * já protegido pelo segredo, exatamente como qualquer outro agendador
+ * externo faria. Um único caminho de fechamento, testado uma vez só.
+ */
+async function runDailyBillingCron(env: Record<string, string | undefined>): Promise<void> {
+  const base = (env.FLYCONTROL_PUBLIC_URL || "").trim().replace(/\/+$/, "");
+  const secret = (env.BILLING_CRON_SECRET || "").trim();
+
+  if (!base || !secret) {
+    console.error(
+      "[cron] FLYCONTROL_PUBLIC_URL ou BILLING_CRON_SECRET ausente — fechamento de ciclos não disparado.",
+    );
+    return;
+  }
+
+  try {
+    const resp = await fetch(`${base}/api/billing/close-cycles`, {
+      method: "POST",
+      headers: { "x-billing-cron-secret": secret },
+    });
+    console.log(`[cron] fechamento de ciclos: status ${resp.status}`);
+  } catch (error) {
+    console.error("[cron] falha ao disparar o fechamento de ciclos:", error);
+  }
+}
+
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
@@ -76,5 +105,13 @@ export default {
       console.error(error);
       return brandedErrorResponse();
     }
+  },
+
+  async scheduled(
+    _event: unknown,
+    env: Record<string, string | undefined>,
+    ctx: { waitUntil: (promise: Promise<unknown>) => void },
+  ) {
+    ctx.waitUntil(runDailyBillingCron(env));
   },
 };

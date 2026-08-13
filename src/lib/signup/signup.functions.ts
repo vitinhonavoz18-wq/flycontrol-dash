@@ -31,6 +31,7 @@ import {
   resolveCheckoutConfig,
 } from "@/lib/billing/checkout";
 import { createInfinityPayCheckoutLink, infinityPayHandle } from "@/lib/billing/infinitypay/api";
+import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { PAYMENT_BYPASS_REASON, isPaymentBypassAllowed } from "./paymentBypass";
@@ -467,8 +468,13 @@ export const createAccount = createServerFn({ method: "POST" })
       });
 
       // O atalho de teste ativa a conta na hora, então o cardápio nasce junto
-      // — é justamente o fluxo completo que se quer inspecionar.
-      if (bypassPayment) await provisionAndForget(companyId);
+      // — é justamente o fluxo completo que se quer inspecionar. O ciclo de
+      // cobrança abre junto, para o atalho reproduzir fielmente o que
+      // acontece numa ativação de verdade.
+      if (bypassPayment) {
+        await openFirstCycle(db, (subscription as { id: string }).id);
+        await provisionAndForget(companyId);
+      }
 
       return {
         companyId,

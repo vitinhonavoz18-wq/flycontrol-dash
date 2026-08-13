@@ -14,6 +14,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
 import { isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import {
   hashIntentToken,
@@ -194,6 +195,11 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
           provider_confirmed: false,
         },
       });
+
+      // Sem isso, o gatilho que conta pedidos no banco nunca teria onde
+      // lançar o consumo — a conta ficaria ativa e recebendo pedidos sem
+      // nunca ser cobrada por eles.
+      if (trustReturn) await openFirstCycle(db, intent.subscription_id);
     }
 
     if (trustReturn) {

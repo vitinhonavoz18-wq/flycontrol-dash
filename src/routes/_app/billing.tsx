@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ArrowUpRight, Check, Loader2, Receipt } from "lucide-react";
+import { AlertTriangle, ArrowUpRight, Check, ExternalLink, Loader2, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +16,7 @@ import {
   type SubscriptionStatus,
 } from "@/lib/billing/subscriptionStatus";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
+import { getPendingCharge } from "@/lib/billing/getPendingCharge.functions";
 import { FEATURE_LABELS, featuresForPlan } from "@/lib/planPermissions";
 
 export const Route = createFileRoute("/_app/billing")({ component: BillingPage });
@@ -200,6 +201,23 @@ function BillingPage() {
     void load();
   }, [load]);
 
+  const [pendingChargeUrl, setPendingChargeUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const pendingInvoice = snapshot?.invoices.find((i) => i.status === "pending");
+    if (!pendingInvoice) {
+      setPendingChargeUrl(null);
+      return;
+    }
+    let cancelled = false;
+    void getPendingCharge({ data: { invoiceId: pendingInvoice.id } }).then((result) => {
+      if (!cancelled) setPendingChargeUrl(result?.checkoutUrl ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [snapshot]);
+
   if (loading) {
     return (
       <div className="flex min-h-[50dvh] items-center justify-center">
@@ -257,6 +275,30 @@ function BillingPage() {
           ) : undefined
         }
       />
+
+      {pendingChargeUrl && (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle
+                className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400"
+                aria-hidden="true"
+              />
+              <div>
+                <p className="text-sm font-bold text-foreground">Existe uma fatura em aberto</p>
+                <p className="text-sm text-muted-foreground">
+                  Pague para continuar com o acesso liberado, sem interrupção.
+                </p>
+              </div>
+            </div>
+            <Button asChild className="h-11 gap-2">
+              <a href={pendingChargeUrl} target="_blank" rel="noreferrer">
+                Pagar agora <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="space-y-3 p-4">

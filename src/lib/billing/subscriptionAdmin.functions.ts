@@ -13,6 +13,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { initialUnitPriceCents } from "./billingEngine";
+import { pizzeriaAccessStatusFor } from "./collections";
 import { COMPANY_BILLING_MODEL, isPublicPlanCode, type PlanCode } from "./plans";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { asBillingDb, type BillingDb } from "./supabaseBridge";
@@ -125,6 +126,14 @@ export const changeSubscriptionStatus = createServerFn({ method: "POST" })
         "A assinatura foi alterada por outro administrador. Recarregue e tente novamente.",
       );
     }
+
+    // O reflexo no campo que a porta de acesso confere de verdade. Sem isso,
+    // "suspender" por aqui não bloqueia nada na prática — quem trancava o
+    // acesso de verdade era só o painel antigo, que mexe direto nesta coluna.
+    await supabase
+      .from("pizzerias")
+      .update({ subscription_status: pizzeriaAccessStatusFor(target) })
+      .eq("id", subscription.company_id);
 
     await recordEvent(supabase, {
       subscriptionId: subscription.id,

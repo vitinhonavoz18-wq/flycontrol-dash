@@ -116,7 +116,11 @@ function AppLayoutInner() {
   const isPublicRoute = ["/docs", "/settings"].includes(path); // Settings is restricted but we might want them to see it? User said block main functions.
 
   // We block if inactive, not super admin, and trying to access anything other than docs or if explicitly blocked
-  const shouldBlock = isBlocked && !path.startsWith("/admin") && path !== "/docs";
+  // "/billing" também escapa do bloqueio: é lá que a fatura em atraso tem o
+  // botão de pagamento. Bloquear essa página junto trancaria quem foi
+  // suspenso por falta de pagamento numa tela sem nenhum jeito de pagar.
+  const shouldBlock =
+    isBlocked && !path.startsWith("/admin") && path !== "/docs" && path !== "/billing";
 
   if (shouldBlock) {
     return (
@@ -126,18 +130,21 @@ function AppLayoutInner() {
         </div>
         <h1 className="mb-2 text-2xl font-bold">Loja Suspensa</h1>
         <p className="mb-8 max-w-md text-muted-foreground">
-          Esta loja está temporariamente suspensa. Entre em contato com o suporte da Conectfly para
-          regularizar o acesso.
+          Esta loja está temporariamente suspensa. Se for por falta de pagamento, regularize na tela
+          de cobrança. Se não for, entre em contato com o suporte.
         </p>
-        <Button
-          variant="outline"
-          onClick={async () => {
-            await signOut();
-            nav({ to: "/login" });
-          }}
-        >
-          <LogOut className="mr-2 h-4 w-4" /> Sair da conta
-        </Button>
+        <div className="flex flex-col gap-3 sm:flex-row">
+          <Button onClick={() => nav({ to: "/billing" })}>Ver cobrança e pagar</Button>
+          <Button
+            variant="outline"
+            onClick={async () => {
+              await signOut();
+              nav({ to: "/login" });
+            }}
+          >
+            <LogOut className="mr-2 h-4 w-4" /> Sair da conta
+          </Button>
+        </div>
       </div>
     );
   }
