@@ -83,7 +83,7 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
               disabled={saving}
             />
             <p className="text-[10px] text-muted-foreground">
-              O slug deve ser idêntico ao configurado no SiteCreatorFly.
+              O slug deve ser idêntico ao configurado no seu site público.
             </p>
           </div>
         </CardContent>

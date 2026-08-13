@@ -35,7 +35,6 @@ export type TableSession = {
   order_count?: number;
 };
 
-
 export function useTables(tenantId: string | null) {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [loading, setLoading] = useState(false);
@@ -47,7 +46,8 @@ export function useTables(tenantId: string | null) {
   async function loadTables() {
     if (!tenantId) return;
     setLoading(true);
-    const selectStr = "*, default_waiter:waiters!restaurant_tables_default_waiter_id_fkey(id, full_name)";
+    const selectStr =
+      "*, default_waiter:waiters!restaurant_tables_default_waiter_id_fkey(id, full_name)";
     const { data, error } = await supabase
       .from("restaurant_tables")
       .select(selectStr)
@@ -61,8 +61,8 @@ export function useTables(tenantId: string | null) {
     }
 
     if (data.length === 0) {
-      const { error: rpcError } = await supabase.rpc('generate_default_restaurant_tables', {
-        p_restaurant_id: tenantId
+      const { error: rpcError } = await supabase.rpc("generate_default_restaurant_tables", {
+        p_restaurant_id: tenantId,
       });
 
       if (rpcError) {
@@ -87,10 +87,10 @@ export function useTables(tenantId: string | null) {
 
   async function addTable(tableNumber: string, tableName?: string) {
     if (!tenantId) return;
-    
+
     // Auto-generate a secure public token (the trigger will also handle this, but it's good practice)
-    const publicToken = crypto.randomUUID().replace(/-/g, '').substring(0, 16);
-    
+    const publicToken = crypto.randomUUID().replace(/-/g, "").substring(0, 16);
+
     const { data, error } = await supabase
       .from("restaurant_tables")
       .insert({
@@ -99,7 +99,7 @@ export function useTables(tenantId: string | null) {
         table_number: tableNumber,
         table_name: tableName || `Mesa ${tableNumber}`,
         public_token: publicToken,
-        is_active: true
+        is_active: true,
       })
       .select()
       .single();
@@ -108,24 +108,25 @@ export function useTables(tenantId: string | null) {
       toast.error("Erro ao adicionar mesa: " + error.message);
       return null;
     }
-    
+
     const newTable = data as RestaurantTable;
-    setTables(prev => [...prev, newTable].sort((a, b) => a.table_number.localeCompare(b.table_number, undefined, { numeric: true })));
+    setTables((prev) =>
+      [...prev, newTable].sort((a, b) =>
+        a.table_number.localeCompare(b.table_number, undefined, { numeric: true }),
+      ),
+    );
     return newTable;
   }
 
   async function updateTable(id: string, updates: Partial<RestaurantTable>) {
     const { default_waiter_name: _drop, ...clean } = updates as any;
-    const { error } = await supabase
-      .from("restaurant_tables")
-      .update(clean)
-      .eq("id", id);
+    const { error } = await supabase.from("restaurant_tables").update(clean).eq("id", id);
 
     if (error) {
       toast.error("Erro ao atualizar mesa: " + error.message);
       return false;
     }
-    
+
     // Reload to get the updated qr_code_url from trigger if it changed
     await loadTables();
     toast.success("Mesa atualizada com sucesso!");
@@ -141,20 +142,17 @@ export function useTables(tenantId: string | null) {
     if (error) {
       toast.error("Erro ao atualizar mesa: " + error.message);
     } else {
-      setTables(prev => prev.map(t => t.id === id ? { ...t, is_active: isActive } : t));
+      setTables((prev) => prev.map((t) => (t.id === id ? { ...t, is_active: isActive } : t)));
     }
   }
 
   async function deleteTable(id: string) {
-    const { error } = await supabase
-      .from("restaurant_tables")
-      .delete()
-      .eq("id", id);
+    const { error } = await supabase.from("restaurant_tables").delete().eq("id", id);
 
     if (error) {
       toast.error("Erro ao excluir mesa: " + error.message);
     } else {
-      setTables(prev => prev.filter(t => t.id !== id));
+      setTables((prev) => prev.filter((t) => t.id !== id));
       toast.success("Mesa excluída com sucesso!");
     }
   }
@@ -179,7 +177,16 @@ export function useTables(tenantId: string | null) {
     }
   }, [tenantId]);
 
-  return { tables, loading, loadTables, addTable, updateTable, toggleTable, deleteTable, updateDefaultWaiter };
+  return {
+    tables,
+    loading,
+    loadTables,
+    addTable,
+    updateTable,
+    toggleTable,
+    deleteTable,
+    updateDefaultWaiter,
+  };
 }
 
 export function useTableSessions(tenantId: string | null) {
@@ -189,15 +196,17 @@ export function useTableSessions(tenantId: string | null) {
   async function loadSessions() {
     if (!tenantId) return;
     setLoading(true);
-    
+
     // Using restaurant_id as confirmed by database schema
     const { data, error } = await supabase
       .from("table_sessions")
-      .select(`
+      .select(
+        `
         *,
         table_session_orders(count),
         waiter:waiters(id, full_name)
-      `)
+      `,
+      )
       .eq("restaurant_id", tenantId)
       .eq("status", "open")
       .order("opened_at", { ascending: false });
@@ -205,7 +214,7 @@ export function useTableSessions(tenantId: string | null) {
     if (error) {
       toast.error("Erro ao carregar sessões: " + error.message);
     } else {
-      const mappedData = (data as any[]).map(s => ({
+      const mappedData = (data as any[]).map((s) => ({
         id: s.id,
         tenant_id: s.restaurant_id,
         table_id: s.table_id,
@@ -222,7 +231,7 @@ export function useTableSessions(tenantId: string | null) {
         table_name: s.table_name,
         waiter_id: s.waiter_id ?? null,
         waiter_name: s.waiter?.full_name ?? null,
-        order_count: s.table_session_orders?.[0]?.count || 0
+        order_count: s.table_session_orders?.[0]?.count || 0,
       })) as TableSession[];
       setSessions(mappedData);
     }
@@ -245,7 +254,7 @@ export function useTableSessions(tenantId: string | null) {
         return;
       }
       if (!res.webhookOk) {
-        toast.warning("Mesa fechada, mas o webhook do SiteCreatorFly falhou.");
+        toast.warning("Mesa fechada, mas não foi possível avisar o site público.");
       } else {
         toast.success("Mesa encerrada.");
       }
@@ -255,13 +264,12 @@ export function useTableSessions(tenantId: string | null) {
     }
   }
 
-
   useEffect(() => {
     if (tenantId) loadSessions();
   }, [tenantId]);
 
   async function toggleServiceFee(sessionId: string, enabled: boolean) {
-    const session = sessions.find(s => s.id === sessionId);
+    const session = sessions.find((s) => s.id === sessionId);
     if (!session) return;
 
     // Se ativando, use a taxa configurada na pizzaria (fonte da verdade).
@@ -295,22 +303,27 @@ export function useTableSessions(tenantId: string | null) {
     if (error) {
       toast.error("Erro ao atualizar taxa de serviço: " + error.message);
     } else {
-      setSessions(prev => prev.map(s => s.id === sessionId ? {
-        ...s,
-        service_fee_enabled: enabled,
-        service_fee_percent: percent,
-        service_fee_amount: feeAmount,
-        total_amount: total,
-      } : s));
+      setSessions((prev) =>
+        prev.map((s) =>
+          s.id === sessionId
+            ? {
+                ...s,
+                service_fee_enabled: enabled,
+                service_fee_percent: percent,
+                service_fee_amount: feeAmount,
+                total_amount: total,
+              }
+            : s,
+        ),
+      );
       toast.success(enabled ? `Taxa de ${percent}% adicionada!` : "Taxa de serviço removida.");
     }
   }
 
-
   async function assignWaiter(
     sessionId: string,
     waiterId: string | null,
-    opts: { alsoSetDefault?: boolean } = {}
+    opts: { alsoSetDefault?: boolean } = {},
   ) {
     const { error } = await supabase
       .from("table_sessions")
@@ -323,7 +336,7 @@ export function useTableSessions(tenantId: string | null) {
     }
 
     if (opts.alsoSetDefault) {
-      const session = sessions.find(s => s.id === sessionId);
+      const session = sessions.find((s) => s.id === sessionId);
       if (session?.table_id) {
         const { error: e2 } = await supabase
           .from("restaurant_tables")
@@ -337,7 +350,9 @@ export function useTableSessions(tenantId: string | null) {
     toast.success(
       opts.alsoSetDefault
         ? "Garçom padrão da mesa atualizado!"
-        : waiterId ? "Garçom atribuído à mesa!" : "Garçom removido da mesa."
+        : waiterId
+          ? "Garçom atribuído à mesa!"
+          : "Garçom removido da mesa.",
     );
     return true;
   }

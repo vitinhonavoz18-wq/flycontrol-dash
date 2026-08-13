@@ -61,7 +61,7 @@ function Landing() {
             {
               icon: Zap,
               title: "Seu site de pedidos já conversa com o painel",
-              desc: "Fez o site com o SiteCreatorFly? O pedido cai direto aqui, na hora, sem ninguém copiar nada à mão de um lugar pro outro.",
+              desc: "Já tem um site de pedidos? O pedido cai direto aqui, na hora, sem ninguém copiar nada à mão de um lugar pro outro.",
             },
           ].map((f) => (
             <div
@@ -211,8 +211,6 @@ function Landing() {
       {/* ── FOOTER ───────────────────────────────────────── */}
       <footer className="border-t border-white/6 py-8 text-center text-xs text-white/20">
         © {new Date().getFullYear()} FlyControl. Todos os direitos reservados.
-        <span className="mx-2 opacity-40">·</span>
-        Powered by SiteCreatorFly
       </footer>
     </div>
   );

@@ -15,7 +15,8 @@ function DocsPage() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://flycontrol.lovable.app";
+  const origin =
+    typeof window !== "undefined" ? window.location.origin : "https://flycontrol.lovable.app";
   const orderEndpoint = `${origin}/api/orders`;
   const healthEndpoint = `${origin}/api/health`;
 
@@ -51,7 +52,8 @@ function DocsPage() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Documentação de Integração</h1>
         <p className="mt-2 text-muted-foreground">
-          Aprenda como conectar o SiteCreatorFly (ou qualquer outro sistema) ao painel FlyControl.
+          Aprenda como conectar o seu site de pedidos (ou qualquer outro sistema) ao painel
+          FlyControl.
         </p>
       </div>
 
@@ -63,10 +65,14 @@ function DocsPage() {
           <p>Existem duas formas de integrar uma pizzaria:</p>
           <ul className="list-disc pl-5 space-y-2">
             <li>
-              <strong>Nova Pizzaria:</strong> Ao criar uma pizzaria no FlyControl, uma <code>API Key</code> exclusiva é gerada. Copie esta chave e cole nas configurações do seu site no SiteCreatorFly.
+              <strong>Nova Pizzaria:</strong> Ao criar uma pizzaria no FlyControl, uma{" "}
+              <code>API Key</code> exclusiva é gerada. Copie esta chave e cole nas configurações do
+              seu site.
             </li>
             <li>
-              <strong>Pizzaria Existente:</strong> Se você já tem uma pizzaria no SiteCreatorFly com uma API Key, use a opção <strong>"Conectar Pizzaria Existente"</strong> no Dashboard do FlyControl e cole a chave original.
+              <strong>Pizzaria Existente:</strong> Se você já tem uma pizzaria no seu site com uma
+              API Key, use a opção <strong>"Conectar Pizzaria Existente"</strong> no Dashboard do
+              FlyControl e cole a chave original.
             </li>
           </ul>
         </CardContent>
@@ -82,11 +88,22 @@ function DocsPage() {
             <div className="flex items-center gap-2 p-2 bg-muted rounded border font-mono text-xs">
               <span className="text-primary font-bold">POST</span>
               <span className="flex-1 truncate">{orderEndpoint}</span>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copy(orderEndpoint, "endpoint")}>
-                {copied === "endpoint" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6"
+                onClick={() => copy(orderEndpoint, "endpoint")}
+              >
+                {copied === "endpoint" ? (
+                  <Check className="h-3 w-3" />
+                ) : (
+                  <Copy className="h-3 w-3" />
+                )}
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground">Envie pedidos novos para processamento imediato.</p>
+            <p className="text-xs text-muted-foreground">
+              Envie pedidos novos para processamento imediato.
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -109,11 +126,15 @@ function DocsPage() {
           <div className="space-y-3">
             <div>
               <p className="font-medium mb-1">Via Header (Recomendado):</p>
-              <code className="block p-2 bg-muted rounded border text-xs">Authorization: Bearer SUA_API_KEY</code>
+              <code className="block p-2 bg-muted rounded border text-xs">
+                Authorization: Bearer SUA_API_KEY
+              </code>
             </div>
             <div>
               <p className="font-medium mb-1">Via Payload JSON:</p>
-              <code className="block p-2 bg-muted rounded border text-xs">"api_key": "SUA_API_KEY"</code>
+              <code className="block p-2 bg-muted rounded border text-xs">
+                "api_key": "SUA_API_KEY"
+              </code>
             </div>
           </div>
         </CardContent>
@@ -128,9 +149,9 @@ function DocsPage() {
             <pre className="p-4 bg-slate-950 text-slate-50 rounded-lg overflow-x-auto text-xs leading-relaxed">
               {curlExample}
             </pre>
-            <Button 
-              variant="secondary" 
-              size="sm" 
+            <Button
+              variant="secondary"
+              size="sm"
               className="absolute top-2 right-2 h-7"
               onClick={() => copy(curlExample, "curl")}
             >

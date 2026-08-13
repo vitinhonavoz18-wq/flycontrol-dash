@@ -25,7 +25,13 @@ interface PizzaSizeListProps {
   onRefresh?: () => void;
 }
 
-export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoint, onRefresh }: PizzaSizeListProps) {
+export function PizzaSizeList({
+  pizzeriaId,
+  pizzeriaSlug,
+  pizzeriaApiKey,
+  syncEndpoint,
+  onRefresh,
+}: PizzaSizeListProps) {
   const [sizes, setSizes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -86,7 +92,7 @@ export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEn
     }
 
     setSaving(true);
-    const numericPrice = parseFloat(price.replace(',', '.'));
+    const numericPrice = parseFloat(price.replace(",", "."));
     const payload = {
       name,
       price: numericPrice,
@@ -102,31 +108,32 @@ export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEn
 
       if (pizzeriaSlug && pizzeriaApiKey) {
         const syncResult = await syncToExternal({
-          type: 'pizza_size',
-          action: editingSize ? 'update' : 'create',
+          type: "pizza_size",
+          action: editingSize ? "update" : "create",
           id: editingSize?.id,
           externalId: editingSize?.external_id,
           data: payload,
           pizzeriaSlug,
           pizzeriaApiKey,
-          syncEndpoint
+          syncEndpoint,
         });
 
         if (!syncResult.success) {
-          let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
-          
+          let errorMsg =
+            "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
+
           if (syncResult.error === "404") {
             errorMsg = "Endpoint de sincronização não encontrado (404).";
           } else if (syncResult.error === "auth_error") {
             errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
           } else if (syncResult.error === "cors_error") {
-            errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+            errorMsg = "Erro de conexão ao atualizar o site público.";
           } else if (syncResult.error === "html_response") {
             errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
           } else if (syncResult.error?.startsWith("api_error:")) {
             errorMsg = syncResult.error.replace("api_error:", "");
           }
-          
+
           toast.error(errorMsg);
           setSaving(false);
           return;
@@ -135,10 +142,10 @@ export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEn
         }
       }
 
-      const finalPayload = { 
-        ...payload, 
-        external_id: externalId, 
-        updated_at: new Date().toISOString()
+      const finalPayload = {
+        ...payload,
+        external_id: externalId,
+        updated_at: new Date().toISOString(),
       };
 
       let error;
@@ -149,9 +156,7 @@ export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEn
           .eq("id", editingSize.id);
         error = err;
       } else {
-        const { error: err } = await supabase
-          .from("pizzeria_pizza_sizes")
-          .insert(finalPayload);
+        const { error: err } = await supabase.from("pizzeria_pizza_sizes").insert(finalPayload);
         error = err;
       }
 
@@ -172,20 +177,21 @@ export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEn
 
   async function toggleActive(size: any) {
     const newValue = !size.active;
-    
+
     if (pizzeriaSlug && pizzeriaApiKey && size.external_id) {
       const syncResult = await syncToExternal({
-        type: 'pizza_size',
-        action: 'status',
+        type: "pizza_size",
+        action: "status",
         externalId: size.external_id,
-        data: { field: 'is_active', value: newValue },
+        data: { field: "is_active", value: newValue },
         pizzeriaSlug,
         pizzeriaApiKey,
-        syncEndpoint
+        syncEndpoint,
       });
 
       if (!syncResult.success) {
-        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
+        let errorMsg =
+          "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
         if (syncResult.error?.startsWith("api_error:")) {
           errorMsg = syncResult.error.replace("api_error:", "");
         }
@@ -198,7 +204,7 @@ export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEn
       .from("pizzeria_pizza_sizes")
       .update({ active: newValue, updated_at: new Date().toISOString() })
       .eq("id", size.id);
-    
+
     if (error) {
       toast.error("Erro ao atualizar: " + error.message);
     } else {
@@ -209,16 +215,21 @@ export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEn
   }
 
   async function handleDelete(size: any) {
-    if (!confirm("Tem certeza que deseja excluir este tamanho? Isso pode afetar os cálculos de preço no site.")) return;
+    if (
+      !confirm(
+        "Tem certeza que deseja excluir este tamanho? Isso pode afetar os cálculos de preço no site.",
+      )
+    )
+      return;
 
     if (pizzeriaSlug && pizzeriaApiKey && size.external_id) {
       const syncResult = await syncToExternal({
-        type: 'pizza_size',
-        action: 'delete',
+        type: "pizza_size",
+        action: "delete",
         externalId: size.external_id,
         pizzeriaSlug,
         pizzeriaApiKey,
-        syncEndpoint
+        syncEndpoint,
       });
 
       if (!syncResult.success) {
@@ -228,11 +239,8 @@ export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEn
       }
     }
 
-    const { error } = await supabase
-      .from("pizzeria_pizza_sizes")
-      .delete()
-      .eq("id", size.id);
-    
+    const { error } = await supabase.from("pizzeria_pizza_sizes").delete().eq("id", size.id);
+
     if (error) {
       toast.error("Erro ao excluir: " + error.message);
     } else {
@@ -263,33 +271,51 @@ export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEn
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {sizes.map((size) => (
-          <Card key={size.id} className={`transition-all hover:border-primary/30 ${!size.active ? 'opacity-60 bg-muted/30' : ''}`}>
+          <Card
+            key={size.id}
+            className={`transition-all hover:border-primary/30 ${!size.active ? "opacity-60 bg-muted/30" : ""}`}
+          >
             <CardContent className="p-4 space-y-4">
               <div className="flex justify-between items-start">
                 <div>
                   <h4 className="font-bold text-lg">{size.name}</h4>
-                  <p className="text-xs text-muted-foreground">{size.slices} fatias • Até {size.max_flavors} {size.max_flavors === 1 ? 'sabor' : 'sabores'}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {size.slices} fatias • Até {size.max_flavors}{" "}
+                    {size.max_flavors === 1 ? "sabor" : "sabores"}
+                  </p>
                 </div>
                 <div className="text-right">
                   <p className="font-bold text-xl text-primary">R$ {size.price.toFixed(2)}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">Preço Base</p>
+                  <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
+                    Preço Base
+                  </p>
                 </div>
               </div>
 
               <div className="flex items-center justify-between pt-2 border-t">
                 <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium">{size.active ? 'Ativo' : 'Inativo'}</span>
-                  <Switch 
-                    checked={size.active} 
+                  <span className="text-xs font-medium">{size.active ? "Ativo" : "Inativo"}</span>
+                  <Switch
+                    checked={size.active}
                     onCheckedChange={() => toggleActive(size)}
                     className="h-4 w-7"
                   />
                 </div>
                 <div className="flex items-center gap-1">
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(size)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8"
+                    onClick={() => openEdit(size)}
+                  >
                     <Pencil className="h-4 w-4" />
                   </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(size)}>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive"
+                    onClick={() => handleDelete(size)}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
@@ -312,33 +338,60 @@ export function PizzaSizeList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEn
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="size-name">Nome do Tamanho</Label>
-              <Input id="size-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Pequena, Média, Grande, Família" />
+              <Input
+                id="size-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Pequena, Média, Grande, Família"
+              />
             </div>
-            
+
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="size-price">Preço Base (R$)</Label>
-                <Input id="size-price" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" />
+                <Input
+                  id="size-price"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0,00"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="size-flavors">Máx. de Sabores</Label>
-                <Input id="size-flavors" type="number" value={maxFlavors} onChange={(e) => setMaxFlavors(e.target.value)} />
+                <Input
+                  id="size-flavors"
+                  type="number"
+                  value={maxFlavors}
+                  onChange={(e) => setMaxFlavors(e.target.value)}
+                />
               </div>
             </div>
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="size-slices">Qtd. de Fatias</Label>
-                <Input id="size-slices" type="number" value={slices} onChange={(e) => setSlices(e.target.value)} />
+                <Input
+                  id="size-slices"
+                  type="number"
+                  value={slices}
+                  onChange={(e) => setSlices(e.target.value)}
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="size-order">Ordem de Exibição</Label>
-                <Input id="size-order" type="number" value={sortOrder} onChange={(e) => setSortOrder(e.target.value)} />
+                <Input
+                  id="size-order"
+                  type="number"
+                  value={sortOrder}
+                  onChange={(e) => setSortOrder(e.target.value)}
+                />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar"}
             </Button>

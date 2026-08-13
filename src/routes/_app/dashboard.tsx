@@ -690,7 +690,7 @@ function Dashboard() {
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Conectar Pizzaria Existente</h2>
             <p className="text-sm text-muted-foreground">
-              Vincule uma pizzaria que já possui uma API Key no SiteCreatorFly.
+              Vincule uma pizzaria que já possui uma API Key no seu site.
             </p>
             <NewPizzeriaCard onCreate={createPizzeria} mode="connect" />
           </div>

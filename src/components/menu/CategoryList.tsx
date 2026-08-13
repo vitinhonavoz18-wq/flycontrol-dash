@@ -27,8 +27,14 @@ interface CategoryListProps {
   syncEndpoint?: string;
 }
 
-export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, pizzeriaApiKey, syncEndpoint }: CategoryListProps) {
-
+export function CategoryList({
+  pizzeriaId,
+  categories,
+  onRefresh,
+  pizzeriaSlug,
+  pizzeriaApiKey,
+  syncEndpoint,
+}: CategoryListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [name, setName] = useState("");
@@ -70,31 +76,32 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
       // Sync to external if we have credentials
       if (pizzeriaSlug && pizzeriaApiKey) {
         const syncResult = await syncToExternal({
-          type: 'category',
-          action: editingCategory ? 'update' : 'create',
+          type: "category",
+          action: editingCategory ? "update" : "create",
           id: editingCategory?.id,
           externalId: editingCategory?.external_id,
           data: payload,
           pizzeriaSlug,
           pizzeriaApiKey,
-          syncEndpoint
+          syncEndpoint,
         });
 
         if (!syncResult.success) {
-          let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
-          
+          let errorMsg =
+            "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
+
           if (syncResult.error === "404") {
             errorMsg = "Endpoint de sincronização não encontrado (404).";
           } else if (syncResult.error === "auth_error") {
             errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
           } else if (syncResult.error === "cors_error") {
-            errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+            errorMsg = "Erro de conexão ao atualizar o site público.";
           } else if (syncResult.error === "html_response") {
             errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
           } else if (syncResult.error?.startsWith("api_error:")) {
             errorMsg = syncResult.error.replace("api_error:", "");
           }
-          
+
           toast.error(errorMsg);
           setLoading(false);
           return;
@@ -103,11 +110,11 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
         }
       }
 
-      const finalPayload = { 
-        ...payload, 
-        external_id: externalId, 
-        external_source: externalId ? 'sitecreatorfly' : null, 
-        updated_at: new Date().toISOString() 
+      const finalPayload = {
+        ...payload,
+        external_id: externalId,
+        external_source: externalId ? "sitecreatorfly" : null,
+        updated_at: new Date().toISOString(),
       };
 
       let error;
@@ -118,9 +125,7 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
           .eq("id", editingCategory.id);
         error = err;
       } else {
-        const { error: err } = await supabase
-          .from("menu_categories")
-          .insert(finalPayload);
+        const { error: err } = await supabase.from("menu_categories").insert(finalPayload);
         error = err;
       }
 
@@ -141,30 +146,31 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
   async function toggleActive(cat: any) {
     if (pizzeriaSlug && pizzeriaApiKey && cat.external_id) {
       const syncResult = await syncToExternal({
-        type: 'category',
-        action: 'status',
+        type: "category",
+        action: "status",
         externalId: cat.external_id,
-        data: { field: 'is_active', value: !cat.active },
+        data: { field: "is_active", value: !cat.active },
         pizzeriaSlug,
         pizzeriaApiKey,
-        syncEndpoint
+        syncEndpoint,
       });
 
       if (!syncResult.success) {
-        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
-        
+        let errorMsg =
+          "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
+
         if (syncResult.error === "404") {
           errorMsg = "Endpoint de sincronização não encontrado (404).";
         } else if (syncResult.error === "auth_error") {
           errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
         } else if (syncResult.error === "cors_error") {
-          errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+          errorMsg = "Erro de conexão ao atualizar o site público.";
         } else if (syncResult.error === "html_response") {
           errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
         } else if (syncResult.error?.startsWith("api_error:")) {
           errorMsg = syncResult.error.replace("api_error:", "");
         }
-        
+
         toast.error(errorMsg);
         return;
       }
@@ -174,7 +180,7 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
       .from("menu_categories")
       .update({ active: !cat.active, updated_at: new Date().toISOString() })
       .eq("id", cat.id);
-    
+
     if (error) {
       toast.error("Erro ao atualizar status: " + error.message);
     } else {
@@ -184,43 +190,46 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
   }
 
   async function handleDelete(cat: any) {
-    if (!confirm("Tem certeza que deseja excluir esta categoria? Isso pode afetar os produtos vinculados.")) return;
+    if (
+      !confirm(
+        "Tem certeza que deseja excluir esta categoria? Isso pode afetar os produtos vinculados.",
+      )
+    )
+      return;
 
     if (pizzeriaSlug && pizzeriaApiKey && cat.external_id) {
       const syncResult = await syncToExternal({
-        type: 'category',
-        action: 'delete',
+        type: "category",
+        action: "delete",
         externalId: cat.external_id,
         pizzeriaSlug,
         pizzeriaApiKey,
-        syncEndpoint
+        syncEndpoint,
       });
 
       if (!syncResult.success) {
-        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
-        
+        let errorMsg =
+          "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
+
         if (syncResult.error === "404") {
           errorMsg = "Endpoint de sincronização não encontrado (404).";
         } else if (syncResult.error === "auth_error") {
           errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
         } else if (syncResult.error === "cors_error") {
-          errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+          errorMsg = "Erro de conexão ao atualizar o site público.";
         } else if (syncResult.error === "html_response") {
           errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
         } else if (syncResult.error?.startsWith("api_error:")) {
           errorMsg = syncResult.error.replace("api_error:", "");
         }
-        
+
         toast.error(errorMsg);
         return;
       }
     }
 
-    const { error } = await supabase
-      .from("menu_categories")
-      .delete()
-      .eq("id", cat.id);
-    
+    const { error } = await supabase.from("menu_categories").delete().eq("id", cat.id);
+
     if (error) {
       toast.error("Erro ao excluir categoria: " + error.message);
     } else {
@@ -242,7 +251,10 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
 
       <div className="grid gap-3">
         {categories.map((cat) => (
-          <Card key={cat.id} className={`transition-colors hover:border-primary/30 ${!cat.active ? 'opacity-60 bg-muted/30' : ''}`}>
+          <Card
+            key={cat.id}
+            className={`transition-colors hover:border-primary/30 ${!cat.active ? "opacity-60 bg-muted/30" : ""}`}
+          >
             {/* Duas faixas empilhadas no celular (identificação em cima, ações
                 embaixo) e uma linha só a partir de sm. O `min-w-0` em cascata
                 é o que faz o nome truncar em vez de empurrar as ações para
@@ -264,12 +276,12 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
               <div className="flex items-center justify-between gap-2 sm:justify-end sm:gap-3">
                 <div className="flex items-center gap-2">
                   <span className="whitespace-nowrap text-xs text-muted-foreground">
-                    {cat.active ? 'Ativa' : 'Inativa'}
+                    {cat.active ? "Ativa" : "Inativa"}
                   </span>
                   <Switch
                     checked={cat.active}
                     onCheckedChange={() => toggleActive(cat)}
-                    aria-label={`${cat.active ? 'Desativar' : 'Ativar'} a categoria ${cat.name}`}
+                    aria-label={`${cat.active ? "Desativar" : "Ativar"} a categoria ${cat.name}`}
                   />
                 </div>
                 {/* h-11 w-11 = 44px de área de toque, com o ícone menor dentro. */}
@@ -312,25 +324,27 @@ export function CategoryList({ pizzeriaId, categories, onRefresh, pizzeriaSlug, 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
               <Label htmlFor="name">Nome</Label>
-              <Input 
-                id="name" 
-                value={name} 
-                onChange={(e) => setName(e.target.value)} 
-                placeholder="Ex: Pizzas Tradicionais, Bebidas, etc." 
+              <Input
+                id="name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Pizzas Tradicionais, Bebidas, etc."
               />
             </div>
             <div className="space-y-2">
               <Label htmlFor="description">Descrição (opcional)</Label>
-              <Input 
-                id="description" 
-                value={description} 
-                onChange={(e) => setDescription(e.target.value)} 
-                placeholder="Ex: Todas as pizzas acompanham molho de tomate." 
+              <Input
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder="Ex: Todas as pizzas acompanham molho de tomate."
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleSave} disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar"}
             </Button>

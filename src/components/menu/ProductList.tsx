@@ -6,7 +6,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
-import { Plus, Pencil, Trash2, Image as ImageIcon, Loader2, ChevronDown, ChevronRight, Search } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Trash2,
+  Image as ImageIcon,
+  Loader2,
+  ChevronDown,
+  ChevronRight,
+  Search,
+} from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
 import { ImageUpload } from "@/components/ui/image-upload";
 
@@ -36,8 +45,16 @@ interface ProductListProps {
   onRefresh?: () => void;
 }
 
-export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug, pizzeriaApiKey, syncEndpoint, onRefresh }: ProductListProps) {
-
+export function ProductList({
+  pizzeriaId,
+  categories,
+  type,
+  title,
+  pizzeriaSlug,
+  pizzeriaApiKey,
+  syncEndpoint,
+  onRefresh,
+}: ProductListProps) {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -101,9 +118,7 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase();
     const filter = (p: any) =>
-      !q ||
-      p.name?.toLowerCase().includes(q) ||
-      p.description?.toLowerCase().includes(q);
+      !q || p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
 
     const groups = categories.map((cat) => ({
       id: cat.id,
@@ -138,12 +153,12 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     }
 
     setSaving(true);
-    const numericPrice = parseFloat(price.replace(',', '.'));
+    const numericPrice = parseFloat(price.replace(",", "."));
     const payload = {
       name,
       description,
       price: numericPrice,
-      category_id: productType === 'beverage' ? null : (categoryId || null),
+      category_id: productType === "beverage" ? null : categoryId || null,
       image_url: imageUrl,
       product_type: productType,
       pizzeria_id: pizzeriaId,
@@ -156,15 +171,15 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
 
       if (pizzeriaSlug && pizzeriaApiKey) {
         // Find external category ID
-        const cat = categories.find(c => c.id === categoryId);
+        const cat = categories.find((c) => c.id === categoryId);
         const rawExternalCategoryId = cat?.external_id ?? null;
-        const SF_CAT_PREFIX = 'sf_cat_';
+        const SF_CAT_PREFIX = "sf_cat_";
         const normalizedExternalCategoryId =
           rawExternalCategoryId && rawExternalCategoryId.startsWith(SF_CAT_PREFIX)
             ? rawExternalCategoryId.slice(SF_CAT_PREFIX.length)
             : rawExternalCategoryId;
 
-        console.log('[ProductSync] Category trace', {
+        console.log("[ProductSync] Category trace", {
           localCategoryId: categoryId || null,
           localCategoryName: cat?.name ?? null,
           externalCategoryId: rawExternalCategoryId,
@@ -172,9 +187,9 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
           finalCategoryIdSent: normalizedExternalCategoryId,
         });
 
-        if (productType !== 'beverage' && !normalizedExternalCategoryId) {
+        if (productType !== "beverage" && !normalizedExternalCategoryId) {
           toast.error(
-            'Categoria não sincronizada com o SiteCreatorFly. Sincronize/recadastre a categoria antes de salvar o produto.'
+            "Categoria não sincronizada com o site público. Sincronize/recadastre a categoria antes de salvar o produto.",
           );
           setSaving(false);
           return;
@@ -182,31 +197,31 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
 
         const syncResult = await syncToExternal({
           type: productType,
-          action: editingProduct ? 'update' : 'create',
+          action: editingProduct ? "update" : "create",
           id: editingProduct?.id,
           externalId: editingProduct?.external_id,
           data: { ...payload, external_category_id: normalizedExternalCategoryId },
           pizzeriaSlug,
           pizzeriaApiKey,
-          syncEndpoint
+          syncEndpoint,
         });
 
-
         if (!syncResult.success) {
-          let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
-          
+          let errorMsg =
+            "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
+
           if (syncResult.error === "404") {
             errorMsg = "Endpoint de sincronização não encontrado (404).";
           } else if (syncResult.error === "auth_error") {
             errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
           } else if (syncResult.error === "cors_error") {
-            errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+            errorMsg = "Erro de conexão ao atualizar o site público.";
           } else if (syncResult.error === "html_response") {
             errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
           } else if (syncResult.error?.startsWith("api_error:")) {
             errorMsg = syncResult.error.replace("api_error:", "");
           }
-          
+
           toast.error(errorMsg);
           setSaving(false);
           return;
@@ -215,11 +230,11 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
         }
       }
 
-      const finalPayload = { 
-        ...payload, 
-        external_id: externalId, 
-        external_source: externalId ? 'sitecreatorfly' : null,
-        updated_at: new Date().toISOString()
+      const finalPayload = {
+        ...payload,
+        external_id: externalId,
+        external_source: externalId ? "sitecreatorfly" : null,
+        updated_at: new Date().toISOString(),
       };
 
       let error;
@@ -230,9 +245,7 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
           .eq("id", editingProduct.id);
         error = err;
       } else {
-        const { error: err } = await supabase
-          .from("menu_products")
-          .insert(finalPayload);
+        const { error: err } = await supabase.from("menu_products").insert(finalPayload);
         error = err;
       }
 
@@ -251,37 +264,38 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     }
   }
 
-  async function toggleStatus(prod: any, field: 'active' | 'available') {
+  async function toggleStatus(prod: any, field: "active" | "available") {
     const newValue = !prod[field];
-    
+
     if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
       // Standardize to 'active' as requested, using 'is_active' for the external field reference if needed
       // but syncToExternal already maps body.active = data.value for status action
       const syncResult = await syncToExternal({
         type: prod.product_type,
-        action: 'status',
+        action: "status",
         externalId: prod.external_id,
         data: { value: newValue },
         pizzeriaSlug,
         pizzeriaApiKey,
-        syncEndpoint
+        syncEndpoint,
       });
 
       if (!syncResult.success) {
-        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
-        
+        let errorMsg =
+          "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
+
         if (syncResult.error === "404") {
           errorMsg = "Endpoint de sincronização não encontrado (404).";
         } else if (syncResult.error === "auth_error") {
           errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
         } else if (syncResult.error === "cors_error") {
-          errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+          errorMsg = "Erro de conexão ao atualizar o site público.";
         } else if (syncResult.error === "html_response") {
           errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
         } else if (syncResult.error?.startsWith("api_error:")) {
           errorMsg = syncResult.error.replace("api_error:", "");
         }
-        
+
         toast.error(errorMsg);
         return;
       }
@@ -289,12 +303,12 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
 
     const updateData: any = {};
     updateData[field] = newValue;
-    
+
     const { error } = await supabase
       .from("menu_products")
       .update({ ...updateData, updated_at: new Date().toISOString() })
       .eq("id", prod.id);
-    
+
     if (error) {
       toast.error("Erro ao atualizar: " + error.message);
     } else {
@@ -310,38 +324,36 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
       const syncResult = await syncToExternal({
         type: prod.product_type,
-        action: 'delete',
+        action: "delete",
         externalId: prod.external_id,
         pizzeriaSlug,
         pizzeriaApiKey,
-        syncEndpoint
+        syncEndpoint,
       });
 
       if (!syncResult.success) {
-        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
-        
+        let errorMsg =
+          "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
+
         if (syncResult.error === "404") {
           errorMsg = "Endpoint de sincronização não encontrado (404).";
         } else if (syncResult.error === "auth_error") {
           errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
         } else if (syncResult.error === "cors_error") {
-          errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+          errorMsg = "Erro de conexão ao atualizar o site público.";
         } else if (syncResult.error === "html_response") {
           errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
         } else if (syncResult.error?.startsWith("api_error:")) {
           errorMsg = syncResult.error.replace("api_error:", "");
         }
-        
+
         toast.error(errorMsg);
         return;
       }
     }
 
-    const { error } = await supabase
-      .from("menu_products")
-      .delete()
-      .eq("id", prod.id);
-    
+    const { error } = await supabase.from("menu_products").delete().eq("id", prod.id);
+
     if (error) {
       toast.error("Erro ao excluir produto: " + error.message);
     } else {
@@ -355,9 +367,7 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
     const q = search.trim().toLowerCase();
     if (!q) return products;
     return products.filter(
-      (p) =>
-        p.name?.toLowerCase().includes(q) ||
-        p.description?.toLowerCase().includes(q)
+      (p) => p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q),
     );
   }, [products, search]);
 
@@ -372,7 +382,10 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
   const isBeverage = type === "beverage";
 
   const renderProductCard = (prod: any) => (
-    <Card key={prod.id} className={`overflow-hidden transition-all hover:border-primary/30 ${!prod.active ? 'opacity-60 bg-muted/30' : ''}`}>
+    <Card
+      key={prod.id}
+      className={`overflow-hidden transition-all hover:border-primary/30 ${!prod.active ? "opacity-60 bg-muted/30" : ""}`}
+    >
       {prod.image_url ? (
         <div className="h-40 w-full overflow-hidden bg-muted">
           <img src={prod.image_url} alt={prod.name} className="h-full w-full object-cover" />
@@ -386,18 +399,20 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
         <div className="flex justify-between items-start gap-2">
           <div>
             <h4 className="font-bold line-clamp-1">{prod.name}</h4>
-            <p className="text-xs text-muted-foreground">{prod.menu_categories?.name || 'Sem categoria'}</p>
+            <p className="text-xs text-muted-foreground">
+              {prod.menu_categories?.name || "Sem categoria"}
+            </p>
           </div>
           <p className="font-bold text-primary">R$ {prod.price.toFixed(2)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[10px] font-medium">
-            <span className={prod.available ? 'text-success' : 'text-destructive'}>
-              {prod.available ? 'Disponível' : 'Indisponível'}
+            <span className={prod.available ? "text-success" : "text-destructive"}>
+              {prod.available ? "Disponível" : "Indisponível"}
             </span>
             <Switch
               checked={prod.available}
-              onCheckedChange={() => toggleStatus(prod, 'available')}
+              onCheckedChange={() => toggleStatus(prod, "available")}
               className="h-4 w-7 data-[state=checked]:bg-success"
             />
           </div>
@@ -405,7 +420,7 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
             <span>Ativo</span>
             <Switch
               checked={prod.active}
-              onCheckedChange={() => toggleStatus(prod, 'active')}
+              onCheckedChange={() => toggleStatus(prod, "active")}
               className="h-4 w-7"
             />
           </div>
@@ -414,7 +429,12 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
           <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(prod)}>
             <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => handleDelete(prod)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-destructive"
+            onClick={() => handleDelete(prod)}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>
@@ -463,12 +483,21 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
                     onClick={() => toggleCategory(group.id)}
                     className="flex items-center gap-2 flex-1 text-left"
                   >
-                    {isOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+                    {isOpen ? (
+                      <ChevronDown className="h-4 w-4" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4" />
+                    )}
                     <span className="font-semibold">{group.name}</span>
                     <span className="text-xs text-muted-foreground">({group.items.length})</span>
                   </button>
                   {isReal && (
-                    <Button size="sm" variant="ghost" className="gap-1 h-7" onClick={() => openCreate(group.id)}>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="gap-1 h-7"
+                      onClick={() => openCreate(group.id)}
+                    >
                       <Plus className="h-3.5 w-3.5" /> Novo
                     </Button>
                   )}
@@ -483,7 +512,12 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
                       <div className="text-center py-6 text-sm text-muted-foreground">
                         <p className="mb-2">Nenhum produto cadastrado.</p>
                         {isReal && (
-                          <Button size="sm" variant="outline" className="gap-1" onClick={() => openCreate(group.id)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-1"
+                            onClick={() => openCreate(group.id)}
+                          >
                             <Plus className="h-3.5 w-3.5" /> Criar Produto
                           </Button>
                         )}
@@ -502,7 +536,6 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
         </div>
       )}
 
-
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -512,13 +545,23 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2 col-span-2">
                 <Label htmlFor="prod-name">Nome</Label>
-                <Input id="prod-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Margherita, Coca-Cola 350ml" />
+                <Input
+                  id="prod-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Margherita, Coca-Cola 350ml"
+                />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="prod-price">Preço (R$)</Label>
-                <Input id="prod-price" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" />
+                <Input
+                  id="prod-price"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                  placeholder="0,00"
+                />
               </div>
-              {productType !== 'beverage' && (
+              {productType !== "beverage" && (
                 <div className="space-y-2">
                   <Label htmlFor="prod-cat">Categoria</Label>
                   <Select value={categoryId} onValueChange={setCategoryId}>
@@ -527,7 +570,9 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
                     </SelectTrigger>
                     <SelectContent>
                       {categories.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name}
+                        </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -549,20 +594,31 @@ export function ProductList({ pizzeriaId, categories, type, title, pizzeriaSlug,
               </Select>
             </div>
 
-            {productType !== 'beverage' && (
+            {productType !== "beverage" && (
               <div className="space-y-2">
                 <Label htmlFor="prod-desc">Descrição</Label>
-                <Input id="prod-desc" value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Ingredientes, detalhes..." />
+                <Input
+                  id="prod-desc"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="Ingredientes, detalhes..."
+                />
               </div>
             )}
 
             <div className="space-y-2">
               <Label>Imagem</Label>
-              <ImageUpload value={imageUrl} onChange={(url) => setImageUrl(url ?? "")} folder="products" />
+              <ImageUpload
+                value={imageUrl}
+                onChange={(url) => setImageUrl(url ?? "")}
+                folder="products"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar"}
             </Button>
