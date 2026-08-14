@@ -129,7 +129,16 @@ export const PizzeriasDashboard = () => {
                 </TableCell>
                 <TableCell className="text-right">
                   <div className="flex justify-end gap-2">
-                    <Button variant="outline" size="icon" asChild title="Abrir Cardápio">
+                    {/* h-11 w-11 = 44px de área de toque, explícito em vez de
+                        depender só da regra global — os dois primeiros usam
+                        `asChild` (viram <a>/<Link>), que fica de fora dela. */}
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-11 w-11"
+                      asChild
+                      title="Abrir Cardápio"
+                    >
                       <a
                         href={`https://sitecreatorfly.lovable.app/${p.pizzeria_id}`}
                         target="_blank"
@@ -141,6 +150,7 @@ export const PizzeriasDashboard = () => {
                     <Button
                       variant="outline"
                       size="icon"
+                      className="h-11 w-11"
                       onClick={() => copyLink(p.pizzeria_id || "", p.pizzeria_id || "")}
                       title="Copiar Link"
                     >
@@ -150,7 +160,13 @@ export const PizzeriasDashboard = () => {
                         <Copy className="h-4 w-4" />
                       )}
                     </Button>
-                    <Button variant="outline" size="icon" asChild title="Ver no Painel">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="h-11 w-11"
+                      asChild
+                      title="Ver no Painel"
+                    >
                       {/* Link do roteador, e não <a href>: aqui é navegação
                           dentro do próprio FlyControl — um link cru recarrega
                           a página inteira, que é a sensação de "site" que

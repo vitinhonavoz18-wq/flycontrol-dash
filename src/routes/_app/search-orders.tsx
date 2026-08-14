@@ -8,10 +8,19 @@ import { Label } from "@/components/ui/label";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, RotateCcw, Loader2 } from "lucide-react";
@@ -43,7 +52,13 @@ type OrderRow = {
 };
 
 const STATUS_OPTIONS = [
-  "pendente", "preparando", "pronto", "saiu_entrega", "entregue", "concluido", "cancelado",
+  "pendente",
+  "preparando",
+  "pronto",
+  "saiu_entrega",
+  "entregue",
+  "concluido",
+  "cancelado",
 ];
 const PAYMENT_OPTIONS = ["dinheiro", "pix", "cartao", "credito", "debito", "online"];
 const TYPE_OPTIONS = [
@@ -134,8 +149,14 @@ function SearchOrdersPage() {
 
   function resetFilters() {
     setFilters({
-      customer: "", phone: "", orderNumber: "", startDate: "", endDate: "",
-      status: "all", payment: "all", type: "all",
+      customer: "",
+      phone: "",
+      orderNumber: "",
+      startDate: "",
+      endDate: "",
+      status: "all",
+      payment: "all",
+      type: "all",
     });
     setRows([]);
   }
@@ -145,7 +166,11 @@ function SearchOrdersPage() {
     const raw = selected.items;
     if (Array.isArray(raw)) return raw;
     if (typeof raw === "string") {
-      try { return JSON.parse(raw); } catch { return []; }
+      try {
+        return JSON.parse(raw);
+      } catch {
+        return [];
+      }
     }
     return [];
   }, [selected]);
@@ -166,58 +191,106 @@ function SearchOrdersPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="space-y-1.5">
             <Label>Nome do Cliente</Label>
-            <Input value={filters.customer} onChange={(e) => setFilters({ ...filters, customer: e.target.value })} placeholder="Ex: João" />
+            <Input
+              value={filters.customer}
+              onChange={(e) => setFilters({ ...filters, customer: e.target.value })}
+              placeholder="Ex: João"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Telefone</Label>
-            <Input value={filters.phone} onChange={(e) => setFilters({ ...filters, phone: e.target.value })} placeholder="(11) 99999-9999" />
+            <Input
+              value={filters.phone}
+              onChange={(e) => setFilters({ ...filters, phone: e.target.value })}
+              placeholder="(11) 99999-9999"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Nº do Pedido</Label>
-            <Input value={filters.orderNumber} onChange={(e) => setFilters({ ...filters, orderNumber: e.target.value })} placeholder="123" />
+            <Input
+              value={filters.orderNumber}
+              onChange={(e) => setFilters({ ...filters, orderNumber: e.target.value })}
+              placeholder="123"
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Status</Label>
-            <Select value={filters.status} onValueChange={(v) => setFilters({ ...filters, status: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={filters.status}
+              onValueChange={(v) => setFilters({ ...filters, status: v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {STATUS_OPTIONS.map((s) => <SelectItem key={s} value={s}>{s}</SelectItem>)}
+                {STATUS_OPTIONS.map((s) => (
+                  <SelectItem key={s} value={s}>
+                    {s}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Data Inicial</Label>
-            <Input type="date" value={filters.startDate} onChange={(e) => setFilters({ ...filters, startDate: e.target.value })} />
+            <Input
+              type="date"
+              value={filters.startDate}
+              onChange={(e) => setFilters({ ...filters, startDate: e.target.value })}
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Data Final</Label>
-            <Input type="date" value={filters.endDate} onChange={(e) => setFilters({ ...filters, endDate: e.target.value })} />
+            <Input
+              type="date"
+              value={filters.endDate}
+              onChange={(e) => setFilters({ ...filters, endDate: e.target.value })}
+            />
           </div>
           <div className="space-y-1.5">
             <Label>Forma de Pagamento</Label>
-            <Select value={filters.payment} onValueChange={(v) => setFilters({ ...filters, payment: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+            <Select
+              value={filters.payment}
+              onValueChange={(v) => setFilters({ ...filters, payment: v })}
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todas</SelectItem>
-                {PAYMENT_OPTIONS.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                {PAYMENT_OPTIONS.map((p) => (
+                  <SelectItem key={p} value={p}>
+                    {p}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-1.5">
             <Label>Tipo do Pedido</Label>
             <Select value={filters.type} onValueChange={(v) => setFilters({ ...filters, type: v })}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos</SelectItem>
-                {TYPE_OPTIONS.map((t) => <SelectItem key={t.value} value={t.value}>{t.label}</SelectItem>)}
+                {TYPE_OPTIONS.map((t) => (
+                  <SelectItem key={t.value} value={t.value}>
+                    {t.label}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
         </div>
         <div className="flex flex-wrap gap-2 pt-2">
           <Button onClick={runSearch} disabled={loading}>
-            {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+            {loading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Search className="h-4 w-4 mr-2" />
+            )}
             Buscar
           </Button>
           <Button variant="outline" onClick={resetFilters}>
@@ -231,7 +304,37 @@ function SearchOrdersPage() {
           <div className="font-semibold">Resultados</div>
           <Badge variant="secondary">{rows.length} pedido(s)</Badge>
         </div>
-        <div className="overflow-x-auto">
+        {/* Celular: um card por pedido, com o essencial — uma tabela de 6
+            colunas em 360px vira letra ilegível com rolagem lateral. */}
+        <div className="divide-y md:hidden">
+          {rows.length === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              {loading ? "Buscando..." : "Nenhum pedido. Ajuste os filtros e clique em Buscar."}
+            </div>
+          ) : (
+            rows.map((o) => (
+              <button
+                key={o.id}
+                type="button"
+                onClick={() => setSelected(o)}
+                className="flex w-full flex-col gap-1 p-4 text-left active:bg-muted/50"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <span className="font-mono font-semibold">#{o.order_number}</span>
+                  <Badge variant="outline">{o.status || "—"}</Badge>
+                </div>
+                <div className="text-sm font-medium">{o.customer_name || "—"}</div>
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                  <span>{fmtDateTime(o.created_at)}</span>
+                  <span>{o.payment_method || "—"}</span>
+                </div>
+                <div className="text-sm font-bold text-primary">{fmtMoney(o.total)}</div>
+              </button>
+            ))
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto md:block">
           <Table>
             <TableHeader>
               <TableRow>
@@ -247,19 +350,25 @@ function SearchOrdersPage() {
               {rows.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    {loading ? "Buscando..." : "Nenhum pedido. Ajuste os filtros e clique em Buscar."}
+                    {loading
+                      ? "Buscando..."
+                      : "Nenhum pedido. Ajuste os filtros e clique em Buscar."}
                   </TableCell>
                 </TableRow>
-              ) : rows.map((o) => (
-                <TableRow key={o.id} className="cursor-pointer" onClick={() => setSelected(o)}>
-                  <TableCell className="font-mono">#{o.order_number}</TableCell>
-                  <TableCell>{o.customer_name || "—"}</TableCell>
-                  <TableCell>{fmtDateTime(o.created_at)}</TableCell>
-                  <TableCell>{fmtMoney(o.total)}</TableCell>
-                  <TableCell>{o.payment_method || "—"}</TableCell>
-                  <TableCell><Badge variant="outline">{o.status || "—"}</Badge></TableCell>
-                </TableRow>
-              ))}
+              ) : (
+                rows.map((o) => (
+                  <TableRow key={o.id} className="cursor-pointer" onClick={() => setSelected(o)}>
+                    <TableCell className="font-mono">#{o.order_number}</TableCell>
+                    <TableCell>{o.customer_name || "—"}</TableCell>
+                    <TableCell>{fmtDateTime(o.created_at)}</TableCell>
+                    <TableCell>{fmtMoney(o.total)}</TableCell>
+                    <TableCell>{o.payment_method || "—"}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{o.status || "—"}</Badge>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </div>
@@ -285,7 +394,9 @@ function SearchOrdersPage() {
                   <Row label="Tipo" value={normalizeOrderType(selected)} />
                   <Row label="Status" value={selected.status} />
                   <Row label="Pagamento" value={selected.payment_method} />
-                  {selected.payment_status && <Row label="Status Pagamento" value={selected.payment_status} />}
+                  {selected.payment_status && (
+                    <Row label="Status Pagamento" value={selected.payment_status} />
+                  )}
                   {(selected.table_number || selected.table_name) && (
                     <Row label="Mesa" value={selected.table_name || selected.table_number} />
                   )}
@@ -299,9 +410,13 @@ function SearchOrdersPage() {
                       {items.map((it: any, i: number) => (
                         <li key={i} className="flex justify-between border-b pb-2 last:border-0">
                           <div>
-                            <div className="font-medium">{(it.quantity || it.qty || 1)}x {formatItemName(it)}</div>
+                            <div className="font-medium">
+                              {it.quantity || it.qty || 1}x {formatItemName(it)}
+                            </div>
                             {(it.notes || it.observations || it.observacao) && (
-                              <div className="text-xs text-muted-foreground">Obs: {it.notes || it.observations || it.observacao}</div>
+                              <div className="text-xs text-muted-foreground">
+                                Obs: {it.notes || it.observations || it.observacao}
+                              </div>
                             )}
                           </div>
                           <div className="font-mono">{fmtMoney(Number(getItemPrice(it)))}</div>
@@ -319,7 +434,12 @@ function SearchOrdersPage() {
 
                 <Section title="Totais">
                   <Row label="Taxa de Entrega" value={fmtMoney(selected.delivery_fee)} />
-                  <Row label="Total" value={<span className="font-bold text-primary">{fmtMoney(selected.total)}</span>} />
+                  <Row
+                    label="Total"
+                    value={
+                      <span className="font-bold text-primary">{fmtMoney(selected.total)}</span>
+                    }
+                  />
                 </Section>
               </div>
             </>

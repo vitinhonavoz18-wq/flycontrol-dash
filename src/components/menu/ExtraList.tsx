@@ -393,13 +393,13 @@ function ExtraItem({ ext, onEdit, onToggle, onDelete }: any) {
         </div>
         <div className="flex items-center gap-2">
           <Switch checked={ext.active} onCheckedChange={() => onToggle(ext)} className="h-4 w-7" />
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(ext)}>
+          <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => onEdit(ext)}>
             <Pencil className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-destructive"
+            className="h-11 w-11 text-destructive"
             onClick={() => onDelete(ext)}
           >
             <Trash2 className="h-4 w-4" />

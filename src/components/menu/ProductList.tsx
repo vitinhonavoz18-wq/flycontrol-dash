@@ -426,13 +426,13 @@ export function ProductList({
           </div>
         </div>
         <div className="flex items-center justify-end gap-2 pt-2 border-t">
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(prod)}>
+          <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => openEdit(prod)}>
             <Pencil className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-destructive"
+            className="h-11 w-11 text-destructive"
             onClick={() => handleDelete(prod)}
           >
             <Trash2 className="h-4 w-4" />

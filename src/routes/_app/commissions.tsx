@@ -7,15 +7,28 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Loader2, Wallet, Percent, RefreshCw, Save, Download } from "lucide-react";
 import { toast } from "sonner";
 import {
-  getCommissionPercent, setCommissionPercent,
-  getCommissionReport, listTenantWaiters,
+  getCommissionPercent,
+  setCommissionPercent,
+  getCommissionReport,
+  listTenantWaiters,
 } from "@/lib/commissions.functions";
 import { RequireFeature } from "@/components/PremiumFeatureLock";
 
@@ -78,17 +91,25 @@ function CommissionsPageInner() {
         ]);
         setPctState(p.percent);
         setWaiters(w as any);
-      } catch (e: any) { toast.error(e.message); }
+      } catch (e: any) {
+        toast.error(e.message);
+      }
     })();
   }, [tenantId, getPct, listWaiters]);
 
   const range = useMemo(() => {
     const now = new Date();
-    const to = new Date(now); to.setHours(23, 59, 59, 999);
+    const to = new Date(now);
+    to.setHours(23, 59, 59, 999);
     const from = new Date(now);
     if (period === "day") from.setHours(0, 0, 0, 0);
-    else if (period === "week") { from.setDate(from.getDate() - 6); from.setHours(0, 0, 0, 0); }
-    else { from.setDate(1); from.setHours(0, 0, 0, 0); }
+    else if (period === "week") {
+      from.setDate(from.getDate() - 6);
+      from.setHours(0, 0, 0, 0);
+    } else {
+      from.setDate(1);
+      from.setHours(0, 0, 0, 0);
+    }
     return { fromIso: from.toISOString(), toIso: to.toISOString() };
   }, [period]);
 
@@ -98,16 +119,23 @@ function CommissionsPageInner() {
     try {
       const r = await getReport({
         data: {
-          tenantId, fromIso: range.fromIso, toIso: range.toIso,
+          tenantId,
+          fromIso: range.fromIso,
+          toIso: range.toIso,
           waiterId: waiterId === "__all__" ? undefined : waiterId,
         },
       });
       setReport(r);
-    } catch (e: any) { toast.error(e.message); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
   }, [tenantId, range.fromIso, range.toIso, waiterId, getReport]);
 
-  useEffect(() => { loadReport(); }, [loadReport]);
+  useEffect(() => {
+    loadReport();
+  }, [loadReport]);
 
   async function handleSavePct() {
     setSavingPct(true);
@@ -115,21 +143,26 @@ function CommissionsPageInner() {
       await setPct({ data: { tenantId, percent: Number(pct) } });
       toast.success("Percentual atualizado");
       loadReport();
-    } catch (e: any) { toast.error(e.message); }
-    finally { setSavingPct(false); }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setSavingPct(false);
+    }
   }
 
   function exportCsv() {
     if (!report?.sessions?.length) return;
     const header = ["fechamento", "mesa", "garçom", "subtotal", "percentual", "comissão"];
-    const lines = report.sessions.map((s: any) => [
-      new Date(s.closedAt).toLocaleString("pt-BR"),
-      s.tableNumber,
-      s.waiterName || "—",
-      s.subtotal.toFixed(2),
-      s.commissionPercent.toFixed(2),
-      s.commissionAmount.toFixed(2),
-    ].join(";"));
+    const lines = report.sessions.map((s: any) =>
+      [
+        new Date(s.closedAt).toLocaleString("pt-BR"),
+        s.tableNumber,
+        s.waiterName || "—",
+        s.subtotal.toFixed(2),
+        s.commissionPercent.toFixed(2),
+        s.commissionAmount.toFixed(2),
+      ].join(";"),
+    );
     const csv = [header.join(";"), ...lines].join("\n");
     const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
     const a = document.createElement("a");
@@ -157,9 +190,15 @@ function CommissionsPageInner() {
           <CardContent className="pt-6 flex flex-wrap items-center gap-3">
             <Label className="shrink-0">Loja:</Label>
             <Select value={tenantId} onValueChange={setTenantId}>
-              <SelectTrigger className="max-w-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="max-w-sm">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {pizzerias.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                {pizzerias.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </CardContent>
@@ -177,8 +216,12 @@ function CommissionsPageInner() {
           <div className="space-y-1.5">
             <Label>% sobre o subtotal da mesa</Label>
             <Input
-              type="number" min={0} max={100} step={0.5}
-              value={pct} onChange={(e) => setPctState(Number(e.target.value))}
+              type="number"
+              min={0}
+              max={100}
+              step={0.5}
+              value={pct}
+              onChange={(e) => setPctState(Number(e.target.value))}
               className="w-32"
             />
           </div>
@@ -187,8 +230,8 @@ function CommissionsPageInner() {
             <Save className="h-4 w-4 mr-2" /> Salvar
           </Button>
           <p className="text-xs text-muted-foreground basis-full">
-            O valor é gravado em cada mesa no momento do fechamento. Mesas já fechadas
-            mantêm o percentual vigente na época.
+            O valor é gravado em cada mesa no momento do fechamento. Mesas já fechadas mantêm o
+            percentual vigente na época.
           </p>
         </CardContent>
       </Card>
@@ -200,8 +243,12 @@ function CommissionsPageInner() {
             <Label>Período</Label>
             <div className="flex gap-1">
               {(["day", "week", "month"] as const).map((p) => (
-                <Button key={p} size="sm" variant={period === p ? "default" : "outline"}
-                  onClick={() => setPeriod(p)}>
+                <Button
+                  key={p}
+                  size="sm"
+                  variant={period === p ? "default" : "outline"}
+                  onClick={() => setPeriod(p)}
+                >
                   {p === "day" ? "Hoje" : p === "week" ? "7 dias" : "Mês"}
                 </Button>
               ))}
@@ -210,17 +257,28 @@ function CommissionsPageInner() {
           <div className="space-y-1.5">
             <Label>Garçom</Label>
             <Select value={waiterId} onValueChange={setWaiterId}>
-              <SelectTrigger className="w-56"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="w-56">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__all__">Todos</SelectItem>
-                {waiters.map((w) => <SelectItem key={w.id} value={w.id}>{w.full_name}</SelectItem>)}
+                {waiters.map((w) => (
+                  <SelectItem key={w.id} value={w.id}>
+                    {w.full_name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
           <Button variant="outline" size="sm" onClick={loadReport} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} /> Atualizar
           </Button>
-          <Button variant="outline" size="sm" onClick={exportCsv} disabled={!report?.sessions?.length}>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={exportCsv}
+            disabled={!report?.sessions?.length}
+          >
             <Download className="h-4 w-4 mr-2" /> CSV
           </Button>
         </CardContent>
@@ -236,9 +294,37 @@ function CommissionsPageInner() {
 
       {/* Per-waiter */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Por garçom</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Por garçom</CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
-          <Table>
+          <div className="divide-y md:hidden">
+            {loading ? (
+              <div className="py-8 text-center">
+                <Loader2 className="h-5 w-5 animate-spin inline" />
+              </div>
+            ) : !report?.perWaiter?.length ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                Sem mesas fechadas no período.
+              </div>
+            ) : (
+              report.perWaiter.map((w: any) => (
+                <div key={w.waiterId || "none"} className="space-y-1 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">{w.waiterName}</span>
+                    <span className="font-semibold text-primary">{fmtBRL(w.commission)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{w.tables} mesa(s)</span>
+                    <span>Vendas: {fmtBRL(w.totalSales)}</span>
+                    <span>Ticket: {fmtBRL(w.avgTicket)}</span>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow>
                 <TableHead>Garçom</TableHead>
@@ -250,22 +336,30 @@ function CommissionsPageInner() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin inline" />
-                </TableCell></TableRow>
-              ) : !report?.perWaiter?.length ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                  Sem mesas fechadas no período.
-                </TableCell></TableRow>
-              ) : report.perWaiter.map((w: any) => (
-                <TableRow key={w.waiterId || "none"}>
-                  <TableCell className="font-medium">{w.waiterName}</TableCell>
-                  <TableCell className="text-right">{w.tables}</TableCell>
-                  <TableCell className="text-right">{fmtBRL(w.totalSales)}</TableCell>
-                  <TableCell className="text-right">{fmtBRL(w.avgTicket)}</TableCell>
-                  <TableCell className="text-right text-primary font-semibold">{fmtBRL(w.commission)}</TableCell>
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin inline" />
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : !report?.perWaiter?.length ? (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                    Sem mesas fechadas no período.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                report.perWaiter.map((w: any) => (
+                  <TableRow key={w.waiterId || "none"}>
+                    <TableCell className="font-medium">{w.waiterName}</TableCell>
+                    <TableCell className="text-right">{w.tables}</TableCell>
+                    <TableCell className="text-right">{fmtBRL(w.totalSales)}</TableCell>
+                    <TableCell className="text-right">{fmtBRL(w.avgTicket)}</TableCell>
+                    <TableCell className="text-right text-primary font-semibold">
+                      {fmtBRL(w.commission)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -273,9 +367,33 @@ function CommissionsPageInner() {
 
       {/* Sessions detail */}
       <Card>
-        <CardHeader><CardTitle className="text-base">Mesas fechadas</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-base">Mesas fechadas</CardTitle>
+        </CardHeader>
         <CardContent className="p-0">
-          <Table>
+          <div className="divide-y md:hidden">
+            {!report?.sessions?.length ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">—</div>
+            ) : (
+              report.sessions.map((r: any) => (
+                <div key={r.id} className="space-y-1 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-medium">Mesa {r.tableNumber}</span>
+                    <span className="font-semibold text-primary">{fmtBRL(r.commissionAmount)}</span>
+                  </div>
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>{r.waiterName || "—"}</span>
+                    <span>{new Date(r.closedAt).toLocaleString("pt-BR")}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    Subtotal {fmtBRL(r.subtotal)} · {r.commissionPercent.toFixed(1)}%
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow>
                 <TableHead>Fechamento</TableHead>
@@ -288,17 +406,27 @@ function CommissionsPageInner() {
             </TableHeader>
             <TableBody>
               {!report?.sessions?.length ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">—</TableCell></TableRow>
-              ) : report.sessions.map((r: any) => (
-                <TableRow key={r.id}>
-                  <TableCell className="text-xs">{new Date(r.closedAt).toLocaleString("pt-BR")}</TableCell>
-                  <TableCell>Mesa {r.tableNumber}</TableCell>
-                  <TableCell>{r.waiterName || "—"}</TableCell>
-                  <TableCell className="text-right">{fmtBRL(r.subtotal)}</TableCell>
-                  <TableCell className="text-right">{r.commissionPercent.toFixed(1)}%</TableCell>
-                  <TableCell className="text-right text-primary font-semibold">{fmtBRL(r.commissionAmount)}</TableCell>
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    —
+                  </TableCell>
                 </TableRow>
-              ))}
+              ) : (
+                report.sessions.map((r: any) => (
+                  <TableRow key={r.id}>
+                    <TableCell className="text-xs">
+                      {new Date(r.closedAt).toLocaleString("pt-BR")}
+                    </TableCell>
+                    <TableCell>Mesa {r.tableNumber}</TableCell>
+                    <TableCell>{r.waiterName || "—"}</TableCell>
+                    <TableCell className="text-right">{fmtBRL(r.subtotal)}</TableCell>
+                    <TableCell className="text-right">{r.commissionPercent.toFixed(1)}%</TableCell>
+                    <TableCell className="text-right text-primary font-semibold">
+                      {fmtBRL(r.commissionAmount)}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>

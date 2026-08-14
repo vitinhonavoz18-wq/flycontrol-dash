@@ -450,7 +450,7 @@ export function ComboManager({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8"
+                    className="h-11 w-11"
                     onClick={() => openEdit(combo)}
                   >
                     <Pencil className="h-4 w-4" />
@@ -458,7 +458,7 @@ export function ComboManager({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-8 w-8 text-destructive"
+                    className="h-11 w-11 text-destructive"
                     onClick={() => handleDelete(combo)}
                   >
                     <Trash2 className="h-4 w-4" />
@@ -632,7 +632,7 @@ export function ComboManager({
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-8 w-8 text-destructive"
+                        className="h-11 w-11 text-destructive"
                         onClick={() => removeItem(idx)}
                       >
                         <Trash2 className="h-4 w-4" />

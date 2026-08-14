@@ -1035,7 +1035,39 @@ function Finance() {
             </div>
 
             <Card className="border-border/60 shadow-sm overflow-hidden">
-              <Table>
+              <div className="divide-y md:hidden">
+                {ordersInPeriod.slice(0, 10).map((order) => (
+                  <div key={order.id} className="space-y-1 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-primary">#{order.order_number}</span>
+                      <span className="font-black">{fmtBRL(order.total)}</span>
+                    </div>
+                    <div className="font-semibold">{order.customer_name || "Cliente Final"}</div>
+                    <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
+                      <span>
+                        {format(new Date(order.created_at), "dd/MM 'às' HH:mm", { locale: ptBR })}
+                      </span>
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] uppercase font-bold ${
+                          order.status === "entregue"
+                            ? "border-green-500 text-green-600"
+                            : "border-blue-500 text-blue-600"
+                        }`}
+                      >
+                        {order.status}
+                      </Badge>
+                    </div>
+                  </div>
+                ))}
+                {ordersInPeriod.length === 0 && (
+                  <div className="h-24 grid place-items-center text-center text-sm text-muted-foreground">
+                    Nenhum pedido encontrado com os filtros atuais.
+                  </div>
+                )}
+              </div>
+
+              <Table className="hidden md:table">
                 <TableHeader>
                   <TableRow className="bg-muted/30">
                     <TableHead className="w-[100px]">Número</TableHead>
