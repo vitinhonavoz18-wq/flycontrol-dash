@@ -12,6 +12,7 @@ import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { InstallBanner } from "@/components/pwa/InstallBanner";
+import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 
 function NotFoundComponent() {
@@ -20,7 +21,10 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-primary">404</h1>
         <h2 className="mt-4 text-xl font-semibold">Página não encontrada</h2>
-        <Link to="/" className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+        <Link
+          to="/"
+          className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
           Voltar
         </Link>
       </div>
@@ -35,7 +39,12 @@ function ErrorComponent({ error }: { error: Error }) {
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold">Algo deu errado</h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-        <a href="/" className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Início</a>
+        <a
+          href="/"
+          className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
+          Início
+        </a>
       </div>
     </div>
   );
@@ -52,13 +61,33 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-title", content: "FlyControl" },
       { name: "mobile-web-app-capable", content: "yes" },
       { title: "FlyControl — Painel central de delivery" },
-      { name: "description", content: "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria." },
+      {
+        name: "description",
+        content:
+          "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria.",
+      },
       { property: "og:title", content: "FlyControl — Painel central de delivery" },
-      { property: "og:description", content: "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria." },
+      {
+        property: "og:description",
+        content:
+          "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria.",
+      },
       { name: "twitter:title", content: "FlyControl — Painel central de delivery" },
-      { name: "twitter:description", content: "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/102b2e79-2d68-465b-becd-e35dc5e0015d/id-preview-a1327d07--81d7e9ad-58d1-4e8a-8987-4f210224d49e.lovable.app-1778257035358.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/102b2e79-2d68-465b-becd-e35dc5e0015d/id-preview-a1327d07--81d7e9ad-58d1-4e8a-8987-4f210224d49e.lovable.app-1778257035358.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/102b2e79-2d68-465b-becd-e35dc5e0015d/id-preview-a1327d07--81d7e9ad-58d1-4e8a-8987-4f210224d49e.lovable.app-1778257035358.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/102b2e79-2d68-465b-becd-e35dc5e0015d/id-preview-a1327d07--81d7e9ad-58d1-4e8a-8987-4f210224d49e.lovable.app-1778257035358.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
@@ -78,8 +107,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }
@@ -96,6 +130,7 @@ function RootComponent() {
           <NotificationsProvider />
           <Toaster />
           <InstallBanner />
+          <ServiceWorkerRegistration />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
