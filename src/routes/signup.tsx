@@ -16,6 +16,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { GoogleIcon } from "@/components/GoogleIcon";
 import { CHECKOUT_TOKEN_STORAGE_KEY } from "@/lib/billing/checkout";
 import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
@@ -37,16 +39,26 @@ import {
 } from "@/lib/signup/validation";
 import logo from "@/assets/flycontrol-logo.png";
 
+type SignupSearch = { plan: PlanCode | undefined; google?: "1" };
+
 export const Route = createFileRoute("/signup")({
   component: SignupWizard,
-  validateSearch: (search: Record<string, unknown>) => ({
+  validateSearch: (search: Record<string, unknown>): SignupSearch => ({
     // `isKnownPlanCode` e não `isPublicPlanCode`: o plano interno de teste só
     // é alcançável por quem já sabe a URL exata — não aparece no seletor.
     plan: isKnownPlanCode(search.plan as string) ? (search.plan as PlanCode) : undefined,
+    // Marcado pelo retorno do login com Google (`/auth/callback`): esta tela
+    // pula o pedido de senha porque a pessoa já provou quem é pelo Google.
+    // Opcional de propósito: os outros links para /signup não precisam saber
+    // que este parâmetro existe.
+    google: search.google === "1" ? "1" : undefined,
   }),
 });
 
 const STEPS = ["Plano", "Responsável", "Empresa", "Revisão"] as const;
+
+/** Sobrevive à viagem de ida e volta ao Google — todo o resto do estado se perde. */
+const GOOGLE_PENDING_PLAN_KEY = "fc_signup_google_plan";
 
 const SEGMENTS = [
   "Pizzaria",
@@ -109,8 +121,13 @@ function Field({
 }
 
 function SignupWizard() {
-  const { plan: planFromUrl } = Route.useSearch();
+  const { plan: planFromUrl, google: googleFlag } = Route.useSearch();
   const navigate = useNavigate();
+  const { user: googleUser, signInWithGoogle } = useAuth();
+
+  // Só é "cadastro pelo Google" quando a tela chegou com o sinal do callback
+  // E existe mesmo uma sessão — sem a sessão não há token para provar nada.
+  const isGoogleAuth = googleFlag === "1" && !!googleUser;
 
   const [step, setStep] = useState(planFromUrl ? 1 : 0);
   const [planCode, setPlanCode] = useState<PlanCode | null>(planFromUrl ?? null);
@@ -121,9 +138,56 @@ function SignupWizard() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [result, setResult] = useState<{ companyName: string; activationPending: boolean } | null>(
     null,
   );
+
+  // Nome, e-mail e foto (quando o Google devolve uma) vêm prontos da conta —
+  // evita pedir de novo o que a pessoa já informou ao Google.
+  useEffect(() => {
+    if (!isGoogleAuth || !googleUser) return;
+    const meta = (googleUser.user_metadata ?? {}) as Record<string, unknown>;
+    const fullName = String(meta.full_name ?? meta.name ?? "");
+    setOwner((prev) => ({
+      ...prev,
+      fullName: prev.fullName || fullName,
+      email: prev.email || googleUser.email || "",
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGoogleAuth, googleUser?.id]);
+
+  // Ir para o Google tira a pessoa desta página inteira — todo o estado do
+  // React some. O plano escolhido é guardado aqui só para sobreviver a essa
+  // viagem de ida e volta; some assim que é lido de volta.
+  useEffect(() => {
+    if (!isGoogleAuth || planCode) return;
+    const pending = localStorage.getItem(GOOGLE_PENDING_PLAN_KEY);
+    if (pending && isKnownPlanCode(pending)) {
+      setPlanCode(pending);
+      setStep(1);
+    }
+    localStorage.removeItem(GOOGLE_PENDING_PLAN_KEY);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGoogleAuth]);
+
+  function onGoogleClick() {
+    if (!planCode) {
+      toast.error("Escolha um plano para continuar.");
+      return;
+    }
+    setGoogleLoading(true);
+    localStorage.setItem(GOOGLE_PENDING_PLAN_KEY, planCode);
+    void signInWithGoogle().then(({ error }) => {
+      // Sem erro, o navegador já está saindo para o Google. Erro aqui só
+      // acontece antes desse redirecionamento.
+      if (error) {
+        localStorage.removeItem(GOOGLE_PENDING_PLAN_KEY);
+        setGoogleLoading(false);
+        toast.error(error);
+      }
+    });
+  }
 
   // Atalho de teste. Quem responde se ele existe é o servidor — o navegador
   // não enxerga variável de ambiente do Worker.
@@ -152,7 +216,7 @@ function SignupWizard() {
       return;
     }
     if (step === 1) {
-      const found = validateOwnerStep(owner);
+      const found = validateOwnerStep(owner, { skipPassword: isGoogleAuth });
       setErrors(found);
       if (hasErrors(found)) return;
       setStep(2);
@@ -174,6 +238,17 @@ function SignupWizard() {
     }
     setSubmitting(true);
     try {
+      let googleAccessToken: string | undefined;
+      if (isGoogleAuth) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        googleAccessToken = sessionData.session?.access_token;
+        if (!googleAccessToken) {
+          toast.error("Sua sessão do Google expirou. Entre novamente.");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const created = await createAccount({
         // As versões que esta tela exibiu vão junto: é o que foi aceito de
         // fato. O servidor confere ambas contra as vigentes.
@@ -185,6 +260,7 @@ function SignupWizard() {
           termsVersion: TERMS_VERSION,
           privacyVersion: PRIVACY_VERSION,
           bypassPayment: options.bypassPayment,
+          googleAccessToken,
         },
       });
       // Checkout configurado: o cliente vai pagar agora. O token fica no
@@ -203,9 +279,17 @@ function SignupWizard() {
       }
 
       // Atalho de teste: entra direto na configuração da loja, que é o que se
-      // quer inspecionar. A senha acabou de ser digitada aqui, então não há
-      // motivo para pedir de novo.
+      // quer inspecionar.
       if (created.paymentBypassed) {
+        // Quem chegou pelo Google já está com a sessão aberta — não há senha
+        // nenhuma para logar de novo.
+        if (isGoogleAuth) {
+          await navigate({ to: "/my-store" });
+          return;
+        }
+
+        // A senha acabou de ser digitada aqui, então não há motivo para
+        // pedir de novo.
         const { error } = await supabase.auth.signInWithPassword({
           email: owner.email.trim().toLowerCase(),
           password: owner.password,
@@ -387,12 +471,42 @@ function SignupWizard() {
                 Ver comparação completa
               </Link>
             </p>
+
+            {!isGoogleAuth && (
+              <>
+                <div className="flex items-center gap-3 pt-2">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-xs text-muted-foreground">ou</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full gap-2"
+                  onClick={onGoogleClick}
+                  disabled={googleLoading}
+                >
+                  <GoogleIcon />
+                  {googleLoading ? "Redirecionando..." : "Continuar com Google"}
+                </Button>
+              </>
+            )}
           </section>
         )}
 
         {step === 1 && (
           <section className="space-y-4">
             <h1 className="text-xl font-bold sm:text-2xl">Seus dados</h1>
+
+            {isGoogleAuth && (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                <GoogleIcon className="h-5 w-5 shrink-0" />
+                <span className="text-muted-foreground">
+                  Conectado com a conta Google{" "}
+                  <strong className="text-foreground">{owner.email}</strong>
+                </span>
+              </div>
+            )}
 
             <Field id="fullName" label="Nome completo" error={errors.fullName}>
               <Input
@@ -415,6 +529,7 @@ function SignupWizard() {
                 autoCapitalize="none"
                 className="h-11"
                 value={owner.email}
+                disabled={isGoogleAuth}
                 aria-invalid={!!errors.email}
                 onChange={(e) => setOwner({ ...owner, email: e.target.value })}
               />
@@ -433,38 +548,45 @@ function SignupWizard() {
               />
             </Field>
 
-            <Field
-              id="password"
-              label="Senha"
-              error={errors.password}
-              hint="Ao menos 8 caracteres, com letra e número."
-            >
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                className="h-11"
-                value={owner.password}
-                aria-invalid={!!errors.password}
-                onChange={(e) => setOwner({ ...owner, password: e.target.value })}
-              />
-            </Field>
+            {/* Quem entrou pelo Google já provou quem é por lá — pedir senha
+                de novo aqui seria redundante, como pedir documento duas vezes
+                na mesma portaria. */}
+            {!isGoogleAuth && (
+              <>
+                <Field
+                  id="password"
+                  label="Senha"
+                  error={errors.password}
+                  hint="Ao menos 8 caracteres, com letra e número."
+                >
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="new-password"
+                    className="h-11"
+                    value={owner.password}
+                    aria-invalid={!!errors.password}
+                    onChange={(e) => setOwner({ ...owner, password: e.target.value })}
+                  />
+                </Field>
 
-            <Field
-              id="passwordConfirmation"
-              label="Confirmar senha"
-              error={errors.passwordConfirmation}
-            >
-              <Input
-                id="passwordConfirmation"
-                type="password"
-                autoComplete="new-password"
-                className="h-11"
-                value={owner.passwordConfirmation}
-                aria-invalid={!!errors.passwordConfirmation}
-                onChange={(e) => setOwner({ ...owner, passwordConfirmation: e.target.value })}
-              />
-            </Field>
+                <Field
+                  id="passwordConfirmation"
+                  label="Confirmar senha"
+                  error={errors.passwordConfirmation}
+                >
+                  <Input
+                    id="passwordConfirmation"
+                    type="password"
+                    autoComplete="new-password"
+                    className="h-11"
+                    value={owner.passwordConfirmation}
+                    aria-invalid={!!errors.passwordConfirmation}
+                    onChange={(e) => setOwner({ ...owner, passwordConfirmation: e.target.value })}
+                  />
+                </Field>
+              </>
+            )}
           </section>
         )}
 

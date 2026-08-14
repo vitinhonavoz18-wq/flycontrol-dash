@@ -287,16 +287,28 @@ function collect(entries: Array<[string, FieldResult]>): FieldErrors {
   return errors;
 }
 
-export function validateOwnerStep(data: OwnerData): FieldErrors {
+/**
+ * `skipPassword` existe para quem chegou autenticado pelo Google: essa pessoa
+ * já provou quem é com a conta do Google, não digita senha nenhuma aqui, e
+ * exigir uma neste passo bloquearia o cadastro sem motivo.
+ */
+export function validateOwnerStep(
+  data: OwnerData,
+  opts: { skipPassword?: boolean } = {},
+): FieldErrors {
   return collect([
     ["fullName", validateFullName(data.fullName)],
     ["email", validateEmail(data.email)],
     ["whatsapp", validateBrazilianPhone(data.whatsapp)],
-    ["password", validatePassword(data.password)],
-    [
-      "passwordConfirmation",
-      validatePasswordConfirmation(data.password, data.passwordConfirmation),
-    ],
+    ...(opts.skipPassword
+      ? []
+      : ([
+          ["password", validatePassword(data.password)],
+          [
+            "passwordConfirmation",
+            validatePasswordConfirmation(data.password, data.passwordConfirmation),
+          ],
+        ] as Array<[string, FieldResult]>)),
   ]);
 }
 

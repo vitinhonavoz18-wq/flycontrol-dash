@@ -61,6 +61,14 @@ export type SignupInput = {
   privacyVersion: string;
   /** Atalho temporário de teste. Só vale se o servidor também permitir. */
   bypassPayment?: boolean;
+  /**
+   * Presente quando quem está se cadastrando já entrou com o Google. O
+   * `access_token` da sessão é conferido no servidor (nunca confiamos no que
+   * o navegador diz sobre si mesmo); quando válido, o cadastro reaproveita
+   * esse `auth.users.id` em vez de criar um usuário novo — evita duplicar
+   * conta para quem já provou sua identidade pelo Google.
+   */
+  googleAccessToken?: string;
 };
 
 export type SignupResult = {
@@ -267,8 +275,11 @@ export const createAccount = createServerFn({ method: "POST" })
     }
 
     // A validação do cliente é conveniência; esta é a que decide. Um payload
-    // montado à mão não passa por aqui.
-    if (hasErrors(validateOwnerStep(d.owner))) throw new Error("Revise os dados do responsável.");
+    // montado à mão não passa por aqui. Quem chega pelo Google não digitou
+    // senha nenhuma — não faz sentido cobrar isso aqui.
+    if (hasErrors(validateOwnerStep(d.owner, { skipPassword: !!d.googleAccessToken }))) {
+      throw new Error("Revise os dados do responsável.");
+    }
     if (hasErrors(validateCompanyStep(d.company))) throw new Error("Revise os dados da empresa.");
     return d;
   })
@@ -293,38 +304,81 @@ export const createAccount = createServerFn({ method: "POST" })
     }
 
     // ---- 1. Usuário proprietário ------------------------------------------
-    const { data: created, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password: data.owner.password,
-      // Sem fluxo de e-mail configurado, exigir confirmação deixaria o
-      // usuário sem conseguir entrar depois de pagar.
-      email_confirm: true,
-      user_metadata: {
-        full_name: data.owner.fullName.trim(),
-        whatsapp: onlyDigits(data.owner.whatsapp),
-      },
-    });
+    // Dois caminhos: quem já entrou com o Google traz uma identidade pronta
+    // (é como já ter mostrado o documento na portaria — não se pede de novo);
+    // quem não trouxe, cria a conta com e-mail e senha, como sempre foi.
+    let userId: string;
+    let createdFreshUser = false;
 
-    if (authError || !created?.user) {
-      const message = String(authError?.message ?? "");
-      if (/already|exists|registered/i.test(message)) {
-        throw new Error("Já existe uma conta com este e-mail. Tente entrar ou recuperar a senha.");
+    if (data.googleAccessToken) {
+      const { data: verified, error: verifyError } = await supabaseAdmin.auth.getUser(
+        data.googleAccessToken,
+      );
+      if (verifyError || !verified?.user) {
+        throw new Error("Sessão do Google expirada. Entre novamente.");
       }
-      // A mensagem crua do provedor de auth não é para o usuário final.
-      console.error("[signup] falha ao criar usuário:", authError);
-      throw new Error("Não foi possível criar sua conta. Tente novamente em instantes.");
+      userId = verified.user.id;
+
+      // Barreira final contra estabelecimento duplicado: se este usuário já
+      // tem um, o cadastro não roda de novo — nem por um pedido forjado.
+      const { data: existingCompany } = await supabaseAdmin
+        .from("pizzerias")
+        .select("id")
+        .eq("owner_id", userId)
+        .neq("status", "deleted")
+        .neq("status", "inactive")
+        .limit(1)
+        .maybeSingle();
+      if (existingCompany) {
+        throw new Error("Você já tem um estabelecimento cadastrado. Acesse o painel.");
+      }
+    } else {
+      const { data: created, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: data.owner.password,
+        // Sem fluxo de e-mail configurado, exigir confirmação deixaria o
+        // usuário sem conseguir entrar depois de pagar.
+        email_confirm: true,
+        user_metadata: {
+          full_name: data.owner.fullName.trim(),
+          whatsapp: onlyDigits(data.owner.whatsapp),
+        },
+      });
+
+      if (authError || !created?.user) {
+        const message = String(authError?.message ?? "");
+        if (/already|exists|registered/i.test(message)) {
+          throw new Error(
+            "Já existe uma conta com este e-mail. Tente entrar ou recuperar a senha.",
+          );
+        }
+        // A mensagem crua do provedor de auth não é para o usuário final.
+        console.error("[signup] falha ao criar usuário:", authError);
+        throw new Error("Não foi possível criar sua conta. Tente novamente em instantes.");
+      }
+
+      userId = created.user.id;
+      createdFreshUser = true;
     }
 
-    const userId = created.user.id;
     let companyId: string | null = null;
 
-    /** Desfaz o que já foi criado. Ordem inversa da criação. */
+    /**
+     * Desfaz o que já foi criado. Ordem inversa da criação.
+     *
+     * A conta de autenticação só é apagada quando foi criada aqui mesmo —
+     * apagar o usuário do Google que já existia antes desta chamada tiraria
+     * o acesso dele a tudo mais que já tinha, por um erro que nada tem a ver
+     * com a conta dele.
+     */
     const rollback = async (reason: string) => {
       console.error(`[signup] rollback (${reason}) para o usuário ${userId}`);
       if (companyId) {
         await supabaseAdmin.from("pizzerias").delete().eq("id", companyId);
       }
-      await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (createdFreshUser) {
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+      }
     };
 
     try {
