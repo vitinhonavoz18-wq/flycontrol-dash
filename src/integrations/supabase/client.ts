@@ -5,13 +5,20 @@
 import { createClient } from "@supabase/supabase-js";
 import type { Database } from "./types";
 import { resolveSupabaseEnv } from "./env";
+import { publicSupabaseConfig } from "./publicConfig";
 
 function createSupabaseClient() {
-  // Use import.meta.env for client-side (Vite build-time replacement)
-  // Fall back to process.env for SSR (server-side rendering)
-  const rawUrl = import.meta.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL;
+  // Três fontes, nesta ordem:
+  // 1. import.meta.env — gravado na compilação (funciona no desenvolvimento);
+  // 2. o que o servidor entregou ao abrir a página (ver ./publicConfig.ts) —
+  //    é o que salva o navegador quando a compilação saiu sem as VITE_*;
+  // 3. process.env — usado quando o próprio servidor monta a página.
+  const injected = publicSupabaseConfig();
+  const rawUrl = import.meta.env.VITE_SUPABASE_URL || injected?.url || process.env.SUPABASE_URL;
   const rawKey =
-    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY;
+    import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    injected?.key ||
+    process.env.SUPABASE_PUBLISHABLE_KEY;
 
   const env = resolveSupabaseEnv(rawUrl, rawKey, {
     url: "VITE_SUPABASE_URL",

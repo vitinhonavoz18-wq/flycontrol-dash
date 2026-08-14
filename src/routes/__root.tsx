@@ -8,6 +8,10 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import {
+  getPublicSupabaseConfig,
+  setPublicSupabaseConfig,
+} from "@/integrations/supabase/publicConfig";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
@@ -98,6 +102,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
     ],
   }),
+  // Roda no servidor ao montar a página e viaja junto com o HTML, então o
+  // navegador já recebe o endereço do Supabase pronto — sem depender do que
+  // estava configurado na máquina que compilou o site.
+  loader: () => getPublicSupabaseConfig(),
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -120,6 +128,13 @@ function RootShell({ children }: { children: React.ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Antes de qualquer tela: guarda o endereço que o servidor mandou. É uma
+  // escrita em memória, não estado do React — roda aqui, no corpo do
+  // componente raiz, porque o cliente do Supabase só é montado no primeiro
+  // uso, que sempre acontece depois deste ponto.
+  setPublicSupabaseConfig(Route.useLoaderData());
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
