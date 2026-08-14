@@ -88,7 +88,99 @@ export const PizzeriasDashboard = () => {
       </div>
 
       <div className="bg-card border rounded-lg shadow-sm overflow-x-auto">
-        <Table>
+        {/* Celular: um card por loja — a tabela de 6 colunas com 4+ botões de
+            ação por linha fica impossível de usar em 360px. */}
+        <div className="divide-y md:hidden">
+          {filteredData.map((p) => (
+            <div key={p.pizzeria_id} className="space-y-3 p-4">
+              <div className="flex items-start justify-between gap-2">
+                <div className="min-w-0">
+                  <div className="truncate font-semibold text-foreground">{p.pizzeria_name}</div>
+                  <div className="truncate font-mono text-xs text-muted-foreground">
+                    {p.pizzeria_id}
+                  </div>
+                </div>
+                <Badge
+                  variant={p.status === "active" ? "default" : "secondary"}
+                  className="w-fit shrink-0"
+                >
+                  {p.status === "active" ? "🟢 Ativa" : "🔴 Desativada"}
+                </Badge>
+              </div>
+              <div className="flex items-center justify-between gap-2 text-xs">
+                <Badge variant="outline" className="font-bold">
+                  {p.orders_day || 0} pedido(s) hoje
+                </Badge>
+                <span className="font-medium text-emerald-600">
+                  R$ {Number(p.revenue_day || 0).toFixed(2)}
+                </span>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Último pedido:{" "}
+                {p.last_order_at ? new Date(p.last_order_at).toLocaleString() : "N/A"}
+              </p>
+              <div className="flex flex-wrap justify-end gap-2 border-t pt-3">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11"
+                  asChild
+                  title="Abrir Cardápio"
+                >
+                  <a
+                    href={`https://sitecreatorfly.lovable.app/${p.pizzeria_id}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </a>
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11"
+                  onClick={() => copyLink(p.pizzeria_id || "", p.pizzeria_id || "")}
+                  title="Copiar Link"
+                >
+                  {copiedId === p.pizzeria_id ? (
+                    <Check className="h-4 w-4 text-emerald-500" />
+                  ) : (
+                    <Copy className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-11 w-11"
+                  asChild
+                  title="Ver no Painel"
+                >
+                  <Link to="/dashboard" search={{ pizzeriaId: p.pizzeria_id }}>
+                    <Store className="h-4 w-4" />
+                  </Link>
+                </Button>
+                <StoreLifecycleActions
+                  pizzeria={{
+                    id: p.pizzeria_id || "",
+                    name: p.pizzeria_name || "",
+                    status: p.status,
+                    owner_name: p.owner_name,
+                    plan_type: p.plan_type,
+                  }}
+                  onChanged={() => refetch()}
+                  variant="icons"
+                />
+              </div>
+            </div>
+          ))}
+          {filteredData.length === 0 && (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              Nenhuma loja encontrada.
+            </div>
+          )}
+        </div>
+
+        <Table className="hidden md:table">
           <TableHeader>
             <TableRow>
               <TableHead>Loja</TableHead>

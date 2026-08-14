@@ -18,13 +18,7 @@ import {
 } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
 import { ImageUpload } from "@/components/ui/image-upload";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 
 interface ComboManagerProps {
@@ -479,11 +473,15 @@ export function ComboManager({
         )}
       </div>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingCombo ? "Editar Combo" : "Criar Novo Combo"}</DialogTitle>
-          </DialogHeader>
+      {/* Sheet lateral, e não Dialog centralizado: este formulário é longo
+          (imagem, preço, itens, agenda) e um modal flutuante fica apertado
+          no celular, com o teclado ainda tomando metade da tela. Mesmo
+          padrão já usado em OrderDetailsDrawer. */}
+      <Sheet open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-2xl">
+          <SheetHeader>
+            <SheetTitle>{editingCombo ? "Editar Combo" : "Criar Novo Combo"}</SheetTitle>
+          </SheetHeader>
 
           <div className="grid md:grid-cols-2 gap-6 py-4">
             <div className="space-y-4">
@@ -644,16 +642,16 @@ export function ComboManager({
             </div>
           </div>
 
-          <DialogFooter>
+          <SheetFooter>
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancelar
             </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar Combo"}
             </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          </SheetFooter>
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
