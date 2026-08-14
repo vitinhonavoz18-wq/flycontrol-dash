@@ -386,16 +386,10 @@ function Dashboard() {
                     showNotification(o);
                   }
 
-                  console.log(
-                    `NEW_BADGE_DEBUG: Pedido #${o.order_number} (${o.id}) detectado como novo. Adicionando badge.`,
-                  );
                   setRecentNewOrderIds((prevIds) => [...prevIds, o.id]);
 
                   setTimeout(() => {
-                    setRecentNewOrderIds((prevIds) => {
-                      console.log(`NEW_BADGE_DEBUG: Removendo badge do pedido ${o.id} após 5s.`);
-                      return prevIds.filter((id) => id !== o.id);
-                    });
+                    setRecentNewOrderIds((prevIds) => prevIds.filter((id) => id !== o.id));
                   }, 5000);
 
                   const next = new Set(prevKnown);
@@ -944,13 +938,6 @@ function OrderCard({
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
   const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
   const orderType = normalizeOrderType(o);
-
-  if (isRecentNew) {
-    const normType = normalizeOrderType(o);
-    console.log(
-      `ORDER_TABLE_DEBUG: id=${o.id}, order_type=${o.order_type}, service_mode=${o.service_mode}, fulfillment_type=${o.fulfillment_type}, delivery_type=${o.delivery_type}, table_number=${o.table_number}, tableNumber=${o.tableNumber}, mesa=${o.mesa}, address=${o.customer_address}, normalized_type=${normType}`,
-    );
-  }
 
   // formatItemName e getItemPrice agora são importados de @/utils/order-utils
 

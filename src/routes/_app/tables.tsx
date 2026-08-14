@@ -1,10 +1,11 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { TablesManagement } from "@/components/TablesManagement";
 import { Loader2, Store } from "lucide-react";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { RequireFeature } from "@/components/PremiumFeatureLock";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 
@@ -83,6 +84,9 @@ function TablesPageInner() {
         <Store className="mx-auto h-12 w-12 text-muted-foreground mb-4" />
         <h2 className="text-xl font-bold">Nenhuma loja encontrada</h2>
         <p className="text-muted-foreground mt-2">Você precisa cadastrar uma loja primeiro.</p>
+        <Button asChild className="mt-4">
+          <Link to="/settings">Cadastrar loja</Link>
+        </Button>
       </div>
     );
   }

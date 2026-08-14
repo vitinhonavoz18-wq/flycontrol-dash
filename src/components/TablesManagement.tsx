@@ -279,9 +279,6 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
 
   async function loadSessionOrders(session: TableSession) {
     setLoadingOrders(true);
-    console.log(
-      `🔍 [Comanda/Load] Carregando pedidos para Mesa ${session.table_number} (ID: ${session.id})`,
-    );
 
     try {
       const { data: linkedData, error: linkedError } = await supabase
@@ -333,10 +330,6 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
       ? subtotal * (session.service_fee_percent / 100)
       : 0;
     const total = subtotal + feeAmount;
-
-    console.log(
-      `🖨️ [Comanda/Print] Recalculado: Orders: ${validOrders.length}, Subtotal: ${subtotal}, Fee: ${feeAmount}, Total: ${total}`,
-    );
 
     const itemsHtml = validOrders
       .map((order) => {
@@ -459,7 +452,6 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
         body: JSON.stringify({ tenant_id: tenantId }),
       });
       const data = await res.json().catch(() => ({}));
-      console.log("SYNC_TABLE_SESSIONS_RESULT:", data);
 
       await loadSessions();
 
@@ -479,8 +471,6 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
   useEffect(() => {
     if (!tenantId) return;
 
-    console.log("📡 [Realtime] Iniciando subscription para atualizações de comandas...");
-
     // Agora ouvimos diretamente a tabela table_sessions pois o backend cuida de tudo
     const channel = supabase
       .channel("table-session-changes")
@@ -492,8 +482,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
           table: "table_sessions",
           filter: `restaurant_id=eq.${tenantId}`,
         },
-        async (payload) => {
-          console.log("🔄 [Realtime] Mudança detectada em table_sessions, recarregando...");
+        async () => {
           loadSessions();
         },
       )

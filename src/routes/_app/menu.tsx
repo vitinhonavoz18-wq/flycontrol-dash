@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { MenuManager } from "@/components/menu/MenuManager";
 
@@ -65,10 +66,14 @@ function MenuPage() {
   if (!pizzerias.length) {
     return (
       <div className="p-8 text-center">
-        <h1 className="text-2xl font-bold">Nenhuma pizzaria encontrada</h1>
+        <h1 className="text-2xl font-bold">Nenhuma loja encontrada</h1>
         <p className="text-muted-foreground mt-2">
-          Você precisa ter uma pizzaria vinculada para gerenciar o cardápio.
+          Sua conta ainda não tem nenhuma loja cadastrada. Cadastre uma em Configurações para
+          começar a montar o cardápio.
         </p>
+        <Button asChild className="mt-4">
+          <Link to="/settings">Cadastrar loja</Link>
+        </Button>
       </div>
     );
   }

@@ -93,7 +93,6 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     }
 
     setSaving(true);
-    console.log("MENU_SYNC_SAVED_URL", syncEndpoint);
 
     const { error } = await supabase
       .from("pizzerias")
@@ -149,19 +148,13 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
 
     try {
       const testUrl = `/api/pizzerias/sync-menu?sync_url=${encodeURIComponent(syncEndpoint)}`;
-      const tokenPreview = syncEndpoint.split("/").pop()?.substring(0, 10) + "...";
-
-      console.log("MENU_SYNC_FETCH_URL_FINAL", syncEndpoint);
-      console.log("MENU_SYNC_TOKEN_PREVIEW", tokenPreview);
 
       const response = await fetch(testUrl, {
         method: "GET",
         headers: { Accept: "application/json", ...(await authHeader()) },
       });
-      console.log("MENU_SYNC_HTTP_STATUS", response.status);
 
       const text = await response.text();
-      console.log("MENU_SYNC_RESPONSE_BODY", text.substring(0, 1000));
 
       let jsonResponse = null;
       try {
@@ -250,7 +243,6 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     const toastId = toast.loading("Sincronizando cardápio...");
 
     const proxyUrl = `/api/pizzerias/sync-menu?sync_url=${encodeURIComponent(syncEndpoint)}`;
-    console.log("MENU_SYNC_FETCH_URL_FINAL", syncEndpoint);
 
     try {
       const controller = new AbortController();
@@ -263,10 +255,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       });
       clearTimeout(timeoutId);
 
-      console.log("MENU_SYNC_HTTP_STATUS", response.status);
-
       const text = await response.text();
-      console.log("MENU_SYNC_RESPONSE_BODY", text.substring(0, 1000));
 
       if (response.status !== 200) {
         let errorMsg = `Erro HTTP ${response.status}`;

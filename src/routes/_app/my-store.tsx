@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -256,6 +256,9 @@ function StoreEditor({
         <p className="text-muted-foreground mt-2">
           Você precisa vincular uma pizzaria nas Configurações primeiro.
         </p>
+        <Button asChild className="mt-4">
+          <Link to="/settings">Cadastrar loja</Link>
+        </Button>
       </div>
     );
   }
@@ -951,6 +954,9 @@ export default function MyStore() {
         <p className="text-muted-foreground mt-2">
           Você precisa vincular uma pizzaria nas Configurações primeiro.
         </p>
+        <Button asChild className="mt-4">
+          <Link to="/settings">Cadastrar loja</Link>
+        </Button>
       </div>
     );
   }
