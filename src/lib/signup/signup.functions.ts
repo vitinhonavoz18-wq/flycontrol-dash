@@ -35,6 +35,7 @@ import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { PAYMENT_BYPASS_REASON, isPaymentBypassAllowed } from "./paymentBypass";
+import { checkAndRecordSignupAttempt, currentRequestIp } from "./rateLimit.server";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
   hasErrors,
@@ -272,6 +273,14 @@ export const createAccount = createServerFn({ method: "POST" })
     return d;
   })
   .handler(async ({ data }): Promise<SignupResult> => {
+    // Antes de qualquer trabalho: barra scripts batendo cadastro sem parar,
+    // cada tentativa gerando um link de pagamento real na InfinityPay.
+    const ip = currentRequestIp();
+    const { allowed } = await checkAndRecordSignupAttempt(ip);
+    if (!allowed) {
+      throw new Error("Muitas tentativas de cadastro. Aguarde um pouco e tente novamente.");
+    }
+
     const planCode = data.planCode as PlanCode;
     const email = normalizeEmail(data.owner.email);
 
