@@ -1,3 +1,4 @@
+import { Link } from "@tanstack/react-router";
 import { useAdminPizzerias } from "@/hooks/admin/use-admin-pizzerias";
 import {
   Table,
@@ -150,9 +151,13 @@ export const PizzeriasDashboard = () => {
                       )}
                     </Button>
                     <Button variant="outline" size="icon" asChild title="Ver no Painel">
-                      <a href={`/dashboard?pizzeriaId=${p.pizzeria_id}`}>
+                      {/* Link do roteador, e não <a href>: aqui é navegação
+                          dentro do próprio FlyControl — um link cru recarrega
+                          a página inteira, que é a sensação de "site" que
+                          queremos evitar num app instalado. */}
+                      <Link to="/dashboard" search={{ pizzeriaId: p.pizzeria_id }}>
                         <Store className="h-4 w-4" />
-                      </a>
+                      </Link>
                     </Button>
                     <StoreLifecycleActions
                       pizzeria={{

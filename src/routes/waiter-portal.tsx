@@ -6,17 +6,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Loader2, LogOut, UtensilsCrossed, RefreshCw, ScanLine,
-  LayoutGrid, Bell, Receipt, History, User, Clock, Users,
-  DollarSign, BellRing, ClipboardList, TrendingUp, MessageSquare,
+  Loader2,
+  LogOut,
+  UtensilsCrossed,
+  RefreshCw,
+  ScanLine,
+  LayoutGrid,
+  Bell,
+  Receipt,
+  History,
+  User,
+  Clock,
+  Users,
+  DollarSign,
+  BellRing,
+  ClipboardList,
+  TrendingUp,
+  MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { getWaiterSession, clearWaiterSession } from "@/lib/waiterSession";
 import { WaiterNotificationCenter } from "@/components/waiter/WaiterNotificationCenter";
 import { ScanTableSheet } from "@/components/waiter/ScanTableSheet";
 import {
-  listMyAssignedSessions, listMyPendingOrders,
-  listMyAssignedCloseRequests, getWaiterDashboard,
+  listMyAssignedSessions,
+  listMyPendingOrders,
+  listMyAssignedCloseRequests,
+  getWaiterDashboard,
   waiterRequestClose,
 } from "@/lib/waiterAuth.functions";
 
@@ -36,7 +52,10 @@ function WaiterPortal() {
 
   useEffect(() => {
     const s = getWaiterSession();
-    if (!s) { nav({ to: "/waiter-login" }); return; }
+    if (!s) {
+      nav({ to: "/waiter-login" });
+      return;
+    }
     setSess(s);
   }, [nav]);
 
@@ -44,14 +63,20 @@ function WaiterPortal() {
   useEffect(() => {
     function onOpenSession(e: any) {
       const tn = e?.detail?.tableNumber;
-      if (tn) { setHighlightTable(String(tn)); setTab("tables"); }
+      if (tn) {
+        setHighlightTable(String(tn));
+        setTab("tables");
+      }
     }
     window.addEventListener("waiter-open-session", onOpenSession);
     return () => window.removeEventListener("waiter-open-session", onOpenSession);
   }, []);
 
   if (!sess) return null;
-  function logout() { clearWaiterSession(); nav({ to: "/waiter-login" }); }
+  function logout() {
+    clearWaiterSession();
+    nav({ to: "/waiter-login" });
+  }
 
   const ctx = { token: sess.token, tenantId: sess.waiter.tenantId, waiterId: sess.waiter.id };
 
@@ -60,9 +85,14 @@ function WaiterPortal() {
     let hint = value.trim();
     try {
       const url = new URL(hint);
-      hint = url.searchParams.get("table") || url.searchParams.get("t") ||
-             url.pathname.split("/").filter(Boolean).pop() || hint;
-    } catch { /* not a URL */ }
+      hint =
+        url.searchParams.get("table") ||
+        url.searchParams.get("t") ||
+        url.pathname.split("/").filter(Boolean).pop() ||
+        hint;
+    } catch {
+      /* not a URL */
+    }
     setHighlightTable(hint);
     setTab("tables");
     toast.success(`Procurando mesa ${hint}…`);
@@ -70,8 +100,11 @@ function WaiterPortal() {
 
   return (
     <div className="min-h-[100dvh] bg-gradient-to-b from-background to-muted/20 pb-24">
-      {/* Sticky mobile header */}
-      <header className="sticky top-0 z-30 backdrop-blur-lg bg-background/80 border-b">
+      {/* Sticky mobile header. Fundo opaco em vez de backdrop-blur: esta barra
+          fica sempre visível e o garçom rola a tela o tempo todo por trás
+          dela — o filtro custava GPU sem parar em Android intermediário
+          (mesmo ajuste já feito em BottomNav.tsx). */}
+      <header className="sticky top-0 z-30 bg-background border-b">
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3 p-3">
           <div className="flex items-center gap-3 min-w-0">
             <div className="h-10 w-10 shrink-0 rounded-2xl bg-gradient-to-br from-primary to-primary/60 grid place-items-center shadow-sm">
@@ -96,7 +129,11 @@ function WaiterPortal() {
 
       <main className="max-w-2xl mx-auto p-3 space-y-3 animate-fade-in">
         {tab === "tables" && (
-          <MyTablesTab {...ctx} highlight={highlightTable} onClearHighlight={() => setHighlightTable(null)} />
+          <MyTablesTab
+            {...ctx}
+            highlight={highlightTable}
+            onClearHighlight={() => setHighlightTable(null)}
+          />
         )}
         {tab === "notifications" && <NotificationsTab />}
         {tab === "orders" && <PendingOrdersTab {...ctx} />}
@@ -113,14 +150,39 @@ function WaiterPortal() {
         <ScanLine className="h-6 w-6" />
       </button>
 
-      {/* Bottom tab bar */}
-      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background/95 backdrop-blur-lg safe-bottom">
+      {/* Bottom tab bar. Mesmo motivo do header: fundo opaco no lugar do blur. */}
+      <nav className="fixed bottom-0 left-0 right-0 z-30 border-t bg-background safe-bottom">
         <div className="max-w-2xl mx-auto grid grid-cols-5">
-          <TabBtn icon={<LayoutGrid className="h-5 w-5" />} label="Mesas" active={tab === "tables"} onClick={() => setTab("tables")} />
-          <TabBtn icon={<Bell className="h-5 w-5" />} label="Alertas" active={tab === "notifications"} onClick={() => setTab("notifications")} />
-          <TabBtn icon={<Receipt className="h-5 w-5" />} label="Pedidos" active={tab === "orders"} onClick={() => setTab("orders")} />
-          <TabBtn icon={<History className="h-5 w-5" />} label="Histórico" active={tab === "history"} onClick={() => setTab("history")} />
-          <TabBtn icon={<User className="h-5 w-5" />} label="Perfil" active={tab === "profile"} onClick={() => setTab("profile")} />
+          <TabBtn
+            icon={<LayoutGrid className="h-5 w-5" />}
+            label="Mesas"
+            active={tab === "tables"}
+            onClick={() => setTab("tables")}
+          />
+          <TabBtn
+            icon={<Bell className="h-5 w-5" />}
+            label="Alertas"
+            active={tab === "notifications"}
+            onClick={() => setTab("notifications")}
+          />
+          <TabBtn
+            icon={<Receipt className="h-5 w-5" />}
+            label="Pedidos"
+            active={tab === "orders"}
+            onClick={() => setTab("orders")}
+          />
+          <TabBtn
+            icon={<History className="h-5 w-5" />}
+            label="Histórico"
+            active={tab === "history"}
+            onClick={() => setTab("history")}
+          />
+          <TabBtn
+            icon={<User className="h-5 w-5" />}
+            label="Perfil"
+            active={tab === "profile"}
+            onClick={() => setTab("profile")}
+          />
         </div>
       </nav>
 
@@ -129,7 +191,17 @@ function WaiterPortal() {
   );
 }
 
-function TabBtn({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
+function TabBtn({
+  icon,
+  label,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  active: boolean;
+  onClick: () => void;
+}) {
   return (
     <button
       onClick={onClick}
@@ -146,9 +218,17 @@ function TabBtn({ icon, label, active, onClick }: { icon: React.ReactNode; label
 // ============================================================
 // MY TABLES
 // ============================================================
-function MyTablesTab({ token, tenantId, highlight, onClearHighlight }: {
-  token: string; tenantId: string; waiterId: string;
-  highlight: string | null; onClearHighlight: () => void;
+function MyTablesTab({
+  token,
+  tenantId,
+  highlight,
+  onClearHighlight,
+}: {
+  token: string;
+  tenantId: string;
+  waiterId: string;
+  highlight: string | null;
+  onClearHighlight: () => void;
 }) {
   const listSess = useServerFn(listMyAssignedSessions);
   const listPending = useServerFn(listMyPendingOrders);
@@ -178,37 +258,69 @@ function MyTablesTab({ token, tenantId, highlight, onClearHighlight }: {
       const rm = new Map<string, number>();
       (rq || []).forEach((r: any) => rm.set(r.session_id, (rm.get(r.session_id) || 0) + 1));
       setReqBySession(rm);
-    } catch (e: any) { toast.error(e.message); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
   }, [token, listSess, listPending, listReq]);
 
-  useEffect(() => { load(); }, [load]);
-  useEffect(() => { const t = setInterval(() => setNow(Date.now()), 1000); return () => clearInterval(t); }, []);
+  useEffect(() => {
+    load();
+  }, [load]);
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
 
   useEffect(() => {
-    const ch = supabase.channel(`waiter-mytables-${tenantId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "table_sessions", filter: `restaurant_id=eq.${tenantId}` }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "table_session_orders" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` }, () => load())
+    const ch = supabase
+      .channel(`waiter-mytables-${tenantId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "table_sessions",
+          filter: `restaurant_id=eq.${tenantId}`,
+        },
+        () => load(),
+      )
+      .on("postgres_changes", { event: "*", schema: "public", table: "table_session_orders" }, () =>
+        load(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` },
+        () => load(),
+      )
       // table_close_requests is intentionally NOT subscribed here. Customer
       // close requests are owned exclusively by the Dashboard's
       // NotificationsProvider. The Waiter Portal must not receive, list,
       // render or process them.
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, [tenantId, load]);
 
   async function handleClose(sessionId: string) {
     try {
       const r = await reqClose({ data: { token, sessionId } });
-      toast.success(r.status === "already_pending" ? "Fechamento já solicitado" : "Fechamento solicitado");
-    } catch (e: any) { toast.error(e.message); }
+      toast.success(
+        r.status === "already_pending" ? "Fechamento já solicitado" : "Fechamento solicitado",
+      );
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   const sorted = useMemo(() => {
     if (!highlight) return rows;
     const h = String(highlight);
-    return [...rows].sort((a, b) => (String(a.table_number) === h ? -1 : String(b.table_number) === h ? 1 : 0));
+    return [...rows].sort((a, b) =>
+      String(a.table_number) === h ? -1 : String(b.table_number) === h ? 1 : 0,
+    );
   }, [rows, highlight]);
 
   return (
@@ -216,12 +328,21 @@ function MyTablesTab({ token, tenantId, highlight, onClearHighlight }: {
       <SectionHeader
         title="Minhas Mesas"
         subtitle={`${rows.length} aberta(s)`}
-        action={<Button variant="ghost" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-        </Button>}
+        action={
+          <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        }
       />
-      {loading && rows.length === 0 ? <Loader /> :
-        rows.length === 0 ? <Empty icon={<LayoutGrid className="h-8 w-8" />} title="Nenhuma mesa atribuída" text="Peça ao gerente para atribuir mesas a você." /> :
+      {loading && rows.length === 0 ? (
+        <Loader />
+      ) : rows.length === 0 ? (
+        <Empty
+          icon={<LayoutGrid className="h-8 w-8" />}
+          title="Nenhuma mesa atribuída"
+          text="Peça ao gerente para atribuir mesas a você."
+        />
+      ) : (
         <div className="space-y-3">
           {sorted.map((r) => (
             <TableCard
@@ -235,14 +356,28 @@ function MyTablesTab({ token, tenantId, highlight, onClearHighlight }: {
               onDismissHighlight={onClearHighlight}
             />
           ))}
-        </div>}
+        </div>
+      )}
     </div>
   );
 }
 
-function TableCard({ r, now, pendingItems, customerRequests, highlighted, onClose, onDismissHighlight }: {
-  r: any; now: number; pendingItems: number; customerRequests: number;
-  highlighted?: boolean; onClose: (id: string) => void; onDismissHighlight?: () => void;
+function TableCard({
+  r,
+  now,
+  pendingItems,
+  customerRequests,
+  highlighted,
+  onClose,
+  onDismissHighlight,
+}: {
+  r: any;
+  now: number;
+  pendingItems: number;
+  customerRequests: number;
+  highlighted?: boolean;
+  onClose: (id: string) => void;
+  onDismissHighlight?: () => void;
 }) {
   const subtotal = Number(r.subtotal_amount || 0);
   const fee = Number(r.service_fee_amount || 0);
@@ -262,11 +397,17 @@ function TableCard({ r, now, pendingItems, customerRequests, highlighted, onClos
       onAnimationEnd={() => highlighted && setTimeout(() => onDismissHighlight?.(), 2500)}
     >
       {/* Header stripe */}
-      <div className={`px-4 py-3 flex items-center justify-between ${hot ? "bg-destructive/10" : "bg-primary/5"}`}>
+      <div
+        className={`px-4 py-3 flex items-center justify-between ${hot ? "bg-destructive/10" : "bg-primary/5"}`}
+      >
         <div className="flex items-center gap-3 min-w-0">
-          <div className={`h-11 w-11 shrink-0 rounded-xl grid place-items-center font-black text-lg ${
-            hot ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
-          }`}>
+          <div
+            className={`h-11 w-11 shrink-0 rounded-xl grid place-items-center font-black text-lg ${
+              hot
+                ? "bg-destructive text-destructive-foreground"
+                : "bg-primary text-primary-foreground"
+            }`}
+          >
             {r.table_number}
           </div>
           <div className="min-w-0">
@@ -277,7 +418,10 @@ function TableCard({ r, now, pendingItems, customerRequests, highlighted, onClos
             </div>
           </div>
         </div>
-        <Badge variant={hot ? "destructive" : "secondary"} className="text-[10px] uppercase shrink-0">
+        <Badge
+          variant={hot ? "destructive" : "secondary"}
+          className="text-[10px] uppercase shrink-0"
+        >
           {hot ? "Chamando" : r.status === "open" ? "Aberta" : r.status}
         </Badge>
       </div>
@@ -290,20 +434,47 @@ function TableCard({ r, now, pendingItems, customerRequests, highlighted, onClos
         </div>
         <div className="text-[11px] text-muted-foreground flex justify-between mt-0.5">
           <span>Subtotal {fmtBRL(subtotal)}</span>
-          {r.service_fee_enabled && <span>Taxa {Number(r.service_fee_percent || 0)}% ({fmtBRL(fee)})</span>}
+          {r.service_fee_enabled && (
+            <span>
+              Taxa {Number(r.service_fee_percent || 0)}% ({fmtBRL(fee)})
+            </span>
+          )}
         </div>
       </div>
 
       {/* Indicators */}
       <div className="px-4 py-3 grid grid-cols-3 gap-2 border-t mt-3">
-        <Indicator icon={<ClipboardList className="h-4 w-4" />} label="Pedidos" value={r.orders_count} />
-        <Indicator icon={<Receipt className="h-4 w-4" />} label="Itens" value={pendingItems} tone={pendingItems > 0 ? "warn" : undefined} />
-        <Indicator icon={<MessageSquare className="h-4 w-4" />} label="Pedidos" value={customerRequests} tone={customerRequests > 0 ? "hot" : undefined} />
+        <Indicator
+          icon={<ClipboardList className="h-4 w-4" />}
+          label="Pedidos"
+          value={r.orders_count}
+        />
+        <Indicator
+          icon={<Receipt className="h-4 w-4" />}
+          label="Itens"
+          value={pendingItems}
+          tone={pendingItems > 0 ? "warn" : undefined}
+        />
+        <Indicator
+          icon={<MessageSquare className="h-4 w-4" />}
+          label="Pedidos"
+          value={customerRequests}
+          tone={customerRequests > 0 ? "hot" : undefined}
+        />
       </div>
 
       {/* Actions */}
       <div className="px-3 pb-3 flex gap-2">
-        <Button size="lg" variant="outline" className="flex-1 h-12" onClick={() => window.dispatchEvent(new CustomEvent("waiter-focus-orders", { detail: { sessionId: r.id } }))}>
+        <Button
+          size="lg"
+          variant="outline"
+          className="flex-1 h-12"
+          onClick={() =>
+            window.dispatchEvent(
+              new CustomEvent("waiter-focus-orders", { detail: { sessionId: r.id } }),
+            )
+          }
+        >
           <Receipt className="h-4 w-4 mr-2" /> Pedidos
         </Button>
         <Button size="lg" className="flex-1 h-12" onClick={() => onClose(r.id)}>
@@ -314,8 +485,23 @@ function TableCard({ r, now, pendingItems, customerRequests, highlighted, onClos
   );
 }
 
-function Indicator({ icon, label, value, tone }: { icon: React.ReactNode; label: string; value: number; tone?: "warn" | "hot" }) {
-  const color = tone === "hot" ? "text-destructive" : tone === "warn" ? "text-amber-600 dark:text-amber-400" : "text-foreground";
+function Indicator({
+  icon,
+  label,
+  value,
+  tone,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  tone?: "warn" | "hot";
+}) {
+  const color =
+    tone === "hot"
+      ? "text-destructive"
+      : tone === "warn"
+        ? "text-amber-600 dark:text-amber-400"
+        : "text-foreground";
   return (
     <div className="flex flex-col items-center gap-0.5 py-1">
       <div className={`${color}`}>{icon}</div>
@@ -370,35 +556,69 @@ function Legend({ label, tone }: { label: string; tone: "primary" | "ok" | "hot"
 // ============================================================
 // PENDING ORDERS
 // ============================================================
-function PendingOrdersTab({ token, tenantId }: { token: string; tenantId: string; waiterId: string }) {
+function PendingOrdersTab({
+  token,
+  tenantId,
+}: {
+  token: string;
+  tenantId: string;
+  waiterId: string;
+}) {
   const list = useServerFn(listMyPendingOrders);
   const [rows, setRows] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setRows((await list({ data: { token } })) as any[]); }
-    catch (e: any) { toast.error(e.message); }
-    finally { setLoading(false); }
+    try {
+      setRows((await list({ data: { token } })) as any[]);
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
   }, [token, list]);
 
-  useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    const ch = supabase.channel(`waiter-pending-${tenantId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "table_session_orders" }, () => load())
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` }, () => load())
+    load();
+  }, [load]);
+  useEffect(() => {
+    const ch = supabase
+      .channel(`waiter-pending-${tenantId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "table_session_orders" }, () =>
+        load(),
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` },
+        () => load(),
+      )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, [tenantId, load]);
 
   return (
     <div className="space-y-3">
-      <SectionHeader title="Pedidos Pendentes" subtitle={`${rows.length} em andamento`}
-        action={<Button variant="ghost" size="sm" onClick={load} disabled={loading}>
-          <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-        </Button>} />
-      {loading && rows.length === 0 ? <Loader /> :
-        rows.length === 0 ? <Empty icon={<Receipt className="h-8 w-8" />} title="Sem pedidos pendentes" text="Quando um pedido chegar em uma mesa sua, aparecerá aqui." /> :
+      <SectionHeader
+        title="Pedidos Pendentes"
+        subtitle={`${rows.length} em andamento`}
+        action={
+          <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+            <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+          </Button>
+        }
+      />
+      {loading && rows.length === 0 ? (
+        <Loader />
+      ) : rows.length === 0 ? (
+        <Empty
+          icon={<Receipt className="h-8 w-8" />}
+          title="Sem pedidos pendentes"
+          text="Quando um pedido chegar em uma mesa sua, aparecerá aqui."
+        />
+      ) : (
         <div className="space-y-2">
           {rows.map((o: any) => (
             <div key={o.id} className="rounded-xl border bg-card p-3 animate-fade-in">
@@ -406,13 +626,22 @@ function PendingOrdersTab({ token, tenantId }: { token: string; tenantId: string
                 <div className="min-w-0">
                   <div className="font-bold text-sm">
                     #{o.order_number || o.id.slice(0, 6)}
-                    {o.table_number && <span className="text-muted-foreground font-normal"> · Mesa {o.table_number}</span>}
+                    {o.table_number && (
+                      <span className="text-muted-foreground font-normal">
+                        {" "}
+                        · Mesa {o.table_number}
+                      </span>
+                    )}
                   </div>
-                  {o.customer_name && <div className="text-xs text-muted-foreground truncate">{o.customer_name}</div>}
+                  {o.customer_name && (
+                    <div className="text-xs text-muted-foreground truncate">{o.customer_name}</div>
+                  )}
                 </div>
                 <div className="text-right shrink-0">
                   <div className="font-mono text-sm font-semibold">{fmtBRL(o.total)}</div>
-                  <Badge variant="outline" className="text-[10px] mt-0.5">{o.status}</Badge>
+                  <Badge variant="outline" className="text-[10px] mt-0.5">
+                    {o.status}
+                  </Badge>
                 </div>
               </div>
               {Array.isArray(o.items) && o.items.length > 0 && (
@@ -420,7 +649,7 @@ function PendingOrdersTab({ token, tenantId }: { token: string; tenantId: string
                   {o.items.slice(0, 5).map((it: any, i: number) => (
                     <li key={i} className="flex items-center gap-2">
                       <span className="h-1.5 w-1.5 rounded-full bg-primary" />
-                      {(it.qty ?? it.quantity ?? 1)}× {it.name || it.product_name || "Item"}
+                      {it.qty ?? it.quantity ?? 1}× {it.name || it.product_name || "Item"}
                     </li>
                   ))}
                   {o.items.length > 5 && <li className="italic">+{o.items.length - 5} itens…</li>}
@@ -428,7 +657,8 @@ function PendingOrdersTab({ token, tenantId }: { token: string; tenantId: string
               )}
             </div>
           ))}
-        </div>}
+        </div>
+      )}
     </div>
   );
 }
@@ -450,19 +680,41 @@ function HistoryTab({ token, tenantId }: { token: string; tenantId: string; wait
         listSess({ data: { token, includeClosed: true } }) as Promise<any[]>,
         dash({ data: { token } }),
       ]);
-      const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-      setClosed((sess || []).filter((s: any) => s.status === "closed" && s.closed_at && new Date(s.closed_at) >= startOfDay));
+      const startOfDay = new Date();
+      startOfDay.setHours(0, 0, 0, 0);
+      setClosed(
+        (sess || []).filter(
+          (s: any) => s.status === "closed" && s.closed_at && new Date(s.closed_at) >= startOfDay,
+        ),
+      );
       setKpi(d);
-    } catch (e: any) { toast.error(e.message); }
-    finally { setLoading(false); }
+    } catch (e: any) {
+      toast.error(e.message);
+    } finally {
+      setLoading(false);
+    }
   }, [token, listSess, dash]);
 
-  useEffect(() => { load(); }, [load]);
   useEffect(() => {
-    const ch = supabase.channel(`waiter-history-${tenantId}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "table_sessions", filter: `restaurant_id=eq.${tenantId}` }, () => load())
+    load();
+  }, [load]);
+  useEffect(() => {
+    const ch = supabase
+      .channel(`waiter-history-${tenantId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "table_sessions",
+          filter: `restaurant_id=eq.${tenantId}`,
+        },
+        () => load(),
+      )
       .subscribe();
-    return () => { supabase.removeChannel(ch); };
+    return () => {
+      supabase.removeChannel(ch);
+    };
   }, [tenantId, load]);
 
   return (
@@ -470,32 +722,64 @@ function HistoryTab({ token, tenantId }: { token: string; tenantId: string; wait
       <SectionHeader title="Histórico de Hoje" subtitle="Mesas fechadas e comissões" />
       {kpi && (
         <div className="grid grid-cols-3 gap-2">
-          <MiniKpi icon={<DollarSign className="h-4 w-4" />} label="Vendas" value={fmtBRL(kpi.todaySales)} />
-          <MiniKpi icon={<TrendingUp className="h-4 w-4" />} label="Comissão" value={fmtBRL(kpi.todayCommission)} />
-          <MiniKpi icon={<Users className="h-4 w-4" />} label="Fechadas" value={String(kpi.todayClosedCount)} />
+          <MiniKpi
+            icon={<DollarSign className="h-4 w-4" />}
+            label="Vendas"
+            value={fmtBRL(kpi.todaySales)}
+          />
+          <MiniKpi
+            icon={<TrendingUp className="h-4 w-4" />}
+            label="Comissão"
+            value={fmtBRL(kpi.todayCommission)}
+          />
+          <MiniKpi
+            icon={<Users className="h-4 w-4" />}
+            label="Fechadas"
+            value={String(kpi.todayClosedCount)}
+          />
         </div>
       )}
       <Card className="rounded-2xl">
-        <CardHeader className="pb-2"><CardTitle className="text-sm">Mesas fechadas hoje</CardTitle></CardHeader>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm">Mesas fechadas hoje</CardTitle>
+        </CardHeader>
         <CardContent>
-          {loading && closed.length === 0 ? <Loader /> :
-            closed.length === 0 ? <Empty icon={<History className="h-8 w-8" />} title="Nada fechado hoje" text="As mesas fechadas do dia aparecerão aqui." /> :
+          {loading && closed.length === 0 ? (
+            <Loader />
+          ) : closed.length === 0 ? (
+            <Empty
+              icon={<History className="h-8 w-8" />}
+              title="Nada fechado hoje"
+              text="As mesas fechadas do dia aparecerão aqui."
+            />
+          ) : (
             <ul className="divide-y">
               {closed.map((s: any) => (
                 <li key={s.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <div className="font-semibold text-sm truncate">{s.table_name || `Mesa ${s.table_number}`}</div>
+                    <div className="font-semibold text-sm truncate">
+                      {s.table_name || `Mesa ${s.table_number}`}
+                    </div>
                     <div className="text-[11px] text-muted-foreground">
-                      Fechada {s.closed_at ? new Date(s.closed_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" }) : "—"}
+                      Fechada{" "}
+                      {s.closed_at
+                        ? new Date(s.closed_at).toLocaleTimeString("pt-BR", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })
+                        : "—"}
                     </div>
                   </div>
                   <div className="text-right shrink-0">
                     <div className="font-mono text-sm font-semibold">{fmtBRL(s.total_amount)}</div>
-                    <div className="text-[10px] text-muted-foreground">comissão {fmtBRL(s.service_fee_amount)}</div>
+                    <div className="text-[10px] text-muted-foreground">
+                      comissão {fmtBRL(s.service_fee_amount)}
+                    </div>
                   </div>
                 </li>
               ))}
-            </ul>}
+            </ul>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -505,7 +789,10 @@ function HistoryTab({ token, tenantId }: { token: string; tenantId: string; wait
 function MiniKpi({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-xl border bg-card p-3">
-      <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase">{icon}<span>{label}</span></div>
+      <div className="flex items-center gap-1 text-[10px] text-muted-foreground uppercase">
+        {icon}
+        <span>{label}</span>
+      </div>
       <div className="text-base font-black mt-1 tabular-nums">{value}</div>
     </div>
   );
@@ -535,7 +822,12 @@ function ProfileTab({ sess, onLogout }: { sess: any; onLogout: () => void }) {
           <Row label="ID interno" value={sess.waiter.id.slice(0, 8) + "…"} />
         </CardContent>
       </Card>
-      <Button variant="destructive" size="lg" className="w-full h-12 rounded-2xl" onClick={onLogout}>
+      <Button
+        variant="destructive"
+        size="lg"
+        className="w-full h-12 rounded-2xl"
+        onClick={onLogout}
+      >
         <LogOut className="h-4 w-4 mr-2" /> Sair
       </Button>
       <p className="text-[11px] text-muted-foreground text-center pt-2">
@@ -557,7 +849,15 @@ function Row({ label, value }: { label: string; value: string }) {
 // ============================================================
 // UI helpers
 // ============================================================
-function SectionHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: React.ReactNode }) {
+function SectionHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string;
+  subtitle?: string;
+  action?: React.ReactNode;
+}) {
   return (
     <div className="flex items-end justify-between gap-2 px-1">
       <div>
@@ -569,15 +869,19 @@ function SectionHeader({ title, subtitle, action }: { title: string; subtitle?: 
   );
 }
 function Loader() {
-  return <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
-    <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Carregando…
-  </div>;
+  return (
+    <div className="flex items-center justify-center py-10 text-muted-foreground text-sm">
+      <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Carregando…
+    </div>
+  );
 }
 function Empty({ icon, title, text }: { icon: React.ReactNode; title: string; text: string }) {
   return (
     <Card className="rounded-2xl">
       <CardContent className="p-8 text-center space-y-2">
-        <div className="h-14 w-14 mx-auto rounded-full bg-muted grid place-items-center text-muted-foreground">{icon}</div>
+        <div className="h-14 w-14 mx-auto rounded-full bg-muted grid place-items-center text-muted-foreground">
+          {icon}
+        </div>
         <div className="font-semibold">{title}</div>
         <p className="text-xs text-muted-foreground">{text}</p>
       </CardContent>

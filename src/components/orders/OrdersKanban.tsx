@@ -144,6 +144,11 @@ export function OrdersKanban({
 
   const handleDragCancel = useCallback(() => setActiveId(null), []);
 
+  // Estável entre renders de propósito: os cards são memoizados (`memo` em
+  // OrderKanbanCard), e uma função nova a cada render aqui derrubaria essa
+  // memoização em cascata para todo card de toda coluna.
+  const handleOpenDetails = useCallback((order: Order) => setDetailsId(order.id), []);
+
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
@@ -218,7 +223,7 @@ export function OrdersKanban({
               pendingIds={pendingIds}
               recentNewIds={recentNewIds}
               waiterNames={waiterNames}
-              onOpenDetails={(order) => setDetailsId(order.id)}
+              onOpenDetails={handleOpenDetails}
             />
           ))}
         </div>

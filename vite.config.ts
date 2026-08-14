@@ -11,5 +11,11 @@ import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 export default defineConfig({
   tanstackStart: {
     server: { entry: "server" },
+    // Cada rota vira seu próprio pedaço de JS, carregado só quando o usuário
+    // realmente abre aquela tela — sem isso, abrir o Dashboard baixava
+    // também o código do Financeiro, do Admin, do Cardápio etc., mesmo sem
+    // usar nada disso. Menos dado consumido e primeiro carregamento mais
+    // rápido no 4G, sem mudar nenhuma rota manualmente.
+    router: { autoCodeSplitting: true },
   },
 });

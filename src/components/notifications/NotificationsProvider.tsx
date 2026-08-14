@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { playSound, unlockAudio, isAudioBlocked } from "@/lib/notification-sounds";
+import { claimOrderAlert } from "@/lib/orderAlertClaim";
 import { Button } from "@/components/ui/button";
 import { Volume2 } from "lucide-react";
 
@@ -72,6 +73,9 @@ export function NotificationsProvider() {
           return;
         }
         seenOrderIds.current.add(row.id);
+        // Se o Dashboard já está aberto na mesma loja, ele mesmo avisa esse
+        // pedido primeiro — evita tocar o som e mostrar o aviso duas vezes.
+        if (!claimOrderAlert(row.id)) return;
         playSound("new_order");
         const tipo = row.table_number
           ? `Mesa ${row.table_number}`

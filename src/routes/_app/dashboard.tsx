@@ -43,6 +43,7 @@ import { ClubCentsCard } from "@/components/club/ClubCentsCard";
 import { HallOfFameStrip } from "@/components/club/HallOfFameStrip";
 import { OrdersKanban } from "@/components/orders/OrdersKanban";
 import { TERMINAL_STATUSES, isKanbanStatus } from "@/components/orders/orderStatusConfig";
+import { claimOrderAlert } from "@/lib/orderAlertClaim";
 
 export const Route = createFileRoute("/_app/dashboard")({ component: Dashboard });
 
@@ -376,10 +377,14 @@ function Dashboard() {
               // DETECÇÃO DE NOVO PEDIDO (FRONT-END ONLY)
               setKnownOrderIds((prevKnown) => {
                 if (!prevKnown.has(o.id)) {
-                  // É realmente novo para esta sessão
-                  if (soundOnRef.current) playBeep();
-                  toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
-                  showNotification(o);
+                  // É realmente novo para esta sessão. O som e o aviso só
+                  // tocam se ninguém mais (o alerta global) já reivindicou
+                  // este pedido primeiro — evita tocar duas vezes.
+                  if (claimOrderAlert(o.id)) {
+                    if (soundOnRef.current) playBeep();
+                    toast.success(`Novo pedido #${o.order_number} — ${o.customer_name}`);
+                    showNotification(o);
+                  }
 
                   console.log(
                     `NEW_BADGE_DEBUG: Pedido #${o.order_number} (${o.id}) detectado como novo. Adicionando badge.`,
@@ -951,7 +956,7 @@ function OrderCard({
 
   return (
     <div
-      className={`rounded-xl border bg-card p-5 transition-all duration-300 group relative overflow-hidden ${
+      className={`rounded-xl border bg-card p-5 transition-[transform,box-shadow,border-color] duration-300 group relative overflow-hidden ${
         isRecentNew
           ? "border-primary shadow-[0_0_15px_rgba(255,122,0,0.3)] scale-[1.02]"
           : "border-border hover:border-primary/50 hover:shadow-lg"
