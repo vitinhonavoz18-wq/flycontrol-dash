@@ -10,7 +10,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/layout/SectionHeader";
 import { calculateCycleProgress, type CycleProgress } from "@/lib/billing/cycleProgress";
 import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
 import {
   SUBSCRIPTION_STATUS_LABELS,
   type SubscriptionStatus,
@@ -142,7 +142,7 @@ function BillingPage() {
       return;
     }
 
-    const planCode = isPublicPlanCode(row.plans?.code) ? row.plans.code : "premium";
+    const planCode = isKnownPlanCode(row.plans?.code) ? row.plans.code : "premium";
     const cycle = row.billing_cycles;
 
     // A taxa de cadastro sai da estimativa assim que aparece em uma fatura.

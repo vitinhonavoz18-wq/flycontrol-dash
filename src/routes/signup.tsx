@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { CHECKOUT_TOKEN_STORAGE_KEY } from "@/lib/billing/checkout";
 import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import { createAccount, getSignupOptions } from "@/lib/signup/signup.functions";
@@ -40,7 +40,9 @@ import logo from "@/assets/flycontrol-logo.png";
 export const Route = createFileRoute("/signup")({
   component: SignupWizard,
   validateSearch: (search: Record<string, unknown>) => ({
-    plan: isPublicPlanCode(search.plan as string) ? (search.plan as PlanCode) : undefined,
+    // `isKnownPlanCode` e não `isPublicPlanCode`: o plano interno de teste só
+    // é alcançável por quem já sabe a URL exata — não aparece no seletor.
+    plan: isKnownPlanCode(search.plan as string) ? (search.plan as PlanCode) : undefined,
   }),
 });
 
@@ -261,8 +263,8 @@ function SignupWizard() {
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Cobrança</span>
                 <strong className="text-right">
-                  {planCode === "premium"
-                    ? `${formatCents(PLAN_PRICING.premium.monthlyFeeCents)} por mês`
+                  {pricing?.billingModel === "monthly_fixed"
+                    ? `${formatCents(pricing.monthlyFeeCents)} por mês`
                     : `${formatCents(PLAN_PRICING.cents.setupFeeCents)} de cadastro + ${formatCents(PLAN_PRICING.cents.defaultOrderUnitPriceCents)} por pedido`}
                 </strong>
               </div>
@@ -591,7 +593,7 @@ function SignupWizard() {
                 <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
                   Plano {pricing.name}
                 </h2>
-                {planCode === "premium" ? (
+                {pricing.billingModel === "monthly_fixed" ? (
                   <div className="flex justify-between gap-2">
                     <span className="text-muted-foreground">Mensalidade</span>
                     <strong>{formatCents(pricing.monthlyFeeCents)}</strong>

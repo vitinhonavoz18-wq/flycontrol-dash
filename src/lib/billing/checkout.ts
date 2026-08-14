@@ -59,6 +59,7 @@ export type CheckoutConfig =
 const ENV_BY_PLAN: Record<PlanCode, string> = {
   premium: "INFINITYPAY_CHECKOUT_URL_PREMIUM",
   cents: "INFINITYPAY_CHECKOUT_URL_CENTS",
+  teste: "INFINITYPAY_CHECKOUT_URL_TESTE",
 };
 
 /** Nome da variável de ambiente que guarda o checkout de um plano. */

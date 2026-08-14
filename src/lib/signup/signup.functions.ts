@@ -18,7 +18,7 @@ import { asBillingDb } from "@/lib/billing/supabaseBridge";
 import {
   COMPANY_BILLING_MODEL,
   PLAN_PRICING,
-  isPublicPlanCode,
+  isKnownPlanCode,
   type PlanCode,
 } from "@/lib/billing/plans";
 import {
@@ -253,7 +253,7 @@ function withDiagnostics(message: string, error: unknown, testMode: boolean): st
 
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((d: SignupInput) => {
-    if (!isPublicPlanCode(d?.planCode)) throw new Error("Selecione um plano válido.");
+    if (!isKnownPlanCode(d?.planCode)) throw new Error("Selecione um plano válido.");
     if (!d?.acceptedTerms) throw new Error("É necessário aceitar os termos para continuar.");
 
     // Aba aberta antes de uma publicação nova: o cliente aceitou um texto que

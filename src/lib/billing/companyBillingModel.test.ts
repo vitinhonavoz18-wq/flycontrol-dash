@@ -12,7 +12,10 @@ import { COMPANY_BILLING_MODEL } from "./plans";
  * do próprio arquivo de migration e comparam com o mapa do código, para que
  * uma mudança em um lado sem o outro pare aqui.
  */
-const MIGRATION = "supabase/migrations/20260721221500_plans_restructure.sql";
+// A migration original criou a constraint; a de teste.sql a substituiu por
+// inteiro (DROP + ADD) para acrescentar o par do plano interno `teste`. É a
+// segunda que descreve o par vigente no banco hoje.
+const MIGRATION = "supabase/migrations/20260814120000_teste_plan.sql";
 const sql = readFileSync(MIGRATION, "utf8");
 
 /** Extrai os pares (plan_type, billing_model) aceitos pela constraint. */
@@ -37,8 +40,8 @@ describe("par plano + modelo de cobrança", () => {
     expect(paresAceitosNoBanco()).toEqual({ ...COMPANY_BILLING_MODEL });
   });
 
-  it("cobre todos os planos públicos", () => {
-    expect(Object.keys(COMPANY_BILLING_MODEL).sort()).toEqual(["cents", "premium"]);
+  it("cobre todos os planos, públicos e internos", () => {
+    expect(Object.keys(COMPANY_BILLING_MODEL).sort()).toEqual(["cents", "premium", "teste"]);
   });
 
   it("CENTS nunca é 'fixed'", () => {

@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CHECKOUT_TOKEN_STORAGE_KEY } from "@/lib/billing/checkout";
 import { confirmCheckoutReturn, type ConfirmReturnResult } from "@/lib/billing/checkout.functions";
-import { PLAN_PRICING, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
 import logo from "@/assets/flycontrol-logo.png";
 
 export const Route = createFileRoute("/pagamento/$plano")({ component: CheckoutReturnPage });
@@ -45,7 +45,7 @@ function CheckoutReturnPage() {
   const [state, setState] = useState<PageState>({ phase: "loading" });
 
   useEffect(() => {
-    if (!isPublicPlanCode(plano)) {
+    if (!isKnownPlanCode(plano)) {
       setState({ phase: "invalid_plan" });
       return;
     }
@@ -207,9 +207,13 @@ function ResultState({ result }: { result: ConfirmReturnResult }) {
 
 /** O que vem depois muda com o plano contratado. */
 function nextStepCopy(planCode: PlanCode): string {
-  return planCode === "premium"
-    ? "Seu acesso está liberado. Entre no painel para concluir a configuração do estabelecimento e começar a receber pedidos."
-    : "Sua taxa de cadastro está paga. Entre no painel para cadastrar seu estabelecimento e o cardápio — a partir daí você paga apenas pelos pedidos válidos.";
+  if (planCode === "premium") {
+    return "Seu acesso está liberado. Entre no painel para concluir a configuração do estabelecimento e começar a receber pedidos.";
+  }
+  if (planCode === "cents") {
+    return "Sua taxa de cadastro está paga. Entre no painel para cadastrar seu estabelecimento e o cardápio — a partir daí você paga apenas pelos pedidos válidos.";
+  }
+  return "Pagamento de teste confirmado. Entre no painel para conferir o fluxo completo de cadastro e checkout.";
 }
 
 function StatusIcon({

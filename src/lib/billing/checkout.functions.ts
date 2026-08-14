@@ -13,7 +13,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
-import { isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
 import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import {
@@ -56,7 +56,7 @@ type IntentRow = {
 
 export const confirmCheckoutReturn = createServerFn({ method: "POST" })
   .inputValidator((d: ConfirmReturnInput) => {
-    if (!isPublicPlanCode(d?.planCode)) throw new Error("Plano inválido.");
+    if (!isKnownPlanCode(d?.planCode)) throw new Error("Plano inválido.");
     // Token é hexadecimal de 32 bytes. Qualquer outra coisa nem chega ao banco.
     if (typeof d?.token !== "string" || !/^[0-9a-f]{64}$/.test(d.token)) {
       throw new Error("Retorno de checkout inválido.");
