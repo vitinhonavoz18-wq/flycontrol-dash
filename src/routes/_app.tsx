@@ -4,6 +4,7 @@ import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
 import {
+  Smartphone,
   LayoutDashboard,
   Store,
   BarChart3,
@@ -164,6 +165,7 @@ function AppLayoutInner() {
     { to: "/search-orders", label: "Buscar Pedidos", icon: Search },
     { to: "/my-store", label: "Minha Loja", icon: Store },
     { to: "/menu", label: "Cardápio", icon: Menu },
+    { to: "/flydelivery", label: "FlyDelivery", icon: Smartphone },
     { to: "/combos", label: "Combos", icon: PieChart },
     { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },
     { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
