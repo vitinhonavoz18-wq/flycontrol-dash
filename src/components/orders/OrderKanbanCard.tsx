@@ -63,6 +63,14 @@ export function OrderCardContent({
             >
               {getOrderTypeLabel(order).toUpperCase()}
             </Badge>
+            {order.source === "flydelivery" && (
+              <Badge
+                variant="outline"
+                className="h-5 border-orange-200 bg-orange-100 py-0 text-[9px] font-black text-orange-700"
+              >
+                FLYDELIVERY
+              </Badge>
+            )}
             {isRecentNew && (
               <Badge className="h-5 animate-pulse bg-primary py-0 text-[9px] font-black text-white">
                 NOVO

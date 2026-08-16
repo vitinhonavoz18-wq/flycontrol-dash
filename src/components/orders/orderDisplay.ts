@@ -81,6 +81,9 @@ export function isPaid(status: string | null | undefined): boolean {
 }
 
 const SOURCE_LABELS: Record<string, string> = {
+  // Pedido vindo do aplicativo FlyDelivery. Sem esta linha o painel mostraria
+  // o código cru "flydelivery" para quem está atendendo.
+  flydelivery: "FlyDelivery",
   sitecreatorfly: "Site",
   site: "Site",
   whatsapp: "WhatsApp",
