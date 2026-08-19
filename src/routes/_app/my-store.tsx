@@ -30,6 +30,7 @@ import { FlyStatusSettings } from "@/components/flystatus/FlyStatusSettings";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { syncToExternal } from "@/utils/menuSync";
+import { CheckoutLayoutPicker } from "@/components/store/CheckoutLayoutPicker";
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
@@ -814,6 +815,24 @@ function StoreEditor({
                   disabled={saving}
                 />
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingBag className="h-4 w-4 text-primary" /> Modelo do Checkout
+              </CardTitle>
+              <CardDescription>
+                Como a tela de finalizar o pedido aparece para o cliente.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CheckoutLayoutPicker
+                current={pizzeria.site_settings?.checkout_layout}
+                saving={saving}
+                onSave={(layout) => handleSiteSettingUpdate("checkout_layout", layout)}
+              />
             </CardContent>
           </Card>
         </TabsContent>
