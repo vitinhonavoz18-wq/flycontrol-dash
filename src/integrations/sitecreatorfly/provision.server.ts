@@ -9,6 +9,15 @@ export type ProvisionPayload = {
   business_type: string;
   selected_template: string;
   api_key: string;
+  /**
+   * Endereço público deste FlyControl, para onde a loja envia os pedidos.
+   *
+   * Quem sabe o próprio endereço é este lado. Mandá-lo junto evita que cada
+   * loja precise ser configurada à mão com "para onde mandar pedido" — que era
+   * o que fazia o carrinho recusar a compra dizendo que a loja não está
+   * conectada ao painel.
+   */
+  flycontrol_base_url?: string;
 };
 
 export type ProvisionResult =

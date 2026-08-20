@@ -16,6 +16,7 @@
  * repescagem tenta de novo.
  */
 
+import { getRequest } from "@tanstack/react-start/server";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { provisionRestaurantInSF } from "@/integrations/sitecreatorfly/provision.server";
 import {
@@ -25,6 +26,28 @@ import {
   decideProvisioning,
   describeSubject,
 } from "./provisioning";
+
+/**
+ * Endereço público deste FlyControl, para a loja saber para onde mandar pedido.
+ *
+ * Descoberto a partir da própria requisição em andamento — assim nasce certo
+ * em qualquer ambiente, sem mais uma variável para alguém esquecer de
+ * preencher. `FLYCONTROL_PUBLIC_URL` existe só como saída manual para o caso
+ * de a origem da requisição não ser a pública (proxy à frente, por exemplo).
+ */
+function resolveOwnBaseUrl(): string | undefined {
+  const configured = (process.env.FLYCONTROL_PUBLIC_URL || "").trim();
+  if (configured) return configured.replace(/\/+$/, "");
+
+  try {
+    const request = getRequest();
+    if (request?.url) return new URL(request.url).origin;
+  } catch {
+    // Fora de um contexto de requisição (rotina agendada, por exemplo). O
+    // SiteCreatorFly mantém o endereço que já tiver gravado.
+  }
+  return undefined;
+}
 
 export type EnsureResult =
   | { ok: true; skipped: true; reason: "already_provisioned"; publicUrl: string | null }
@@ -104,6 +127,7 @@ export async function ensureRestaurantProvisioned(companyId: string): Promise<En
     business_type: "pizzeria",
     selected_template: "default",
     api_key: company.api_key,
+    flycontrol_base_url: resolveOwnBaseUrl(),
   });
 
   if (!provision.ok) {
