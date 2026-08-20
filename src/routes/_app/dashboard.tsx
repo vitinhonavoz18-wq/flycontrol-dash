@@ -31,6 +31,7 @@ import {
   type FlyStatusKind,
   type FlyStatusPizzeria,
 } from "@/components/flystatus/FlyStatusModal";
+import { TrialBanner } from "@/components/billing/TrialBanner";
 import { ClubCentsCard } from "@/components/club/ClubCentsCard";
 import { HallOfFameStrip } from "@/components/club/HallOfFameStrip";
 import { OrdersKanban } from "@/components/orders/OrdersKanban";
@@ -756,6 +757,9 @@ function Dashboard() {
           </Button>
         </div>
       </div>
+
+      {/* Faixa fina do período grátis. Some sozinha quando não há trial. */}
+      <TrialBanner />
 
       <ClubCentsCard tenantId={activeId} />
       <HallOfFameStrip />

@@ -3,11 +3,14 @@ import { useEffect, useState } from "react";
 import {
   ArrowLeft,
   ArrowRight,
+  CalendarClock,
   Check,
   Clock,
   ExternalLink,
   FlaskConical,
+  Gift,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -21,6 +24,12 @@ import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TERMS_VERSION } from "@/lib/legal/terms";
+import {
+  TRIAL_DURATION_DAYS,
+  TRIAL_PLAN_CODE,
+  buildTrialTimeline,
+  formatTrialDate,
+} from "@/lib/billing/trial";
 import { createAccount, getSignupOptions } from "@/lib/signup/signup.functions";
 import { PAYMENT_BYPASS_WARNING } from "@/lib/signup/paymentBypass";
 import {
@@ -44,7 +53,7 @@ export const Route = createFileRoute("/signup")({
   }),
 });
 
-const STEPS = ["Plano", "Responsável", "Empresa", "Revisão"] as const;
+const STEPS = ["Comece grátis", "Criar conta", "Estabelecimento", "Ativar"] as const;
 
 const SEGMENTS = [
   "Pizzaria",
@@ -110,8 +119,11 @@ function SignupWizard() {
   const { plan: planFromUrl } = Route.useSearch();
   const navigate = useNavigate();
 
-  const [step, setStep] = useState(planFromUrl ? 1 : 0);
-  const [planCode, setPlanCode] = useState<PlanCode | null>(planFromUrl ?? null);
+  const [step, setStep] = useState(0);
+  // Cadastro novo entra no CENTS: é o plano que combina com "pague só depois
+  // de usar". O PREMIUM continua existindo e é oferecido dentro do painel; o
+  // parâmetro `?plan=` na URL segue funcionando para links antigos.
+  const [planCode] = useState<PlanCode>(planFromUrl ?? TRIAL_PLAN_CODE);
   // Os dados vivem no wizard inteiro: voltar uma etapa nunca apaga o que já
   // foi digitado.
   const [owner, setOwner] = useState<OwnerData>(emptyOwner);
@@ -119,9 +131,15 @@ function SignupWizard() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
-  const [result, setResult] = useState<{ companyName: string; activationPending: boolean } | null>(
-    null,
-  );
+  const [result, setResult] = useState<{
+    companyName: string;
+    activationPending: boolean;
+    /** Datas reais devolvidas pelo servidor. Nulo quando não houve trial. */
+    trial: { startsAt: string; endsAt: string } | null;
+    trialDenied: string | null;
+    /** `true` quando o login automático deu certo e dá para entrar direto. */
+    signedIn: boolean;
+  } | null>(null);
 
   // Atalho de teste. Quem responde se ele existe é o servidor — o navegador
   // não enxerga variável de ambiente do Worker.
@@ -138,14 +156,10 @@ function SignupWizard() {
     };
   }, []);
 
-  const pricing = planCode ? PLAN_PRICING[planCode] : null;
+  const pricing = PLAN_PRICING[planCode];
 
   function goNext() {
     if (step === 0) {
-      if (!planCode) {
-        toast.error("Escolha um plano para continuar.");
-        return;
-      }
       setStep(1);
       return;
     }
@@ -164,8 +178,18 @@ function SignupWizard() {
     }
   }
 
+  /** Entra na conta recém-criada. A senha acabou de ser digitada aqui. */
+  async function signInSilently(): Promise<boolean> {
+    const { error } = await supabase.auth.signInWithPassword({
+      email: owner.email.trim().toLowerCase(),
+      password: owner.password,
+    });
+    if (error) console.error("[signup] login automático falhou:", error);
+    return !error;
+  }
+
   async function submit(options: { bypassPayment?: boolean } = {}) {
-    if (!planCode || submitting) return;
+    if (submitting) return;
     if (!acceptedTerms) {
       toast.error("É necessário aceitar os termos para continuar.");
       return;
@@ -201,26 +225,23 @@ function SignupWizard() {
       }
 
       // Atalho de teste: entra direto na configuração da loja, que é o que se
-      // quer inspecionar. A senha acabou de ser digitada aqui, então não há
-      // motivo para pedir de novo.
-      if (created.paymentBypassed) {
-        const { error } = await supabase.auth.signInWithPassword({
-          email: owner.email.trim().toLowerCase(),
-          password: owner.password,
-        });
-
-        if (!error) {
-          await navigate({ to: "/my-store" });
-          return;
-        }
-        // Login automático falhou: a conta existe, então cai na tela de
-        // sucesso e o acesso é pelo login normal.
-        console.error("[signup] login automático falhou:", error);
+      // quer inspecionar.
+      if (created.paymentBypassed && (await signInSilently())) {
+        await navigate({ to: "/my-store" });
+        return;
       }
+
+      // Período gratuito liberado: a conta já está de pé. Entramos agora para
+      // que a tela de conclusão termine em "Entrar no FlyControl" de verdade,
+      // e não em mais um formulário de login.
+      const signedIn = created.trial ? await signInSilently() : false;
 
       setResult({
         companyName: created.companyName,
         activationPending: created.subscriptionStatus === "pending_activation",
+        trial: created.trial,
+        trialDenied: created.trialDenied,
+        signedIn,
       });
     } catch (err) {
       // A função do servidor já devolve mensagem em português e sem detalhe
@@ -235,7 +256,75 @@ function SignupWizard() {
     }
   }
 
-  // ---- Etapa final: cadastro concluído, aguardando ativação ---------------
+  // ---- Etapa final A: período gratuito ativo ------------------------------
+  if (result?.trial) {
+    // As datas vêm do servidor. A tela apenas deriva as do ciclo seguinte a
+    // partir do fim real do período — nunca recalcula o início.
+    const timeline = buildTrialTimeline(new Date(result.trial.startsAt));
+    const trialEnd = new Date(result.trial.endsAt);
+
+    return (
+      <div className="grid min-h-dvh place-items-center bg-background px-4 py-8">
+        <Card className="w-full max-w-lg overflow-hidden">
+          <CardContent className="space-y-5 p-5 text-center sm:p-6">
+            <div className="mx-auto grid h-14 w-14 place-items-center rounded-full bg-emerald-500/15">
+              <Check
+                className="h-7 w-7 text-emerald-600 dark:text-emerald-400"
+                aria-hidden="true"
+              />
+            </div>
+
+            <div className="space-y-1">
+              <h1 className="text-xl font-black sm:text-2xl">Seu FlyControl está ativo 🎉</h1>
+              <p className="text-sm font-semibold text-primary">
+                Seus próximos {TRIAL_DURATION_DAYS} dias são por nossa conta.
+              </p>
+              <p className="text-sm text-muted-foreground">{result.companyName}</p>
+            </div>
+
+            <dl className="space-y-2 rounded-lg border border-border bg-muted/30 p-4 text-left text-sm">
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Período grátis</dt>
+                <dd className="text-right font-semibold">
+                  {formatTrialDate(result.trial.startsAt)} até {formatTrialDate(trialEnd)}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Ciclo cobrado começa em</dt>
+                <dd className="text-right font-semibold">{formatTrialDate(trialEnd)}</dd>
+              </div>
+              <div className="flex items-center justify-between gap-3">
+                <dt className="text-muted-foreground">Ciclo cobrado termina em</dt>
+                <dd className="text-right font-semibold">
+                  {formatTrialDate(timeline.usageCycleEnd)}
+                </dd>
+              </div>
+              <div className="flex items-center justify-between gap-3 border-t border-border pt-2">
+                <dt className="text-muted-foreground">Primeira cobrança prevista</dt>
+                <dd className="text-right font-black text-primary">
+                  {formatTrialDate(timeline.firstChargeAt)}
+                </dd>
+              </div>
+            </dl>
+
+            {/* Dizer quando NÃO se cobra é tão importante quanto dizer quanto
+                custa: é o que evita a sensação de cobrança surpresa. */}
+            <p className="rounded-lg bg-primary/5 p-3 text-left text-sm text-muted-foreground">
+              Nada é cobrado agora nem durante os {TRIAL_DURATION_DAYS} dias. Depois disso, cada
+              pedido válido passa a contar {formatCents(pricing.defaultOrderUnitPriceCents)}, e a
+              conta é fechada só no fim do ciclo — em {formatTrialDate(timeline.firstChargeAt)}.
+            </p>
+
+            <Button asChild className="h-12 w-full text-base font-bold">
+              <Link to={result.signedIn ? "/dashboard" : "/login"}>Entrar no FlyControl</Link>
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // ---- Etapa final B: cadastro concluído, aguardando ativação -------------
   if (result) {
     return (
       <div className="grid min-h-dvh place-items-center bg-background px-4 py-8">
@@ -276,6 +365,15 @@ function SignupWizard() {
                 </Badge>
               </div>
             </div>
+
+            {/* Motivo explícito quando o período grátis não valeu. Omitir
+                deixaria o cliente achando que o sistema falhou, quando na
+                verdade a regra é "um período grátis por pessoa". */}
+            {result.trialDenied && (
+              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-left text-sm text-amber-700 dark:text-amber-400">
+                {result.trialDenied}
+              </p>
+            )}
 
             {/* Nada de dizer que a conta está ativa antes de estar. */}
             <p className="text-sm text-muted-foreground">
@@ -337,54 +435,94 @@ function SignupWizard() {
 
         {step === 0 && (
           <section className="space-y-4">
-            <div>
-              <h1 className="text-xl font-bold sm:text-2xl">Escolha seu plano</h1>
-              <p className="text-sm text-muted-foreground">Você pode trocar depois.</p>
+            {/* Um cartão só, e ele domina a tela. Duas opções lado a lado
+                transformavam a primeira decisão em uma conta de matemática —
+                aqui a única decisão é "começar". O preço aparece embaixo,
+                em letra menor e sem esconder nada. */}
+            <div className="relative overflow-hidden rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/15 via-primary/5 to-transparent p-6 text-center shadow-lg sm:p-8">
+              {/* Brilho decorativo. `pointer-events-none` para nunca roubar o
+                  toque do botão no celular. */}
+              <div
+                className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-primary/20 blur-3xl"
+                aria-hidden="true"
+              />
+
+              <Badge className="relative mb-4 gap-1.5 bg-primary px-3 py-1 text-primary-foreground">
+                <Sparkles className="h-3.5 w-3.5" aria-hidden="true" />
+                Oferta de boas-vindas
+              </Badge>
+
+              <h1 className="relative text-4xl font-black leading-none tracking-tight sm:text-5xl">
+                {TRIAL_DURATION_DAYS} DIAS
+                <span className="block text-primary">GRÁTIS</span>
+              </h1>
+
+              <p className="relative mt-4 text-base font-semibold sm:text-lg">
+                Comece agora. Pague só depois de usar.
+              </p>
+
+              <p className="relative mt-1 text-sm text-muted-foreground">
+                R$ 0 nos primeiros {TRIAL_DURATION_DAYS} dias
+              </p>
+
+              <ul className="relative mx-auto mt-5 grid max-w-sm gap-2 text-left text-sm">
+                {[
+                  "Cardápio digital publicado automaticamente",
+                  "Pedidos, entregas e financeiro no mesmo painel",
+                  "Sem cartão de crédito para começar",
+                  "Sem fidelidade: cancele quando quiser",
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2">
+                    <Check
+                      className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"
+                      aria-hidden="true"
+                    />
+                    <span>{item}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <Button
+                className="relative mt-6 h-14 w-full text-base font-black tracking-wide transition-transform active:scale-[0.98]"
+                onClick={goNext}
+              >
+                COMEÇAR GRÁTIS AGORA
+                <ArrowRight className="h-5 w-5" aria-hidden="true" />
+              </Button>
             </div>
 
-            <div className="grid gap-3">
-              {(["premium", "cents"] as const).map((code) => {
-                const p = PLAN_PRICING[code];
-                const selected = planCode === code;
-                return (
-                  <button
-                    key={code}
-                    type="button"
-                    onClick={() => setPlanCode(code)}
-                    aria-pressed={selected}
-                    className={`rounded-xl border p-4 text-left transition-colors ${
-                      selected
-                        ? "border-primary bg-primary/5 ring-1 ring-primary"
-                        : "border-border bg-card hover:border-primary/50"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-2">
-                      <span className="text-lg font-black">{p.name}</span>
-                      {selected && (
-                        <Badge className="bg-primary text-primary-foreground">Selecionado</Badge>
-                      )}
-                    </div>
-                    <p className="mt-1 text-sm font-bold text-primary">
-                      {code === "premium"
-                        ? `${formatCents(p.monthlyFeeCents)}/mês`
-                        : `${formatCents(p.setupFeeCents)} de cadastro + ${formatCents(p.defaultOrderUnitPriceCents)} por pedido`}
-                    </p>
-                    <p className="mt-1 text-xs text-muted-foreground">{p.description}</p>
-                    {code === "cents" && (
-                      <p className="mt-2 text-xs text-amber-600 dark:text-amber-400">
-                        Não inclui Mesas, Garçons e Comissões.
-                      </p>
-                    )}
-                  </button>
-                );
-              })}
+            {/* O que acontece depois dos 30 dias, dito antes de começar. */}
+            <div className="rounded-xl border border-border bg-card p-4">
+              <h2 className="flex items-center gap-2 text-sm font-bold">
+                <CalendarClock className="h-4 w-4 text-primary" aria-hidden="true" />
+                Depois dos {TRIAL_DURATION_DAYS} dias
+              </h2>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Começa um ciclo em que cada pedido válido conta{" "}
+                <strong className="text-foreground">
+                  {formatCents(pricing.defaultOrderUnitPriceCents)}
+                </strong>
+                . Ao atingir {pricing.promotionThresholdOrders} pedidos em um ciclo, o próximo cai
+                para{" "}
+                <strong className="text-foreground">
+                  {formatCents(pricing.promotionalOrderUnitPriceCents)}
+                </strong>{" "}
+                por pedido. A conta é fechada só no fim do ciclo — nada é cobrado adiantado.
+              </p>
+              {pricing.setupFeeCents > 0 && (
+                <p className="mt-2 text-sm text-muted-foreground">
+                  Há também a taxa única de cadastro de{" "}
+                  <strong className="text-foreground">{formatCents(pricing.setupFeeCents)}</strong>,
+                  cobrada uma só vez e apenas na primeira conta — depois do período grátis, nunca
+                  antes.
+                </p>
+              )}
+              <p className="mt-2 text-xs text-muted-foreground">
+                <Link to="/plans" className="text-primary underline">
+                  Ver todos os planos e o comparativo completo
+                </Link>
+              </p>
             </div>
-
-            <p className="text-center text-xs text-muted-foreground">
-              <Link to="/plans" className="text-primary underline">
-                Ver comparação completa
-              </Link>
-            </p>
           </section>
         )}
 
@@ -582,37 +720,47 @@ function SignupWizard() {
           </section>
         )}
 
-        {step === 3 && pricing && (
+        {step === 3 && (
           <section className="space-y-4">
-            <h1 className="text-xl font-bold sm:text-2xl">Confira antes de criar</h1>
+            <h1 className="text-xl font-bold sm:text-2xl">Ativar seu período grátis</h1>
 
-            <Card>
+            <Card className="border-primary/40 bg-primary/5">
               <CardContent className="space-y-3 p-4 text-sm">
-                <h2 className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
-                  Plano {pricing.name}
+                <h2 className="flex items-center gap-2 text-base font-black">
+                  <Gift className="h-5 w-5 text-primary" aria-hidden="true" />
+                  {TRIAL_DURATION_DAYS} dias grátis
                 </h2>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Hoje você paga</span>
+                  <strong className="text-primary">R$ 0,00</strong>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-muted-foreground">Nos {TRIAL_DURATION_DAYS} dias</span>
+                  <strong className="text-primary">R$ 0,00</strong>
+                </div>
                 {planCode === "premium" ? (
-                  <div className="flex justify-between gap-2">
-                    <span className="text-muted-foreground">Mensalidade</span>
-                    <strong>{formatCents(pricing.monthlyFeeCents)}</strong>
+                  <div className="flex justify-between gap-2 border-t border-primary/20 pt-2">
+                    <span className="text-muted-foreground">Depois disso</span>
+                    <strong>{formatCents(pricing.monthlyFeeCents)} por mês</strong>
                   </div>
                 ) : (
                   <>
-                    <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground">Taxa única de cadastro</span>
-                      <strong>{formatCents(pricing.setupFeeCents)}</strong>
-                    </div>
-                    <div className="flex justify-between gap-2">
-                      <span className="text-muted-foreground">Por pedido válido</span>
+                    <div className="flex justify-between gap-2 border-t border-primary/20 pt-2">
+                      <span className="text-muted-foreground">Depois disso, por pedido válido</span>
                       <strong>{formatCents(pricing.defaultOrderUnitPriceCents)}</strong>
                     </div>
-                    <p className="rounded-md bg-muted/50 p-2 text-xs text-muted-foreground">
-                      Ao atingir {pricing.promotionThresholdOrders} pedidos válidos em um ciclo, o
-                      próximo passa a custar {formatCents(pricing.promotionalOrderUnitPriceCents)}{" "}
-                      por pedido. Para manter, é preciso atingir a meta em cada ciclo.
+                    <p className="rounded-md bg-background/60 p-2 text-xs text-muted-foreground">
+                      A partir do fim do período grátis, ao atingir{" "}
+                      {pricing.promotionThresholdOrders} pedidos válidos em um ciclo, o próximo
+                      passa a custar {formatCents(pricing.promotionalOrderUnitPriceCents)} por
+                      pedido. Para manter, é preciso atingir a meta em cada ciclo. A cobrança sai só
+                      no fechamento do ciclo.
+                      {pricing.setupFeeCents > 0 &&
+                        ` A taxa única de cadastro de ${formatCents(pricing.setupFeeCents)} entra nessa primeira conta, e em nenhuma outra.`}
                     </p>
                     <p className="text-xs text-amber-600 dark:text-amber-400">
-                      Não inclui Mesas, Garçons e Comissões.
+                      Não inclui Mesas, Garçons e Comissões — recursos do PREMIUM, que você pode
+                      conhecer dentro do painel.
                     </p>
                   </>
                 )}
@@ -689,8 +837,10 @@ function SignupWizard() {
           </section>
         )}
 
-        <div className="mt-6 flex gap-2">
-          {step > 0 && (
+        {/* A etapa 0 tem o próprio botão dentro do cartão: repetir aqui daria
+            dois "continuar" na mesma tela. */}
+        {step > 0 && (
+          <div className="mt-6 flex gap-2">
             <Button
               variant="outline"
               className="h-12 flex-1"
@@ -702,23 +852,23 @@ function SignupWizard() {
             >
               <ArrowLeft className="h-4 w-4" aria-hidden="true" /> Voltar
             </Button>
-          )}
 
-          {step < 3 ? (
-            <Button className="h-12 flex-1" onClick={goNext}>
-              Continuar <ArrowRight className="h-4 w-4" aria-hidden="true" />
-            </Button>
-          ) : (
-            <Button
-              className="h-12 flex-1"
-              onClick={() => void submit()}
-              disabled={submitting || !acceptedTerms}
-            >
-              {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-              {submitting ? "Criando conta…" : "Criar minha conta"}
-            </Button>
-          )}
-        </div>
+            {step < 3 ? (
+              <Button className="h-12 flex-1" onClick={goNext}>
+                Continuar <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            ) : (
+              <Button
+                className="h-12 flex-[2] font-bold"
+                onClick={() => void submit()}
+                disabled={submitting || !acceptedTerms}
+              >
+                {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
+                {submitting ? "Ativando…" : `Ativar meus ${TRIAL_DURATION_DAYS} dias grátis`}
+              </Button>
+            )}
+          </div>
+        )}
 
         {/* TEMPORÁRIO — atalho de teste.
             Só aparece com SIGNUP_ALLOW_PAYMENT_BYPASS="true" no servidor, e o

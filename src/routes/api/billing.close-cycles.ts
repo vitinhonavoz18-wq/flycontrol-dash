@@ -88,9 +88,13 @@ export const Route = createFileRoute("/api/billing/close-cycles")({
               results.push({
                 cycleId: cycle.id,
                 ok: true,
-                detail: result.alreadyClosed
-                  ? `já fechado, fatura ${result.invoiceId}`
-                  : `fatura ${result.invoiceId}, total ${result.totalAmountCents} centavos`,
+                // Período grátis fecha sem fatura de propósito: não se emite
+                // conta de R$ 0,00.
+                detail: result.freeTrial
+                  ? `período grátis encerrado${result.alreadyClosed ? " (já estava)" : ""}, ciclo cobrado ${result.nextCycleId ?? "não aberto"}`
+                  : result.alreadyClosed
+                    ? `já fechado, fatura ${result.invoiceId}`
+                    : `fatura ${result.invoiceId}, total ${result.totalAmountCents} centavos`,
               });
             } else {
               results.push({ cycleId: cycle.id, ok: false, detail: result.error });

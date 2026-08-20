@@ -13,6 +13,10 @@
 export const SUBSCRIPTION_STATUSES = [
   "pending_activation",
   "pending_payment",
+  // Os 30 dias por nossa conta. É um estado próprio, e não uma conta de datas
+  // feita em cada tela: assim "está no período grátis" tem uma resposta só, e
+  // ela mora no banco.
+  "free_trial",
   "active",
   "past_due",
   "suspended",
@@ -25,6 +29,7 @@ export type SubscriptionStatus = (typeof SUBSCRIPTION_STATUSES)[number];
 export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
   pending_activation: "Aguardando ativação",
   pending_payment: "Aguardando pagamento",
+  free_trial: "Período grátis",
   active: "Ativa",
   past_due: "Pagamento em atraso",
   suspended: "Suspensa",
@@ -40,10 +45,15 @@ export const SUBSCRIPTION_STATUS_LABELS: Record<SubscriptionStatus, string> = {
  * cobrança do período encerrado permanecer intacto.
  */
 const ALLOWED_TRANSITIONS: Record<SubscriptionStatus, readonly SubscriptionStatus[]> = {
-  pending_activation: ["pending_payment", "active", "canceled"],
+  pending_activation: ["pending_payment", "free_trial", "active", "canceled"],
   // Ativação direta existe porque, sem gateway, quem confirma o pagamento é
   // um administrador — e ele confirma o que já recebeu.
-  pending_payment: ["active", "canceled", "expired"],
+  pending_payment: ["free_trial", "active", "canceled", "expired"],
+  // O fim do período grátis leva a `active`: o cliente continua operando e
+  // passa a acumular pedidos no ciclo cobrado. Nunca há bloqueio automático
+  // aqui — desligar um restaurante porque o brinde acabou seria a pior forma
+  // possível de apresentar a conta.
+  free_trial: ["active", "suspended", "canceled"],
   active: ["past_due", "suspended", "canceled"],
   past_due: ["active", "suspended", "canceled"],
   suspended: ["active", "canceled"],
@@ -97,7 +107,9 @@ export function isTerminalStatus(status: string): boolean {
  * compensando. A suspensão é decisão explícita, não automática.
  */
 export function isOperational(status: string): boolean {
-  return status === "active" || status === "past_due";
+  // `free_trial` opera igual a uma assinatura paga: prometer 30 dias e
+  // entregar um sistema capado transformaria o brinde em propaganda enganosa.
+  return status === "active" || status === "past_due" || status === "free_trial";
 }
 
 /** Ações administrativas disponíveis, derivadas da máquina de estados. */
