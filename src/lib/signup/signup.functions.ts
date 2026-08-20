@@ -31,11 +31,10 @@ import {
   resolveCheckoutConfig,
 } from "@/lib/billing/checkout";
 import { createInfinityPayCheckoutLink, infinityPayHandle } from "@/lib/billing/infinitypay/api";
-import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TRIAL_DENIAL_MESSAGES, grantFreeTrial } from "@/lib/billing/trial.server";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
-import { PAYMENT_BYPASS_REASON, isPaymentBypassAllowed } from "./paymentBypass";
+import { isSignupDebugEnabled, withDiagnostics } from "./diagnostics";
 import { checkAndRecordSignupAttempt, currentRequestIp } from "./rateLimit.server";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
@@ -60,8 +59,6 @@ export type SignupInput = {
   /** Versões dos documentos exibidas na tela em que o aceite foi dado. */
   termsVersion: string;
   privacyVersion: string;
-  /** Atalho temporário de teste. Só vale se o servidor também permitir. */
-  bypassPayment?: boolean;
   /**
    * Presente quando quem está se cadastrando já entrou com o Google. O
    * `access_token` da sessão é conferido no servidor (nunca confiamos no que
@@ -83,8 +80,6 @@ export type SignupResult = {
    * combinada com a equipe.
    */
   checkout: { url: string; token: string } | null;
-  /** `true` quando a conta foi criada pelo atalho de teste, sem pagamento. */
-  paymentBypassed: boolean;
   /**
    * Datas reais do período gratuito, vindas do banco.
    *
@@ -99,19 +94,6 @@ export type SignupResult = {
    */
   trialDenied: string | null;
 };
-
-/**
- * O que a tela de cadastro precisa saber sobre o ambiente.
- *
- * O botão de atalho não pode ser decidido pelo navegador: `import.meta.env`
- * do cliente não enxerga variável de servidor, e deixar a decisão no bundle
- * publicaria o atalho junto com o site.
- */
-export const getSignupOptions = createServerFn({ method: "GET" }).handler(
-  async (): Promise<{ paymentBypassAllowed: boolean }> => ({
-    paymentBypassAllowed: isPaymentBypassAllowed(process.env),
-  }),
-);
 
 /**
  * Grava a intenção de checkout. `id` explícito permite que o chamador saiba
@@ -257,23 +239,6 @@ function generateApiKey(): string {
   return "fc_" + Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-/**
- * Anexa o erro do banco à mensagem, apenas no modo de teste.
- *
- * A mensagem em português é a certa para quem está se cadastrando: código de
- * constraint e nome de coluna não ajudam o cliente e revelam a estrutura do
- * banco. Mas no atalho de teste é justamente esse detalhe que se quer ver — e
- * sem ele a única forma de descobrir a causa é abrir o log do servidor, o que
- * transforma um erro de uma linha em uma investigação.
- */
-function withDiagnostics(message: string, error: unknown, testMode: boolean): string {
-  if (!testMode || !error) return message;
-
-  const e = error as { code?: string; message?: string; details?: string; hint?: string };
-  const parts = [e.code, e.message, e.details, e.hint].filter(Boolean);
-  return parts.length > 0 ? `${message}\n\n[modo de teste] ${parts.join(" · ")}` : message;
-}
-
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((d: SignupInput) => {
     if (!isKnownPlanCode(d?.planCode)) throw new Error("Selecione um plano válido.");
@@ -309,13 +274,9 @@ export const createAccount = createServerFn({ method: "POST" })
     const planCode = data.planCode as PlanCode;
     const email = normalizeEmail(data.owner.email);
 
-    // O pedido do navegador não decide nada: quem autoriza o atalho é o
-    // ambiente. Uma requisição forjada com bypassPayment: true cai aqui e
-    // segue pelo fluxo normal, com pagamento.
-    const bypassPayment = data.bypassPayment === true && isPaymentBypassAllowed(process.env);
-    if (data.bypassPayment === true && !bypassPayment) {
-      console.warn("[signup] atalho de pagamento pedido, mas desligado no ambiente. Ignorado.");
-    }
+    // Detalhe técnico na mensagem de erro. Desligado por padrão; só muda o
+    // texto do erro, nunca o que é criado.
+    const showDetails = isSignupDebugEnabled(process.env);
 
     // ---- 1. Usuário proprietário ------------------------------------------
     // Dois caminhos: quem já entrou com o Google traz uma identidade pronta
@@ -414,9 +375,9 @@ export const createAccount = createServerFn({ method: "POST" })
           // coluna cai no default 'fixed' e todo cadastro no CENTS é recusado.
           billing_model: COMPANY_BILLING_MODEL[planCode],
           // A assinatura ainda não foi ativada, e a empresa não deve operar
-          // como se tivesse sido. O atalho de teste é a exceção: ele existe
-          // justamente para chegar ao que vem depois do pagamento.
-          subscription_status: bypassPayment ? "active" : "pending_activation",
+          // como se tivesse sido. Quem muda isto é a liberação do período
+          // gratuito ou a confirmação do pagamento — nunca o cadastro.
+          subscription_status: "pending_activation",
           phone: onlyDigits(data.company.phone) || null,
           address:
             [data.company.address, data.company.city, data.company.state]
@@ -433,7 +394,7 @@ export const createAccount = createServerFn({ method: "POST" })
           withDiagnostics(
             "Não foi possível criar o estabelecimento. Tente novamente.",
             companyError,
-            bypassPayment,
+            showDetails,
           ),
         );
       }
@@ -466,8 +427,7 @@ export const createAccount = createServerFn({ method: "POST" })
           subscriptionStatus: null,
           // A empresa existe e o cliente pode pagar; a assinatura é criada
           // pelo administrador depois.
-          checkout: bypassPayment ? null : await createCheckoutIntent(planCode, companyId, null),
-          paymentBypassed: bypassPayment,
+          checkout: await createCheckoutIntent(planCode, companyId, null),
           trial: null,
           trialDenied: TRIAL_DENIAL_MESSAGES.billing_not_installed,
         };
@@ -489,8 +449,7 @@ export const createAccount = createServerFn({ method: "POST" })
           companyName: company.name,
           planCode,
           subscriptionStatus: null,
-          checkout: bypassPayment ? null : await createCheckoutIntent(planCode, companyId, null),
-          paymentBypassed: bypassPayment,
+          checkout: await createCheckoutIntent(planCode, companyId, null),
           trial: null,
           trialDenied: TRIAL_DENIAL_MESSAGES.billing_not_installed,
         };
@@ -502,16 +461,12 @@ export const createAccount = createServerFn({ method: "POST" })
           company_id: companyId,
           plan_id: typedPlan.id,
           plan_price_version_id: (priceVersion as { id: string }).id,
-          // Nunca nasce ativa. Sem gateway integrado, marcar como paga seria
-          // inventar um pagamento que não existe — salvo no atalho de teste,
-          // que é explicitamente um ambiente onde isso é aceito.
-          status: bypassPayment ? "active" : "pending_activation",
+          // Nunca nasce ativa. Marcar como paga aqui seria inventar um
+          // pagamento que não existe. Quem ativa é a liberação do período
+          // gratuito, logo abaixo, ou a confirmação da InfinityPay.
+          status: "pending_activation",
           billing_model: typedPlan.billing_model,
           payment_provider: "manual",
-          ...(bypassPayment && {
-            activated_at: new Date().toISOString(),
-            billing_anchor_day: new Date().getUTCDate(),
-          }),
         })
         .select("id")
         .maybeSingle();
@@ -523,7 +478,7 @@ export const createAccount = createServerFn({ method: "POST" })
           withDiagnostics(
             "Não foi possível concluir o cadastro. Tente novamente.",
             subError,
-            bypassPayment,
+            showDetails,
           ),
         );
       }
@@ -531,10 +486,10 @@ export const createAccount = createServerFn({ method: "POST" })
       await db.from("subscription_events").insert({
         subscription_id: (subscription as { id: string }).id,
         company_id: companyId,
-        event_type: bypassPayment ? "subscription_created_test_bypass" : "subscription_created",
-        new_status: bypassPayment ? "active" : "pending_activation",
+        event_type: "subscription_created",
+        new_status: "pending_activation",
         performed_by: userId,
-        reason: bypassPayment ? PAYMENT_BYPASS_REASON : "Cadastro realizado pelo próprio cliente",
+        reason: "Cadastro realizado pelo próprio cliente",
         metadata: {
           plan_code: planCode,
           // Registro do consentimento: sem a versão, uma alteração futura nos
@@ -542,9 +497,6 @@ export const createAccount = createServerFn({ method: "POST" })
           accepted_terms_at: new Date().toISOString(),
           accepted_terms_version: TERMS_VERSION,
           accepted_privacy_version: PRIVACY_VERSION,
-          // Marca permanente: esta conta nunca pagou. É o que permite
-          // encontrá-las depois para limpar ou cobrar.
-          payment_bypassed: bypassPayment,
         },
       });
 
@@ -553,15 +505,13 @@ export const createAccount = createServerFn({ method: "POST" })
       // ---- 4. Período gratuito de 30 dias ---------------------------------
       // Quem concede é o banco. Aqui só pedimos e lemos a resposta — o
       // aplicativo não tem como dizer "pode" quando o banco disse "não".
-      const trial = bypassPayment
-        ? null
-        : await grantFreeTrial({
-            subscriptionId,
-            ownerEmail: email,
-            document: onlyDigits(data.company.document) || null,
-          });
+      const trial = await grantFreeTrial({
+        subscriptionId,
+        ownerEmail: email,
+        document: onlyDigits(data.company.document) || null,
+      });
 
-      if (trial?.granted) {
+      if (trial.granted) {
         // Conta ativa desde o primeiro minuto: o cardápio digital nasce junto,
         // porque prometer 30 dias e entregar um sistema pela metade seria pior
         // do que não prometer nada.
@@ -574,19 +524,9 @@ export const createAccount = createServerFn({ method: "POST" })
           subscriptionStatus: "free_trial",
           // Ninguém paga nada agora. É esse o ponto do período gratuito.
           checkout: null,
-          paymentBypassed: false,
           trial: { startsAt: trial.trialStartedAt, endsAt: trial.trialEndsAt },
           trialDenied: null,
         };
-      }
-
-      // O atalho de teste ativa a conta na hora, então o cardápio nasce junto
-      // — é justamente o fluxo completo que se quer inspecionar. O ciclo de
-      // cobrança abre junto, para o atalho reproduzir fielmente o que
-      // acontece numa ativação de verdade.
-      if (bypassPayment) {
-        await openFirstCycle(db, (subscription as { id: string }).id);
-        await provisionAndForget(companyId);
       }
 
       // Sem período gratuito (já usado antes, ou migration ainda não aplicada)
@@ -595,14 +535,10 @@ export const createAccount = createServerFn({ method: "POST" })
         companyId,
         companyName: company.name,
         planCode,
-        subscriptionStatus: bypassPayment ? "active" : "pending_activation",
-        // No atalho não há para onde mandar pagar: é justamente o ponto dele.
-        checkout: bypassPayment
-          ? null
-          : await createCheckoutIntent(planCode, companyId, subscriptionId),
-        paymentBypassed: bypassPayment,
+        subscriptionStatus: "pending_activation",
+        checkout: await createCheckoutIntent(planCode, companyId, subscriptionId),
         trial: null,
-        trialDenied: trial ? TRIAL_DENIAL_MESSAGES[trial.reason] : null,
+        trialDenied: TRIAL_DENIAL_MESSAGES[trial.reason],
       };
     } catch (err) {
       // Erro já tratado acima relança com mensagem própria; qualquer outro
@@ -614,7 +550,7 @@ export const createAccount = createServerFn({ method: "POST" })
         withDiagnostics(
           "Não foi possível concluir o cadastro. Tente novamente.",
           err instanceof Error ? { message: err.message } : err,
-          bypassPayment,
+          showDetails,
         ),
       );
     }

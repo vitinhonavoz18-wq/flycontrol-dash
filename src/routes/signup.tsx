@@ -7,7 +7,6 @@ import {
   Check,
   Clock,
   ExternalLink,
-  FlaskConical,
   Gift,
   Loader2,
   Sparkles,
@@ -32,8 +31,7 @@ import {
   buildTrialTimeline,
   formatTrialDate,
 } from "@/lib/billing/trial";
-import { createAccount, getSignupOptions } from "@/lib/signup/signup.functions";
-import { PAYMENT_BYPASS_WARNING } from "@/lib/signup/paymentBypass";
+import { createAccount } from "@/lib/signup/signup.functions";
 import {
   BRAZILIAN_STATES,
   formatCEP,
@@ -203,21 +201,6 @@ function SignupWizard() {
     });
   }
 
-  // Atalho de teste. Quem responde se ele existe é o servidor — o navegador
-  // não enxerga variável de ambiente do Worker.
-  const [bypassAllowed, setBypassAllowed] = useState(false);
-  useEffect(() => {
-    let active = true;
-    void getSignupOptions()
-      .then((options) => active && setBypassAllowed(options.paymentBypassAllowed))
-      .catch(() => {
-        // Sem resposta, o atalho simplesmente não aparece.
-      });
-    return () => {
-      active = false;
-    };
-  }, []);
-
   const pricing = PLAN_PRICING[planCode];
 
   function goNext() {
@@ -256,7 +239,7 @@ function SignupWizard() {
     return !error;
   }
 
-  async function submit(options: { bypassPayment?: boolean } = {}) {
+  async function submit() {
     if (submitting) return;
     if (!acceptedTerms) {
       toast.error("É necessário aceitar os termos para continuar.");
@@ -285,7 +268,6 @@ function SignupWizard() {
           acceptedTerms,
           termsVersion: TERMS_VERSION,
           privacyVersion: PRIVACY_VERSION,
-          bypassPayment: options.bypassPayment,
           googleAccessToken,
         },
       });
@@ -301,13 +283,6 @@ function SignupWizard() {
         // `replace` e não `assign`: o botão "voltar" do checkout não deve
         // trazer o cliente para uma tela de cadastro já enviado.
         window.location.replace(created.checkout.url);
-        return;
-      }
-
-      // Atalho de teste: entra direto na configuração da loja, que é o que se
-      // quer inspecionar.
-      if (created.paymentBypassed && (await signInSilently())) {
-        await navigate({ to: "/my-store" });
         return;
       }
 
@@ -988,29 +963,6 @@ function SignupWizard() {
                 {submitting ? "Ativando…" : `Ativar meus ${TRIAL_DURATION_DAYS} dias grátis`}
               </Button>
             )}
-          </div>
-        )}
-
-        {/* TEMPORÁRIO — atalho de teste.
-            Só aparece com SIGNUP_ALLOW_PAYMENT_BYPASS="true" no servidor, e o
-            servidor reconfere: forjar a requisição não adianta. Sai junto com
-            src/lib/signup/paymentBypass.ts quando a confirmação de pagamento
-            da InfinityPay estiver ligada. */}
-        {step === 3 && bypassAllowed && (
-          <div className="mt-4 space-y-2 rounded-lg border border-dashed border-amber-500/60 bg-amber-500/10 p-3">
-            <p className="flex items-start gap-2 text-sm text-muted-foreground">
-              <FlaskConical className="mt-0.5 h-4 w-4 shrink-0 text-amber-600" aria-hidden="true" />
-              <span>{PAYMENT_BYPASS_WARNING}</span>
-            </p>
-            <Button
-              variant="outline"
-              className="h-11 w-full border-amber-500/60"
-              onClick={() => void submit({ bypassPayment: true })}
-              disabled={submitting || !acceptedTerms}
-            >
-              {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-              Criar conta sem pagamento e continuar
-            </Button>
           </div>
         )}
       </main>

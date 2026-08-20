@@ -231,6 +231,29 @@ describe("nada e cobrado no periodo gratuito", () => {
   });
 });
 
+describe("nao existe mais atalho que ativa conta sem pagamento", () => {
+  const fonte = () => readFileSync("src/lib/signup/signup.functions.ts", "utf8");
+
+  it("o cadastro nunca nasce ativo", () => {
+    // Quem ativa e a liberacao do periodo gratuito ou a confirmacao do
+    // pagamento. Um cadastro que ja nasce ativo e um "assine gratis" na
+    // pagina publica.
+    expect(fonte()).not.toMatch(/status:\s*bypassPayment/);
+    expect(fonte()).not.toContain("SIGNUP_ALLOW_PAYMENT_BYPASS");
+  });
+
+  it("o modulo do atalho foi apagado", () => {
+    expect(() => readFileSync("src/lib/signup/paymentBypass.ts", "utf8")).toThrow();
+  });
+
+  it("a chave que sobrou so muda texto de erro", () => {
+    const diagnostico = readFileSync("src/lib/signup/diagnostics.ts", "utf8");
+    expect(diagnostico).toContain("SIGNUP_DEBUG_ERRORS");
+    // Nada de criar, ativar ou liberar: este modulo nao toca no banco.
+    expect(diagnostico).not.toMatch(/supabase|insert|update|status/i);
+  });
+});
+
 describe("estados novos existem tambem no banco", () => {
   it("free_trial esta no CHECK da assinatura", () => {
     // Inventar um estado so no TypeScript faria a gravacao ser recusada
