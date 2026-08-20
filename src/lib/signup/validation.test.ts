@@ -91,6 +91,26 @@ describe("responsável", () => {
   it("aceita a etapa preenchida corretamente", () => {
     expect(hasErrors(validateOwnerStep(validOwner))).toBe(false);
   });
+
+  it("com skipPassword, ignora senha vazia mas ainda exige nome, e-mail e telefone", () => {
+    const errors = validateOwnerStep(
+      {
+        fullName: "João da Silva",
+        email: "joao@exemplo.com.br",
+        whatsapp: "(11) 99999-0000",
+        password: "",
+        passwordConfirmation: "",
+      },
+      { skipPassword: true },
+    );
+    expect(hasErrors(errors)).toBe(false);
+
+    const stillInvalid = validateOwnerStep(
+      { fullName: "J", email: "invalido", whatsapp: "", password: "", passwordConfirmation: "" },
+      { skipPassword: true },
+    );
+    expect(Object.keys(stillInvalid).sort()).toEqual(["email", "fullName", "whatsapp"].sort());
+  });
 });
 
 describe("telefone brasileiro", () => {

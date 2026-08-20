@@ -30,6 +30,7 @@ export type QueryBuilder = {
   neq: (column: string, value: unknown) => QueryBuilder;
   lte: (column: string, value: unknown) => QueryBuilder;
   not: (column: string, operator: string, value: unknown) => QueryBuilder;
+  order: (column: string, options?: { ascending?: boolean }) => QueryBuilder;
   maybeSingle: () => PromiseLike<QueryResult>;
 } & PromiseLike<QueryResult>;
 

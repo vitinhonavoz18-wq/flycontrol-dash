@@ -8,10 +8,15 @@ import {
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
+import {
+  getPublicSupabaseConfig,
+  setPublicSupabaseConfig,
+} from "@/integrations/supabase/publicConfig";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
 import { ThemeProvider } from "@/components/theme-provider";
 import { InstallBanner } from "@/components/pwa/InstallBanner";
+import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 
 function NotFoundComponent() {
@@ -20,7 +25,10 @@ function NotFoundComponent() {
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-primary">404</h1>
         <h2 className="mt-4 text-xl font-semibold">Página não encontrada</h2>
-        <Link to="/" className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">
+        <Link
+          to="/"
+          className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
           Voltar
         </Link>
       </div>
@@ -35,7 +43,12 @@ function ErrorComponent({ error }: { error: Error }) {
       <div className="max-w-md text-center">
         <h1 className="text-xl font-semibold">Algo deu errado</h1>
         <p className="mt-2 text-sm text-muted-foreground">{error.message}</p>
-        <a href="/" className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground">Início</a>
+        <a
+          href="/"
+          className="mt-6 inline-flex rounded-md bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+        >
+          Início
+        </a>
       </div>
     </div>
   );
@@ -52,23 +65,47 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-title", content: "FlyControl" },
       { name: "mobile-web-app-capable", content: "yes" },
       { title: "FlyControl — Painel central de delivery" },
-      { name: "description", content: "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria." },
+      {
+        name: "description",
+        content:
+          "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria.",
+      },
       { property: "og:title", content: "FlyControl — Painel central de delivery" },
-      { property: "og:description", content: "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria." },
+      {
+        property: "og:description",
+        content:
+          "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria.",
+      },
       { name: "twitter:title", content: "FlyControl — Painel central de delivery" },
-      { name: "twitter:description", content: "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/102b2e79-2d68-465b-becd-e35dc5e0015d/id-preview-a1327d07--81d7e9ad-58d1-4e8a-8987-4f210224d49e.lovable.app-1778257035358.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/102b2e79-2d68-465b-becd-e35dc5e0015d/id-preview-a1327d07--81d7e9ad-58d1-4e8a-8987-4f210224d49e.lovable.app-1778257035358.png" },
+      {
+        name: "twitter:description",
+        content:
+          "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/102b2e79-2d68-465b-becd-e35dc5e0015d/id-preview-a1327d07--81d7e9ad-58d1-4e8a-8987-4f210224d49e.lovable.app-1778257035358.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/102b2e79-2d68-465b-becd-e35dc5e0015d/id-preview-a1327d07--81d7e9ad-58d1-4e8a-8987-4f210224d49e.lovable.app-1778257035358.png",
+      },
       { name: "twitter:card", content: "summary_large_image" },
       { property: "og:type", content: "website" },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
       { rel: "manifest", href: "/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/icons/icon-192.png" },
+      { rel: "apple-touch-icon", href: "/icons/icon-apple-touch.png" },
       { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
     ],
   }),
+  // Roda no servidor ao montar a página e viaja junto com o HTML, então o
+  // navegador já recebe o endereço do Supabase pronto — sem depender do que
+  // estava configurado na máquina que compilou o site.
+  loader: () => getPublicSupabaseConfig(),
   shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
@@ -78,14 +115,26 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
 function RootShell({ children }: { children: React.ReactNode }) {
   return (
     <html lang="pt-BR">
-      <head><HeadContent /></head>
-      <body>{children}<Scripts /></body>
+      <head>
+        <HeadContent />
+      </head>
+      <body>
+        {children}
+        <Scripts />
+      </body>
     </html>
   );
 }
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+
+  // Antes de qualquer tela: guarda o endereço que o servidor mandou. É uma
+  // escrita em memória, não estado do React — roda aqui, no corpo do
+  // componente raiz, porque o cliente do Supabase só é montado no primeiro
+  // uso, que sempre acontece depois deste ponto.
+  setPublicSupabaseConfig(Route.useLoaderData());
+
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="dark">
@@ -96,6 +145,7 @@ function RootComponent() {
           <NotificationsProvider />
           <Toaster />
           <InstallBanner />
+          <ServiceWorkerRegistration />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>

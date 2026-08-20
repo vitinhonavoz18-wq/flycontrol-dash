@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { MenuManager } from "@/components/menu/MenuManager";
 
@@ -20,24 +21,29 @@ function MenuPage() {
 
   async function loadPizzerias() {
     setLoading(true);
-    let query = supabase.from("pizzerias").select("*").neq("status", "deleted").order("name");
-    
+    let query = supabase
+      .from("pizzerias")
+      .select("*")
+      .neq("status", "deleted")
+      .neq("status", "inactive")
+      .order("name");
+
     if (!isSuperAdmin && user?.id) {
       query = query.eq("owner_id", user.id);
     }
-    
+
     const { data, error } = await query;
     if (error) {
       toast.error("Erro ao carregar pizzarias: " + error.message);
       setLoading(false);
       return;
     }
-    
+
     setPizzerias(data ?? []);
     if (data && data.length) {
       const params = new URLSearchParams(window.location.search);
       const pId = params.get("pizzeriaId");
-      if (pId && data.some(p => p.id === pId)) {
+      if (pId && data.some((p) => p.id === pId)) {
         setActiveId(pId);
       } else {
         setActiveId(data[0].id);
@@ -60,8 +66,14 @@ function MenuPage() {
   if (!pizzerias.length) {
     return (
       <div className="p-8 text-center">
-        <h1 className="text-2xl font-bold">Nenhuma pizzaria encontrada</h1>
-        <p className="text-muted-foreground mt-2">Você precisa ter uma pizzaria vinculada para gerenciar o cardápio.</p>
+        <h1 className="text-2xl font-bold">Nenhuma loja encontrada</h1>
+        <p className="text-muted-foreground mt-2">
+          Sua conta ainda não tem nenhuma loja cadastrada. Cadastre uma em Configurações para
+          começar a montar o cardápio.
+        </p>
+        <Button asChild className="mt-4">
+          <Link to="/settings">Cadastrar loja</Link>
+        </Button>
       </div>
     );
   }
@@ -79,11 +91,7 @@ function MenuPage() {
         </div>
         {/* O seletor ocupa a largura toda no celular e encolhe no desktop. */}
         <div className="w-full min-w-0 md:w-auto md:shrink-0">
-          <PizzeriaSelector
-            pizzerias={pizzerias}
-            activeId={activeId}
-            onSelect={setActiveId}
-          />
+          <PizzeriaSelector pizzerias={pizzerias} activeId={activeId} onSelect={setActiveId} />
         </div>
       </div>
 

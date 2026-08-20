@@ -1,143 +1,137 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Copy, Check } from "lucide-react";
-import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { Utensils, Link2, KeyRound, LayoutGrid, AlertTriangle } from "lucide-react";
 
 export const Route = createFileRoute("/_app/docs")({ component: DocsPage });
 
 function DocsPage() {
-  const [copied, setCopied] = useState<string | null>(null);
-
-  const copy = (text: string, id: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
-  };
-
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://flycontrol.lovable.app";
-  const orderEndpoint = `${origin}/api/orders`;
-  const healthEndpoint = `${origin}/api/health`;
-
-  const examplePayload = `{
-  "api_key": "SUA_API_KEY",
-  "customer": {
-    "name": "João Silva",
-    "phone": "71999999999",
-    "address": "Rua das Flores, 123 - Centro"
-  },
-  "items": [
-    {
-      "name": "Pizza Calabresa G",
-      "qty": 1,
-      "price": 49.90
-    },
-    {
-      "name": "Coca-Cola 2L",
-      "qty": 1,
-      "price": 12.00
-    }
-  ],
-  "total": 61.90
-}`;
-
-  const curlExample = `curl -X POST ${orderEndpoint} \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer SUA_API_KEY" \\
-  -d '${examplePayload}'`;
-
   return (
     <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-8 pb-20">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Documentação de Integração</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Como o FlyControl funciona</h1>
         <p className="mt-2 text-muted-foreground">
-          Aprenda como conectar o SiteCreatorFly (ou qualquer outro sistema) ao painel FlyControl.
+          Um resumo simples de como o painel e o cardápio digital trabalham juntos para atender o
+          seu cliente — sem precisar entender de programação.
         </p>
       </div>
 
       <Card>
         <CardHeader>
-          <CardTitle>1. Como Conectar uma Pizzaria</CardTitle>
+          <CardTitle className="flex items-center gap-2">
+            <Utensils className="h-5 w-5 text-primary" /> Dois sistemas, um fluxo só
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-4 text-sm leading-relaxed">
-          <p>Existem duas formas de integrar uma pizzaria:</p>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            <strong>FlyControl</strong> é o painel que você usa no dia a dia: pedidos, cardápio,
+            mesas, equipe e financeiro.
+          </p>
+          <p>
+            <strong>Cardápio Digital</strong> é o site que o seu cliente abre no celular para fazer
+            o pedido — a "vitrine" da sua loja na internet.
+          </p>
+          <p>
+            É como a cozinha e o salão de um restaurante: são espaços diferentes, mas o pedido
+            caminha automaticamente de um para o outro, sem ninguém precisar levar o papel na mão de
+            um lado a outro.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Link2 className="h-5 w-5 text-primary" /> A conexão é automática
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            Quando você assina o FlyControl e o pagamento é confirmado, o seu cardápio digital é
+            criado sozinho, na hora — você não precisa copiar nenhuma chave nem configurar nada
+            manualmente.
+          </p>
+          <p>
+            É como pedir uma linha de telefone nova: você contrata, e a operadora já entrega o
+            número funcionando. Você não precisa emendar fio nenhum.
+          </p>
+          <p>
+            A partir daí, tudo que você cadastra em <strong>Cardápio</strong> — categorias,
+            produtos, preços, fotos — aparece sozinho no site do cliente. E todo pedido feito lá cai
+            direto na tela de <strong>Pedidos</strong> do FlyControl, com o alerta sonoro avisando
+            que chegou.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <KeyRound className="h-5 w-5 text-primary" /> O que garante que o pedido cai na loja
+            certa
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3 text-sm leading-relaxed">
+          <p>
+            Por trás dessa conexão existe uma chave de acesso única, gerada e guardada
+            automaticamente para a sua loja — você pode vê-la em{" "}
+            <strong>Configurações → sua loja</strong>, mas não precisa mexer nela no uso normal.
+          </p>
+          <p>
+            É como o crachá de um funcionário: só a sua loja tem o seu crachá, então o cardápio
+            digital sabe exatamente para qual painel mandar cada pedido, sem misturar com o de outra
+            loja.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <LayoutGrid className="h-5 w-5 text-primary" /> O que mais o FlyControl faz
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="text-sm leading-relaxed">
           <ul className="list-disc pl-5 space-y-2">
             <li>
-              <strong>Nova Pizzaria:</strong> Ao criar uma pizzaria no FlyControl, uma <code>API Key</code> exclusiva é gerada. Copie esta chave e cole nas configurações do seu site no SiteCreatorFly.
+              <strong>Pedidos:</strong> tudo que chega do cardápio digital (ou é lançado na hora,
+              como pedido de balcão) aparece aqui, em tempo real.
             </li>
             <li>
-              <strong>Pizzaria Existente:</strong> Se você já tem uma pizzaria no SiteCreatorFly com uma API Key, use a opção <strong>"Conectar Pizzaria Existente"</strong> no Dashboard do FlyControl e cole a chave original.
+              <strong>Mesas e QR Codes:</strong> gera um QR Code por mesa para o cliente pedir
+              sentado, sem precisar chamar o garçom para anotar.
+            </li>
+            <li>
+              <strong>Garçons e Comissões:</strong> controla quem atendeu cada mesa e calcula a
+              comissão automaticamente.
+            </li>
+            <li>
+              <strong>Financeiro:</strong> mostra quanto a sua loja faturou, por período.
+            </li>
+            <li>
+              <strong>Plano e cobrança:</strong> onde você acompanha a sua assinatura do FlyControl
+              e os pagamentos dela.
             </li>
           </ul>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="border-amber-500/30 bg-amber-500/5">
         <CardHeader>
-          <CardTitle>2. Endpoints da API</CardTitle>
+          <CardTitle className="flex items-center gap-2 text-amber-700 dark:text-amber-400">
+            <AlertTriangle className="h-5 w-5" /> O que merece atenção
+          </CardTitle>
         </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="space-y-2">
-            <h3 className="font-semibold text-sm">Criar Pedido (POST)</h3>
-            <div className="flex items-center gap-2 p-2 bg-muted rounded border font-mono text-xs">
-              <span className="text-primary font-bold">POST</span>
-              <span className="flex-1 truncate">{orderEndpoint}</span>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => copy(orderEndpoint, "endpoint")}>
-                {copied === "endpoint" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-              </Button>
-            </div>
-            <p className="text-xs text-muted-foreground">Envie pedidos novos para processamento imediato.</p>
-          </div>
-
-          <div className="space-y-2">
-            <h3 className="font-semibold text-sm">Health Check (GET)</h3>
-            <div className="flex items-center gap-2 p-2 bg-muted rounded border font-mono text-xs">
-              <span className="text-success font-bold">GET</span>
-              <span className="flex-1 truncate">{healthEndpoint}</span>
-            </div>
-            <p className="text-xs text-muted-foreground">Verifique se o sistema está online.</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>3. Autenticação</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4 text-sm">
-          <p>Você pode autenticar suas requisições de duas formas:</p>
-          <div className="space-y-3">
-            <div>
-              <p className="font-medium mb-1">Via Header (Recomendado):</p>
-              <code className="block p-2 bg-muted rounded border text-xs">Authorization: Bearer SUA_API_KEY</code>
-            </div>
-            <div>
-              <p className="font-medium mb-1">Via Payload JSON:</p>
-              <code className="block p-2 bg-muted rounded border text-xs">"api_key": "SUA_API_KEY"</code>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>4. Exemplo de Requisição (cURL)</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
-            <pre className="p-4 bg-slate-950 text-slate-50 rounded-lg overflow-x-auto text-xs leading-relaxed">
-              {curlExample}
-            </pre>
-            <Button 
-              variant="secondary" 
-              size="sm" 
-              className="absolute top-2 right-2 h-7"
-              onClick={() => copy(curlExample, "curl")}
-            >
-              {copied === "curl" ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
-              {copied === "curl" ? " Copiado" : " Copiar"}
-            </Button>
-          </div>
+        <CardContent className="space-y-2 text-sm leading-relaxed">
+          <p>
+            O cardápio digital só é criado depois que o pagamento da assinatura é confirmado — é
+            como uma matrícula: o acesso só é liberado depois que a mensalidade entra. Enquanto a
+            assinatura estiver pendente, o site do cliente ainda não existe.
+          </p>
+          <p>
+            Lojas cadastradas antes desse processo automático existir ainda podem depender da
+            configuração manual de chave. Se for o seu caso e o cardápio digital não estiver
+            aparecendo, fale com o suporte para verificar essa conexão específica.
+          </p>
         </CardContent>
       </Card>
     </div>

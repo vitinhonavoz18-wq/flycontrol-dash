@@ -32,8 +32,13 @@ interface ExtraListProps {
   onRefresh?: () => void;
 }
 
-export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoint, onRefresh }: ExtraListProps) {
-
+export function ExtraList({
+  pizzeriaId,
+  pizzeriaSlug,
+  pizzeriaApiKey,
+  syncEndpoint,
+  onRefresh,
+}: ExtraListProps) {
   const [extras, setExtras] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -89,7 +94,7 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
     }
 
     setSaving(true);
-    const numericPrice = parseFloat(price.replace(',', '.'));
+    const numericPrice = parseFloat(price.replace(",", "."));
     const payload = {
       name,
       price: numericPrice,
@@ -103,31 +108,32 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
 
       if (pizzeriaSlug && pizzeriaApiKey) {
         const syncResult = await syncToExternal({
-          type: 'extra',
-          action: editingExtra ? 'update' : 'create',
+          type: "extra",
+          action: editingExtra ? "update" : "create",
           id: editingExtra?.id,
           externalId: editingExtra?.external_id,
           data: payload,
           pizzeriaSlug,
           pizzeriaApiKey,
-          syncEndpoint
+          syncEndpoint,
         });
 
         if (!syncResult.success) {
-          let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
-          
+          let errorMsg =
+            "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
+
           if (syncResult.error === "404") {
             errorMsg = "Endpoint de sincronização não encontrado (404).";
           } else if (syncResult.error === "auth_error") {
             errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
           } else if (syncResult.error === "cors_error") {
-            errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+            errorMsg = "Erro de conexão ao atualizar o site público.";
           } else if (syncResult.error === "html_response") {
             errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
           } else if (syncResult.error?.startsWith("api_error:")) {
             errorMsg = syncResult.error.replace("api_error:", "");
           }
-          
+
           toast.error(errorMsg);
           setSaving(false);
           return;
@@ -136,11 +142,11 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
         }
       }
 
-      const finalPayload = { 
-        ...payload, 
-        external_id: externalId, 
-        external_source: externalId ? 'sitecreatorfly' : null,
-        updated_at: new Date().toISOString()
+      const finalPayload = {
+        ...payload,
+        external_id: externalId,
+        external_source: externalId ? "sitecreatorfly" : null,
+        updated_at: new Date().toISOString(),
       };
 
       let error;
@@ -151,9 +157,7 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
           .eq("id", editingExtra.id);
         error = err;
       } else {
-        const { error: err } = await supabase
-          .from("menu_extras")
-          .insert(finalPayload);
+        const { error: err } = await supabase.from("menu_extras").insert(finalPayload);
         error = err;
       }
 
@@ -174,33 +178,34 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
 
   async function toggleActive(ext: any) {
     const newValue = !ext.active;
-    
+
     if (pizzeriaSlug && pizzeriaApiKey && ext.external_id) {
       const syncResult = await syncToExternal({
-        type: 'extra',
-        action: 'status',
+        type: "extra",
+        action: "status",
         externalId: ext.external_id,
-        data: { field: 'is_active', value: newValue },
+        data: { field: "is_active", value: newValue },
         pizzeriaSlug,
         pizzeriaApiKey,
-        syncEndpoint
+        syncEndpoint,
       });
 
       if (!syncResult.success) {
-        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
-        
+        let errorMsg =
+          "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
+
         if (syncResult.error === "404") {
           errorMsg = "Endpoint de sincronização não encontrado (404).";
         } else if (syncResult.error === "auth_error") {
           errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
         } else if (syncResult.error === "cors_error") {
-          errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+          errorMsg = "Erro de conexão ao atualizar o site público.";
         } else if (syncResult.error === "html_response") {
           errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
         } else if (syncResult.error?.startsWith("api_error:")) {
           errorMsg = syncResult.error.replace("api_error:", "");
         }
-        
+
         toast.error(errorMsg);
         return;
       }
@@ -210,7 +215,7 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
       .from("menu_extras")
       .update({ active: newValue, updated_at: new Date().toISOString() })
       .eq("id", ext.id);
-    
+
     if (error) {
       toast.error("Erro ao atualizar: " + error.message);
     } else {
@@ -225,39 +230,37 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
 
     if (pizzeriaSlug && pizzeriaApiKey && ext.external_id) {
       const syncResult = await syncToExternal({
-        type: 'extra',
-        action: 'delete',
+        type: "extra",
+        action: "delete",
         externalId: ext.external_id,
         pizzeriaSlug,
         pizzeriaApiKey,
-        syncEndpoint
+        syncEndpoint,
       });
 
       if (!syncResult.success) {
-        let errorMsg = "Não foi possível atualizar o cardápio público. Verifique a conexão com o SiteCreatorFly.";
-        
+        let errorMsg =
+          "Não foi possível atualizar o cardápio público. Verifique a conexão com o site público.";
+
         if (syncResult.error === "404") {
           errorMsg = "Endpoint de sincronização não encontrado (404).";
         } else if (syncResult.error === "auth_error") {
           errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
         } else if (syncResult.error === "cors_error") {
-          errorMsg = "Erro de CORS ao atualizar o SiteCreatorFly.";
+          errorMsg = "Erro de conexão ao atualizar o site público.";
         } else if (syncResult.error === "html_response") {
           errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
         } else if (syncResult.error?.startsWith("api_error:")) {
           errorMsg = syncResult.error.replace("api_error:", "");
         }
-        
+
         toast.error(errorMsg);
         return;
       }
     }
 
-    const { error } = await supabase
-      .from("menu_extras")
-      .delete()
-      .eq("id", ext.id);
-    
+    const { error } = await supabase.from("menu_extras").delete().eq("id", ext.id);
+
     if (error) {
       toast.error("Erro ao excluir: " + error.message);
     } else {
@@ -275,8 +278,8 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
     );
   }
 
-  const bordas = extras.filter(e => e.extra_type === 'borda');
-  const adicionais = extras.filter(e => e.extra_type === 'adicional');
+  const bordas = extras.filter((e) => e.extra_type === "borda");
+  const adicionais = extras.filter((e) => e.extra_type === "adicional");
 
   return (
     <div className="space-y-8">
@@ -295,7 +298,13 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
           </h4>
           <div className="space-y-3">
             {bordas.map((ext) => (
-              <ExtraItem key={ext.id} ext={ext} onEdit={openEdit} onToggle={toggleActive} onDelete={handleDelete} />
+              <ExtraItem
+                key={ext.id}
+                ext={ext}
+                onEdit={openEdit}
+                onToggle={toggleActive}
+                onDelete={handleDelete}
+              />
             ))}
             {!bordas.length && <EmptyList />}
           </div>
@@ -308,7 +317,13 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
           </h4>
           <div className="space-y-3">
             {adicionais.map((ext) => (
-              <ExtraItem key={ext.id} ext={ext} onEdit={openEdit} onToggle={toggleActive} onDelete={handleDelete} />
+              <ExtraItem
+                key={ext.id}
+                ext={ext}
+                onEdit={openEdit}
+                onToggle={toggleActive}
+                onDelete={handleDelete}
+              />
             ))}
             {!adicionais.length && <EmptyList />}
           </div>
@@ -335,15 +350,27 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
             </div>
             <div className="space-y-2">
               <Label htmlFor="ext-name">Nome</Label>
-              <Input id="ext-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ex: Catupiry, Bacon, Cheddar..." />
+              <Input
+                id="ext-name"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Ex: Catupiry, Bacon, Cheddar..."
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="ext-price">Preço adicional (R$)</Label>
-              <Input id="ext-price" value={price} onChange={(e) => setPrice(e.target.value)} placeholder="0,00" />
+              <Input
+                id="ext-price"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="0,00"
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+              Cancelar
+            </Button>
             <Button onClick={handleSave} disabled={saving}>
               {saving ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Salvar"}
             </Button>
@@ -356,22 +383,25 @@ export function ExtraList({ pizzeriaId, pizzeriaSlug, pizzeriaApiKey, syncEndpoi
 
 function ExtraItem({ ext, onEdit, onToggle, onDelete }: any) {
   return (
-    <Card className={`transition-all hover:border-primary/30 ${!ext.active ? 'opacity-60 bg-muted/30' : ''}`}>
+    <Card
+      className={`transition-all hover:border-primary/30 ${!ext.active ? "opacity-60 bg-muted/30" : ""}`}
+    >
       <CardContent className="p-3 flex items-center justify-between">
         <div>
           <h5 className="font-semibold text-sm">{ext.name}</h5>
           <p className="text-xs text-primary font-bold">+ R$ {ext.price.toFixed(2)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Switch 
-            checked={ext.active} 
-            onCheckedChange={() => onToggle(ext)}
-            className="h-4 w-7"
-          />
-          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(ext)}>
-                  <Pencil className="h-4 w-4" />
+          <Switch checked={ext.active} onCheckedChange={() => onToggle(ext)} className="h-4 w-7" />
+          <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => onEdit(ext)}>
+            <Pencil className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => onDelete(ext)}>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-11 w-11 text-destructive"
+            onClick={() => onDelete(ext)}
+          >
             <Trash2 className="h-4 w-4" />
           </Button>
         </div>

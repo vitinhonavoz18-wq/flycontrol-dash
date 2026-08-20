@@ -1,16 +1,20 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Clock, Truck, FileText, Globe, Key } from "lucide-react";
+import { Loader2, Globe, Key } from "lucide-react";
 
 interface PizzeriaConfigProps {
   pizzeriaId: string;
 }
 
+// Os campos de identidade, contato, aparência e comportamento do site
+// (nome, WhatsApp, cores, capa, modos de atendimento etc.) moram em "Minha
+// Loja" (src/routes/_app/my-store.tsx) — lá é onde o dono do estabelecimento
+// espera encontrá-los. Esta tela guarda só o que é específico da conexão
+// técnica de sincronização do cardápio, que não tem por que aparecer lá.
 export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
   const [pizzeria, setPizzeria] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -65,92 +69,22 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Truck className="h-4 w-4 text-primary" /> Taxas de Entrega
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="delivery-fee">Taxa de Entrega Padrão (R$)</Label>
-            <Input 
-              id="delivery-fee"
-              type="number" 
-              step="0.01" 
-              defaultValue={pizzeria?.delivery_fee || 0}
-              onBlur={(e) => handleUpdate('delivery_fee', parseFloat(e.target.value) || 0)}
-              placeholder="0,00"
-            />
-            <p className="text-[10px] text-muted-foreground">Valor cobrado por padrão em cada pedido.</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Clock className="h-4 w-4 text-primary" /> Horários
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="hours">Horário de Funcionamento</Label>
-            <Input 
-              id="hours"
-              placeholder="Ex: Seg a Sex: 18h às 23h" 
-              defaultValue={typeof pizzeria?.opening_hours === 'string' ? pizzeria?.opening_hours : JSON.stringify(pizzeria?.opening_hours)}
-              onBlur={(e) => {
-                let val = e.target.value;
-                try {
-                  if (val.startsWith('[') || val.startsWith('{')) {
-                    handleUpdate('opening_hours', JSON.parse(val));
-                  } else {
-                    handleUpdate('opening_hours', val);
-                  }
-                } catch {
-                  handleUpdate('opening_hours', val);
-                }
-              }}
-            />
-            <p className="text-[10px] text-muted-foreground">Exibido no rodapé do seu site.</p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="md:col-span-2 lg:col-span-1">
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <FileText className="h-4 w-4 text-primary" /> Informações
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="description">Descrição do Site</Label>
-            <textarea 
-              id="description"
-              className="flex min-h-[100px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-              placeholder="Fale um pouco sobre a qualidade e tradição da sua pizzaria..."
-              defaultValue={pizzeria?.description || ""}
-              onBlur={(e) => handleUpdate('description', e.target.value)}
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
             <Globe className="h-4 w-4 text-primary" /> Identificação do Site
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="slug">Slug do Site (identificador único)</Label>
-            <Input 
+            <Input
               id="slug"
-              placeholder="ex: pizzaria-do-joao" 
+              placeholder="ex: pizzaria-do-joao"
               defaultValue={pizzeria?.slug || ""}
-              onBlur={(e) => handleUpdate('slug', e.target.value)}
+              onBlur={(e) => handleUpdate("slug", e.target.value)}
+              disabled={saving}
             />
-            <p className="text-[10px] text-muted-foreground">O slug deve ser idêntico ao configurado no SiteCreatorFly.</p>
+            <p className="text-[10px] text-muted-foreground">
+              O slug deve ser idêntico ao configurado no seu site público.
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -164,14 +98,17 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="api_key">Chave de API (x-api-key)</Label>
-            <Input 
+            <Input
               id="api_key"
               type="password"
-              placeholder="Sua chave de API" 
+              placeholder="Sua chave de API"
               defaultValue={pizzeria?.api_key || ""}
-              onBlur={(e) => handleUpdate('api_key', e.target.value)}
+              onBlur={(e) => handleUpdate("api_key", e.target.value)}
+              disabled={saving}
             />
-            <p className="text-[10px] text-muted-foreground">Necessária para validar a sincronização segura dos dados.</p>
+            <p className="text-[10px] text-muted-foreground">
+              Necessária para validar a sincronização segura dos dados.
+            </p>
           </div>
         </CardContent>
       </Card>

@@ -15,18 +15,28 @@
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
-import { COMPANY_BILLING_MODEL, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import {
+  COMPANY_BILLING_MODEL,
+  PLAN_PRICING,
+  isKnownPlanCode,
+  type PlanCode,
+} from "@/lib/billing/plans";
 import {
   CHECKOUT_INTENT_TTL_MS,
   checkoutAmountCents,
+  checkoutReturnUrl,
   generateIntentToken,
   hashIntentToken,
+  infinityPayWebhookUrl,
   resolveCheckoutConfig,
 } from "@/lib/billing/checkout";
+import { createInfinityPayCheckoutLink, infinityPayHandle } from "@/lib/billing/infinitypay/api";
+import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TRIAL_DENIAL_MESSAGES, grantFreeTrial } from "@/lib/billing/trial.server";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { PAYMENT_BYPASS_REASON, isPaymentBypassAllowed } from "./paymentBypass";
+import { checkAndRecordSignupAttempt, currentRequestIp } from "./rateLimit.server";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
   hasErrors,
@@ -52,6 +62,14 @@ export type SignupInput = {
   privacyVersion: string;
   /** Atalho temporário de teste. Só vale se o servidor também permitir. */
   bypassPayment?: boolean;
+  /**
+   * Presente quando quem está se cadastrando já entrou com o Google. O
+   * `access_token` da sessão é conferido no servidor (nunca confiamos no que
+   * o navegador diz sobre si mesmo); quando válido, o cadastro reaproveita
+   * esse `auth.users.id` em vez de criar um usuário novo — evita duplicar
+   * conta para quem já provou sua identidade pelo Google.
+   */
+  googleAccessToken?: string;
 };
 
 export type SignupResult = {
@@ -96,11 +114,66 @@ export const getSignupOptions = createServerFn({ method: "GET" }).handler(
 );
 
 /**
+ * Grava a intenção de checkout. `id` explícito permite que o chamador saiba
+ * o identificador antes da gravação — necessário para repassá-lo à
+ * InfinityPay como `order_nsu` antes mesmo de a linha existir no banco.
+ */
+async function insertCheckoutIntent(params: {
+  id?: string;
+  tokenHash: string;
+  companyId: string;
+  subscriptionId: string | null;
+  planCode: PlanCode;
+  amountCents: number;
+  checkoutUrl: string;
+  expiresAt: string;
+}): Promise<boolean> {
+  const row: Record<string, unknown> = {
+    token_hash: params.tokenHash,
+    company_id: params.companyId,
+    subscription_id: params.subscriptionId,
+    plan_code: params.planCode,
+    // O valor vem da tabela de preços do servidor. O navegador não opina
+    // sobre quanto custa.
+    expected_amount_cents: params.amountCents,
+    checkout_url: params.checkoutUrl,
+    expires_at: params.expiresAt,
+  };
+  if (params.id) row.id = params.id;
+
+  try {
+    const { error } = await asBillingDb(supabaseAdmin)
+      .from("checkout_intents")
+      .insert(row)
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      console.error("[signup] falha ao registrar intenção de checkout:", error);
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("[signup] erro ao criar intenção de checkout:", err);
+    return false;
+  }
+}
+
+/**
  * Cria a intenção de checkout e devolve o token que vai para o navegador.
  *
  * Nasce aqui, e não em um endpoint próprio, de propósito: um endpoint público
  * que recebesse um `companyId` deixaria qualquer um emitir token para empresa
  * alheia. Assim o token só existe para a empresa recém-criada nesta chamada.
+ *
+ * Dois caminhos, nesta ordem:
+ *
+ * 1. Automático: com `INFINITYPAY_HANDLE` configurado, gera um link de
+ *    pagamento novo para este cadastro, com o aviso de pagamento
+ *    (`webhook_url`) já apontando para o nosso endpoint. É o que permite
+ *    ativar a assinatura sozinho, sem depender de conferência manual.
+ * 2. Manual (compatibilidade): sem a variável, cai no link fixo colado à mão
+ *    no painel da InfinityPay — o fluxo original, que continua funcionando.
  *
  * Falha aqui nunca derruba o cadastro — a conta já existe, e o pior caso é o
  * cliente ver a tela de "combine a ativação com a equipe".
@@ -110,42 +183,57 @@ async function createCheckoutIntent(
   companyId: string,
   subscriptionId: string | null,
 ): Promise<{ url: string; token: string } | null> {
+  const amountCents = checkoutAmountCents(planCode);
+  const token = generateIntentToken();
+  const tokenHash = await hashIntentToken(token);
+  const expiresAt = new Date(Date.now() + CHECKOUT_INTENT_TTL_MS).toISOString();
+  const publicUrl = (process.env.FLYCONTROL_PUBLIC_URL || "").trim().replace(/\/+$/, "");
+
+  if (infinityPayHandle() && publicUrl) {
+    const intentId = crypto.randomUUID();
+    const link = await createInfinityPayCheckoutLink({
+      orderNsu: intentId,
+      amountCents,
+      description: `FlyControl - plano ${PLAN_PRICING[planCode].name}`,
+      redirectUrl: checkoutReturnUrl(publicUrl, planCode),
+      webhookUrl: infinityPayWebhookUrl(publicUrl),
+    });
+
+    if (link.ok) {
+      const inserted = await insertCheckoutIntent({
+        id: intentId,
+        tokenHash,
+        companyId,
+        subscriptionId,
+        planCode,
+        amountCents,
+        checkoutUrl: link.url,
+        expiresAt,
+      });
+      if (inserted) return { url: link.url, token };
+      // Falhou ao gravar a intenção com o link já criado: cai para o modo
+      // manual abaixo em vez de deixar o cliente sem para onde ir.
+    } else {
+      console.warn(`[signup] link dinâmico da InfinityPay indisponível: ${link.error}`);
+    }
+  }
+
   const config = resolveCheckoutConfig(planCode, process.env);
   if (!config.configured) {
     console.info(`[signup] ${config.reason}`);
     return null;
   }
 
-  try {
-    const token = generateIntentToken();
-    const tokenHash = await hashIntentToken(token);
-
-    const { error } = await asBillingDb(supabaseAdmin)
-      .from("checkout_intents")
-      .insert({
-        token_hash: tokenHash,
-        company_id: companyId,
-        subscription_id: subscriptionId,
-        plan_code: planCode,
-        // O valor vem da tabela de preços do servidor. O navegador não opina
-        // sobre quanto custa.
-        expected_amount_cents: checkoutAmountCents(planCode),
-        checkout_url: config.url,
-        expires_at: new Date(Date.now() + CHECKOUT_INTENT_TTL_MS).toISOString(),
-      })
-      .select("id")
-      .maybeSingle();
-
-    if (error) {
-      console.error("[signup] falha ao registrar intenção de checkout:", error);
-      return null;
-    }
-
-    return { url: config.url, token };
-  } catch (err) {
-    console.error("[signup] erro ao criar intenção de checkout:", err);
-    return null;
-  }
+  const inserted = await insertCheckoutIntent({
+    tokenHash,
+    companyId,
+    subscriptionId,
+    planCode,
+    amountCents,
+    checkoutUrl: config.url,
+    expiresAt,
+  });
+  return inserted ? { url: config.url, token } : null;
 }
 
 /** Slug único: acrescenta sufixo curto enquanto houver colisão. */
@@ -188,7 +276,7 @@ function withDiagnostics(message: string, error: unknown, testMode: boolean): st
 
 export const createAccount = createServerFn({ method: "POST" })
   .inputValidator((d: SignupInput) => {
-    if (!isPublicPlanCode(d?.planCode)) throw new Error("Selecione um plano válido.");
+    if (!isKnownPlanCode(d?.planCode)) throw new Error("Selecione um plano válido.");
     if (!d?.acceptedTerms) throw new Error("É necessário aceitar os termos para continuar.");
 
     // Aba aberta antes de uma publicação nova: o cliente aceitou um texto que
@@ -201,12 +289,23 @@ export const createAccount = createServerFn({ method: "POST" })
     }
 
     // A validação do cliente é conveniência; esta é a que decide. Um payload
-    // montado à mão não passa por aqui.
-    if (hasErrors(validateOwnerStep(d.owner))) throw new Error("Revise os dados do responsável.");
+    // montado à mão não passa por aqui. Quem chega pelo Google não digitou
+    // senha nenhuma — não faz sentido cobrar isso aqui.
+    if (hasErrors(validateOwnerStep(d.owner, { skipPassword: !!d.googleAccessToken }))) {
+      throw new Error("Revise os dados do responsável.");
+    }
     if (hasErrors(validateCompanyStep(d.company))) throw new Error("Revise os dados da empresa.");
     return d;
   })
   .handler(async ({ data }): Promise<SignupResult> => {
+    // Antes de qualquer trabalho: barra scripts batendo cadastro sem parar,
+    // cada tentativa gerando um link de pagamento real na InfinityPay.
+    const ip = currentRequestIp();
+    const { allowed } = await checkAndRecordSignupAttempt(ip);
+    if (!allowed) {
+      throw new Error("Muitas tentativas de cadastro. Aguarde um pouco e tente novamente.");
+    }
+
     const planCode = data.planCode as PlanCode;
     const email = normalizeEmail(data.owner.email);
 
@@ -219,38 +318,81 @@ export const createAccount = createServerFn({ method: "POST" })
     }
 
     // ---- 1. Usuário proprietário ------------------------------------------
-    const { data: created, error: authError } = await supabaseAdmin.auth.admin.createUser({
-      email,
-      password: data.owner.password,
-      // Sem fluxo de e-mail configurado, exigir confirmação deixaria o
-      // usuário sem conseguir entrar depois de pagar.
-      email_confirm: true,
-      user_metadata: {
-        full_name: data.owner.fullName.trim(),
-        whatsapp: onlyDigits(data.owner.whatsapp),
-      },
-    });
+    // Dois caminhos: quem já entrou com o Google traz uma identidade pronta
+    // (é como já ter mostrado o documento na portaria — não se pede de novo);
+    // quem não trouxe, cria a conta com e-mail e senha, como sempre foi.
+    let userId: string;
+    let createdFreshUser = false;
 
-    if (authError || !created?.user) {
-      const message = String(authError?.message ?? "");
-      if (/already|exists|registered/i.test(message)) {
-        throw new Error("Já existe uma conta com este e-mail. Tente entrar ou recuperar a senha.");
+    if (data.googleAccessToken) {
+      const { data: verified, error: verifyError } = await supabaseAdmin.auth.getUser(
+        data.googleAccessToken,
+      );
+      if (verifyError || !verified?.user) {
+        throw new Error("Sessão do Google expirada. Entre novamente.");
       }
-      // A mensagem crua do provedor de auth não é para o usuário final.
-      console.error("[signup] falha ao criar usuário:", authError);
-      throw new Error("Não foi possível criar sua conta. Tente novamente em instantes.");
+      userId = verified.user.id;
+
+      // Barreira final contra estabelecimento duplicado: se este usuário já
+      // tem um, o cadastro não roda de novo — nem por um pedido forjado.
+      const { data: existingCompany } = await supabaseAdmin
+        .from("pizzerias")
+        .select("id")
+        .eq("owner_id", userId)
+        .neq("status", "deleted")
+        .neq("status", "inactive")
+        .limit(1)
+        .maybeSingle();
+      if (existingCompany) {
+        throw new Error("Você já tem um estabelecimento cadastrado. Acesse o painel.");
+      }
+    } else {
+      const { data: created, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email,
+        password: data.owner.password,
+        // Sem fluxo de e-mail configurado, exigir confirmação deixaria o
+        // usuário sem conseguir entrar depois de pagar.
+        email_confirm: true,
+        user_metadata: {
+          full_name: data.owner.fullName.trim(),
+          whatsapp: onlyDigits(data.owner.whatsapp),
+        },
+      });
+
+      if (authError || !created?.user) {
+        const message = String(authError?.message ?? "");
+        if (/already|exists|registered/i.test(message)) {
+          throw new Error(
+            "Já existe uma conta com este e-mail. Tente entrar ou recuperar a senha.",
+          );
+        }
+        // A mensagem crua do provedor de auth não é para o usuário final.
+        console.error("[signup] falha ao criar usuário:", authError);
+        throw new Error("Não foi possível criar sua conta. Tente novamente em instantes.");
+      }
+
+      userId = created.user.id;
+      createdFreshUser = true;
     }
 
-    const userId = created.user.id;
     let companyId: string | null = null;
 
-    /** Desfaz o que já foi criado. Ordem inversa da criação. */
+    /**
+     * Desfaz o que já foi criado. Ordem inversa da criação.
+     *
+     * A conta de autenticação só é apagada quando foi criada aqui mesmo —
+     * apagar o usuário do Google que já existia antes desta chamada tiraria
+     * o acesso dele a tudo mais que já tinha, por um erro que nada tem a ver
+     * com a conta dele.
+     */
     const rollback = async (reason: string) => {
       console.error(`[signup] rollback (${reason}) para o usuário ${userId}`);
       if (companyId) {
         await supabaseAdmin.from("pizzerias").delete().eq("id", companyId);
       }
-      await supabaseAdmin.auth.admin.deleteUser(userId);
+      if (createdFreshUser) {
+        await supabaseAdmin.auth.admin.deleteUser(userId);
+      }
     };
 
     try {
@@ -439,8 +581,13 @@ export const createAccount = createServerFn({ method: "POST" })
       }
 
       // O atalho de teste ativa a conta na hora, então o cardápio nasce junto
-      // — é justamente o fluxo completo que se quer inspecionar.
-      if (bypassPayment) await provisionAndForget(companyId);
+      // — é justamente o fluxo completo que se quer inspecionar. O ciclo de
+      // cobrança abre junto, para o atalho reproduzir fielmente o que
+      // acontece numa ativação de verdade.
+      if (bypassPayment) {
+        await openFirstCycle(db, (subscription as { id: string }).id);
+        await provisionAndForget(companyId);
+      }
 
       // Sem período gratuito (já usado antes, ou migration ainda não aplicada)
       // o cadastro segue pelo caminho antigo: pagamento primeiro.

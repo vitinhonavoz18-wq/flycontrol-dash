@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { CSS } from "@dnd-kit/utilities";
 import { Bike, GripVertical, Loader2, MapPin, StickyNote } from "lucide-react";
@@ -62,6 +63,14 @@ export function OrderCardContent({
             >
               {getOrderTypeLabel(order).toUpperCase()}
             </Badge>
+            {order.source === "flydelivery" && (
+              <Badge
+                variant="outline"
+                className="h-5 border-orange-200 bg-orange-100 py-0 text-[9px] font-black text-orange-700"
+              >
+                FLYDELIVERY
+              </Badge>
+            )}
             {isRecentNew && (
               <Badge className="h-5 animate-pulse bg-primary py-0 text-[9px] font-black text-white">
                 NOVO
@@ -159,8 +168,13 @@ export type OrderKanbanCardProps = OrderCardContentProps & {
  * A área arrastável e o botão "Ver detalhes" são irmãos, e não aninhados: o
  * dnd-kit marca o elemento arrastável como `role="button"`, e um botão dentro
  * de outro botão é HTML inválido e confunde leitores de tela.
+ *
+ * `memo`: sem isso, o relógio compartilhado do quadro (que atualiza "há X
+ * minutos" a cada 30s) e qualquer alteração em UM card — arrastar outro,
+ * abrir os detalhes de outro — re-renderizava TODOS os cards da tela. Com
+ * `memo`, um card só re-renderiza quando as próprias props dele mudam.
  */
-export function OrderKanbanCard({
+function OrderKanbanCardComponent({
   isPending = false,
   onOpenDetails,
   ...contentProps
@@ -220,3 +234,5 @@ export function OrderKanbanCard({
     </div>
   );
 }
+
+export const OrderKanbanCard = memo(OrderKanbanCardComponent);

@@ -26,6 +26,7 @@ import { Route as AppCommissionsRouteImport } from './routes/_app/commissions'
 import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppDocsRouteImport } from './routes/_app/docs'
 import { Route as AppFinanceRouteImport } from './routes/_app/finance'
+import { Route as AppFlydeliveryRouteImport } from './routes/_app/flydelivery'
 import { Route as AppMenuRouteImport } from './routes/_app/menu'
 import { Route as AppMyStoreRouteImport } from './routes/_app/my-store'
 import { Route as AppSearchOrdersRouteImport } from './routes/_app/search-orders'
@@ -35,6 +36,7 @@ import { Route as AppWaitersRouteImport } from './routes/_app/waiters'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiSyncTableSessionsRouteImport } from './routes/api/sync-table-sessions'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as PagamentoPlanoRouteImport } from './routes/pagamento.$plano'
 import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
@@ -54,7 +56,11 @@ import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public
 import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/public/open-table-session'
 import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/public/request-close-table'
 import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
+import { Route as ApiWebhooksInfinitypayRouteImport } from './routes/api/webhooks.infinitypay'
+import { Route as ApiPizzeriasIdDeactivateRouteImport } from './routes/api/pizzerias.$id.deactivate'
+import { Route as ApiPizzeriasIdDeleteRouteImport } from './routes/api/pizzerias.$id.delete'
 import { Route as ApiPizzeriasIdProvisionRouteImport } from './routes/api/pizzerias.$id.provision'
+import { Route as ApiPizzeriasIdReactivateRouteImport } from './routes/api/pizzerias.$id.reactivate'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -140,6 +146,11 @@ const AppFinanceRoute = AppFinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => AppRoute,
 } as any)
+const AppFlydeliveryRoute = AppFlydeliveryRouteImport.update({
+  id: '/flydelivery',
+  path: '/flydelivery',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMenuRoute = AppMenuRouteImport.update({
   id: '/menu',
   path: '/menu',
@@ -183,6 +194,11 @@ const ApiOrdersRoute = ApiOrdersRouteImport.update({
 const ApiSyncTableSessionsRoute = ApiSyncTableSessionsRouteImport.update({
   id: '/api/sync-table-sessions',
   path: '/api/sync-table-sessions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PagamentoPlanoRoute = PagamentoPlanoRouteImport.update({
@@ -283,11 +299,33 @@ const ApiPublicTableSessionStatusRoute =
     path: '/api/public/table-session-status',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiWebhooksInfinitypayRoute = ApiWebhooksInfinitypayRouteImport.update({
+  id: '/api/webhooks/infinitypay',
+  path: '/api/webhooks/infinitypay',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiPizzeriasIdDeactivateRoute =
+  ApiPizzeriasIdDeactivateRouteImport.update({
+    id: '/api/pizzerias/$id/deactivate',
+    path: '/api/pizzerias/$id/deactivate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiPizzeriasIdDeleteRoute = ApiPizzeriasIdDeleteRouteImport.update({
+  id: '/api/pizzerias/$id/delete',
+  path: '/api/pizzerias/$id/delete',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPizzeriasIdProvisionRoute = ApiPizzeriasIdProvisionRouteImport.update({
   id: '/api/pizzerias/$id/provision',
   path: '/api/pizzerias/$id/provision',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiPizzeriasIdReactivateRoute =
+  ApiPizzeriasIdReactivateRouteImport.update({
+    id: '/api/pizzerias/$id/reactivate',
+    path: '/api/pizzerias/$id/reactivate',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -306,6 +344,7 @@ export interface FileRoutesByFullPath {
   '/dashboard': typeof AppDashboardRoute
   '/docs': typeof AppDocsRoute
   '/finance': typeof AppFinanceRoute
+  '/flydelivery': typeof AppFlydeliveryRoute
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
   '/search-orders': typeof AppSearchOrdersRoute
@@ -315,6 +354,7 @@ export interface FileRoutesByFullPath {
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
@@ -333,8 +373,12 @@ export interface FileRoutesByFullPath {
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
+  '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/admin/': typeof AppAdminIndexRoute
+  '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
+  '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
+  '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -352,6 +396,7 @@ export interface FileRoutesByTo {
   '/dashboard': typeof AppDashboardRoute
   '/docs': typeof AppDocsRoute
   '/finance': typeof AppFinanceRoute
+  '/flydelivery': typeof AppFlydeliveryRoute
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
   '/search-orders': typeof AppSearchOrdersRoute
@@ -361,6 +406,7 @@ export interface FileRoutesByTo {
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
@@ -379,8 +425,12 @@ export interface FileRoutesByTo {
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
+  '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/admin': typeof AppAdminIndexRoute
+  '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
+  '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
+  '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -401,6 +451,7 @@ export interface FileRoutesById {
   '/_app/dashboard': typeof AppDashboardRoute
   '/_app/docs': typeof AppDocsRoute
   '/_app/finance': typeof AppFinanceRoute
+  '/_app/flydelivery': typeof AppFlydeliveryRoute
   '/_app/menu': typeof AppMenuRoute
   '/_app/my-store': typeof AppMyStoreRoute
   '/_app/search-orders': typeof AppSearchOrdersRoute
@@ -410,6 +461,7 @@ export interface FileRoutesById {
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
@@ -428,8 +480,12 @@ export interface FileRoutesById {
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
+  '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/_app/admin/': typeof AppAdminIndexRoute
+  '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
+  '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
+  '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -450,6 +506,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/docs'
     | '/finance'
+    | '/flydelivery'
     | '/menu'
     | '/my-store'
     | '/search-orders'
@@ -459,6 +516,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
+    | '/auth/callback'
     | '/pagamento/$plano'
     | '/print/$orderId'
     | '/admin/analytics'
@@ -477,8 +535,12 @@ export interface FileRouteTypes {
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
+    | '/api/webhooks/infinitypay'
     | '/admin/'
+    | '/api/pizzerias/$id/deactivate'
+    | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
+    | '/api/pizzerias/$id/reactivate'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -496,6 +558,7 @@ export interface FileRouteTypes {
     | '/dashboard'
     | '/docs'
     | '/finance'
+    | '/flydelivery'
     | '/menu'
     | '/my-store'
     | '/search-orders'
@@ -505,6 +568,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
+    | '/auth/callback'
     | '/pagamento/$plano'
     | '/print/$orderId'
     | '/admin/analytics'
@@ -523,8 +587,12 @@ export interface FileRouteTypes {
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
+    | '/api/webhooks/infinitypay'
     | '/admin'
+    | '/api/pizzerias/$id/deactivate'
+    | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
+    | '/api/pizzerias/$id/reactivate'
   id:
     | '__root__'
     | '/'
@@ -544,6 +612,7 @@ export interface FileRouteTypes {
     | '/_app/dashboard'
     | '/_app/docs'
     | '/_app/finance'
+    | '/_app/flydelivery'
     | '/_app/menu'
     | '/_app/my-store'
     | '/_app/search-orders'
@@ -553,6 +622,7 @@ export interface FileRouteTypes {
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
+    | '/auth/callback'
     | '/pagamento/$plano'
     | '/print/$orderId'
     | '/_app/admin/analytics'
@@ -571,8 +641,12 @@ export interface FileRouteTypes {
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
+    | '/api/webhooks/infinitypay'
     | '/_app/admin/'
+    | '/api/pizzerias/$id/deactivate'
+    | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
+    | '/api/pizzerias/$id/reactivate'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -589,6 +663,7 @@ export interface RootRouteChildren {
   ApiHealthRoute: typeof ApiHealthRoute
   ApiOrdersRoute: typeof ApiOrdersRoute
   ApiSyncTableSessionsRoute: typeof ApiSyncTableSessionsRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   PagamentoPlanoRoute: typeof PagamentoPlanoRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiBillingCloseCyclesRoute: typeof ApiBillingCloseCyclesRoute
@@ -601,7 +676,11 @@ export interface RootRouteChildren {
   ApiPublicOpenTableSessionRoute: typeof ApiPublicOpenTableSessionRoute
   ApiPublicRequestCloseTableRoute: typeof ApiPublicRequestCloseTableRoute
   ApiPublicTableSessionStatusRoute: typeof ApiPublicTableSessionStatusRoute
+  ApiWebhooksInfinitypayRoute: typeof ApiWebhooksInfinitypayRoute
+  ApiPizzeriasIdDeactivateRoute: typeof ApiPizzeriasIdDeactivateRoute
+  ApiPizzeriasIdDeleteRoute: typeof ApiPizzeriasIdDeleteRoute
   ApiPizzeriasIdProvisionRoute: typeof ApiPizzeriasIdProvisionRoute
+  ApiPizzeriasIdReactivateRoute: typeof ApiPizzeriasIdReactivateRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -725,6 +804,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFinanceRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/flydelivery': {
+      id: '/_app/flydelivery'
+      path: '/flydelivery'
+      fullPath: '/flydelivery'
+      preLoaderRoute: typeof AppFlydeliveryRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/menu': {
       id: '/_app/menu'
       path: '/menu'
@@ -786,6 +872,13 @@ declare module '@tanstack/react-router' {
       path: '/api/sync-table-sessions'
       fullPath: '/api/sync-table-sessions'
       preLoaderRoute: typeof ApiSyncTableSessionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pagamento/$plano': {
@@ -921,11 +1014,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTableSessionStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/infinitypay': {
+      id: '/api/webhooks/infinitypay'
+      path: '/api/webhooks/infinitypay'
+      fullPath: '/api/webhooks/infinitypay'
+      preLoaderRoute: typeof ApiWebhooksInfinitypayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pizzerias/$id/deactivate': {
+      id: '/api/pizzerias/$id/deactivate'
+      path: '/api/pizzerias/$id/deactivate'
+      fullPath: '/api/pizzerias/$id/deactivate'
+      preLoaderRoute: typeof ApiPizzeriasIdDeactivateRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pizzerias/$id/delete': {
+      id: '/api/pizzerias/$id/delete'
+      path: '/api/pizzerias/$id/delete'
+      fullPath: '/api/pizzerias/$id/delete'
+      preLoaderRoute: typeof ApiPizzeriasIdDeleteRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pizzerias/$id/provision': {
       id: '/api/pizzerias/$id/provision'
       path: '/api/pizzerias/$id/provision'
       fullPath: '/api/pizzerias/$id/provision'
       preLoaderRoute: typeof ApiPizzeriasIdProvisionRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/pizzerias/$id/reactivate': {
+      id: '/api/pizzerias/$id/reactivate'
+      path: '/api/pizzerias/$id/reactivate'
+      fullPath: '/api/pizzerias/$id/reactivate'
+      preLoaderRoute: typeof ApiPizzeriasIdReactivateRouteImport
       parentRoute: typeof rootRouteImport
     }
   }
@@ -963,6 +1084,7 @@ interface AppRouteChildren {
   AppDashboardRoute: typeof AppDashboardRoute
   AppDocsRoute: typeof AppDocsRoute
   AppFinanceRoute: typeof AppFinanceRoute
+  AppFlydeliveryRoute: typeof AppFlydeliveryRoute
   AppMenuRoute: typeof AppMenuRoute
   AppMyStoreRoute: typeof AppMyStoreRoute
   AppSearchOrdersRoute: typeof AppSearchOrdersRoute
@@ -979,6 +1101,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDashboardRoute: AppDashboardRoute,
   AppDocsRoute: AppDocsRoute,
   AppFinanceRoute: AppFinanceRoute,
+  AppFlydeliveryRoute: AppFlydeliveryRoute,
   AppMenuRoute: AppMenuRoute,
   AppMyStoreRoute: AppMyStoreRoute,
   AppSearchOrdersRoute: AppSearchOrdersRoute,
@@ -1003,6 +1126,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiHealthRoute: ApiHealthRoute,
   ApiOrdersRoute: ApiOrdersRoute,
   ApiSyncTableSessionsRoute: ApiSyncTableSessionsRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   PagamentoPlanoRoute: PagamentoPlanoRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiBillingCloseCyclesRoute: ApiBillingCloseCyclesRoute,
@@ -1015,7 +1139,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOpenTableSessionRoute: ApiPublicOpenTableSessionRoute,
   ApiPublicRequestCloseTableRoute: ApiPublicRequestCloseTableRoute,
   ApiPublicTableSessionStatusRoute: ApiPublicTableSessionStatusRoute,
+  ApiWebhooksInfinitypayRoute: ApiWebhooksInfinitypayRoute,
+  ApiPizzeriasIdDeactivateRoute: ApiPizzeriasIdDeactivateRoute,
+  ApiPizzeriasIdDeleteRoute: ApiPizzeriasIdDeleteRoute,
   ApiPizzeriasIdProvisionRoute: ApiPizzeriasIdProvisionRoute,
+  ApiPizzeriasIdReactivateRoute: ApiPizzeriasIdReactivateRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

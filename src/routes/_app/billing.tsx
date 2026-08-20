@@ -4,6 +4,7 @@ import {
   AlertTriangle,
   ArrowUpRight,
   Check,
+  ExternalLink,
   Gift,
   Loader2,
   Receipt,
@@ -18,12 +19,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/layout/SectionHeader";
 import { calculateCycleProgress, type CycleProgress } from "@/lib/billing/cycleProgress";
 import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
 import {
   SUBSCRIPTION_STATUS_LABELS,
   type SubscriptionStatus,
 } from "@/lib/billing/subscriptionStatus";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
+import { getPendingCharge } from "@/lib/billing/getPendingCharge.functions";
 import {
   SUBSCRIPTION_PHASE_LABELS,
   TRIAL_DURATION_DAYS,
@@ -110,6 +112,7 @@ function BillingPage() {
       .select("id, name")
       .eq("owner_id", user.id)
       .neq("status", "deleted")
+      .neq("status", "inactive")
       .limit(1)
       .maybeSingle();
 
@@ -165,7 +168,7 @@ function BillingPage() {
       return;
     }
 
-    const planCode = isPublicPlanCode(row.plans?.code) ? row.plans.code : "premium";
+    const planCode = isKnownPlanCode(row.plans?.code) ? row.plans.code : "premium";
     const cycle = row.billing_cycles;
 
     // A taxa de cadastro sai da estimativa assim que aparece em uma fatura.
@@ -243,6 +246,23 @@ function BillingPage() {
     void load();
   }, [load]);
 
+  const [pendingChargeUrl, setPendingChargeUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    const pendingInvoice = snapshot?.invoices.find((i) => i.status === "pending");
+    if (!pendingInvoice) {
+      setPendingChargeUrl(null);
+      return;
+    }
+    let cancelled = false;
+    void getPendingCharge({ data: { invoiceId: pendingInvoice.id } }).then((result) => {
+      if (!cancelled) setPendingChargeUrl(result?.checkoutUrl ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [snapshot]);
+
   if (loading) {
     return (
       <div className="flex min-h-[50dvh] items-center justify-center">
@@ -288,6 +308,30 @@ function BillingPage() {
   return (
     <div className="space-y-6 p-4 sm:p-6 md:p-8">
       <SectionHeader title="Plano e cobrança" description={snapshot.companyName} />
+
+      {pendingChargeUrl && (
+        <Card className="border-amber-500/40 bg-amber-500/5">
+          <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
+            <div className="flex items-start gap-3">
+              <AlertTriangle
+                className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400"
+                aria-hidden="true"
+              />
+              <div>
+                <p className="text-sm font-bold text-foreground">Existe uma fatura em aberto</p>
+                <p className="text-sm text-muted-foreground">
+                  Pague para continuar com o acesso liberado, sem interrupção.
+                </p>
+              </div>
+            </div>
+            <Button asChild className="h-11 gap-2">
+              <a href={pendingChargeUrl} target="_blank" rel="noreferrer">
+                Pagar agora <ExternalLink className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="space-y-3 p-4">

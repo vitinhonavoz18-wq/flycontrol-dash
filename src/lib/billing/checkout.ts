@@ -36,6 +36,11 @@ export function checkoutReturnUrl(origin: string, planCode: PlanCode): string {
   return `${origin.replace(/\/+$/, "")}${checkoutReturnPath(planCode)}`;
 }
 
+/** URL do nosso endpoint que recebe o aviso de pagamento da InfinityPay. */
+export function infinityPayWebhookUrl(origin: string): string {
+  return `${origin.replace(/\/+$/, "")}/api/webhooks/infinitypay`;
+}
+
 /**
  * Valor que o checkout daquele plano deve cobrar na entrada.
  *
@@ -54,6 +59,7 @@ export type CheckoutConfig =
 const ENV_BY_PLAN: Record<PlanCode, string> = {
   premium: "INFINITYPAY_CHECKOUT_URL_PREMIUM",
   cents: "INFINITYPAY_CHECKOUT_URL_CENTS",
+  teste: "INFINITYPAY_CHECKOUT_URL_TESTE",
 };
 
 /** Nome da variável de ambiente que guarda o checkout de um plano. */
@@ -170,6 +176,40 @@ export function validateIntentForReturn(
       ok: false,
       code: "plan_mismatch",
       message: "O plano deste retorno não corresponde ao do checkout iniciado.",
+    };
+  }
+
+  return { ok: true };
+}
+
+export type GatewayConfirmation = { paid: boolean; paidAmountCents: number | null };
+
+export type GatewayConfirmationRejection = "not_paid" | "amount_mismatch";
+
+/**
+ * Decide se uma reconferência da InfinityPay basta para ativar a assinatura.
+ *
+ * Separada do acesso à rede de propósito, como `validateIntentForReturn`: é
+ * a regra que decide se um pagamento é aceito, e precisa ser testável sem
+ * chamar a InfinityPay de verdade.
+ */
+export function validateGatewayConfirmation(
+  confirmation: GatewayConfirmation,
+  expectedAmountCents: number,
+): { ok: true } | { ok: false; code: GatewayConfirmationRejection; message: string } {
+  if (!confirmation.paid) {
+    return {
+      ok: false,
+      code: "not_paid",
+      message: "A InfinityPay não confirma este pagamento como pago.",
+    };
+  }
+
+  if (confirmation.paidAmountCents === null || confirmation.paidAmountCents < expectedAmountCents) {
+    return {
+      ok: false,
+      code: "amount_mismatch",
+      message: "O valor confirmado pela InfinityPay é menor que o esperado para este plano.",
     };
   }
 

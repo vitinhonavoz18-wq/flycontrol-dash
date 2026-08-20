@@ -13,7 +13,13 @@
 
 import type { Cents } from "./money";
 
-export type PlanCode = "premium" | "cents";
+/**
+ * `teste` é um plano INTERNO, não comercial — R$0,20/mês para validar o
+ * cadastro real e o checkout da InfinityPay sem arriscar o preço de verdade
+ * dos planos pagos. Nunca aparece na página pública nem no seletor de plano
+ * do cadastro: só é alcançável por quem abre `/signup?plan=teste` direto.
+ */
+export type PlanCode = "premium" | "cents" | "teste";
 
 /** Como o plano cobra. Determina qual caminho do motor de cobrança roda. */
 export type BillingModel = "monthly_fixed" | "usage_per_order";
@@ -60,10 +66,24 @@ export const PLAN_PRICING: Readonly<Record<PlanCode, PlanPricing>> = {
     promotionalOrderUnitPriceCents: 45, // R$ 0,45
     promotionThresholdOrders: 500,
   },
+  teste: {
+    code: "teste",
+    name: "TESTE (interno)",
+    description: "Plano interno para validar cadastro e checkout. Não é vendido a clientes.",
+    billingModel: "monthly_fixed",
+    setupFeeCents: 0,
+    monthlyFeeCents: 20, // R$ 0,20
+    defaultOrderUnitPriceCents: 0,
+    promotionalOrderUnitPriceCents: 0,
+    promotionThresholdOrders: 0,
+  },
 } as const;
 
-/** Ordem de exibição na página pública. */
+/** Ordem de exibição na página pública. `teste` fica de fora de propósito. */
 export const PUBLIC_PLAN_CODES: readonly PlanCode[] = ["premium", "cents"] as const;
+
+/** Todo código de plano que o sistema reconhece, incluindo os internos. */
+export const ALL_PLAN_CODES: readonly PlanCode[] = ["premium", "cents", "teste"] as const;
 
 /**
  * Valor de `pizzerias.billing_model` correspondente a cada plano.
@@ -85,12 +105,23 @@ export type CompanyBillingModel = "fixed" | "per_order";
 export const COMPANY_BILLING_MODEL: Readonly<Record<PlanCode, CompanyBillingModel>> = {
   premium: "fixed",
   cents: "per_order",
+  teste: "fixed",
 } as const;
 
 export function getPlanPricing(code: PlanCode): PlanPricing {
   return PLAN_PRICING[code];
 }
 
+/** Só os planos vendidos na página comercial e no seletor do cadastro. */
 export function isPublicPlanCode(value: string | null | undefined): value is PlanCode {
   return value === "premium" || value === "cents";
+}
+
+/**
+ * Todo plano que o sistema sabe processar, incluindo `teste`. Usada nos
+ * pontos que precisam aceitar o plano interno (link direto do cadastro,
+ * retorno do checkout) sem expô-lo na vitrine pública.
+ */
+export function isKnownPlanCode(value: string | null | undefined): value is PlanCode {
+  return (ALL_PLAN_CODES as readonly string[]).includes(value ?? "");
 }

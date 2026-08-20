@@ -26,8 +26,10 @@ export function CheckoutReturnLinks() {
         <div className="space-y-1">
           <h2 className="font-bold">Links de retorno da InfinityPay</h2>
           <p className="text-sm text-muted-foreground">
-            Cole cada link no campo de redirecionamento do checkout correspondente, no painel da
-            InfinityPay. O cliente é enviado para ele depois de pagar.
+            Com <code>INFINITYPAY_HANDLE</code> configurado, cada cadastro já gera seu próprio link
+            de pagamento com este retorno embutido — nada para colar manualmente. Estes endereços
+            servem de referência e continuam valendo para quem ainda usa o modo manual (links fixos
+            colados à mão no painel da InfinityPay).
           </p>
         </div>
 
@@ -38,10 +40,14 @@ export function CheckoutReturnLinks() {
         </div>
 
         <p className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-muted-foreground">
-          <strong className="text-foreground">O retorno não é confirmação de pagamento.</strong>{" "}
+          <strong className="text-foreground">
+            No modo manual, o retorno não é confirmação de pagamento.
+          </strong>{" "}
           Esta URL é fixa e pública: quem a abrir chega na mesma tela de quem pagou. Por isso o
           cliente que volta do checkout fica em <em>aguardando pagamento</em>, e a ativação é feita
-          aqui nesta tela.
+          aqui nesta tela. No modo automático (com
+          <code> INFINITYPAY_HANDLE</code>) isso não se aplica: a ativação é feita pelo aviso de
+          pagamento (webhook), sempre reconferido diretamente com a InfinityPay.
         </p>
       </CardContent>
     </Card>

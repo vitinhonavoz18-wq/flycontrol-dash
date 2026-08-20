@@ -19,9 +19,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
+import { GoogleIcon } from "@/components/GoogleIcon";
 import { CHECKOUT_TOKEN_STORAGE_KEY } from "@/lib/billing/checkout";
 import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING, isPublicPlanCode, type PlanCode } from "@/lib/billing/plans";
+import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
@@ -46,14 +48,26 @@ import {
 } from "@/lib/signup/validation";
 import logo from "@/assets/flycontrol-logo.png";
 
+type SignupSearch = { plan: PlanCode | undefined; google?: "1" };
+
 export const Route = createFileRoute("/signup")({
   component: SignupWizard,
-  validateSearch: (search: Record<string, unknown>) => ({
-    plan: isPublicPlanCode(search.plan as string) ? (search.plan as PlanCode) : undefined,
+  validateSearch: (search: Record<string, unknown>): SignupSearch => ({
+    // `isKnownPlanCode` e não `isPublicPlanCode`: o plano interno de teste só
+    // é alcançável por quem já sabe a URL exata — não aparece no seletor.
+    plan: isKnownPlanCode(search.plan as string) ? (search.plan as PlanCode) : undefined,
+    // Marcado pelo retorno do login com Google (`/auth/callback`): esta tela
+    // pula o pedido de senha porque a pessoa já provou quem é pelo Google.
+    // Opcional de propósito: os outros links para /signup não precisam saber
+    // que este parâmetro existe.
+    google: search.google === "1" ? "1" : undefined,
   }),
 });
 
 const STEPS = ["Comece grátis", "Criar conta", "Estabelecimento", "Ativar"] as const;
+
+/** Sobrevive à viagem de ida e volta ao Google — todo o resto do estado se perde. */
+const GOOGLE_PENDING_PLAN_KEY = "fc_signup_google_plan";
 
 const SEGMENTS = [
   "Pizzaria",
@@ -116,14 +130,20 @@ function Field({
 }
 
 function SignupWizard() {
-  const { plan: planFromUrl } = Route.useSearch();
+  const { plan: planFromUrl, google: googleFlag } = Route.useSearch();
   const navigate = useNavigate();
+  const { user: googleUser, signInWithGoogle } = useAuth();
+
+  // Só é "cadastro pelo Google" quando a tela chegou com o sinal do callback
+  // E existe mesmo uma sessão — sem a sessão não há token para provar nada.
+  const isGoogleAuth = googleFlag === "1" && !!googleUser;
 
   const [step, setStep] = useState(0);
   // Cadastro novo entra no CENTS: é o plano que combina com "pague só depois
   // de usar". O PREMIUM continua existindo e é oferecido dentro do painel; o
-  // parâmetro `?plan=` na URL segue funcionando para links antigos.
-  const [planCode] = useState<PlanCode>(planFromUrl ?? TRIAL_PLAN_CODE);
+  // parâmetro `?plan=` na URL segue funcionando para links antigos e para o
+  // plano interno de teste.
+  const [planCode, setPlanCode] = useState<PlanCode>(planFromUrl ?? TRIAL_PLAN_CODE);
   // Os dados vivem no wizard inteiro: voltar uma etapa nunca apaga o que já
   // foi digitado.
   const [owner, setOwner] = useState<OwnerData>(emptyOwner);
@@ -131,15 +151,57 @@ function SignupWizard() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
   const [submitting, setSubmitting] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [result, setResult] = useState<{
     companyName: string;
     activationPending: boolean;
     /** Datas reais devolvidas pelo servidor. Nulo quando não houve trial. */
     trial: { startsAt: string; endsAt: string } | null;
     trialDenied: string | null;
-    /** `true` quando o login automático deu certo e dá para entrar direto. */
+    /** `true` quando já dá para entrar direto, sem passar pelo login. */
     signedIn: boolean;
   } | null>(null);
+
+  // Nome, e-mail e foto (quando o Google devolve uma) vêm prontos da conta —
+  // evita pedir de novo o que a pessoa já informou ao Google.
+  useEffect(() => {
+    if (!isGoogleAuth || !googleUser) return;
+    const meta = (googleUser.user_metadata ?? {}) as Record<string, unknown>;
+    const fullName = String(meta.full_name ?? meta.name ?? "");
+    setOwner((prev) => ({
+      ...prev,
+      fullName: prev.fullName || fullName,
+      email: prev.email || googleUser.email || "",
+    }));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isGoogleAuth, googleUser?.id]);
+
+  // Ir para o Google tira a pessoa desta página inteira — todo o estado do
+  // React some. O plano escolhido é guardado aqui só para sobreviver a essa
+  // viagem de ida e volta; some assim que é lido de volta.
+  useEffect(() => {
+    if (!isGoogleAuth) return;
+    const pending = localStorage.getItem(GOOGLE_PENDING_PLAN_KEY);
+    if (pending && isKnownPlanCode(pending)) setPlanCode(pending);
+    // Quem volta do Google já passou pelo cartão de boas-vindas: mandá-lo de
+    // volta para a etapa 0 faria a viagem parecer perdida.
+    setStep(1);
+    localStorage.removeItem(GOOGLE_PENDING_PLAN_KEY);
+  }, [isGoogleAuth]);
+
+  function onGoogleClick() {
+    setGoogleLoading(true);
+    localStorage.setItem(GOOGLE_PENDING_PLAN_KEY, planCode);
+    void signInWithGoogle().then(({ error }) => {
+      // Sem erro, o navegador já está saindo para o Google. Erro aqui só
+      // acontece antes desse redirecionamento.
+      if (error) {
+        localStorage.removeItem(GOOGLE_PENDING_PLAN_KEY);
+        setGoogleLoading(false);
+        toast.error(error);
+      }
+    });
+  }
 
   // Atalho de teste. Quem responde se ele existe é o servidor — o navegador
   // não enxerga variável de ambiente do Worker.
@@ -164,7 +226,7 @@ function SignupWizard() {
       return;
     }
     if (step === 1) {
-      const found = validateOwnerStep(owner);
+      const found = validateOwnerStep(owner, { skipPassword: isGoogleAuth });
       setErrors(found);
       if (hasErrors(found)) return;
       setStep(2);
@@ -178,8 +240,14 @@ function SignupWizard() {
     }
   }
 
-  /** Entra na conta recém-criada. A senha acabou de ser digitada aqui. */
+  /**
+   * Entra na conta recém-criada.
+   *
+   * Quem veio pelo Google já está com a sessão aberta; quem digitou senha
+   * acabou de digitá-la aqui, então não há motivo para pedir de novo.
+   */
   async function signInSilently(): Promise<boolean> {
+    if (isGoogleAuth) return true;
     const { error } = await supabase.auth.signInWithPassword({
       email: owner.email.trim().toLowerCase(),
       password: owner.password,
@@ -196,6 +264,17 @@ function SignupWizard() {
     }
     setSubmitting(true);
     try {
+      let googleAccessToken: string | undefined;
+      if (isGoogleAuth) {
+        const { data: sessionData } = await supabase.auth.getSession();
+        googleAccessToken = sessionData.session?.access_token;
+        if (!googleAccessToken) {
+          toast.error("Sua sessão do Google expirou. Entre novamente.");
+          setSubmitting(false);
+          return;
+        }
+      }
+
       const created = await createAccount({
         // As versões que esta tela exibiu vão junto: é o que foi aceito de
         // fato. O servidor confere ambas contra as vigentes.
@@ -207,6 +286,7 @@ function SignupWizard() {
           termsVersion: TERMS_VERSION,
           privacyVersion: PRIVACY_VERSION,
           bypassPayment: options.bypassPayment,
+          googleAccessToken,
         },
       });
       // Checkout configurado: o cliente vai pagar agora. O token fica no
@@ -310,9 +390,12 @@ function SignupWizard() {
             {/* Dizer quando NÃO se cobra é tão importante quanto dizer quanto
                 custa: é o que evita a sensação de cobrança surpresa. */}
             <p className="rounded-lg bg-primary/5 p-3 text-left text-sm text-muted-foreground">
-              Nada é cobrado agora nem durante os {TRIAL_DURATION_DAYS} dias. Depois disso, cada
-              pedido válido passa a contar {formatCents(pricing.defaultOrderUnitPriceCents)}, e a
-              conta é fechada só no fim do ciclo — em {formatTrialDate(timeline.firstChargeAt)}.
+              Nada é cobrado agora nem durante os {TRIAL_DURATION_DAYS} dias. Depois disso,{" "}
+              {planCode === "cents"
+                ? `cada pedido válido passa a contar ${formatCents(pricing.defaultOrderUnitPriceCents)}`
+                : `a mensalidade passa a ser ${formatCents(pricing.monthlyFeeCents)}`}
+              , e a conta é fechada só no fim do ciclo — em{" "}
+              {formatTrialDate(timeline.firstChargeAt)}.
             </p>
 
             <Button asChild className="h-12 w-full text-base font-bold">
@@ -350,8 +433,8 @@ function SignupWizard() {
               <div className="flex items-center justify-between gap-2">
                 <span className="text-muted-foreground">Cobrança</span>
                 <strong className="text-right">
-                  {planCode === "premium"
-                    ? `${formatCents(PLAN_PRICING.premium.monthlyFeeCents)} por mês`
+                  {pricing?.billingModel === "monthly_fixed"
+                    ? `${formatCents(pricing.monthlyFeeCents)} por mês`
                     : `${formatCents(PLAN_PRICING.cents.setupFeeCents)} de cadastro + ${formatCents(PLAN_PRICING.cents.defaultOrderUnitPriceCents)} por pedido`}
                 </strong>
               </div>
@@ -500,35 +583,65 @@ function SignupWizard() {
               <p className="mt-2 text-sm text-muted-foreground">
                 Começa um ciclo em que cada pedido válido conta{" "}
                 <strong className="text-foreground">
-                  {formatCents(pricing.defaultOrderUnitPriceCents)}
+                  {formatCents(PLAN_PRICING.cents.defaultOrderUnitPriceCents)}
                 </strong>
-                . Ao atingir {pricing.promotionThresholdOrders} pedidos em um ciclo, o próximo cai
-                para{" "}
+                . Ao atingir {PLAN_PRICING.cents.promotionThresholdOrders} pedidos em um ciclo, o
+                próximo cai para{" "}
                 <strong className="text-foreground">
-                  {formatCents(pricing.promotionalOrderUnitPriceCents)}
+                  {formatCents(PLAN_PRICING.cents.promotionalOrderUnitPriceCents)}
                 </strong>{" "}
                 por pedido. A conta é fechada só no fim do ciclo — nada é cobrado adiantado.
               </p>
-              {pricing.setupFeeCents > 0 && (
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Há também a taxa única de cadastro de{" "}
-                  <strong className="text-foreground">{formatCents(pricing.setupFeeCents)}</strong>,
-                  cobrada uma só vez e apenas na primeira conta — depois do período grátis, nunca
-                  antes.
-                </p>
-              )}
+              <p className="mt-2 text-sm text-muted-foreground">
+                Há também a taxa única de cadastro de{" "}
+                <strong className="text-foreground">
+                  {formatCents(PLAN_PRICING.cents.setupFeeCents)}
+                </strong>
+                , cobrada uma só vez e apenas na primeira conta — depois do período grátis, nunca
+                antes.
+              </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 <Link to="/plans" className="text-primary underline">
                   Ver todos os planos e o comparativo completo
                 </Link>
               </p>
             </div>
+
+            {!isGoogleAuth && (
+              <>
+                <div className="flex items-center gap-3 pt-2">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-xs text-muted-foreground">ou</span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-11 w-full gap-2"
+                  onClick={onGoogleClick}
+                  disabled={googleLoading}
+                >
+                  <GoogleIcon />
+                  {googleLoading ? "Redirecionando..." : "Continuar com Google"}
+                </Button>
+              </>
+            )}
           </section>
         )}
 
         {step === 1 && (
           <section className="space-y-4">
             <h1 className="text-xl font-bold sm:text-2xl">Seus dados</h1>
+
+            {isGoogleAuth && (
+              <div className="flex items-center gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm">
+                <GoogleIcon className="h-5 w-5 shrink-0" />
+                <span className="text-muted-foreground">
+                  Conectado com a conta Google{" "}
+                  <strong className="text-foreground">{owner.email}</strong>
+                </span>
+              </div>
+            )}
 
             <Field id="fullName" label="Nome completo" error={errors.fullName}>
               <Input
@@ -551,6 +664,7 @@ function SignupWizard() {
                 autoCapitalize="none"
                 className="h-11"
                 value={owner.email}
+                disabled={isGoogleAuth}
                 aria-invalid={!!errors.email}
                 onChange={(e) => setOwner({ ...owner, email: e.target.value })}
               />
@@ -569,38 +683,45 @@ function SignupWizard() {
               />
             </Field>
 
-            <Field
-              id="password"
-              label="Senha"
-              error={errors.password}
-              hint="Ao menos 8 caracteres, com letra e número."
-            >
-              <Input
-                id="password"
-                type="password"
-                autoComplete="new-password"
-                className="h-11"
-                value={owner.password}
-                aria-invalid={!!errors.password}
-                onChange={(e) => setOwner({ ...owner, password: e.target.value })}
-              />
-            </Field>
+            {/* Quem entrou pelo Google já provou quem é por lá — pedir senha
+                de novo aqui seria redundante, como pedir documento duas vezes
+                na mesma portaria. */}
+            {!isGoogleAuth && (
+              <>
+                <Field
+                  id="password"
+                  label="Senha"
+                  error={errors.password}
+                  hint="Ao menos 8 caracteres, com letra e número."
+                >
+                  <Input
+                    id="password"
+                    type="password"
+                    autoComplete="new-password"
+                    className="h-11"
+                    value={owner.password}
+                    aria-invalid={!!errors.password}
+                    onChange={(e) => setOwner({ ...owner, password: e.target.value })}
+                  />
+                </Field>
 
-            <Field
-              id="passwordConfirmation"
-              label="Confirmar senha"
-              error={errors.passwordConfirmation}
-            >
-              <Input
-                id="passwordConfirmation"
-                type="password"
-                autoComplete="new-password"
-                className="h-11"
-                value={owner.passwordConfirmation}
-                aria-invalid={!!errors.passwordConfirmation}
-                onChange={(e) => setOwner({ ...owner, passwordConfirmation: e.target.value })}
-              />
-            </Field>
+                <Field
+                  id="passwordConfirmation"
+                  label="Confirmar senha"
+                  error={errors.passwordConfirmation}
+                >
+                  <Input
+                    id="passwordConfirmation"
+                    type="password"
+                    autoComplete="new-password"
+                    className="h-11"
+                    value={owner.passwordConfirmation}
+                    aria-invalid={!!errors.passwordConfirmation}
+                    onChange={(e) => setOwner({ ...owner, passwordConfirmation: e.target.value })}
+                  />
+                </Field>
+              </>
+            )}
           </section>
         )}
 
@@ -732,13 +853,13 @@ function SignupWizard() {
                 </h2>
                 <div className="flex justify-between gap-2">
                   <span className="text-muted-foreground">Hoje você paga</span>
-                  <strong className="text-primary">R$ 0,00</strong>
+                  <strong className="text-primary">{formatCents(0)}</strong>
                 </div>
                 <div className="flex justify-between gap-2">
                   <span className="text-muted-foreground">Nos {TRIAL_DURATION_DAYS} dias</span>
-                  <strong className="text-primary">R$ 0,00</strong>
+                  <strong className="text-primary">{formatCents(0)}</strong>
                 </div>
-                {planCode === "premium" ? (
+                {pricing.billingModel === "monthly_fixed" ? (
                   <div className="flex justify-between gap-2 border-t border-primary/20 pt-2">
                     <span className="text-muted-foreground">Depois disso</span>
                     <strong>{formatCents(pricing.monthlyFeeCents)} por mês</strong>

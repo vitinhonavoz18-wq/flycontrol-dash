@@ -5,7 +5,8 @@ const getCorsHeaders = (request?: Request) => {
   const origin = request?.headers.get("origin") || "*";
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, accept",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-api-key, accept",
     "Access-Control-Allow-Methods": "POST, OPTIONS",
     "Access-Control-Max-Age": "86400",
     "Access-Control-Allow-Credentials": "true",
@@ -29,7 +30,8 @@ const getCorsHeaders = (request?: Request) => {
 export const Route = createFileRoute("/api/public/open-table-session")({
   server: {
     handlers: {
-      OPTIONS: async ({ request }) => new Response(null, { status: 204, headers: getCorsHeaders(request) }),
+      OPTIONS: async ({ request }) =>
+        new Response(null, { status: 204, headers: getCorsHeaders(request) }),
       POST: async ({ request }) => {
         const cors = getCorsHeaders(request);
 
@@ -45,18 +47,25 @@ export const Route = createFileRoute("/api/public/open-table-session")({
           } = body || {};
 
           console.log("OPEN_TABLE_SESSION_REQUEST:", {
-            restaurant_slug, table_number, table_token,
+            restaurant_slug,
+            table_number,
+            table_token,
             incoming_dining: incomingDiningSessionId || null,
-            incoming_token: incomingCustomerToken ? String(incomingCustomerToken).slice(0, 6) + "…" : null,
+            incoming_token: incomingCustomerToken
+              ? String(incomingCustomerToken).slice(0, 6) + "…"
+              : null,
           });
 
           if (!restaurant_slug || !table_number || !table_token) {
             console.warn("⚠️ OPEN_TABLE_SESSION_BAD_REQUEST: Missing required fields");
-            return new Response(JSON.stringify({
-              success: false,
-              error: "missing_params",
-              message: "restaurant_slug, table_number e table_token são obrigatórios"
-            }), { status: 400, headers: cors });
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "missing_params",
+                message: "restaurant_slug, table_number e table_token são obrigatórios",
+              }),
+              { status: 400, headers: cors },
+            );
           }
 
           const { data: pz, error: pErr } = await supabaseAdmin
@@ -64,6 +73,7 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             .select("id, name, slug, is_active, subscription_status, service_fee_percent")
             .eq("slug", restaurant_slug)
             .neq("status", "deleted")
+            .neq("status", "inactive")
             .maybeSingle();
 
           if (pErr) {
@@ -71,14 +81,24 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             throw pErr;
           }
           if (!pz) {
-            return new Response(JSON.stringify({
-              success: false, error: "invalid_restaurant", message: "Restaurante não encontrado"
-            }), { status: 404, headers: cors });
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "invalid_restaurant",
+                message: "Restaurante não encontrado",
+              }),
+              { status: 404, headers: cors },
+            );
           }
           if (pz.is_active === false || pz.subscription_status === "suspended") {
-            return new Response(JSON.stringify({
-              success: false, error: "inactive_restaurant", message: "Este restaurante está temporariamente inativo"
-            }), { status: 403, headers: cors });
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "inactive_restaurant",
+                message: "Este restaurante está temporariamente inativo",
+              }),
+              { status: 403, headers: cors },
+            );
           }
 
           const { data: table, error: tErr } = await supabaseAdmin
@@ -92,15 +112,22 @@ export const Route = createFileRoute("/api/public/open-table-session")({
 
           if (tErr) throw tErr;
           if (!table) {
-            return new Response(JSON.stringify({
-              success: false, error: "invalid_table", message: "Mesa inválida ou inativa"
-            }), { status: 400, headers: cors });
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "invalid_table",
+                message: "Mesa inválida ou inativa",
+              }),
+              { status: 400, headers: cors },
+            );
           }
 
           // Reuse an existing ACTIVE session (aliased as 'open' in DB).
           const { data: existingSession } = await supabaseAdmin
             .from("table_sessions")
-            .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
+            .select(
+              "id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at",
+            )
             .eq("restaurant_id", pz.id)
             .eq("table_number", String(table_number))
             .in("status", ["open", "requested_close", "waiting_operator", "closing"])
@@ -112,29 +139,46 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             // Adopt SCF-provided IDs onto the reused session (authoritative contract).
             const updates: any = {};
             if (!(existingSession as any).table_id && table?.id) updates.table_id = table.id;
-            if (incomingDiningSessionId && (existingSession as any).dining_session_id !== incomingDiningSessionId) {
+            if (
+              incomingDiningSessionId &&
+              (existingSession as any).dining_session_id !== incomingDiningSessionId
+            ) {
               updates.dining_session_id = incomingDiningSessionId;
             }
-            if (incomingCustomerToken && (existingSession as any).customer_token !== incomingCustomerToken) {
+            if (
+              incomingCustomerToken &&
+              (existingSession as any).customer_token !== incomingCustomerToken
+            ) {
               updates.customer_token = incomingCustomerToken;
             }
             if (Object.keys(updates).length > 0) {
               const { data: upd, error: uErr } = await supabaseAdmin
-                .from("table_sessions").update(updates as any)
+                .from("table_sessions")
+                .update(updates as any)
                 .eq("id", (existingSession as any).id)
-                .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
+                .select(
+                  "id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at",
+                )
                 .single();
               if (!uErr && upd) Object.assign(existingSession as any, upd);
               else if (uErr) console.error("OPEN_TABLE_SESSION_ADOPT_ERROR:", uErr.message);
             }
-            console.log("OPEN_TABLE_SESSION_FOUND_EXISTING:", existingSession.id,
-              "dining:", (existingSession as any).dining_session_id,
-              "table_id:", (existingSession as any).table_id);
-            return new Response(JSON.stringify({
-              success: true,
-              status: "already_open",
-              table_session: existingSession,
-            }), { status: 200, headers: cors });
+            console.log(
+              "OPEN_TABLE_SESSION_FOUND_EXISTING:",
+              existingSession.id,
+              "dining:",
+              (existingSession as any).dining_session_id,
+              "table_id:",
+              (existingSession as any).table_id,
+            );
+            return new Response(
+              JSON.stringify({
+                success: true,
+                status: "already_open",
+                table_session: existingSession,
+              }),
+              { status: 200, headers: cors },
+            );
           }
 
           try {
@@ -157,22 +201,31 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             const { data: newSession, error: iErr } = await supabaseAdmin
               .from("table_sessions")
               .insert(insertPayload)
-              .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
+              .select(
+                "id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at",
+              )
               .single();
 
             if (iErr) {
               if (iErr.code === "23505") {
                 const { data: raceSession } = await supabaseAdmin
                   .from("table_sessions")
-                  .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
+                  .select(
+                    "id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at",
+                  )
                   .eq("restaurant_id", pz.id)
                   .eq("table_number", String(table_number))
                   .in("status", ["open", "requested_close", "waiting_operator", "closing"])
                   .maybeSingle();
                 if (raceSession) {
-                  return new Response(JSON.stringify({
-                    success: true, status: "already_open", table_session: raceSession,
-                  }), { status: 200, headers: cors });
+                  return new Response(
+                    JSON.stringify({
+                      success: true,
+                      status: "already_open",
+                      table_session: raceSession,
+                    }),
+                    { status: 200, headers: cors },
+                  );
                 }
               }
               throw iErr;
@@ -180,36 +233,56 @@ export const Route = createFileRoute("/api/public/open-table-session")({
 
             console.log(
               "OPEN_TABLE_SESSION_CREATED",
-              "session:", newSession.id,
-              "dining:", (newSession as any).dining_session_id,
-              "token:", (newSession as any).customer_token?.slice(0, 6) + "…",
+              "session:",
+              newSession.id,
+              "dining:",
+              (newSession as any).dining_session_id,
+              "token:",
+              (newSession as any).customer_token?.slice(0, 6) + "…",
             );
 
-            return new Response(JSON.stringify({
-              success: true, status: "created", table_session: newSession,
-            }), { status: 201, headers: cors });
+            return new Response(
+              JSON.stringify({
+                success: true,
+                status: "created",
+                table_session: newSession,
+              }),
+              { status: 201, headers: cors },
+            );
           } catch (insertError: any) {
             if (insertError?.code === "23505") {
               const { data: finalSession } = await supabaseAdmin
                 .from("table_sessions")
-                .select("id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at")
+                .select(
+                  "id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at",
+                )
                 .eq("restaurant_id", pz.id)
                 .eq("table_number", String(table_number))
                 .in("status", ["open", "requested_close", "waiting_operator", "closing"])
                 .maybeSingle();
               if (finalSession) {
-                return new Response(JSON.stringify({
-                  success: true, status: "already_open", table_session: finalSession,
-                }), { status: 200, headers: cors });
+                return new Response(
+                  JSON.stringify({
+                    success: true,
+                    status: "already_open",
+                    table_session: finalSession,
+                  }),
+                  { status: 200, headers: cors },
+                );
               }
             }
             throw insertError;
           }
         } catch (error: any) {
           console.error("❌ OPEN_TABLE_SESSION_UNHANDLED_ERROR:", error?.message);
-          return new Response(JSON.stringify({
-            success: false, error: "server_error", message: "Erro interno ao abrir mesa"
-          }), { status: 500, headers: cors });
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "server_error",
+              message: "Erro interno ao abrir mesa",
+            }),
+            { status: 500, headers: cors },
+          );
         }
       },
     },

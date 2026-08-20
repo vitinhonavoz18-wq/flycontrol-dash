@@ -11,6 +11,8 @@ import { ExtraList } from "./ExtraList";
 import { PizzaSizeList } from "./PizzaSizeList";
 import { PizzeriaConfig } from "./PizzeriaConfig";
 import { MenuSyncSection } from "./MenuSyncSection";
+import { MenuTemplatePicker } from "./MenuTemplatePicker";
+import { MenuImportDialog } from "./MenuImportDialog";
 
 interface MenuManagerProps {
   pizzeriaId: string;
@@ -34,8 +36,13 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
   const [pizzeria, setPizzeria] = useState<any>(null);
-
-
+  // As listas de cada aba carregam os próprios dados ao montar. Depois de uma
+  // importação em massa, trocar esta chave é o que faz todas recarregarem —
+  // sem isso o cardápio novo só apareceria ao sair e voltar da tela.
+  const [refreshKey, setRefreshKey] = useState(0);
+  // "Outro" no seletor de modelo não cria nada — só dispensa a tela para a
+  // loja aparecer vazia, do jeito que já era antes de existir este seletor.
+  const [templateSkipped, setTemplateSkipped] = useState(false);
 
   useEffect(() => {
     if (pizzeriaId) {
@@ -81,34 +88,56 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
     );
   }
 
+  if (categories.length === 0 && !templateSkipped) {
+    return (
+      <MenuTemplatePicker
+        pizzeriaId={pizzeriaId}
+        onApplied={loadCategories}
+        onSkip={() => setTemplateSkipped(true)}
+      />
+    );
+  }
+
   return (
     <div className="space-y-4">
-      <MenuSyncSection 
-        pizzeriaId={pizzeriaId} 
-        onSyncSuccess={loadCategories}
-      />
+      <MenuSyncSection pizzeriaId={pizzeriaId} onSyncSuccess={loadCategories} />
+
+      <div className="flex justify-end">
+        <MenuImportDialog
+          pizzeriaId={pizzeriaId}
+          pizzeriaSlug={pizzeria?.slug}
+          pizzeriaApiKey={pizzeria?.api_key}
+          syncEndpoint={pizzeria?.sync_endpoint}
+          existingCategoryCount={categories.length}
+          onImported={() => {
+            loadCategories();
+            setRefreshKey((k) => k + 1);
+          }}
+        />
+      </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <ScrollableTabs items={MENU_TABS} value={activeTab} className="mb-2" />
 
         <div className="mt-6">
           <TabsContent value="categories" className="m-0 focus-visible:outline-none">
-            <CategoryList 
-              pizzeriaId={pizzeriaId} 
-              categories={categories} 
-              onRefresh={handleLocalRefresh} 
+            <CategoryList
+              pizzeriaId={pizzeriaId}
+              categories={categories}
+              onRefresh={handleLocalRefresh}
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}
             />
           </TabsContent>
-          
+
           <TabsContent value="products" className="m-0 focus-visible:outline-none">
-            <ProductList 
-              pizzeriaId={pizzeriaId} 
-              categories={categories.filter(c => c.active)} 
-              type="standard" 
-              title="Sabores & Produtos" 
+            <ProductList
+              key={`products-${refreshKey}`}
+              pizzeriaId={pizzeriaId}
+              categories={categories.filter((c) => c.active)}
+              type="standard"
+              title="Sabores & Produtos"
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}
@@ -117,8 +146,8 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
           </TabsContent>
 
           <TabsContent value="pizza_sizes" className="m-0 focus-visible:outline-none">
-            <PizzaSizeList 
-              pizzeriaId={pizzeriaId} 
+            <PizzaSizeList
+              pizzeriaId={pizzeriaId}
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}
@@ -126,13 +155,13 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
             />
           </TabsContent>
 
-
           <TabsContent value="beverages" className="m-0 focus-visible:outline-none">
-            <ProductList 
-              pizzeriaId={pizzeriaId} 
-              categories={categories.filter(c => c.active)} 
-              type="beverage" 
-              title="Bebidas" 
+            <ProductList
+              key={`beverages-${refreshKey}`}
+              pizzeriaId={pizzeriaId}
+              categories={categories.filter((c) => c.active)}
+              type="beverage"
+              title="Bebidas"
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}
@@ -141,8 +170,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
           </TabsContent>
 
           <TabsContent value="extras" className="m-0 focus-visible:outline-none">
-            <ExtraList 
-              pizzeriaId={pizzeriaId} 
+            <ExtraList
+              key={`extras-${refreshKey}`}
+              pizzeriaId={pizzeriaId}
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}

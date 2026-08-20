@@ -9,16 +9,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Loader2, Plus, KeyRound, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
-import {
-  listWaiters, createWaiter, updateWaiter, deleteWaiter,
-} from "@/lib/waiterAuth.functions";
+import { listWaiters, createWaiter, updateWaiter, deleteWaiter } from "@/lib/waiterAuth.functions";
 import { RequireFeature } from "@/components/PremiumFeatureLock";
 
 export const Route = createFileRoute("/_app/waiters")({ component: WaitersPage });
@@ -33,9 +48,13 @@ function WaitersPage() {
 
 type Pizzeria = { id: string; name: string };
 type Waiter = {
-  id: string; full_name: string; phone: string | null;
-  username: string; is_active: boolean;
-  last_login_at: string | null; created_at: string;
+  id: string;
+  full_name: string;
+  phone: string | null;
+  username: string;
+  is_active: boolean;
+  last_login_at: string | null;
+  created_at: string;
 };
 
 function WaitersPageInner() {
@@ -78,13 +97,17 @@ function WaitersPageInner() {
       setLoading(false);
     }
   }
-  useEffect(() => { if (tenantId) load(); /* eslint-disable-next-line */ }, [tenantId]);
+  useEffect(() => {
+    if (tenantId) load(); /* eslint-disable-next-line */
+  }, [tenantId]);
 
   async function handleToggleActive(w: Waiter, val: boolean) {
     try {
       await update({ data: { waiterId: w.id, isActive: val } });
       setWaiters((prev) => prev.map((x) => (x.id === w.id ? { ...x, is_active: val } : x)));
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   async function handleDelete(w: Waiter) {
@@ -93,7 +116,9 @@ function WaitersPageInner() {
       await remove({ data: { waiterId: w.id } });
       setWaiters((prev) => prev.filter((x) => x.id !== w.id));
       toast.success("Garçom excluído");
-    } catch (e: any) { toast.error(e.message); }
+    } catch (e: any) {
+      toast.error(e.message);
+    }
   }
 
   const selectedStoreName = useMemo(
@@ -122,9 +147,15 @@ function WaitersPageInner() {
           <CardContent className="pt-6 flex items-center gap-3">
             <Label className="shrink-0">Loja:</Label>
             <Select value={tenantId} onValueChange={setTenantId}>
-              <SelectTrigger className="max-w-sm"><SelectValue /></SelectTrigger>
+              <SelectTrigger className="max-w-sm">
+                <SelectValue />
+              </SelectTrigger>
               <SelectContent>
-                {pizzerias.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                {pizzerias.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </CardContent>
@@ -134,11 +165,72 @@ function WaitersPageInner() {
       <Card>
         <CardHeader>
           <CardTitle className="text-base">
-            Garçons cadastrados {selectedStoreName && <span className="text-muted-foreground font-normal">— {selectedStoreName}</span>}
+            Garçons cadastrados{" "}
+            {selectedStoreName && (
+              <span className="text-muted-foreground font-normal">— {selectedStoreName}</span>
+            )}
           </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
-          <Table>
+          {/* Celular: card por garçom — a tabela de 6 colunas fica ilegível
+              em 360px. */}
+          <div className="divide-y md:hidden">
+            {loading ? (
+              <div className="py-8 text-center">
+                <Loader2 className="h-5 w-5 animate-spin inline" />
+              </div>
+            ) : waiters.length === 0 ? (
+              <div className="py-8 text-center text-sm text-muted-foreground">
+                Nenhum garçom cadastrado.
+              </div>
+            ) : (
+              waiters.map((w) => (
+                <div key={w.id} className="space-y-2 p-4">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="truncate font-medium">{w.full_name}</p>
+                      <Badge variant="outline" className="mt-1">
+                        {w.username}
+                      </Badge>
+                    </div>
+                    <Switch
+                      checked={w.is_active}
+                      onCheckedChange={(v) => handleToggleActive(w, v)}
+                    />
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    <p>{w.phone || "Sem telefone"}</p>
+                    <p>
+                      Último acesso:{" "}
+                      {w.last_login_at
+                        ? new Date(w.last_login_at).toLocaleString("pt-BR")
+                        : "Nunca"}
+                    </p>
+                  </div>
+                  <div className="flex gap-2 border-t pt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-11 flex-1"
+                      onClick={() => setOpenReset(w)}
+                    >
+                      <KeyRound className="h-4 w-4 mr-1" /> Senha
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-11 flex-1 text-destructive"
+                      onClick={() => handleDelete(w)}
+                    >
+                      <Trash2 className="h-4 w-4 mr-1" /> Excluir
+                    </Button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <Table className="hidden md:table">
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
@@ -151,32 +243,52 @@ function WaitersPageInner() {
             </TableHeader>
             <TableBody>
               {loading ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8">
-                  <Loader2 className="h-5 w-5 animate-spin inline" />
-                </TableCell></TableRow>
-              ) : waiters.length === 0 ? (
-                <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                  Nenhum garçom cadastrado.
-                </TableCell></TableRow>
-              ) : waiters.map((w) => (
-                <TableRow key={w.id}>
-                  <TableCell className="font-medium">{w.full_name}</TableCell>
-                  <TableCell><Badge variant="outline">{w.username}</Badge></TableCell>
-                  <TableCell>{w.phone || "—"}</TableCell>
-                  <TableCell>{w.last_login_at ? new Date(w.last_login_at).toLocaleString("pt-BR") : "Nunca"}</TableCell>
-                  <TableCell className="text-center">
-                    <Switch checked={w.is_active} onCheckedChange={(v) => handleToggleActive(w, v)} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button variant="ghost" size="sm" onClick={() => setOpenReset(w)}>
-                      <KeyRound className="h-4 w-4 mr-1" /> Senha
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => handleDelete(w)}>
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8">
+                    <Loader2 className="h-5 w-5 animate-spin inline" />
                   </TableCell>
                 </TableRow>
-              ))}
+              ) : waiters.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                    Nenhum garçom cadastrado.
+                  </TableCell>
+                </TableRow>
+              ) : (
+                waiters.map((w) => (
+                  <TableRow key={w.id}>
+                    <TableCell className="font-medium">{w.full_name}</TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{w.username}</Badge>
+                    </TableCell>
+                    <TableCell>{w.phone || "—"}</TableCell>
+                    <TableCell>
+                      {w.last_login_at
+                        ? new Date(w.last_login_at).toLocaleString("pt-BR")
+                        : "Nunca"}
+                    </TableCell>
+                    <TableCell className="text-center">
+                      <Switch
+                        checked={w.is_active}
+                        onCheckedChange={(v) => handleToggleActive(w, v)}
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setOpenReset(w)}>
+                        <KeyRound className="h-4 w-4 mr-1" /> Senha
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-destructive"
+                        onClick={() => handleDelete(w)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
             </TableBody>
           </Table>
         </CardContent>
@@ -184,9 +296,18 @@ function WaitersPageInner() {
 
       <Card className="bg-muted/30">
         <CardContent className="pt-6 text-sm text-muted-foreground space-y-1">
-          <p><b>Permissões do garçom:</b> abrir mesas, lançar pedidos, ver comandas abertas, solicitar fechamento, registrar pagamento.</p>
-          <p><b>Restrições:</b> não edita cardápio, não acessa configurações, financeiro global ou cadastro de usuários.</p>
-          <p>Os garçons acessam o sistema em <code className="bg-background px-1.5 py-0.5 rounded">/waiter-login</code>.</p>
+          <p>
+            <b>Permissões do garçom:</b> abrir mesas, lançar pedidos, ver comandas abertas,
+            solicitar fechamento, registrar pagamento.
+          </p>
+          <p>
+            <b>Restrições:</b> não edita cardápio, não acessa configurações, financeiro global ou
+            cadastro de usuários.
+          </p>
+          <p>
+            Os garçons acessam o sistema em{" "}
+            <code className="bg-background px-1.5 py-0.5 rounded">/waiter-login</code>.
+          </p>
         </CardContent>
       </Card>
 
@@ -207,9 +328,15 @@ function WaitersPageInner() {
 }
 
 function CreateWaiterDialog({
-  open, onOpenChange, tenantId, onCreated, createFn,
+  open,
+  onOpenChange,
+  tenantId,
+  onCreated,
+  createFn,
 }: {
-  open: boolean; onOpenChange: (o: boolean) => void; tenantId: string;
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  tenantId: string;
   onCreated: (w: Waiter) => void;
   createFn: ReturnType<typeof useServerFn<typeof createWaiter>>;
 }) {
@@ -220,7 +347,12 @@ function CreateWaiterDialog({
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (open) { setFullName(""); setPhone(""); setUsername(""); setPassword(""); }
+    if (open) {
+      setFullName("");
+      setPhone("");
+      setUsername("");
+      setPassword("");
+    }
   }, [open]);
 
   async function submit(e: React.FormEvent) {
@@ -241,7 +373,9 @@ function CreateWaiterDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>Novo Garçom</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Novo Garçom</DialogTitle>
+        </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label>Nome Completo *</Label>
@@ -249,20 +383,37 @@ function CreateWaiterDialog({
           </div>
           <div className="space-y-1.5">
             <Label>Telefone</Label>
-            <Input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="(11) 99999-9999" />
+            <Input
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="(11) 99999-9999"
+            />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Usuário *</Label>
-              <Input value={username} onChange={(e) => setUsername(e.target.value)} placeholder="ex: joao" required />
+              <Input
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="ex: joao"
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <Label>Senha *</Label>
-              <Input type="text" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={4} />
+              <Input
+                type="text"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                minLength={4}
+              />
             </div>
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Cadastrar
             </Button>
@@ -274,7 +425,9 @@ function CreateWaiterDialog({
 }
 
 function ResetPasswordDialog({
-  waiter, onOpenChange, updateFn,
+  waiter,
+  onOpenChange,
+  updateFn,
 }: {
   waiter: Waiter | null;
   onOpenChange: (o: boolean) => void;
@@ -283,7 +436,9 @@ function ResetPasswordDialog({
   const [pwd, setPwd] = useState("");
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => { setPwd(""); }, [waiter]);
+  useEffect(() => {
+    setPwd("");
+  }, [waiter]);
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -303,14 +458,18 @@ function ResetPasswordDialog({
   return (
     <Dialog open={!!waiter} onOpenChange={onOpenChange}>
       <DialogContent>
-        <DialogHeader><DialogTitle>Redefinir senha — {waiter?.full_name}</DialogTitle></DialogHeader>
+        <DialogHeader>
+          <DialogTitle>Redefinir senha — {waiter?.full_name}</DialogTitle>
+        </DialogHeader>
         <form onSubmit={submit} className="space-y-4">
           <div className="space-y-1.5">
             <Label>Nova senha</Label>
             <Input value={pwd} onChange={(e) => setPwd(e.target.value)} required minLength={4} />
           </div>
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
             <Button type="submit" disabled={saving}>
               {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />} Salvar
             </Button>

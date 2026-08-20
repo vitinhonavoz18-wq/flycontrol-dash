@@ -1,15 +1,34 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { format, differenceInDays } from "date-fns";
 import { useState } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CreatePizzeriaDialog } from "./CreatePizzeriaDialog";
@@ -29,6 +48,7 @@ export const SubscriptionsDashboard = () => {
         .from("pizzerias")
         .select("*")
         .neq("status", "deleted")
+        .neq("status", "inactive")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -87,7 +107,9 @@ export const SubscriptionsDashboard = () => {
     }
 
     if (newPlanType === "cents") {
-      const { error: enrollErr } = await supabase.rpc("enroll_company_in_cents", { p_company_id: editingPizzeria.id });
+      const { error: enrollErr } = await supabase.rpc("enroll_company_in_cents", {
+        p_company_id: editingPizzeria.id,
+      });
       if (enrollErr) {
         toast.error("Plano salvo, mas falhou ao matricular no Clube CENTS: " + enrollErr.message);
       }
@@ -100,13 +122,20 @@ export const SubscriptionsDashboard = () => {
     queryClient.invalidateQueries({ queryKey: ["admin-cents-overview"] });
   };
 
-  if (isLoading) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
+  if (isLoading)
+    return (
+      <div className="p-8">
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
 
   return (
     <div className="p-8 pb-20">
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-3xl font-bold">Clientes e Planos</h1>
-        <CreatePizzeriaDialog onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] })} />
+        <CreatePizzeriaDialog
+          onSuccess={() => queryClient.invalidateQueries({ queryKey: ["admin-subscriptions"] })}
+        />
       </div>
       <div className="bg-card border rounded-lg p-6 shadow-sm overflow-x-auto">
         <Table>
@@ -140,7 +169,13 @@ export const SubscriptionsDashboard = () => {
                   </TableCell>
                   <TableCell>
                     <Badge
-                      variant={p.subscription_status === "active" ? "default" : p.subscription_status === "suspended" ? "destructive" : "secondary"}
+                      variant={
+                        p.subscription_status === "active"
+                          ? "default"
+                          : p.subscription_status === "suspended"
+                            ? "destructive"
+                            : "secondary"
+                      }
                       className="capitalize"
                     >
                       {p.subscription_status || "Trial"}
@@ -154,7 +189,9 @@ export const SubscriptionsDashboard = () => {
                           : "N/A"}
                       </span>
                       {daysLeft !== null && (
-                        <span className={`text-[10px] ${daysLeft < 5 ? "text-destructive font-bold" : "text-muted-foreground"}`}>
+                        <span
+                          className={`text-[10px] ${daysLeft < 5 ? "text-destructive font-bold" : "text-muted-foreground"}`}
+                        >
                           {daysLeft < 0 ? "Vencido" : `${daysLeft} dias restantes`}
                         </span>
                       )}
@@ -167,17 +204,17 @@ export const SubscriptionsDashboard = () => {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setEditingPizzeria(p)}
-                      >
+                      <Button variant="outline" size="sm" onClick={() => setEditingPizzeria(p)}>
                         Editar
                       </Button>
                       <Button
                         variant={p.subscription_status === "suspended" ? "default" : "outline"}
                         size="sm"
-                        className={p.subscription_status !== "suspended" ? "text-destructive hover:text-destructive" : ""}
+                        className={
+                          p.subscription_status !== "suspended"
+                            ? "text-destructive hover:text-destructive"
+                            : ""
+                        }
                         onClick={() => toggleSuspension(p.id, p.subscription_status)}
                       >
                         {p.subscription_status === "suspended" ? "Reativar" : "Suspender"}
@@ -217,7 +254,9 @@ export const SubscriptionsDashboard = () => {
                 <Label>Status</Label>
                 <Select
                   value={editingPizzeria?.subscription_status || "active"}
-                  onValueChange={(v) => setEditingPizzeria({ ...editingPizzeria, subscription_status: v })}
+                  onValueChange={(v) =>
+                    setEditingPizzeria({ ...editingPizzeria, subscription_status: v })
+                  }
                 >
                   <SelectTrigger>
                     <SelectValue />
@@ -243,15 +282,21 @@ export const SubscriptionsDashboard = () => {
               <Label>Observações Internas</Label>
               <Textarea
                 value={editingPizzeria?.internal_notes || ""}
-                onChange={(e) => setEditingPizzeria({ ...editingPizzeria, internal_notes: e.target.value })}
+                onChange={(e) =>
+                  setEditingPizzeria({ ...editingPizzeria, internal_notes: e.target.value })
+                }
                 placeholder="Notas visíveis apenas para admin..."
                 className="h-24"
               />
             </div>
 
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setEditingPizzeria(null)}>Cancelar</Button>
-              <Button type="submit" disabled={savingPlan}>{savingPlan ? "Salvando..." : "Salvar Alterações"}</Button>
+              <Button type="button" variant="ghost" onClick={() => setEditingPizzeria(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit" disabled={savingPlan}>
+                {savingPlan ? "Salvando..." : "Salvar Alterações"}
+              </Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -12,6 +12,14 @@ interface MenuSyncSectionProps {
   onSyncSuccess?: () => void;
 }
 
+/** Bearer do usuário logado, exigido pelas rotas de proxy/reprovisionamento. */
+async function authHeader(): Promise<Record<string, string>> {
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+  return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
+}
+
 export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionProps) {
   const [syncEndpoint, setSyncEndpoint] = useState("");
   const [loading, setLoading] = useState(true);
@@ -74,16 +82,17 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     if (syncEndpoint && !validation.valid) {
       if (validation.old) {
         toast.error(
-          "Este é o formato antigo do link. Copie novamente o link de sincronização no SiteCreatorFly.",
+          "Este é o formato antigo do link. Copie novamente o link de sincronização nas configurações do seu site.",
         );
       } else {
-        toast.error("Link de sincronização inválido. Verifique o link gerado no SiteCreatorFly.");
+        toast.error(
+          "Link de sincronização inválido. Verifique o link gerado nas configurações do seu site.",
+        );
       }
       return;
     }
 
     setSaving(true);
-    console.log("MENU_SYNC_SAVED_URL", syncEndpoint);
 
     const { error } = await supabase
       .from("pizzerias")
@@ -126,7 +135,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     if (!validation.valid) {
       if (validation.old) {
         toast.error(
-          "Este é o formato antigo do link. Copie novamente o link de sincronização no SiteCreatorFly.",
+          "Este é o formato antigo do link. Copie novamente o link de sincronização nas configurações do seu site.",
         );
       } else {
         toast.error("Link de sincronização inválido.");
@@ -139,19 +148,13 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
 
     try {
       const testUrl = `/api/pizzerias/sync-menu?sync_url=${encodeURIComponent(syncEndpoint)}`;
-      const tokenPreview = syncEndpoint.split("/").pop()?.substring(0, 10) + "...";
-
-      console.log("MENU_SYNC_FETCH_URL_FINAL", syncEndpoint);
-      console.log("MENU_SYNC_TOKEN_PREVIEW", tokenPreview);
 
       const response = await fetch(testUrl, {
         method: "GET",
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", ...(await authHeader()) },
       });
-      console.log("MENU_SYNC_HTTP_STATUS", response.status);
 
       const text = await response.text();
-      console.log("MENU_SYNC_RESPONSE_BODY", text.substring(0, 1000));
 
       let jsonResponse = null;
       try {
@@ -194,7 +197,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
               jsonResponse.message === "invalid_sync_token"))
         ) {
           toast.error(
-            "Token inválido. Copie novamente o link no SiteCreatorFly ou regenere o token.",
+            "Token inválido. Copie novamente o link nas configurações do seu site ou regenere o token.",
             { id: toastId, duration: 5000 },
           );
         } else {
@@ -222,7 +225,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     if (!validation.valid) {
       if (validation.old) {
         toast.error(
-          "Este é o formato antigo do link. Copie novamente o link de sincronização no SiteCreatorFly.",
+          "Este é o formato antigo do link. Copie novamente o link de sincronização nas configurações do seu site.",
         );
       } else {
         toast.error("Link de sincronização inválido.");
@@ -240,7 +243,6 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     const toastId = toast.loading("Sincronizando cardápio...");
 
     const proxyUrl = `/api/pizzerias/sync-menu?sync_url=${encodeURIComponent(syncEndpoint)}`;
-    console.log("MENU_SYNC_FETCH_URL_FINAL", syncEndpoint);
 
     try {
       const controller = new AbortController();
@@ -248,21 +250,18 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
 
       const response = await fetch(proxyUrl, {
         method: "GET",
-        headers: { Accept: "application/json" },
+        headers: { Accept: "application/json", ...(await authHeader()) },
         signal: controller.signal,
       });
       clearTimeout(timeoutId);
 
-      console.log("MENU_SYNC_HTTP_STATUS", response.status);
-
       const text = await response.text();
-      console.log("MENU_SYNC_RESPONSE_BODY", text.substring(0, 1000));
 
       if (response.status !== 200) {
         let errorMsg = `Erro HTTP ${response.status}`;
         if (response.status === 401) {
           errorMsg =
-            "Token inválido. Copie novamente o link no SiteCreatorFly ou regenere o token.";
+            "Token inválido. Copie novamente o link nas configurações do seu site ou regenere o token.";
         } else {
           try {
             const errorJson = JSON.parse(text);
@@ -271,7 +270,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
               errorJson.message === "invalid_sync_token"
             ) {
               errorMsg =
-                "Token inválido. Copie novamente o link no SiteCreatorFly ou regenere o token.";
+                "Token inválido. Copie novamente o link nas configurações do seu site ou regenere o token.";
             } else {
               errorMsg = `Erro: ${errorJson.error || errorJson.message || errorMsg}`;
             }
@@ -295,11 +294,11 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
           externalMenu.message === "invalid_sync_token"
         ) {
           throw new Error(
-            "Token inválido. Copie novamente o link no SiteCreatorFly ou regenere o token.",
+            "Token inválido. Copie novamente o link nas configurações do seu site ou regenere o token.",
           );
         }
         throw new Error(
-          externalMenu.message || externalMenu.error || "Erro retornado pela API do SiteCreatorFly",
+          externalMenu.message || externalMenu.error || "Erro retornado pelo site público",
         );
       }
 
@@ -385,14 +384,17 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
 
   async function handleReprovision() {
     setReprovisioning(true);
-    const toastId = toast.loading("Provisionando restaurante no SiteCreatorFly...");
+    const toastId = toast.loading("Provisionando restaurante no site público...");
     try {
-      const resp = await fetch(`/api/pizzerias/${pizzeriaId}/provision`, { method: "POST" });
+      const resp = await fetch(`/api/pizzerias/${pizzeriaId}/provision`, {
+        method: "POST",
+        headers: await authHeader(),
+      });
       const json = await resp.json().catch(() => ({}));
       if (resp.ok && json?.success) {
         toast.success(
           json.already_existed
-            ? "Restaurante já existia no SiteCreatorFly — dados atualizados."
+            ? "Restaurante já existia no site público — dados atualizados."
             : "Restaurante provisionado com sucesso.",
           { id: toastId },
         );
@@ -422,10 +424,10 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       <CardHeader className="pb-3">
         <CardTitle className="text-lg font-bold flex items-center gap-2">
           <RefreshCw className={`h-5 w-5 text-primary ${syncing ? "animate-spin" : ""}`} />
-          Sincronização com SiteCreatorFly
+          Sincronização do Cardápio
         </CardTitle>
         <CardDescription>
-          Mantenha seu cardápio do FlyControl atualizado com os dados do seu site.
+          Mantenha o cardápio do seu site público sempre atualizado.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -440,8 +442,8 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
             <div className="flex items-center gap-2 font-medium">
               <AlertCircle className="h-4 w-4" />
               {provisionStatus === "failed"
-                ? "Falha ao provisionar este restaurante no SiteCreatorFly."
-                : "Provisionamento pendente no SiteCreatorFly."}
+                ? "Falha ao provisionar este restaurante no site público."
+                : "Provisionamento pendente no site público."}
             </div>
             {pizzeria?.provision_error && (
               <div className="text-xs font-mono bg-white/60 p-2 rounded border break-all">
@@ -497,6 +499,25 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
                 )}
                 Sincronizar Cardápio
               </Button>
+              {/* "Conectado com sucesso" só quer dizer que a loja existe do
+                outro lado — não garante que todos os dados dela (como o
+                endereço para onde mandar os pedidos) estão completos. Este
+                botão sempre disponível permite consertar isso sem precisar
+                que o status vire "falha" primeiro. */}
+              <Button
+                variant="outline"
+                onClick={handleReprovision}
+                disabled={reprovisioning}
+                title="Reenvia os dados da loja para o site público — útil se o cardápio abre mas os pedidos não chegam."
+                className="gap-2"
+              >
+                {reprovisioning ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4" />
+                )}
+                Reconectar com o site público
+              </Button>
             </div>
           </div>
         ) : (
@@ -504,14 +525,14 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
             <div className="space-y-2">
               <Label htmlFor="sync-link" className="flex items-center gap-2">
                 <Link className="h-3.5 w-3.5" />
-                Link de sincronização do SiteCreatorFly
+                Link de sincronização do site público
               </Label>
               {/* `min-w-0` no campo impede que uma URL longa alargue o flex e
                 empurre o botão para fora do card. */}
               <div className="flex gap-2">
                 <Input
                   id="sync-link"
-                  placeholder="Cole o link gerado no SiteCreatorFly"
+                  placeholder="Cole o link gerado nas configurações do seu site"
                   value={syncEndpoint}
                   onChange={(e) => setSyncEndpoint(e.target.value)}
                   className="min-w-0 flex-1 bg-background"

@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { closeBillingCycle } from "@/lib/billing/closeCycle.server";
+import { createRecurringCharge } from "@/lib/billing/infinitypay/recurringCharge.server";
+import { reconcileOverdueInvoices } from "@/lib/billing/collections.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
 
 /**
@@ -10,10 +12,17 @@ import { asBillingDb } from "@/lib/billing/supabaseBridge";
  * de cobrança fica completo mas nunca é acionado. É a peça que faltava para
  * o circuito rodar sozinho.
  *
+ * Três fases, nesta ordem:
+ *   1. Fecha todo ciclo vencido e emite a fatura correspondente.
+ *   2. Para cada fatura recém-emitida com valor a cobrar, gera o link de
+ *      pagamento da InfinityPay (fatura de valor zero é paga sozinha —
+ *      nada a cobrar não pode virar motivo de suspensão depois).
+ *   3. Verifica faturas pendentes vencidas e aplica o prazo de tolerância
+ *      (ver collections.ts): sinaliza atraso, e suspende só depois do prazo.
+ *
  * Feito para ser chamado por um agendador (Cloudflare Cron Trigger, cron do
  * Supabase, ou qualquer chamador externo) uma vez por dia. Rodar com mais
- * frequência não faz mal: só fecha ciclo cujo `cycle_end` já passou, e
- * `closeBillingCycle` é idempotente.
+ * frequência não faz mal: cada fase é idempotente.
  */
 
 /** Segredo do agendador. Sem ele configurado, o endpoint fica desligado. */
@@ -96,6 +105,31 @@ export const Route = createFileRoute("/api/billing/close-cycles")({
                     ? `já fechado, fatura ${result.invoiceId}`
                     : `fatura ${result.invoiceId}, total ${result.totalAmountCents} centavos`,
               });
+
+              // Só faturas recém-emitidas precisam de cobrança nova — uma já
+              // fechada em execução anterior já teve (ou não precisou de)
+              // cobrança gerada naquela vez.
+              // O ciclo grátis não gera fatura nenhuma — não há o que marcar
+              // como paga nem o que cobrar. Sem esta condição, o robô tentaria
+              // atualizar uma fatura de identificador nulo.
+              if (!result.alreadyClosed && !result.freeTrial && result.invoiceId) {
+                if (result.totalAmountCents === 0) {
+                  // Nada a cobrar: paga sozinha, para não virar motivo de
+                  // suspensão por atraso de uma dívida que não existe.
+                  await db
+                    .from("invoices")
+                    .update({ status: "paid", paid_at: new Date().toISOString() })
+                    .eq("id", result.invoiceId)
+                    .eq("status", "pending");
+                } else {
+                  const charge = await createRecurringCharge(result.invoiceId);
+                  if (!charge.ok) {
+                    console.error(
+                      `[billing-cron] fatura ${result.invoiceId} fechada mas sem cobrança gerada: ${charge.reason}`,
+                    );
+                  }
+                }
+              }
             } else {
               results.push({ cycleId: cycle.id, ok: false, detail: result.error });
               console.error(`[billing-cron] ciclo ${cycle.id} não fechou: ${result.error}`);
@@ -116,10 +150,21 @@ export const Route = createFileRoute("/api/billing/close-cycles")({
           `[billing-cron] ${results.length} ciclo(s) vencido(s): ${succeeded} fechado(s), ${failed} com falha`,
         );
 
+        let reconciliation: Awaited<ReturnType<typeof reconcileOverdueInvoices>> | null = null;
+        try {
+          reconciliation = await reconcileOverdueInvoices();
+          console.log(
+            `[billing-cron] cobrança: ${reconciliation.checked} fatura(s) vencida(s) revisada(s), ` +
+              `${reconciliation.markedPastDue} marcada(s) em atraso, ${reconciliation.suspended} suspensa(s)`,
+          );
+        } catch (err) {
+          console.error("[billing-cron] falha na reconciliação de faturas vencidas:", err);
+        }
+
         // 207 quando houve falha parcial: um agendador que só olha o código
         // de status precisa distinguir "tudo certo" de "alguns falharam".
         return json(
-          { processed: results.length, succeeded, failed, results },
+          { processed: results.length, succeeded, failed, results, reconciliation },
           failed > 0 ? 207 : 200,
         );
       },

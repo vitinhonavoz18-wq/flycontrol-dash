@@ -1,8 +1,9 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { ComboManager } from "@/components/combos/ComboManager";
 
@@ -20,24 +21,29 @@ function CombosPage() {
 
   async function loadPizzerias() {
     setLoading(true);
-    let query = supabase.from("pizzerias").select("*").neq("status", "deleted").order("name");
-    
+    let query = supabase
+      .from("pizzerias")
+      .select("*")
+      .neq("status", "deleted")
+      .neq("status", "inactive")
+      .order("name");
+
     if (!isSuperAdmin && user?.id) {
       query = query.eq("owner_id", user.id);
     }
-    
+
     const { data, error } = await query;
     if (error) {
       toast.error("Erro ao carregar pizzarias: " + error.message);
       setLoading(false);
       return;
     }
-    
+
     setPizzerias(data ?? []);
     if (data && data.length) {
       const params = new URLSearchParams(window.location.search);
       const pId = params.get("pizzeriaId");
-      if (pId && data.some(p => p.id === pId)) {
+      if (pId && data.some((p) => p.id === pId)) {
         setActiveId(pId);
       } else {
         setActiveId(data[0].id);
@@ -57,8 +63,14 @@ function CombosPage() {
   if (!pizzerias.length) {
     return (
       <div className="p-8 text-center">
-        <h1 className="text-2xl font-bold">Nenhuma pizzaria encontrada</h1>
-        <p className="text-muted-foreground mt-2">Você precisa ter uma pizzaria vinculada para gerenciar os combos.</p>
+        <h1 className="text-2xl font-bold">Nenhuma loja encontrada</h1>
+        <p className="text-muted-foreground mt-2">
+          Sua conta ainda não tem nenhuma loja cadastrada. Cadastre uma em Configurações para
+          gerenciar os combos.
+        </p>
+        <Button asChild className="mt-4">
+          <Link to="/settings">Cadastrar loja</Link>
+        </Button>
       </div>
     );
   }
@@ -68,21 +80,19 @@ function CombosPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Combos</h1>
-          <p className="text-muted-foreground">Crie e gerencie combos promocionais para atrair mais clientes.</p>
+          <p className="text-muted-foreground">
+            Crie e gerencie combos promocionais para atrair mais clientes.
+          </p>
         </div>
-        <PizzeriaSelector 
-          pizzerias={pizzerias} 
-          activeId={activeId} 
-          onSelect={setActiveId} 
-        />
+        <PizzeriaSelector pizzerias={pizzerias} activeId={activeId} onSelect={setActiveId} />
       </div>
 
       {activeId && (
-        <ComboManager 
-          pizzeriaId={activeId} 
-          pizzeriaSlug={pizzerias.find(p => p.id === activeId)?.slug}
-          pizzeriaApiKey={pizzerias.find(p => p.id === activeId)?.api_key}
-          syncEndpoint={pizzerias.find(p => p.id === activeId)?.sync_endpoint}
+        <ComboManager
+          pizzeriaId={activeId}
+          pizzeriaSlug={pizzerias.find((p) => p.id === activeId)?.slug}
+          pizzeriaApiKey={pizzerias.find((p) => p.id === activeId)?.api_key}
+          syncEndpoint={pizzerias.find((p) => p.id === activeId)?.sync_endpoint}
         />
       )}
     </div>

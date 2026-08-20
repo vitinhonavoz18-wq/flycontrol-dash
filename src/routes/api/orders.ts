@@ -6,7 +6,8 @@ const getCorsHeaders = (request?: Request) => {
   const origin = request?.headers.get("origin") || "*";
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, accept, x-idempotency-key",
+    "Access-Control-Allow-Headers":
+      "authorization, x-client-info, apikey, content-type, x-api-key, accept, x-idempotency-key",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Max-Age": "86400",
     "Access-Control-Allow-Credentials": "true",
@@ -18,15 +19,19 @@ export const Route = createFileRoute("/api/orders")({
   server: {
     handlers: {
       OPTIONS: async ({ request }) => {
-        return new Response(null, { 
-          status: 204, 
-          headers: getCorsHeaders(request) 
+        return new Response(null, {
+          status: 204,
+          headers: getCorsHeaders(request),
         });
       },
       POST: async ({ request }) => {
         const cors = getCorsHeaders(request);
 
-        const validateTableForOrder = async (restaurantId: string, tableNumber: string, tableToken: string) => {
+        const validateTableForOrder = async (
+          restaurantId: string,
+          tableNumber: string,
+          tableToken: string,
+        ) => {
           console.log(`🔍 [API/Orders] Validando mesa: #${tableNumber} com token ${tableToken}`);
           const { data: table, error } = await supabaseAdmin
             .from("restaurant_tables")
@@ -50,11 +55,20 @@ export const Route = createFileRoute("/api/orders")({
           return { valid: true, table };
         };
 
-        const getOrCreateTableSession = async (restaurantId: string, tableId: string | null, tableNumber: string, tableName?: string) => {
-          console.log(`🔍 [API/Orders] TABLE_ORDER_SESSION_LOOKUP para Mesa ${tableNumber} (Restaurant: ${restaurantId})`);
+        const getOrCreateTableSession = async (
+          restaurantId: string,
+          tableId: string | null,
+          tableNumber: string,
+          tableName?: string,
+        ) => {
+          console.log(
+            `🔍 [API/Orders] TABLE_ORDER_SESSION_LOOKUP para Mesa ${tableNumber} (Restaurant: ${restaurantId})`,
+          );
           const { data: session, error: sError } = await supabaseAdmin
             .from("table_sessions")
-            .select("id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent")
+            .select(
+              "id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent",
+            )
             .eq("restaurant_id", restaurantId)
             .eq("table_number", tableNumber)
             .eq("status", "open")
@@ -90,11 +104,12 @@ export const Route = createFileRoute("/api/orders")({
               service_fee_percent: defaultPct,
               service_fee_amount: 0,
               total_amount: 0,
-              opened_at: new Date().toISOString()
+              opened_at: new Date().toISOString(),
             })
-            .select("id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent")
+            .select(
+              "id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent",
+            )
             .single();
-
 
           if (iError) {
             console.error("❌ [API/Orders] Erro ao criar sessão:", iError.message);
@@ -105,581 +120,742 @@ export const Route = createFileRoute("/api/orders")({
         };
         let body: any;
         try {
-        console.log("ORDER_RECEIVE_STARTED");
-        const origin = request.headers.get("origin") || "N/A";
+          console.log("ORDER_RECEIVE_STARTED");
+          const origin = request.headers.get("origin") || "N/A";
 
-        console.log("📥 [API/Orders] Requisição POST recebida");
-        console.log(`🌐 Origem: ${origin}`);
+          console.log("📥 [API/Orders] Requisição POST recebida");
+          console.log(`🌐 Origem: ${origin}`);
 
-        try {
-          const bodyText = await request.clone().text();
-          body = JSON.parse(bodyText);
-          
-          console.log("ORDER_RAW_PAYLOAD:", JSON.stringify(body));
-        } catch (err) {
-          console.error("❌ [API/Orders] JSON inválido");
-          console.log("ORDER_RESPONSE_SENT: error (invalid_json)");
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "invalid_json",
-            message: "JSON inválido" 
-          }), { status: 400, headers: cors });
-        }
-
-        const apiKey = (
-          request.headers.get("x-api-key") || 
-          body?.api_key || 
-          (request.headers.get("authorization")?.startsWith("Bearer ") ? request.headers.get("authorization")?.substring(7) : "") ||
-          ""
-        ).trim();
-
-        console.log(`🔑 API Key identificada: ${apiKey ? "Sim (presente)" : "Não (ausente)"}`);
-
-        if (!apiKey) {
-          console.error("❌ [API/Orders] Erro: API Key ausente");
-          console.log("ORDER_RESPONSE_SENT: error (api_key_missing)");
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "api_key_missing",
-            message: "API Key ausente" 
-          }), { status: 401, headers: cors });
-        }
-
-        // 1. Identificar Pizzaria
-        console.log(`🔍 [API/Orders] Buscando pizzaria pela API Key...`);
-        const { data: pz, error: pErr } = await supabaseAdmin
-          .from("pizzerias")
-          .select("id, name, slug, status, is_active, is_open, subscription_status, fiqon_enabled, fiqon_webhook_url")
-          .eq("api_key", apiKey)
-          .neq("status", "deleted")
-          .maybeSingle();
-
-        if (pErr) {
-          console.error("❌ [API/Orders] Erro no banco:", pErr.message);
-          console.log("ORDER_RESPONSE_SENT: error (db_error)");
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "db_error",
-            message: "Erro de banco de dados interno",
-            details: pErr.message
-          }), { status: 500, headers: cors });
-        }
-
-        if (!pz) {
-          console.error("❌ [API/Orders] Pizzaria não encontrada para esta API Key");
-          console.log("ORDER_RESTAURANT_FOUND: false");
-          console.log("ORDER_RESPONSE_SENT: error (restaurant_not_found)");
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "restaurant_not_found",
-            message: "Pizzaria não encontrada ou API Key inválida" 
-          }), { status: 404, headers: cors });
-        }
-
-        console.log("ORDER_RESTAURANT_FOUND: true");
-        console.log(`✅ [API/Orders] Loja identificada: ${pz.name} (ID: ${pz.id}) | Aberta: ${pz.is_open}`);
-        
-        // Verificação de assinatura suspensa
-        if (pz.subscription_status === "suspended" || pz.is_active === false) {
-          console.error(`❌ [API/Orders] Loja ${pz.name} está SUSPENSA. Bloqueando pedido.`);
-          console.log("ORDER_RESPONSE_SENT: error (store_suspended)");
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "store_suspended",
-            message: "Esta loja está temporariamente suspensa. Entre em contato com o suporte." 
-          }), { status: 403, headers: cors });
-        }
-
-        // Verificação de loja aberta
-        if (pz.is_open === false) {
-          console.error(`❌ [API/Orders] Loja ${pz.name} está FECHADA. Bloqueando pedido.`);
-          console.log("ORDER_RESPONSE_SENT: error (store_closed)");
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "store_closed",
-            message: "Loja fechada no momento. Os pedidos estão temporariamente indisponíveis." 
-          }), { status: 403, headers: cors });
-        }
-
-        // 2. Tratar TESTE REAL (Item 5 e 6 do pedido do usuário)
-        if (body.test === true || body.payload?.test === true) {
-          console.log("🧪 [API/Orders] RECEBIDO PAYLOAD DE TESTE");
-          
-          // Registrar log de teste
-          await logExternalOrder(apiKey, body, 200, "Teste de conexão bem-sucedido");
-          
-          return new Response(JSON.stringify({ 
-            success: true, 
-            message: "FlyControl recebeu teste",
-            received_at: new Date().toISOString(),
-            pizzeria: pz.name
-          }), { status: 200, headers: cors });
-        }
-
-        // 3. Processamento de Pedido Real
-        const orderData = body.order || body || {};
-        const customer = body.customer || body || {};
-        const items = orderData.items || body.items || [];
-
-        const parseMoney = (val: any) => {
-          if (typeof val === "number") return val;
-          if (typeof val === "string") {
-            const num = parseFloat(val.replace(/[^\d.,]/g, "").replace(",", "."));
-            return isNaN(num) ? 0 : num;
-          }
-          return 0;
-        };
-
-        const totalValue = parseMoney(orderData.total || body.total || 0);
-        console.log("ORDER_ITEMS_COUNT:", items.length);
-        console.log("ORDER_TOTAL:", totalValue);
-
-        // Validações básicas de pedido
-        if (!Array.isArray(items) || items.length === 0) {
-          console.error("❌ [API/Orders] Itens vazios");
-          console.log("ORDER_RESPONSE_SENT: error (empty_items)");
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "empty_items",
-            message: "O pedido deve conter pelo menos um item" 
-          }), { status: 400, headers: cors });
-        }
-
-        if (totalValue <= 0) {
-          console.error("❌ [API/Orders] Total inválido");
-          console.log("ORDER_RESPONSE_SENT: error (invalid_total)");
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "invalid_total",
-            message: "O valor total do pedido deve ser maior que zero" 
-          }), { status: 400, headers: cors });
-        }
-
-        // 3. Detecção/validação de Mesa (detecta por presença de table_number/token OU dining_session_id)
-        const rawDeliveryType = (orderData.delivery_type || body.delivery_type || body.service_mode || orderData.service_mode || orderData.order_type || body.order_type || "delivery").toLowerCase();
-        const rawTableNumber = body.table_number || orderData.table_number || "";
-        const rawTableToken = body.table_token || orderData.table_token || "";
-        const rawDiningSessionId = String(body.dining_session_id || orderData.dining_session_id || "").trim() || null;
-        const rawCustomerToken = String(body.customer_token || orderData.customer_token || "").trim() || null;
-        const explicitTable = ["table", "mesa"].includes(rawDeliveryType);
-        const inferredTable = !!(String(rawTableNumber).trim()) || !!(String(rawTableToken).trim()) || !!rawDiningSessionId || !!rawCustomerToken;
-        const isTableOrder = explicitTable || inferredTable;
-        const deliveryType = isTableOrder ? "table" : rawDeliveryType;
-
-        console.log("ORDER_TYPE_DETECTED:", isTableOrder ? "table" : deliveryType,
-          "explicit:", explicitTable, "inferred:", inferredTable,
-          "dining_session_id:", rawDiningSessionId ? "present" : "absent");
-
-        let validatedTableId: string | null = null;
-        let validatedTableNumber = rawTableNumber;
-        let validatedTableName = body.table_name || orderData.table_name || "";
-        let validatedDiningSessionId: string | null = null;
-        let validatedCustomerToken: string | null = null;
-        let resolvedSessionRow: { id: string; status: string; table_number: string | null; table_name: string | null; table_id: string | null } | null = null;
-
-        if (isTableOrder) {
-          // Preferred path: dining_session_id / customer_token from SiteCreatorFly (authoritative).
-          if (rawDiningSessionId || rawCustomerToken) {
-            const q = supabaseAdmin
-              .from("table_sessions")
-              .select("id, status, table_number, table_name, table_id, dining_session_id, customer_token, restaurant_id");
-            const { data: sess, error: sErr } = rawDiningSessionId
-              ? await q.eq("dining_session_id", rawDiningSessionId).maybeSingle()
-              : await q.eq("customer_token", rawCustomerToken!).maybeSingle();
-
-            if (sErr) console.error("❌ [API/Orders] Erro ao buscar sessão via dining_session_id:", sErr.message);
-
-            if (sess) {
-              if ((sess as any).restaurant_id !== pz.id) {
-                return new Response(JSON.stringify({
-                  success: false, error: "dining_session_restaurant_mismatch",
-                  message: "Este dining_session_id não pertence a esta loja.",
-                }), { status: 400, headers: cors });
-              }
-              if (["closed", "archived"].includes((sess as any).status)) {
-                return new Response(JSON.stringify({
-                  success: false,
-                  error: "session_closed",
-                  message: "Esta mesa foi encerrada. Refaça o scan do QR Code para abrir uma nova comanda.",
-                  dining_session_id: (sess as any).dining_session_id,
-                }), { status: 409, headers: cors });
-              }
-
-              resolvedSessionRow = {
-                id: (sess as any).id,
-                status: (sess as any).status,
-                table_number: (sess as any).table_number,
-                table_name: (sess as any).table_name,
-                table_id: (sess as any).table_id,
-              };
-              validatedDiningSessionId = (sess as any).dining_session_id;
-              validatedCustomerToken = (sess as any).customer_token;
-              validatedTableId = (sess as any).table_id ?? validatedTableId;
-              validatedTableNumber = (sess as any).table_number || validatedTableNumber;
-              validatedTableName = (sess as any).table_name || validatedTableName;
-            } else {
-              // AUTHORITATIVE ADOPTION: dining_session_id was minted by SiteCreatorFly
-              // and does not yet exist locally. Persist it verbatim instead of rejecting.
-              console.log("ADOPT_FOREIGN_DINING_SESSION:", { dining: rawDiningSessionId, token: rawCustomerToken ? rawCustomerToken.slice(0, 6) + "…" : null });
-
-              // Resolve real restaurant_tables UUID from table_number (+ token if present).
-              let tableRow: { id: string; table_name: string | null; table_number: string } | null = null;
-              if (rawTableNumber) {
-                const tq = supabaseAdmin
-                  .from("restaurant_tables")
-                  .select("id, table_name, table_number")
-                  .eq("restaurant_id", pz.id)
-                  .eq("table_number", String(rawTableNumber))
-                  .eq("is_active", true);
-                const { data: t } = rawTableToken
-                  ? await tq.eq("public_token", rawTableToken).maybeSingle()
-                  : await tq.maybeSingle();
-                tableRow = (t as any) ?? null;
-              }
-              if (!tableRow) {
-                return new Response(JSON.stringify({
-                  success: false, error: "invalid_table",
-                  message: "Não foi possível localizar a mesa (table_number/table_token) para vincular ao dining_session_id.",
-                }), { status: 400, headers: cors });
-              }
-
-              // Look for an existing OPEN session on this table to adopt SCF's IDs into.
-              const { data: openOnTable } = await supabaseAdmin
-                .from("table_sessions")
-                .select("id, status, dining_session_id, customer_token, table_id, table_number, table_name")
-                .eq("restaurant_id", pz.id)
-                .eq("table_number", tableRow.table_number)
-                .in("status", ["open", "requested_close", "waiting_operator", "closing"])
-                .maybeSingle();
-
-              let sessionRow: any = null;
-              if (openOnTable) {
-                const updates: any = { table_id: tableRow.id };
-                if (rawDiningSessionId && (openOnTable as any).dining_session_id !== rawDiningSessionId) {
-                  updates.dining_session_id = rawDiningSessionId;
-                }
-                if (rawCustomerToken && (openOnTable as any).customer_token !== rawCustomerToken) {
-                  updates.customer_token = rawCustomerToken;
-                }
-                const { data: upd, error: uErr } = await supabaseAdmin
-                  .from("table_sessions")
-                  .update(updates as any)
-                  .eq("id", (openOnTable as any).id)
-                  .select("id, status, dining_session_id, customer_token, table_id, table_number, table_name")
-                  .single();
-                if (uErr) {
-                  console.error("❌ [API/Orders] Failed to adopt SCF IDs on existing session:", uErr.message);
-                  return new Response(JSON.stringify({
-                    success: false, error: "session_adopt_failed", message: uErr.message,
-                  }), { status: 409, headers: cors });
-                }
-                sessionRow = upd;
-              } else {
-                const { data: pzCfg } = await supabaseAdmin
-                  .from("pizzerias").select("service_fee_percent").eq("id", pz.id).maybeSingle();
-                const defaultPct = Number((pzCfg as any)?.service_fee_percent ?? 10);
-                const insertPayload: any = {
-                  restaurant_id: pz.id,
-                  table_id: tableRow.id,
-                  table_number: tableRow.table_number,
-                  table_name: tableRow.table_name || `Mesa ${tableRow.table_number}`,
-                  status: "open",
-                  subtotal_amount: 0,
-                  service_fee_enabled: false,
-                  service_fee_percent: defaultPct,
-                  service_fee_amount: 0,
-                  total_amount: 0,
-                  opened_at: new Date().toISOString(),
-                };
-                if (rawDiningSessionId) insertPayload.dining_session_id = rawDiningSessionId;
-                if (rawCustomerToken) insertPayload.customer_token = rawCustomerToken;
-                const { data: ins, error: iErr } = await supabaseAdmin
-                  .from("table_sessions").insert(insertPayload)
-                  .select("id, status, dining_session_id, customer_token, table_id, table_number, table_name")
-                  .single();
-                if (iErr) {
-                  console.error("❌ [API/Orders] Failed to create adopted session:", iErr.message);
-                  return new Response(JSON.stringify({
-                    success: false, error: "session_create_failed", message: iErr.message,
-                  }), { status: 500, headers: cors });
-                }
-                sessionRow = ins;
-              }
-
-              resolvedSessionRow = {
-                id: sessionRow.id,
-                status: sessionRow.status,
-                table_number: sessionRow.table_number,
-                table_name: sessionRow.table_name,
-                table_id: sessionRow.table_id,
-              };
-              validatedDiningSessionId = sessionRow.dining_session_id;
-              validatedCustomerToken = sessionRow.customer_token;
-              validatedTableId = sessionRow.table_id;
-              validatedTableNumber = sessionRow.table_number;
-              validatedTableName = sessionRow.table_name || validatedTableName;
-            }
-          } else {
-            console.error("❌ [API/Orders] table order without dining_session_id/customer_token");
-            return new Response(JSON.stringify({
-              success: false,
-              error: "missing_dining_session",
-              message: "Pedido de mesa exige dining_session_id (ou customer_token). Refaça o scan do QR Code.",
-            }), { status: 400, headers: cors });
-          }
-        }
-
-        const orderToInsert: any = {
-          tenant_id: pz.id,
-          external_order_id: String(orderData.id || body.order_id || body.id || `ext_${Date.now()}`),
-          customer_name: customer.name || customer.customer_name || body.customer_name || "Cliente Site",
-          customer_phone: customer.phone || customer.customer_phone || body.customer_phone || "",
-          customer_address: isTableOrder ? "Consumo no Local" : (customer.address || customer.customer_address || body.customer_address || "Não informado"),
-          neighborhood: isTableOrder ? "Mesa" : (customer.neighborhood || body.neighborhood || null),
-          total: totalValue,
-          subtotal: parseMoney(orderData.subtotal || body.subtotal || 0),
-          delivery_fee: isTableOrder ? 0 : parseMoney(orderData.delivery_fee || body.delivery_fee || 0),
-          payment_method: orderData.payment_method || body.payment_method || "Não informado",
-          delivery_type: isTableOrder ? "table" : deliveryType,
-          order_type: isTableOrder ? "table" : deliveryType,
-          service_mode: isTableOrder ? "mesa" : deliveryType,
-          table_number: String(validatedTableNumber),
-          table_id: validatedTableId,
-          table_name: validatedTableName,
-          table_token: body.table_token || orderData.table_token || null,
-          dining_session_id: validatedDiningSessionId,
-          customer_token: validatedCustomerToken,
-          notes: orderData.notes || body.notes || "",
-          status: "novo",
-          source: body.source || "sitecreatorfly",
-          items: items,
-        };
-
-        console.log("ORDER_SAVE_STARTED");
-        console.log("ORDER_INSERT_PAYLOAD:", JSON.stringify(orderToInsert));
-
-        const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
-          .insert(orderToInsert)
-          .select("id, order_number")
-          .single();
-
-        if (orderError) {
-          console.error("ORDER_INSERT_ERROR:", orderError.message);
-          console.log("ORDER_SAVE_ERROR:", orderError.message);
-          console.log("ORDER_RESPONSE_SENT: error (save_error)");
-          await logExternalOrder(apiKey, body, 500, `Erro insert: ${orderError.message}`);
-          return new Response(JSON.stringify({ 
-            success: false, 
-            error: "save_error",
-            message: "Erro ao salvar pedido no FlyControl",
-            details: orderError.message 
-          }), { status: 500, headers: cors });
-        }
-        
-        console.log("ORDER_SAVE_SUCCESS");
-        console.log(`✨ [API/Orders] Pedido salvo! ID: ${order.id}`);
-
-        // 5. Vincular à Comanda (se for pedido de mesa)
-        if (isTableOrder) {
           try {
-            const customerName = orderToInsert.customer_name;
-            
-            console.log("TABLE_SESSION_CREATE_OR_UPDATE:", { tableId: validatedTableId, tableNumber: validatedTableNumber });
-            
-            // Prefer the already-resolved dining session (validated above). Fall back to lookup/create for legacy payloads.
-            const session = resolvedSessionRow
-              ? (await supabaseAdmin
-                  .from("table_sessions")
-                  .select("id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent")
-                  .eq("id", resolvedSessionRow.id)
-                  .single()).data!
-              : await getOrCreateTableSession(pz.id, validatedTableId, String(validatedTableNumber), validatedTableName);
-            
-            // Log do ID da sessão recebida/encontrada
-            console.log("TABLE_ORDER_SESSION_ID_FOUND:", session.id);
+            const bodyText = await request.clone().text();
+            body = JSON.parse(bodyText);
 
-            // Atualizar nome do cliente e table_name na sessão se necessário
-            const updateData: any = {};
-            if (customerName && customerName !== "Cliente Site" && !session.customer_name) {
-              updateData.customer_name = customerName;
-            }
-            if (validatedTableName) {
-              updateData.table_name = validatedTableName;
-            }
-
-            if (Object.keys(updateData).length > 0) {
-              await supabaseAdmin
-                .from("table_sessions")
-                .update(updateData)
-                .eq("id", session.id);
-            }
-
-            // Vincular pedido à sessão
-            console.log(`🔗 [API/Orders] TABLE_ORDER_LINKED_TO_SESSION: Order ${order.id} -> Session ${session.id}`);
-            await supabaseAdmin.from("table_session_orders").insert({
-              table_session_id: session.id,
-              order_id: order.id
-            });
-
-            // RECALCULAR TOTAIS DA SESSÃO USANDO DADOS REAIS DOS PEDIDOS
-            console.log(`🔄 [API/Orders] SYNC_ORDER_TO_TABLE_SESSION_STARTED: Session ${session.id}`);
-            
-            const { data: linkedOrders, error: linkError } = await supabaseAdmin
-              .from("table_session_orders")
-              .select("order_id")
-              .eq("table_session_id", session.id);
-            
-            if (linkError) throw linkError;
-
-            // Log informativo
-            console.log("TABLE_ORDER_REAL_RECEIVED:", order.id);
-            console.log("TABLE_ORDER_LINKED_TO_SESSION:", session.id);
-
-            const orderIds = (linkedOrders || []).map(lo => lo.order_id);
-            console.log("SYNC_ORDER_ID_LIST:", orderIds);
-            
-            if (orderIds.length > 0) {
-              const { data: ordersInfo, error: ordersError } = await supabaseAdmin
-                .from("orders")
-                .select("id, total, items")
-                .in("id", orderIds);
-              
-              if (ordersError) throw ordersError;
-
-              const subtotal = (ordersInfo || []).reduce((sum, o) => {
-                const orderTotal = Number(o.total) || 0;
-                console.log(`[API/Orders] SYNC_ORDER_ID=${o.id} SYNC_ORDER_TOTAL_FROM_DASHBOARD_PARSER=${orderTotal}`);
-                return sum + orderTotal;
-              }, 0);
-              
-              let serviceFeeAmount = 0;
-              let finalTotal = subtotal;
-
-              if (session.service_fee_enabled) {
-                const percent = Number(session.service_fee_percent) || 10;
-                serviceFeeAmount = subtotal * (percent / 100);
-                finalTotal = subtotal + serviceFeeAmount;
-                console.log(`[API/Orders] SYNC_SESSION_TOTAL_RECALCULATED: ${finalTotal}`);
-              }
-
-              const { error: updateSessionError } = await supabaseAdmin
-                .from("table_sessions")
-                .update({ 
-                  subtotal_amount: subtotal,
-                  service_fee_amount: serviceFeeAmount,
-                  total_amount: finalTotal,
-                  updated_at: new Date().toISOString()
-                })
-                .eq("id", session.id);
-              
-              if (updateSessionError) {
-                console.error("❌ [API/Orders] SYNC_SESSION_SUBTOTAL_RECALCULATE_ERROR:", updateSessionError.message);
-              } else {
-                console.log(`📊 [API/Orders] SYNC_SESSION_SUBTOTAL_RECALCULATED: ${subtotal}`);
-              }
-            }
-
+            console.log("ORDER_RAW_PAYLOAD:", JSON.stringify(body));
           } catch (err) {
-            console.error("❌ [API/Orders] Erro ao processar sessão da mesa:", err);
-          }
-        }
-
-        // Tenta salvar itens na tabela relacionada (não bloqueante)
-        if (Array.isArray(items) && items.length > 0) {
-          try {
-            const orderItemsToInsert = items.map((it: any) => ({
-              order_id: order.id,
-              pizzeria_id: pz.id,
-              product_name: it.product_name || it.name || "Item",
-              quantity: Number(it.quantity || 1),
-              unit_price: parseMoney(it.unit_price || it.price || 0),
-              total_price: Number(it.quantity || 1) * parseMoney(it.unit_price || it.price || 0)
-            }));
-            await (supabaseAdmin.from("order_items") as any).insert(orderItemsToInsert);
-          } catch (err) {
-            console.warn("⚠️ [API/Orders] Erro não-crítico ao salvar itens:", err);
-          }
-        }
-
-        await logExternalOrder(apiKey, body, 200);
-        console.log("ORDER_RESPONSE_SENT: success");
-
-        // 4. Integração FIQON (Assíncrona/Não-bloqueante para o cliente)
-        if (pz.fiqon_enabled && pz.fiqon_webhook_url) {
-          console.log("🚀 [API/Orders] Disparando integração FIQON...");
-          // Usamos uma IIFE para não aguardar a resposta da FIQON antes de responder ao cliente
-          (async () => {
-            try {
-              const fiqonPayload = {
-                event: "order.created",
-                source: "flycontrol",
-                restaurant: {
-                  slug: pz.slug,
-                  name: pz.name
-                },
-                order: {
-                  id: order.id,
-                  customer_name: orderToInsert.customer_name,
-                  customer_phone: orderToInsert.customer_phone,
-                  address: orderToInsert.customer_address,
-                  items: orderToInsert.items,
-                  subtotal: orderToInsert.subtotal,
-                  delivery_fee: orderToInsert.delivery_fee,
-                  total: orderToInsert.total,
-                  payment_method: orderToInsert.payment_method,
-                  notes: orderToInsert.notes,
-                  status: orderToInsert.status,
-                  created_at: new Date().toISOString()
-                }
-              };
-
-              const response = await fetch(pz.fiqon_webhook_url!, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(fiqonPayload)
-              });
-
-              const respText = await response.text();
-              const isSuccess = response.status >= 200 && response.status < 300;
-
-              // Registrar log da FIQON
-              await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
-                restaurant_id: pz.id,
-                order_id: order.id,
-                fiqon_url: pz.fiqon_webhook_url,
-                payload: fiqonPayload,
-                status_http: response.status,
-                response_body: respText,
-                success: isSuccess,
-                error_message: isSuccess ? null : `Status ${response.status}: ${respText.substring(0, 100)}`
-              });
-
-              console.log(`✅ [FIQON] Resposta: ${response.status}`);
-            } catch (err: any) {
-              console.error("❌ [FIQON] Erro no envio:", err.message);
-              await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
-                restaurant_id: pz.id,
-                order_id: order.id,
-                fiqon_url: pz.fiqon_webhook_url,
-                payload: {},
+            console.error("❌ [API/Orders] JSON inválido");
+            console.log("ORDER_RESPONSE_SENT: error (invalid_json)");
+            return new Response(
+              JSON.stringify({
                 success: false,
-                error_message: err.message
-              });
+                error: "invalid_json",
+                message: "JSON inválido",
+              }),
+              { status: 400, headers: cors },
+            );
+          }
+
+          const apiKey = (
+            request.headers.get("x-api-key") ||
+            body?.api_key ||
+            (request.headers.get("authorization")?.startsWith("Bearer ")
+              ? request.headers.get("authorization")?.substring(7)
+              : "") ||
+            ""
+          ).trim();
+
+          console.log(`🔑 API Key identificada: ${apiKey ? "Sim (presente)" : "Não (ausente)"}`);
+
+          if (!apiKey) {
+            console.error("❌ [API/Orders] Erro: API Key ausente");
+            console.log("ORDER_RESPONSE_SENT: error (api_key_missing)");
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "api_key_missing",
+                message: "API Key ausente",
+              }),
+              { status: 401, headers: cors },
+            );
+          }
+
+          // 1. Identificar Pizzaria
+          console.log(`🔍 [API/Orders] Buscando pizzaria pela API Key...`);
+          const { data: pz, error: pErr } = await supabaseAdmin
+            .from("pizzerias")
+            .select(
+              "id, name, slug, status, is_active, is_open, subscription_status, fiqon_enabled, fiqon_webhook_url",
+            )
+            .eq("api_key", apiKey)
+            .neq("status", "deleted")
+            .neq("status", "inactive")
+            .maybeSingle();
+
+          if (pErr) {
+            console.error("❌ [API/Orders] Erro no banco:", pErr.message);
+            console.log("ORDER_RESPONSE_SENT: error (db_error)");
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "db_error",
+                message: "Erro de banco de dados interno",
+                details: pErr.message,
+              }),
+              { status: 500, headers: cors },
+            );
+          }
+
+          if (!pz) {
+            console.error("❌ [API/Orders] Pizzaria não encontrada para esta API Key");
+            console.log("ORDER_RESTAURANT_FOUND: false");
+            console.log("ORDER_RESPONSE_SENT: error (restaurant_not_found)");
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "restaurant_not_found",
+                message: "Pizzaria não encontrada ou API Key inválida",
+              }),
+              { status: 404, headers: cors },
+            );
+          }
+
+          console.log("ORDER_RESTAURANT_FOUND: true");
+          console.log(
+            `✅ [API/Orders] Loja identificada: ${pz.name} (ID: ${pz.id}) | Aberta: ${pz.is_open}`,
+          );
+
+          // Verificação de assinatura suspensa
+          if (pz.subscription_status === "suspended" || pz.is_active === false) {
+            console.error(`❌ [API/Orders] Loja ${pz.name} está SUSPENSA. Bloqueando pedido.`);
+            console.log("ORDER_RESPONSE_SENT: error (store_suspended)");
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "store_suspended",
+                message: "Esta loja está temporariamente suspensa. Entre em contato com o suporte.",
+              }),
+              { status: 403, headers: cors },
+            );
+          }
+
+          // Verificação de loja aberta
+          if (pz.is_open === false) {
+            console.error(`❌ [API/Orders] Loja ${pz.name} está FECHADA. Bloqueando pedido.`);
+            console.log("ORDER_RESPONSE_SENT: error (store_closed)");
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "store_closed",
+                message: "Loja fechada no momento. Os pedidos estão temporariamente indisponíveis.",
+              }),
+              { status: 403, headers: cors },
+            );
+          }
+
+          // 2. Tratar TESTE REAL (Item 5 e 6 do pedido do usuário)
+          if (body.test === true || body.payload?.test === true) {
+            console.log("🧪 [API/Orders] RECEBIDO PAYLOAD DE TESTE");
+
+            // Registrar log de teste
+            await logExternalOrder(apiKey, body, 200, "Teste de conexão bem-sucedido");
+
+            return new Response(
+              JSON.stringify({
+                success: true,
+                message: "FlyControl recebeu teste",
+                received_at: new Date().toISOString(),
+                pizzeria: pz.name,
+              }),
+              { status: 200, headers: cors },
+            );
+          }
+
+          // 3. Processamento de Pedido Real
+          const orderData = body.order || body || {};
+          const customer = body.customer || body || {};
+          const items = orderData.items || body.items || [];
+
+          const parseMoney = (val: any) => {
+            if (typeof val === "number") return val;
+            if (typeof val === "string") {
+              const num = parseFloat(val.replace(/[^\d.,]/g, "").replace(",", "."));
+              return isNaN(num) ? 0 : num;
             }
-          })();
-        }
+            return 0;
+          };
 
-        console.log("ORDER_RESPONSE_SENT: success");
+          const totalValue = parseMoney(orderData.total || body.total || 0);
+          console.log("ORDER_ITEMS_COUNT:", items.length);
+          console.log("ORDER_TOTAL:", totalValue);
 
-        return new Response(JSON.stringify({ 
-          success: true, 
-          order_id: order.id, 
-          order_number: order.order_number,
-          order_type: orderToInsert.delivery_type,
-          service_mode: orderToInsert.delivery_type === "table" ? "mesa" : orderToInsert.delivery_type,
-          table_number: orderToInsert.table_number,
-          message: "Pedido recebido com sucesso"
-        }), { status: 201, headers: cors });
+          // Validações básicas de pedido
+          if (!Array.isArray(items) || items.length === 0) {
+            console.error("❌ [API/Orders] Itens vazios");
+            console.log("ORDER_RESPONSE_SENT: error (empty_items)");
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "empty_items",
+                message: "O pedido deve conter pelo menos um item",
+              }),
+              { status: 400, headers: cors },
+            );
+          }
+
+          if (totalValue <= 0) {
+            console.error("❌ [API/Orders] Total inválido");
+            console.log("ORDER_RESPONSE_SENT: error (invalid_total)");
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "invalid_total",
+                message: "O valor total do pedido deve ser maior que zero",
+              }),
+              { status: 400, headers: cors },
+            );
+          }
+
+          // 3. Detecção/validação de Mesa (detecta por presença de table_number/token OU dining_session_id)
+          const rawDeliveryType = (
+            orderData.delivery_type ||
+            body.delivery_type ||
+            body.service_mode ||
+            orderData.service_mode ||
+            orderData.order_type ||
+            body.order_type ||
+            "delivery"
+          ).toLowerCase();
+          const rawTableNumber = body.table_number || orderData.table_number || "";
+          const rawTableToken = body.table_token || orderData.table_token || "";
+          const rawDiningSessionId =
+            String(body.dining_session_id || orderData.dining_session_id || "").trim() || null;
+          const rawCustomerToken =
+            String(body.customer_token || orderData.customer_token || "").trim() || null;
+          const explicitTable = ["table", "mesa"].includes(rawDeliveryType);
+          const inferredTable =
+            !!String(rawTableNumber).trim() ||
+            !!String(rawTableToken).trim() ||
+            !!rawDiningSessionId ||
+            !!rawCustomerToken;
+          const isTableOrder = explicitTable || inferredTable;
+          const deliveryType = isTableOrder ? "table" : rawDeliveryType;
+
+          console.log(
+            "ORDER_TYPE_DETECTED:",
+            isTableOrder ? "table" : deliveryType,
+            "explicit:",
+            explicitTable,
+            "inferred:",
+            inferredTable,
+            "dining_session_id:",
+            rawDiningSessionId ? "present" : "absent",
+          );
+
+          let validatedTableId: string | null = null;
+          let validatedTableNumber = rawTableNumber;
+          let validatedTableName = body.table_name || orderData.table_name || "";
+          let validatedDiningSessionId: string | null = null;
+          let validatedCustomerToken: string | null = null;
+          let resolvedSessionRow: {
+            id: string;
+            status: string;
+            table_number: string | null;
+            table_name: string | null;
+            table_id: string | null;
+          } | null = null;
+
+          if (isTableOrder) {
+            // Preferred path: dining_session_id / customer_token from SiteCreatorFly (authoritative).
+            if (rawDiningSessionId || rawCustomerToken) {
+              const q = supabaseAdmin
+                .from("table_sessions")
+                .select(
+                  "id, status, table_number, table_name, table_id, dining_session_id, customer_token, restaurant_id",
+                );
+              const { data: sess, error: sErr } = rawDiningSessionId
+                ? await q.eq("dining_session_id", rawDiningSessionId).maybeSingle()
+                : await q.eq("customer_token", rawCustomerToken!).maybeSingle();
+
+              if (sErr)
+                console.error(
+                  "❌ [API/Orders] Erro ao buscar sessão via dining_session_id:",
+                  sErr.message,
+                );
+
+              if (sess) {
+                if ((sess as any).restaurant_id !== pz.id) {
+                  return new Response(
+                    JSON.stringify({
+                      success: false,
+                      error: "dining_session_restaurant_mismatch",
+                      message: "Este dining_session_id não pertence a esta loja.",
+                    }),
+                    { status: 400, headers: cors },
+                  );
+                }
+                if (["closed", "archived"].includes((sess as any).status)) {
+                  return new Response(
+                    JSON.stringify({
+                      success: false,
+                      error: "session_closed",
+                      message:
+                        "Esta mesa foi encerrada. Refaça o scan do QR Code para abrir uma nova comanda.",
+                      dining_session_id: (sess as any).dining_session_id,
+                    }),
+                    { status: 409, headers: cors },
+                  );
+                }
+
+                resolvedSessionRow = {
+                  id: (sess as any).id,
+                  status: (sess as any).status,
+                  table_number: (sess as any).table_number,
+                  table_name: (sess as any).table_name,
+                  table_id: (sess as any).table_id,
+                };
+                validatedDiningSessionId = (sess as any).dining_session_id;
+                validatedCustomerToken = (sess as any).customer_token;
+                validatedTableId = (sess as any).table_id ?? validatedTableId;
+                validatedTableNumber = (sess as any).table_number || validatedTableNumber;
+                validatedTableName = (sess as any).table_name || validatedTableName;
+              } else {
+                // AUTHORITATIVE ADOPTION: dining_session_id was minted by SiteCreatorFly
+                // and does not yet exist locally. Persist it verbatim instead of rejecting.
+                console.log("ADOPT_FOREIGN_DINING_SESSION:", {
+                  dining: rawDiningSessionId,
+                  token: rawCustomerToken ? rawCustomerToken.slice(0, 6) + "…" : null,
+                });
+
+                // Resolve real restaurant_tables UUID from table_number (+ token if present).
+                let tableRow: {
+                  id: string;
+                  table_name: string | null;
+                  table_number: string;
+                } | null = null;
+                if (rawTableNumber) {
+                  const tq = supabaseAdmin
+                    .from("restaurant_tables")
+                    .select("id, table_name, table_number")
+                    .eq("restaurant_id", pz.id)
+                    .eq("table_number", String(rawTableNumber))
+                    .eq("is_active", true);
+                  const { data: t } = rawTableToken
+                    ? await tq.eq("public_token", rawTableToken).maybeSingle()
+                    : await tq.maybeSingle();
+                  tableRow = (t as any) ?? null;
+                }
+                if (!tableRow) {
+                  return new Response(
+                    JSON.stringify({
+                      success: false,
+                      error: "invalid_table",
+                      message:
+                        "Não foi possível localizar a mesa (table_number/table_token) para vincular ao dining_session_id.",
+                    }),
+                    { status: 400, headers: cors },
+                  );
+                }
+
+                // Look for an existing OPEN session on this table to adopt SCF's IDs into.
+                const { data: openOnTable } = await supabaseAdmin
+                  .from("table_sessions")
+                  .select(
+                    "id, status, dining_session_id, customer_token, table_id, table_number, table_name",
+                  )
+                  .eq("restaurant_id", pz.id)
+                  .eq("table_number", tableRow.table_number)
+                  .in("status", ["open", "requested_close", "waiting_operator", "closing"])
+                  .maybeSingle();
+
+                let sessionRow: any = null;
+                if (openOnTable) {
+                  const updates: any = { table_id: tableRow.id };
+                  if (
+                    rawDiningSessionId &&
+                    (openOnTable as any).dining_session_id !== rawDiningSessionId
+                  ) {
+                    updates.dining_session_id = rawDiningSessionId;
+                  }
+                  if (
+                    rawCustomerToken &&
+                    (openOnTable as any).customer_token !== rawCustomerToken
+                  ) {
+                    updates.customer_token = rawCustomerToken;
+                  }
+                  const { data: upd, error: uErr } = await supabaseAdmin
+                    .from("table_sessions")
+                    .update(updates as any)
+                    .eq("id", (openOnTable as any).id)
+                    .select(
+                      "id, status, dining_session_id, customer_token, table_id, table_number, table_name",
+                    )
+                    .single();
+                  if (uErr) {
+                    console.error(
+                      "❌ [API/Orders] Failed to adopt SCF IDs on existing session:",
+                      uErr.message,
+                    );
+                    return new Response(
+                      JSON.stringify({
+                        success: false,
+                        error: "session_adopt_failed",
+                        message: uErr.message,
+                      }),
+                      { status: 409, headers: cors },
+                    );
+                  }
+                  sessionRow = upd;
+                } else {
+                  const { data: pzCfg } = await supabaseAdmin
+                    .from("pizzerias")
+                    .select("service_fee_percent")
+                    .eq("id", pz.id)
+                    .maybeSingle();
+                  const defaultPct = Number((pzCfg as any)?.service_fee_percent ?? 10);
+                  const insertPayload: any = {
+                    restaurant_id: pz.id,
+                    table_id: tableRow.id,
+                    table_number: tableRow.table_number,
+                    table_name: tableRow.table_name || `Mesa ${tableRow.table_number}`,
+                    status: "open",
+                    subtotal_amount: 0,
+                    service_fee_enabled: false,
+                    service_fee_percent: defaultPct,
+                    service_fee_amount: 0,
+                    total_amount: 0,
+                    opened_at: new Date().toISOString(),
+                  };
+                  if (rawDiningSessionId) insertPayload.dining_session_id = rawDiningSessionId;
+                  if (rawCustomerToken) insertPayload.customer_token = rawCustomerToken;
+                  const { data: ins, error: iErr } = await supabaseAdmin
+                    .from("table_sessions")
+                    .insert(insertPayload)
+                    .select(
+                      "id, status, dining_session_id, customer_token, table_id, table_number, table_name",
+                    )
+                    .single();
+                  if (iErr) {
+                    console.error(
+                      "❌ [API/Orders] Failed to create adopted session:",
+                      iErr.message,
+                    );
+                    return new Response(
+                      JSON.stringify({
+                        success: false,
+                        error: "session_create_failed",
+                        message: iErr.message,
+                      }),
+                      { status: 500, headers: cors },
+                    );
+                  }
+                  sessionRow = ins;
+                }
+
+                resolvedSessionRow = {
+                  id: sessionRow.id,
+                  status: sessionRow.status,
+                  table_number: sessionRow.table_number,
+                  table_name: sessionRow.table_name,
+                  table_id: sessionRow.table_id,
+                };
+                validatedDiningSessionId = sessionRow.dining_session_id;
+                validatedCustomerToken = sessionRow.customer_token;
+                validatedTableId = sessionRow.table_id;
+                validatedTableNumber = sessionRow.table_number;
+                validatedTableName = sessionRow.table_name || validatedTableName;
+              }
+            } else {
+              console.error("❌ [API/Orders] table order without dining_session_id/customer_token");
+              return new Response(
+                JSON.stringify({
+                  success: false,
+                  error: "missing_dining_session",
+                  message:
+                    "Pedido de mesa exige dining_session_id (ou customer_token). Refaça o scan do QR Code.",
+                }),
+                { status: 400, headers: cors },
+              );
+            }
+          }
+
+          const orderToInsert: any = {
+            tenant_id: pz.id,
+            external_order_id: String(
+              orderData.id || body.order_id || body.id || `ext_${Date.now()}`,
+            ),
+            customer_name:
+              customer.name || customer.customer_name || body.customer_name || "Cliente Site",
+            customer_phone: customer.phone || customer.customer_phone || body.customer_phone || "",
+            customer_address: isTableOrder
+              ? "Consumo no Local"
+              : customer.address ||
+                customer.customer_address ||
+                body.customer_address ||
+                "Não informado",
+            neighborhood: isTableOrder
+              ? "Mesa"
+              : customer.neighborhood || body.neighborhood || null,
+            total: totalValue,
+            subtotal: parseMoney(orderData.subtotal || body.subtotal || 0),
+            delivery_fee: isTableOrder
+              ? 0
+              : parseMoney(orderData.delivery_fee || body.delivery_fee || 0),
+            payment_method: orderData.payment_method || body.payment_method || "Não informado",
+            delivery_type: isTableOrder ? "table" : deliveryType,
+            order_type: isTableOrder ? "table" : deliveryType,
+            service_mode: isTableOrder ? "mesa" : deliveryType,
+            table_number: String(validatedTableNumber),
+            table_id: validatedTableId,
+            table_name: validatedTableName,
+            table_token: body.table_token || orderData.table_token || null,
+            dining_session_id: validatedDiningSessionId,
+            customer_token: validatedCustomerToken,
+            notes: orderData.notes || body.notes || "",
+            status: "novo",
+            source: body.source || "sitecreatorfly",
+            items: items,
+          };
+
+          console.log("ORDER_SAVE_STARTED");
+          console.log("ORDER_INSERT_PAYLOAD:", JSON.stringify(orderToInsert));
+
+          const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
+            .insert(orderToInsert)
+            .select("id, order_number")
+            .single();
+
+          if (orderError) {
+            console.error("ORDER_INSERT_ERROR:", orderError.message);
+            console.log("ORDER_SAVE_ERROR:", orderError.message);
+            console.log("ORDER_RESPONSE_SENT: error (save_error)");
+            await logExternalOrder(apiKey, body, 500, `Erro insert: ${orderError.message}`);
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "save_error",
+                message: "Erro ao salvar pedido no FlyControl",
+                details: orderError.message,
+              }),
+              { status: 500, headers: cors },
+            );
+          }
+
+          console.log("ORDER_SAVE_SUCCESS");
+          console.log(`✨ [API/Orders] Pedido salvo! ID: ${order.id}`);
+
+          // 5. Vincular à Comanda (se for pedido de mesa)
+          if (isTableOrder) {
+            try {
+              const customerName = orderToInsert.customer_name;
+
+              console.log("TABLE_SESSION_CREATE_OR_UPDATE:", {
+                tableId: validatedTableId,
+                tableNumber: validatedTableNumber,
+              });
+
+              // Prefer the already-resolved dining session (validated above). Fall back to lookup/create for legacy payloads.
+              const session = resolvedSessionRow
+                ? (
+                    await supabaseAdmin
+                      .from("table_sessions")
+                      .select(
+                        "id, total_amount, subtotal_amount, customer_name, service_fee_enabled, service_fee_percent",
+                      )
+                      .eq("id", resolvedSessionRow.id)
+                      .single()
+                  ).data!
+                : await getOrCreateTableSession(
+                    pz.id,
+                    validatedTableId,
+                    String(validatedTableNumber),
+                    validatedTableName,
+                  );
+
+              // Log do ID da sessão recebida/encontrada
+              console.log("TABLE_ORDER_SESSION_ID_FOUND:", session.id);
+
+              // Atualizar nome do cliente e table_name na sessão se necessário
+              const updateData: any = {};
+              if (customerName && customerName !== "Cliente Site" && !session.customer_name) {
+                updateData.customer_name = customerName;
+              }
+              if (validatedTableName) {
+                updateData.table_name = validatedTableName;
+              }
+
+              if (Object.keys(updateData).length > 0) {
+                await supabaseAdmin.from("table_sessions").update(updateData).eq("id", session.id);
+              }
+
+              // Vincular pedido à sessão
+              console.log(
+                `🔗 [API/Orders] TABLE_ORDER_LINKED_TO_SESSION: Order ${order.id} -> Session ${session.id}`,
+              );
+              await supabaseAdmin.from("table_session_orders").insert({
+                table_session_id: session.id,
+                order_id: order.id,
+              });
+
+              // RECALCULAR TOTAIS DA SESSÃO USANDO DADOS REAIS DOS PEDIDOS
+              console.log(
+                `🔄 [API/Orders] SYNC_ORDER_TO_TABLE_SESSION_STARTED: Session ${session.id}`,
+              );
+
+              const { data: linkedOrders, error: linkError } = await supabaseAdmin
+                .from("table_session_orders")
+                .select("order_id")
+                .eq("table_session_id", session.id);
+
+              if (linkError) throw linkError;
+
+              // Log informativo
+              console.log("TABLE_ORDER_REAL_RECEIVED:", order.id);
+              console.log("TABLE_ORDER_LINKED_TO_SESSION:", session.id);
+
+              const orderIds = (linkedOrders || []).map((lo) => lo.order_id);
+              console.log("SYNC_ORDER_ID_LIST:", orderIds);
+
+              if (orderIds.length > 0) {
+                const { data: ordersInfo, error: ordersError } = await supabaseAdmin
+                  .from("orders")
+                  .select("id, total, items")
+                  .in("id", orderIds);
+
+                if (ordersError) throw ordersError;
+
+                const subtotal = (ordersInfo || []).reduce((sum, o) => {
+                  const orderTotal = Number(o.total) || 0;
+                  console.log(
+                    `[API/Orders] SYNC_ORDER_ID=${o.id} SYNC_ORDER_TOTAL_FROM_DASHBOARD_PARSER=${orderTotal}`,
+                  );
+                  return sum + orderTotal;
+                }, 0);
+
+                let serviceFeeAmount = 0;
+                let finalTotal = subtotal;
+
+                if (session.service_fee_enabled) {
+                  const percent = Number(session.service_fee_percent) || 10;
+                  serviceFeeAmount = subtotal * (percent / 100);
+                  finalTotal = subtotal + serviceFeeAmount;
+                  console.log(`[API/Orders] SYNC_SESSION_TOTAL_RECALCULATED: ${finalTotal}`);
+                }
+
+                const { error: updateSessionError } = await supabaseAdmin
+                  .from("table_sessions")
+                  .update({
+                    subtotal_amount: subtotal,
+                    service_fee_amount: serviceFeeAmount,
+                    total_amount: finalTotal,
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", session.id);
+
+                if (updateSessionError) {
+                  console.error(
+                    "❌ [API/Orders] SYNC_SESSION_SUBTOTAL_RECALCULATE_ERROR:",
+                    updateSessionError.message,
+                  );
+                } else {
+                  console.log(`📊 [API/Orders] SYNC_SESSION_SUBTOTAL_RECALCULATED: ${subtotal}`);
+                }
+              }
+            } catch (err) {
+              console.error("❌ [API/Orders] Erro ao processar sessão da mesa:", err);
+            }
+          }
+
+          // Tenta salvar itens na tabela relacionada (não bloqueante)
+          if (Array.isArray(items) && items.length > 0) {
+            try {
+              const orderItemsToInsert = items.map((it: any) => ({
+                order_id: order.id,
+                pizzeria_id: pz.id,
+                product_name: it.product_name || it.name || "Item",
+                quantity: Number(it.quantity || 1),
+                unit_price: parseMoney(it.unit_price || it.price || 0),
+                total_price: Number(it.quantity || 1) * parseMoney(it.unit_price || it.price || 0),
+              }));
+              await (supabaseAdmin.from("order_items") as any).insert(orderItemsToInsert);
+            } catch (err) {
+              console.warn("⚠️ [API/Orders] Erro não-crítico ao salvar itens:", err);
+            }
+          }
+
+          await logExternalOrder(apiKey, body, 200);
+          console.log("ORDER_RESPONSE_SENT: success");
+
+          // 4. Integração FIQON (Assíncrona/Não-bloqueante para o cliente)
+          if (pz.fiqon_enabled && pz.fiqon_webhook_url) {
+            console.log("🚀 [API/Orders] Disparando integração FIQON...");
+            // Usamos uma IIFE para não aguardar a resposta da FIQON antes de responder ao cliente
+            (async () => {
+              try {
+                const fiqonPayload = {
+                  event: "order.created",
+                  source: "flycontrol",
+                  restaurant: {
+                    slug: pz.slug,
+                    name: pz.name,
+                  },
+                  order: {
+                    id: order.id,
+                    customer_name: orderToInsert.customer_name,
+                    customer_phone: orderToInsert.customer_phone,
+                    address: orderToInsert.customer_address,
+                    items: orderToInsert.items,
+                    subtotal: orderToInsert.subtotal,
+                    delivery_fee: orderToInsert.delivery_fee,
+                    total: orderToInsert.total,
+                    payment_method: orderToInsert.payment_method,
+                    notes: orderToInsert.notes,
+                    status: orderToInsert.status,
+                    created_at: new Date().toISOString(),
+                  },
+                };
+
+                const response = await fetch(pz.fiqon_webhook_url!, {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(fiqonPayload),
+                });
+
+                const respText = await response.text();
+                const isSuccess = response.status >= 200 && response.status < 300;
+
+                // Registrar log da FIQON
+                await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
+                  restaurant_id: pz.id,
+                  order_id: order.id,
+                  fiqon_url: pz.fiqon_webhook_url,
+                  payload: fiqonPayload,
+                  status_http: response.status,
+                  response_body: respText,
+                  success: isSuccess,
+                  error_message: isSuccess
+                    ? null
+                    : `Status ${response.status}: ${respText.substring(0, 100)}`,
+                });
+
+                console.log(`✅ [FIQON] Resposta: ${response.status}`);
+              } catch (err: any) {
+                console.error("❌ [FIQON] Erro no envio:", err.message);
+                await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
+                  restaurant_id: pz.id,
+                  order_id: order.id,
+                  fiqon_url: pz.fiqon_webhook_url,
+                  payload: {},
+                  success: false,
+                  error_message: err.message,
+                });
+              }
+            })();
+          }
+
+          console.log("ORDER_RESPONSE_SENT: success");
+
+          return new Response(
+            JSON.stringify({
+              success: true,
+              order_id: order.id,
+              order_number: order.order_number,
+              order_type: orderToInsert.delivery_type,
+              service_mode:
+                orderToInsert.delivery_type === "table" ? "mesa" : orderToInsert.delivery_type,
+              table_number: orderToInsert.table_number,
+              message: "Pedido recebido com sucesso",
+            }),
+            { status: 201, headers: cors },
+          );
         } catch (err: any) {
           console.error("❌ [API/Orders] Erro não tratado:", err?.stack || err?.message || err);
           try {
@@ -692,25 +868,33 @@ export const Route = createFileRoute("/api/orders")({
           } catch (logErr) {
             console.error("❌ [API/Orders] Falha ao registrar log de erro não tratado:", logErr);
           }
-          return new Response(JSON.stringify({
-            success: false,
-            error: "internal_error",
-            message: "Erro interno ao processar pedido no FlyControl",
-          }), { status: 500, headers: cors });
+          return new Response(
+            JSON.stringify({
+              success: false,
+              error: "internal_error",
+              message: "Erro interno ao processar pedido no FlyControl",
+            }),
+            { status: 500, headers: cors },
+          );
         }
       },
     },
   },
 });
 
-async function logExternalOrder(apiKey: string, payload: any, statusCode: number, errorMessage?: string) {
+async function logExternalOrder(
+  apiKey: string,
+  payload: any,
+  statusCode: number,
+  errorMessage?: string,
+) {
   try {
     const partialKey = apiKey ? `${apiKey.substring(0, 4)}***${apiKey.slice(-4)}` : "N/A";
     await supabaseAdmin.from("external_order_logs").insert({
       api_key_partial: partialKey,
       payload: payload,
       status_code: statusCode,
-      error_message: errorMessage
+      error_message: errorMessage,
     });
   } catch (err) {
     console.error("Falha ao registrar log externo:", err);

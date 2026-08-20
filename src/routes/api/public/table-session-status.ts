@@ -11,7 +11,8 @@ const cors = (request?: Request) => ({
   "Content-Type": "application/json",
 });
 
-const SELECT = "id, dining_session_id, customer_token, status, closed_at, restaurant_id, table_number, table_name, opened_at, subtotal_amount, service_fee_amount, total_amount";
+const SELECT =
+  "id, dining_session_id, customer_token, status, closed_at, restaurant_id, table_number, table_name, opened_at, subtotal_amount, service_fee_amount, total_amount";
 
 async function resolveStatus(params: {
   dining_session_id?: string | null;
@@ -26,7 +27,8 @@ async function resolveStatus(params: {
   // Preferred lookups: dining_session_id / customer_token.
   if (dining_session_id) {
     const { data, error } = await supabaseAdmin
-      .from("table_sessions").select(SELECT)
+      .from("table_sessions")
+      .select(SELECT)
       .eq("dining_session_id", dining_session_id)
       .maybeSingle();
     if (error) throw error;
@@ -36,7 +38,8 @@ async function resolveStatus(params: {
 
   if (customer_token) {
     const { data, error } = await supabaseAdmin
-      .from("table_sessions").select(SELECT)
+      .from("table_sessions")
+      .select(SELECT)
       .eq("customer_token", customer_token)
       .maybeSingle();
     if (error) throw error;
@@ -46,9 +49,12 @@ async function resolveStatus(params: {
 
   // Legacy lookups (deprecated). Continue to accept during migration window.
   if (session_id) {
-    console.warn("[TABLE_SESSION_STATUS_LEGACY] lookup by session_id — please migrate to dining_session_id");
+    console.warn(
+      "[TABLE_SESSION_STATUS_LEGACY] lookup by session_id — please migrate to dining_session_id",
+    );
     const { data, error } = await supabaseAdmin
-      .from("table_sessions").select(SELECT)
+      .from("table_sessions")
+      .select(SELECT)
       .eq("id", session_id)
       .maybeSingle();
     if (error) throw error;
@@ -60,16 +66,21 @@ async function resolveStatus(params: {
     return { found: false as const, error: "missing_params" as const };
   }
 
-  console.warn("[TABLE_SESSION_STATUS_LEGACY] lookup by slug+table_number — please migrate to dining_session_id");
+  console.warn(
+    "[TABLE_SESSION_STATUS_LEGACY] lookup by slug+table_number — please migrate to dining_session_id",
+  );
   const { data: pz } = await supabaseAdmin
-    .from("pizzerias").select("id")
+    .from("pizzerias")
+    .select("id")
     .eq("slug", restaurant_slug)
     .neq("status", "deleted")
+    .neq("status", "inactive")
     .maybeSingle();
   if (!pz) return { found: false as const, error: "invalid_restaurant" as const };
 
   const { data, error } = await supabaseAdmin
-    .from("table_sessions").select(SELECT)
+    .from("table_sessions")
+    .select(SELECT)
     .eq("restaurant_id", pz.id)
     .eq("table_number", String(table_number))
     .order("opened_at", { ascending: false })
@@ -82,15 +93,15 @@ async function resolveStatus(params: {
 
 function respond(headers: Record<string, string>, result: any) {
   if (!result.found) {
-    return new Response(
-      JSON.stringify({ success: false, error: result.error || "not_found" }),
-      { status: 404, headers },
-    );
+    return new Response(JSON.stringify({ success: false, error: result.error || "not_found" }), {
+      status: 404,
+      headers,
+    });
   }
-  return new Response(
-    JSON.stringify({ success: true, session: result.session }),
-    { status: 200, headers },
-  );
+  return new Response(JSON.stringify({ success: true, session: result.session }), {
+    status: 200,
+    headers,
+  });
 }
 
 export const Route = createFileRoute("/api/public/table-session-status")({
@@ -111,7 +122,10 @@ export const Route = createFileRoute("/api/public/table-session-status")({
           return respond(headers, result);
         } catch (err: any) {
           console.error("❌ TABLE_SESSION_STATUS_ERROR:", err?.message);
-          return new Response(JSON.stringify({ success: false, error: "server_error" }), { status: 500, headers });
+          return new Response(JSON.stringify({ success: false, error: "server_error" }), {
+            status: 500,
+            headers,
+          });
         }
       },
       POST: async ({ request }) => {
@@ -128,7 +142,10 @@ export const Route = createFileRoute("/api/public/table-session-status")({
           return respond(headers, result);
         } catch (err: any) {
           console.error("❌ TABLE_SESSION_STATUS_ERROR:", err?.message);
-          return new Response(JSON.stringify({ success: false, error: "server_error" }), { status: 500, headers });
+          return new Response(JSON.stringify({ success: false, error: "server_error" }), {
+            status: 500,
+            headers,
+          });
         }
       },
     },

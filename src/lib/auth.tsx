@@ -12,6 +12,7 @@ interface AuthCtx {
   isSuperAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string }>;
+  signInWithGoogle: () => Promise<{ error?: string }>;
   signOut: () => Promise<void>;
 }
 
@@ -33,12 +34,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setRoles([]);
       }
-      
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed successfully');
+
+      if (event === "TOKEN_REFRESHED") {
+        console.log("Token refreshed successfully");
       }
-      
-      if (event === 'SIGNED_OUT') {
+
+      if (event === "SIGNED_OUT") {
         setUser(null);
         setSession(null);
         setRoles([]);
@@ -80,7 +81,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
 
     const { error } = await supabase.auth.signUp({
-      email, password,
+      email,
+      password,
       options: {
         emailRedirectTo: `${window.location.origin}/dashboard`,
         data: { full_name: fullName },
@@ -89,14 +91,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return error ? { error: error.message } : {};
   };
 
-  const signOut = async () => { await supabase.auth.signOut(); };
+  // O login com Google inteiro acontece no servidor do Supabase — aqui só se
+  // pede o redirecionamento. Nenhuma chave secreta do Google passa por este
+  // código: é como pedir para o porteiro do prédio ligar para a portaria de
+  // outro prédio confirmar quem é você, em vez de você mesmo carregar as
+  // chaves da portaria alheia.
+  const signInWithGoogle: AuthCtx["signInWithGoogle"] = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${window.location.origin}/auth/callback` },
+    });
+    return error ? { error: error.message } : {};
+  };
+
+  const signOut = async () => {
+    await supabase.auth.signOut();
+  };
 
   return (
-    <Ctx.Provider value={{
-      user, session, loading, roles,
-      isSuperAdmin: roles.includes("super_admin"),
-      signIn, signUp, signOut,
-    }}>
+    <Ctx.Provider
+      value={{
+        user,
+        session,
+        loading,
+        roles,
+        isSuperAdmin: roles.includes("super_admin"),
+        signIn,
+        signUp,
+        signInWithGoogle,
+        signOut,
+      }}
+    >
       {children}
     </Ctx.Provider>
   );

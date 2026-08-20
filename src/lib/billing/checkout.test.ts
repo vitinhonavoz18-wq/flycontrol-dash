@@ -7,8 +7,10 @@ import {
   checkoutReturnUrl,
   generateIntentToken,
   hashIntentToken,
+  infinityPayWebhookUrl,
   resolveCheckoutConfig,
   shouldTrustCheckoutReturn,
+  validateGatewayConfirmation,
   validateIntentForReturn,
 } from "./checkout";
 import { PLAN_PRICING } from "./plans";
@@ -174,6 +176,40 @@ describe("validação do retorno", () => {
 
   it("dá prazo de um dia", () => {
     expect(CHECKOUT_INTENT_TTL_MS).toBe(24 * 60 * 60 * 1000);
+  });
+});
+
+describe("URL do aviso de pagamento", () => {
+  it("monta sem barra duplicada", () => {
+    expect(infinityPayWebhookUrl("https://app.flycontrol.com.br")).toBe(
+      "https://app.flycontrol.com.br/api/webhooks/infinitypay",
+    );
+    expect(infinityPayWebhookUrl("https://app.flycontrol.com.br/")).toBe(
+      "https://app.flycontrol.com.br/api/webhooks/infinitypay",
+    );
+  });
+});
+
+describe("reconferência da InfinityPay", () => {
+  it("recusa quando a InfinityPay não confirma pagamento", () => {
+    const verdict = validateGatewayConfirmation({ paid: false, paidAmountCents: null }, 1000);
+    expect(verdict.ok).toBe(false);
+    expect(verdict.ok === false && verdict.code).toBe("not_paid");
+  });
+
+  it("recusa quando o valor pago é menor que o esperado", () => {
+    // Cobrança parcial ou de outro valor não pode liberar o plano contratado.
+    const verdict = validateGatewayConfirmation({ paid: true, paidAmountCents: 500 }, 1000);
+    expect(verdict.ok).toBe(false);
+    expect(verdict.ok === false && verdict.code).toBe("amount_mismatch");
+  });
+
+  it("aceita valor pago igual ao esperado", () => {
+    expect(validateGatewayConfirmation({ paid: true, paidAmountCents: 1000 }, 1000).ok).toBe(true);
+  });
+
+  it("aceita valor pago maior — cartão pode repassar taxa ao cliente", () => {
+    expect(validateGatewayConfirmation({ paid: true, paidAmountCents: 1010 }, 1000).ok).toBe(true);
   });
 });
 
