@@ -24,6 +24,7 @@ import {
   resolveCheckoutConfig,
 } from "@/lib/billing/checkout";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
+import { TRIAL_DENIAL_MESSAGES, grantFreeTrial } from "@/lib/billing/trial.server";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { PAYMENT_BYPASS_REASON, isPaymentBypassAllowed } from "./paymentBypass";
 import { TERMS_VERSION } from "@/lib/legal/terms";
@@ -57,7 +58,7 @@ export type SignupResult = {
   companyId: string;
   companyName: string;
   planCode: PlanCode;
-  subscriptionStatus: "pending_activation" | "active" | null;
+  subscriptionStatus: "pending_activation" | "free_trial" | "active" | null;
   /**
    * Para onde mandar o cliente pagar, quando o checkout do plano está
    * configurado. Nulo mantém o fluxo anterior: cadastro concluído e ativação
@@ -66,6 +67,19 @@ export type SignupResult = {
   checkout: { url: string; token: string } | null;
   /** `true` quando a conta foi criada pelo atalho de teste, sem pagamento. */
   paymentBypassed: boolean;
+  /**
+   * Datas reais do período gratuito, vindas do banco.
+   *
+   * A tela de conclusão mostra estas datas em vez de calcular as próprias: se
+   * a tela calculasse, uma diferença de fuso ou um segundo de atraso faria o
+   * cliente ler uma data e o sistema cobrar por outra.
+   */
+  trial: { startsAt: string; endsAt: string } | null;
+  /**
+   * Motivo, em português, de o período gratuito não ter sido liberado.
+   * O caso normal é o e-mail ou o CNPJ já ter usado os 30 dias antes.
+   */
+  trialDenied: string | null;
 };
 
 /**
@@ -312,6 +326,8 @@ export const createAccount = createServerFn({ method: "POST" })
           // pelo administrador depois.
           checkout: bypassPayment ? null : await createCheckoutIntent(planCode, companyId, null),
           paymentBypassed: bypassPayment,
+          trial: null,
+          trialDenied: TRIAL_DENIAL_MESSAGES.billing_not_installed,
         };
       }
 
@@ -333,6 +349,8 @@ export const createAccount = createServerFn({ method: "POST" })
           subscriptionStatus: null,
           checkout: bypassPayment ? null : await createCheckoutIntent(planCode, companyId, null),
           paymentBypassed: bypassPayment,
+          trial: null,
+          trialDenied: TRIAL_DENIAL_MESSAGES.billing_not_installed,
         };
       }
 
@@ -388,10 +406,44 @@ export const createAccount = createServerFn({ method: "POST" })
         },
       });
 
+      const subscriptionId = (subscription as { id: string }).id;
+
+      // ---- 4. Período gratuito de 30 dias ---------------------------------
+      // Quem concede é o banco. Aqui só pedimos e lemos a resposta — o
+      // aplicativo não tem como dizer "pode" quando o banco disse "não".
+      const trial = bypassPayment
+        ? null
+        : await grantFreeTrial({
+            subscriptionId,
+            ownerEmail: email,
+            document: onlyDigits(data.company.document) || null,
+          });
+
+      if (trial?.granted) {
+        // Conta ativa desde o primeiro minuto: o cardápio digital nasce junto,
+        // porque prometer 30 dias e entregar um sistema pela metade seria pior
+        // do que não prometer nada.
+        await provisionAndForget(companyId);
+
+        return {
+          companyId,
+          companyName: company.name,
+          planCode,
+          subscriptionStatus: "free_trial",
+          // Ninguém paga nada agora. É esse o ponto do período gratuito.
+          checkout: null,
+          paymentBypassed: false,
+          trial: { startsAt: trial.trialStartedAt, endsAt: trial.trialEndsAt },
+          trialDenied: null,
+        };
+      }
+
       // O atalho de teste ativa a conta na hora, então o cardápio nasce junto
       // — é justamente o fluxo completo que se quer inspecionar.
       if (bypassPayment) await provisionAndForget(companyId);
 
+      // Sem período gratuito (já usado antes, ou migration ainda não aplicada)
+      // o cadastro segue pelo caminho antigo: pagamento primeiro.
       return {
         companyId,
         companyName: company.name,
@@ -400,8 +452,10 @@ export const createAccount = createServerFn({ method: "POST" })
         // No atalho não há para onde mandar pagar: é justamente o ponto dele.
         checkout: bypassPayment
           ? null
-          : await createCheckoutIntent(planCode, companyId, (subscription as { id: string }).id),
+          : await createCheckoutIntent(planCode, companyId, subscriptionId),
         paymentBypassed: bypassPayment,
+        trial: null,
+        trialDenied: trial ? TRIAL_DENIAL_MESSAGES[trial.reason] : null,
       };
     } catch (err) {
       // Erro já tratado acima relança com mensagem própria; qualquer outro

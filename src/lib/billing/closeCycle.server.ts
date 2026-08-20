@@ -12,21 +12,19 @@
  */
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import {
-  buildInvoiceItems,
-  calculateCycle,
-  computeNextCycleStart,
-  determineNextCycleUnitPrice,
-} from "./billingEngine";
-import type { PlanCode } from "./plans";
+import { buildInvoiceItems, calculateCycle, determineNextCycleUnitPrice } from "./billingEngine";
+import { computeCycleStartAfter } from "./trial";
+import { getPlanPricing, type PlanCode } from "./plans";
 
 export type CloseCycleResult =
   | {
       ok: true;
-      invoiceId: string;
+      /** Nulo quando o ciclo fechado era o gratuito: brinde não gera fatura. */
+      invoiceId: string | null;
       totalAmountCents: number;
       nextCycleId: string | null;
       alreadyClosed: boolean;
+      freeTrial: boolean;
     }
   | { ok: false; error: string };
 
@@ -36,6 +34,8 @@ type CycleRow = {
   company_id: string;
   status: string;
   cycle_start: string;
+  cycle_end: string;
+  cycle_type: string | null;
   unit_price_cents: number;
   promotion_threshold_orders: number;
 };
@@ -98,7 +98,8 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
   const { data: cycle, error: cycleError } = await db
     .from("billing_cycles")
     .select(
-      "id, subscription_id, company_id, status, cycle_start, unit_price_cents, promotion_threshold_orders",
+      "id, subscription_id, company_id, status, cycle_start, cycle_end, cycle_type, " +
+        "unit_price_cents, promotion_threshold_orders",
     )
     .eq("id", cycleId)
     .maybeSingle();
@@ -107,10 +108,24 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
   if (!cycle) return { ok: false, error: "Ciclo não encontrado." };
 
   const typedCycle = cycle as CycleRow;
+  const isFreeTrial = typedCycle.cycle_type === "free_trial";
 
   // Ciclo já fechado nunca é recalculado — é isso que impede alteração
   // retroativa de valor.
   if (typedCycle.status !== "open" && typedCycle.status !== "calculating") {
+    // Ciclo gratuito fechado não tem fatura para reencontrar, e isso é o
+    // esperado: não se emite conta de R$ 0,00.
+    if (isFreeTrial) {
+      return {
+        ok: true,
+        invoiceId: null,
+        totalAmountCents: 0,
+        nextCycleId: null,
+        alreadyClosed: true,
+        freeTrial: true,
+      };
+    }
+
     const { data: existingRaw } = await db
       .from("invoices")
       .select("id, total_cents")
@@ -126,6 +141,7 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
           totalAmountCents: existing.total_cents,
           nextCycleId: null,
           alreadyClosed: true,
+          freeTrial: false,
         }
       : { ok: false, error: "Ciclo fechado sem fatura correspondente. Requer conferência manual." };
   }
@@ -155,6 +171,10 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
   });
   if (countError) return { ok: false, error: `Falha ao contar o consumo: ${countError.message}` };
   const billableOrderCount = Number(trueCount ?? 0);
+
+  if (isFreeTrial) {
+    return closeFreeTrialCycle(db, typedCycle, typedSub, planCode, billableOrderCount);
+  }
 
   // A taxa de cadastro é decidida por item de fatura já emitido, e não pelo
   // número do ciclo — um ciclo pode ser reprocessado, a taxa é uma só.
@@ -236,6 +256,7 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
         totalAmountCents: existing.total_cents,
         nextCycleId: null,
         alreadyClosed: true,
+        freeTrial: false,
       };
     }
     return {
@@ -264,7 +285,11 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
     planCode,
     qualifiedForNextCycle: totals.qualifiedForNextCycle,
   });
-  const nextStart = computeNextCycleStart(new Date(typedCycle.cycle_start));
+  const nextStart = computeCycleStartAfter({
+    cycleType: typedCycle.cycle_type,
+    cycleStart: new Date(typedCycle.cycle_start),
+    cycleEnd: new Date(typedCycle.cycle_end),
+  });
 
   let nextCycleId: string | null = null;
   if (typedSub.status === "active" || typedSub.status === "past_due") {
@@ -273,9 +298,12 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
       p_cycle_start: nextStart.toISOString(),
       p_unit_price_cents: nextUnitPrice,
       p_qualified_from_previous: totals.qualifiedForNextCycle,
+      p_cycle_type: "usage",
     });
     nextCycleId = (nextId as string | null) ?? null;
   }
+
+  await syncSubscriptionSnapshot(db, typedSub.id, nextCycleId);
 
   await db.from("subscription_events").insert({
     subscription_id: typedSub.id,
@@ -297,5 +325,149 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
     totalAmountCents: totals.totalAmountCents,
     nextCycleId,
     alreadyClosed: false,
+    freeTrial: false,
   };
+}
+
+/**
+ * Fecha o ciclo gratuito e começa o ciclo cobrado.
+ *
+ * O que NÃO acontece aqui é o mais importante: nenhuma fatura é emitida,
+ * nenhum valor é cobrado e o acesso não é cortado. O cliente termina os 30
+ * dias e simplesmente continua trabalhando — só que a partir daí os pedidos
+ * passam a contar para a conta que será apresentada no fim do ciclo seguinte.
+ *
+ * É como o restaurante que oferece a primeira semana de entregas por conta da
+ * casa: no oitavo dia ninguém tranca a porta do cliente, apenas a comanda
+ * passa a ser anotada.
+ */
+async function closeFreeTrialCycle(
+  db: AdminClient,
+  cycle: CycleRow,
+  subscription: SubscriptionRow,
+  planCode: PlanCode,
+  billableOrderCount: number,
+): Promise<CloseCycleResult> {
+  const now = new Date();
+
+  const { error: closeError } = await db
+    .from("billing_cycles")
+    .update({
+      status: "closed",
+      billable_order_count: billableOrderCount,
+      gross_usage_amount_cents: 0,
+      setup_fee_amount_cents: 0,
+      monthly_fee_amount_cents: 0,
+      discount_amount_cents: 0,
+      total_amount_cents: 0,
+      qualified_for_next_cycle: false,
+      closed_at: now.toISOString(),
+      updated_at: now.toISOString(),
+    })
+    .eq("id", cycle.id)
+    // Duas execuções simultâneas: só uma fecha.
+    .eq("status", cycle.status);
+
+  if (closeError) {
+    return { ok: false, error: `Falha ao fechar o período grátis: ${closeError.message}` };
+  }
+
+  // A assinatura deixa de ser "grátis" e passa a ser "ativa". A troca é feita
+  // aqui, no servidor, a partir da data gravada — e não por algo que a tela
+  // resolva sozinha.
+  await db
+    .from("subscriptions")
+    .update({ status: "active", updated_at: now.toISOString() })
+    .eq("id", subscription.id)
+    .eq("status", "free_trial");
+
+  await db.from("pizzerias").update({ subscription_status: "active" }).eq("id", cycle.company_id);
+
+  // O ciclo cobrado começa no instante seguinte ao fim do grátis: nenhum dia
+  // fica sem ciclo, e nenhum pedido fica sem lugar para ser contado.
+  const nextStart = computeCycleStartAfter({
+    cycleType: cycle.cycle_type,
+    cycleStart: new Date(cycle.cycle_start),
+    cycleEnd: new Date(cycle.cycle_end),
+  });
+
+  const { data: nextId } = await db.rpc("open_billing_cycle", {
+    p_subscription_id: subscription.id,
+    p_cycle_start: nextStart.toISOString(),
+    p_unit_price_cents: getPlanPricing(planCode).defaultOrderUnitPriceCents,
+    p_qualified_from_previous: false,
+    p_cycle_type: "usage",
+  });
+  const nextCycleId = (nextId as string | null) ?? null;
+
+  const firstChargeAt = await syncSubscriptionSnapshot(db, subscription.id, nextCycleId);
+
+  await db.from("subscription_events").insert({
+    subscription_id: subscription.id,
+    company_id: cycle.company_id,
+    event_type: "free_trial_ended",
+    previous_status: "free_trial",
+    new_status: "active",
+    reason: "Período grátis concluído; ciclo cobrado iniciado",
+    metadata: {
+      billing_cycle_id: cycle.id,
+      next_billing_cycle_id: nextCycleId,
+      orders_during_trial: billableOrderCount,
+      first_charge_at: firstChargeAt,
+    },
+  });
+
+  return {
+    ok: true,
+    invoiceId: null,
+    totalAmountCents: 0,
+    nextCycleId,
+    alreadyClosed: false,
+    freeTrial: true,
+  };
+}
+
+/**
+ * Copia para a assinatura os dados do ciclo recém-aberto.
+ *
+ * A tela do cliente lê uma linha só em vez de somar eventos toda vez que o
+ * painel abre. `first_charge_at` é a data em que a conta será apresentada —
+ * o fechamento do ciclo cobrado, nunca antes.
+ *
+ * Devolve essa data, para quem chamou registrar no histórico.
+ */
+async function syncSubscriptionSnapshot(
+  db: AdminClient,
+  subscriptionId: string,
+  nextCycleId: string | null,
+): Promise<string | null> {
+  if (!nextCycleId) return null;
+
+  const { data: rowRaw } = await db
+    .from("billing_cycles")
+    .select("cycle_start, cycle_end, unit_price_cents")
+    .eq("id", nextCycleId)
+    .maybeSingle();
+
+  const row = rowRaw as {
+    cycle_start: string;
+    cycle_end: string;
+    unit_price_cents: number;
+  } | null;
+  if (!row) return null;
+
+  await db
+    .from("subscriptions")
+    .update({
+      billing_cycle_started_at: row.cycle_start,
+      billing_cycle_ends_at: row.cycle_end,
+      first_charge_at: row.cycle_end,
+      current_order_rate: row.unit_price_cents,
+      total_billable_orders: 0,
+      amount_due: 0,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", subscriptionId);
+
+  return row.cycle_end;
 }

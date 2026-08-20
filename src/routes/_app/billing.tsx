@@ -1,6 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
-import { AlertTriangle, ArrowUpRight, Check, Loader2, Receipt } from "lucide-react";
+import {
+  AlertTriangle,
+  ArrowUpRight,
+  Check,
+  Gift,
+  Loader2,
+  Receipt,
+  ShieldCheck,
+} from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -16,6 +24,14 @@ import {
   type SubscriptionStatus,
 } from "@/lib/billing/subscriptionStatus";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
+import {
+  SUBSCRIPTION_PHASE_LABELS,
+  TRIAL_DURATION_DAYS,
+  calculateTrialProgress,
+  deriveSubscriptionPhase,
+  type SubscriptionPhase,
+  type TrialProgress,
+} from "@/lib/billing/trial";
 import { FEATURE_LABELS, featuresForPlan } from "@/lib/planPermissions";
 
 export const Route = createFileRoute("/_app/billing")({ component: BillingPage });
@@ -28,9 +44,14 @@ type Snapshot = {
   planCode: PlanCode;
   planName: string;
   status: SubscriptionStatus;
+  phase: SubscriptionPhase;
   activatedAt: string | null;
   cycleStart: string | null;
   cycleEnd: string | null;
+  /** Quando a primeira conta será apresentada. Nunca antes disso. */
+  firstChargeAt: string | null;
+  trialEndsAt: string | null;
+  trial: TrialProgress | null;
   progress: CycleProgress | null;
   invoices: InvoiceRow[];
 };
@@ -101,8 +122,8 @@ function BillingPage() {
     const { data, error } = await db
       .from("subscriptions")
       .select(
-        "id, status, activated_at, plans(code, name), " +
-          "billing_cycles!subscriptions_current_cycle_fkey(cycle_start, cycle_end, unit_price_cents, billable_order_count, promotion_threshold_orders, qualified_from_previous_cycle)",
+        "id, status, activated_at, trial_started_at, trial_ends_at, first_charge_at, plans(code, name), " +
+          "billing_cycles!subscriptions_current_cycle_fkey(cycle_start, cycle_end, cycle_type, unit_price_cents, billable_order_count, promotion_threshold_orders, qualified_from_previous_cycle)",
       )
       .eq("company_id", company.id)
       .maybeSingle();
@@ -123,10 +144,14 @@ function BillingPage() {
       id: string;
       status: string;
       activated_at: string | null;
+      trial_started_at: string | null;
+      trial_ends_at: string | null;
+      first_charge_at: string | null;
       plans: { code: string; name: string } | null;
       billing_cycles: {
         cycle_start: string;
         cycle_end: string;
+        cycle_type: string | null;
         unit_price_cents: number;
         billable_order_count: number;
         promotion_threshold_orders: number;
@@ -166,14 +191,33 @@ function BillingPage() {
       }))
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
+    // Quantos ciclos cobrados já fecharam: é o que separa "primeiro ciclo
+    // depois do grátis" de "cliente em regime".
+    const closedUsageCycles = invoices.filter((i) => i.status !== "canceled").length;
+
     setSnapshot({
       companyName: company.name,
       planCode,
       planName: row.plans?.name ?? PLAN_PRICING[planCode].name,
       status: row.status as SubscriptionStatus,
+      phase: deriveSubscriptionPhase({
+        status: row.status,
+        cycleType: cycle?.cycle_type,
+        closedUsageCycles,
+      }),
       activatedAt: row.activated_at,
       cycleStart: cycle?.cycle_start ?? null,
       cycleEnd: cycle?.cycle_end ?? null,
+      firstChargeAt: row.first_charge_at ?? cycle?.cycle_end ?? null,
+      trialEndsAt: row.trial_ends_at,
+      trial:
+        row.trial_started_at && row.trial_ends_at
+          ? calculateTrialProgress({
+              trialStart: new Date(row.trial_started_at),
+              trialEnd: new Date(row.trial_ends_at),
+              now: new Date(),
+            })
+          : null,
       progress: cycle
         ? calculateCycleProgress(
             {
@@ -243,19 +287,7 @@ function BillingPage() {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 md:p-8">
-      <SectionHeader
-        title="Plano e cobrança"
-        description={snapshot.companyName}
-        action={
-          isUsageBased ? (
-            <Button asChild variant="outline" className="h-11 gap-2">
-              <a href="/plans" target="_blank" rel="noreferrer">
-                Conhecer o PREMIUM <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-              </a>
-            </Button>
-          ) : undefined
-        }
-      />
+      <SectionHeader title="Plano e cobrança" description={snapshot.companyName} />
 
       <Card>
         <CardContent className="space-y-3 p-4">
@@ -264,8 +296,17 @@ function BillingPage() {
               <p className="text-xs uppercase tracking-wide text-muted-foreground">Plano atual</p>
               <p className="text-xl font-black">{snapshot.planName}</p>
             </div>
-            <Badge variant="outline" className="font-bold">
-              {SUBSCRIPTION_STATUS_LABELS[snapshot.status] ?? snapshot.status}
+            <Badge
+              variant="outline"
+              className={`font-bold ${
+                snapshot.phase === "free_trial"
+                  ? "border-primary/40 bg-primary/10 text-primary"
+                  : ""
+              }`}
+            >
+              {SUBSCRIPTION_PHASE_LABELS[snapshot.phase] ??
+                SUBSCRIPTION_STATUS_LABELS[snapshot.status] ??
+                snapshot.status}
             </Badge>
           </div>
 
@@ -296,8 +337,92 @@ function BillingPage() {
         </CardContent>
       </Card>
 
-      {/* Progresso da meta: só faz sentido em plano por uso. */}
-      {isUsageBased && snapshot.progress && (
+      {/* Período grátis em andamento. */}
+      {snapshot.phase === "free_trial" && snapshot.trial && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="space-y-4 p-4">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <p className="flex items-center gap-2 text-sm font-bold">
+                <Gift className="h-4 w-4 text-primary" aria-hidden="true" />
+                <span aria-hidden="true">🎁</span> Você está no período grátis
+              </p>
+              <p className="text-xl font-black text-primary">{snapshot.trial.message}</p>
+            </div>
+
+            <div
+              className="h-3 overflow-hidden rounded-full bg-muted"
+              role="progressbar"
+              aria-valuenow={snapshot.trial.daysElapsed}
+              aria-valuemin={0}
+              aria-valuemax={snapshot.trial.durationDays}
+              aria-label={`Dia ${snapshot.trial.daysElapsed} de ${snapshot.trial.durationDays} do período grátis`}
+            >
+              <div
+                className="h-full rounded-full bg-primary transition-[width] duration-500"
+                style={{ width: `${snapshot.trial.percent}%` }}
+              />
+            </div>
+
+            <dl className="grid grid-cols-2 gap-3 border-t border-primary/20 pt-3 text-xs">
+              <div>
+                <dt className="text-muted-foreground">Termina em</dt>
+                <dd className="font-bold">{formatDate(snapshot.trialEndsAt)}</dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Cobrado até lá</dt>
+                <dd className="font-bold text-primary">{formatCents(0)}</dd>
+              </div>
+              {isUsageBased && (
+                <div>
+                  <dt className="text-muted-foreground">Pedidos válidos já feitos</dt>
+                  <dd className="font-bold">{snapshot.progress?.billableOrderCount ?? 0}</dd>
+                </div>
+              )}
+              <div>
+                <dt className="text-muted-foreground">Depois disso</dt>
+                <dd className="font-bold">
+                  {isUsageBased
+                    ? `${formatCents(pricing.defaultOrderUnitPriceCents)} por pedido`
+                    : `${formatCents(pricing.monthlyFeeCents)} por mês`}
+                </dd>
+              </div>
+            </dl>
+
+            <p className="rounded-lg bg-background/60 p-3 text-sm text-muted-foreground">
+              Nenhum valor é cobrado durante os {TRIAL_DURATION_DAYS} dias, e os pedidos deste
+              período não entram em conta nenhuma. Quando o período terminar, o sistema continua
+              funcionando normalmente — começa apenas um ciclo em que os pedidos passam a ser
+              contados, com a conta fechada só no fim dele.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Primeiro ciclo cobrado: o cliente ainda não viu fatura nenhuma e
+          precisa saber exatamente quando a primeira chega. */}
+      {snapshot.phase === "usage_cycle" && (
+        <Card className="border-border">
+          <CardContent className="space-y-2 p-4 text-sm">
+            <h2 className="font-bold">Seu período grátis terminou — e nada mudou na operação.</h2>
+            <p className="text-muted-foreground">
+              O ciclo cobrado começou em {formatDate(snapshot.cycleStart)} e vai até{" "}
+              {formatDate(snapshot.cycleEnd)}. Faltam{" "}
+              <strong className="text-foreground">{snapshot.progress?.daysRemaining ?? 0}</strong>{" "}
+              dias para o fechamento.
+            </p>
+            <p className="text-muted-foreground">
+              Sua primeira cobrança é gerada em{" "}
+              <strong className="text-foreground">{formatDate(snapshot.firstChargeAt)}</strong>, com
+              base nos pedidos deste ciclo. Até lá nada é debitado.
+            </p>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Progresso da meta: só faz sentido em plano por uso, e só depois do
+          período grátis. Mostrar "estimativa deste ciclo" durante o trial
+          exibiria um valor a pagar onde não existe valor a pagar. */}
+      {isUsageBased && snapshot.progress && snapshot.phase !== "free_trial" && (
         <Card>
           <CardContent className="space-y-4 p-4">
             <div className="flex flex-wrap items-end justify-between gap-2">
@@ -381,7 +506,7 @@ function BillingPage() {
         </Card>
       )}
 
-      {!isUsageBased && snapshot.progress && (
+      {!isUsageBased && snapshot.progress && snapshot.phase !== "free_trial" && (
         <Card>
           <CardContent className="space-y-2 p-4 text-sm">
             <p className="font-semibold">
@@ -409,21 +534,58 @@ function BillingPage() {
               </li>
             ))}
           </ul>
-
-          {missingFeatures.length > 0 && (
-            <div className="rounded-lg border border-primary/30 bg-primary/5 p-3 text-sm">
-              <p className="font-semibold">
-                Disponível no PREMIUM: {missingFeatures.map((f) => FEATURE_LABELS[f]).join(", ")}.
-              </p>
-              <Button asChild variant="outline" size="sm" className="mt-2 h-10">
-                <a href="/plans" target="_blank" rel="noreferrer">
-                  Fazer upgrade <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-                </a>
-              </Button>
-            </div>
-          )}
         </CardContent>
       </Card>
+
+      {/* Área de upgrade. O PREMIUM saiu da porta de entrada e passou a morar
+          aqui: quem já usa o sistema sabe o que está comprando, quem acabou de
+          chegar não precisa escolher plano antes de ver a ferramenta. */}
+      {missingFeatures.length > 0 && (
+        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-transparent">
+          <CardContent className="space-y-4 p-4">
+            <div>
+              <h2 className="text-lg font-black">Conheça o FlyControl Premium</h2>
+              <p className="text-sm text-muted-foreground">
+                Mensalidade fixa de {formatCents(PLAN_PRICING.premium.monthlyFeeCents)}, sem
+                cobrança por pedido — o valor não muda em mês de movimento alto.
+              </p>
+            </div>
+
+            <ul className="grid gap-1.5 text-sm sm:grid-cols-2">
+              {missingFeatures.map((feature) => (
+                <li key={feature} className="flex items-center gap-2">
+                  <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                  {FEATURE_LABELS[feature]}
+                </li>
+              ))}
+            </ul>
+
+            {/* Medo de perder dados é o que trava upgrade. Dizer o que é
+                preservado, item por item, é mais convincente que "migração
+                sem perdas". */}
+            <div className="rounded-lg border border-border bg-background/70 p-3 text-sm">
+              <p className="flex items-center gap-2 font-semibold">
+                <ShieldCheck
+                  className="h-4 w-4 text-emerald-600 dark:text-emerald-400"
+                  aria-hidden="true"
+                />
+                Ao trocar de plano, nada é perdido
+              </p>
+              <p className="mt-1 text-muted-foreground">
+                Estabelecimento, produtos, pedidos, clientes, configurações, histórico e dados
+                financeiros continuam exatamente como estão. A troca muda o que você pode usar e
+                como é cobrado — não o que você já construiu.
+              </p>
+            </div>
+
+            <Button asChild className="h-11 w-full gap-2 sm:w-auto">
+              <a href="/plans" target="_blank" rel="noreferrer">
+                Ver o que muda no PREMIUM <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+              </a>
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="space-y-3 p-4">
