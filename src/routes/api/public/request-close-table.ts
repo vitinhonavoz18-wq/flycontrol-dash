@@ -2,11 +2,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 
 const cors = (request?: Request) => ({
+  // O navegador NÃO deve mandar cookie nem sessão junto: estas rotas são
+  // abertas de propósito (o site de pedidos chama de qualquer domínio) e se
+  // identificam pela chave da loja ou pelo segredo da comanda, nunca pelo
+  // cookie de quem está com a aba aberta. Devolver a origem de quem chamou
+  // JUNTO com "pode mandar credencial" seria o mesmo que o porteiro aceitar
+  // qualquer pessoa que diga "sou eu" e ainda entregar a chave.
   "Access-Control-Allow-Origin": request?.headers.get("origin") || "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key, accept",
   "Access-Control-Allow-Methods": "POST, OPTIONS",
   "Access-Control-Max-Age": "86400",
-  "Access-Control-Allow-Credentials": "true",
   "Content-Type": "application/json",
 });
 

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { isUnsafeOutboundWebhookUrl } from "@/lib/server/urlSafety";
 
 export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
   server: {
@@ -29,6 +30,20 @@ export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
 
         if (!pz.fiqon_webhook_url) {
           return new Response(JSON.stringify({ error: "Webhook URL not configured" }), { status: 400 });
+        }
+
+        // O endereço é digitado pelo dono da loja e este servidor vai batê-lo.
+        // Sem esta trava, um endereço apontando para dentro da nossa própria
+        // rede faria o servidor buscar coisa nossa e devolver o conteúdo de
+        // volta na tela de quem pediu.
+        if (isUnsafeOutboundWebhookUrl(pz.fiqon_webhook_url)) {
+          return new Response(
+            JSON.stringify({
+              error:
+                "Endereço de webhook não permitido. Use um endereço https público (não vale endereço interno da rede).",
+            }),
+            { status: 400 },
+          );
         }
 
         const payload = {
@@ -74,10 +89,13 @@ export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
             error_message: isSuccess ? null : `Status ${response.status}: ${respText.substring(0, 100)}`
           });
 
-          return new Response(JSON.stringify({ 
-            success: isSuccess, 
+          // Devolve só um trecho: a resposta inteira de um servidor de fora
+          // pode trazer qualquer coisa, e esta tela só precisa mostrar se o
+          // aviso chegou.
+          return new Response(JSON.stringify({
+            success: isSuccess,
             status: response.status,
-            response: respText 
+            response: respText.slice(0, 300),
           }), { status: 200 });
         } catch (err: any) {
           await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
@@ -87,7 +105,8 @@ export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
             success: false,
             error_message: err.message
           });
-          return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+          console.error("[FIQON/test] falha no envio:", err?.message);
+          return new Response(JSON.stringify({ error: "Falha ao enviar o teste para o webhook." }), { status: 500 });
         }
       }
     }

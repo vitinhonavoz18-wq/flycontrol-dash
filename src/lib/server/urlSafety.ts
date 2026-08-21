@@ -66,3 +66,32 @@ export function isUnsafeMenuSyncUrl(rawUrl: string): boolean {
 
   return !isAllowedHost;
 }
+
+/**
+ * `true` quando a URL não pode ser chamada como webhook de saída (FIQON).
+ *
+ * Diferente da sincronização de cardápio, aqui o destino é escolhido pelo
+ * dono do restaurante e pode ser qualquer serviço da internet — não dá para
+ * ter uma lista fechada de endereços permitidos. O que dá, e é o que importa,
+ * é impedir que o endereço aponte para dentro da nossa própria rede: sem
+ * isso, um endereço como `http://127.0.0.1/...` faz o nosso servidor bater
+ * na porta de casa em nome de quem pediu — o mesmo truque de mandar o
+ * entregador buscar algo no cofre do restaurante em vez de no fornecedor.
+ */
+export function isUnsafeOutboundWebhookUrl(rawUrl: string): boolean {
+  let parsed: URL;
+  try {
+    parsed = new URL(rawUrl);
+  } catch {
+    return true;
+  }
+
+  // Só https: em http o aviso (com dados do pedido e do cliente) viajaria
+  // aberto, legível por qualquer ponto da rede no caminho.
+  if (parsed.protocol !== "https:") return true;
+
+  const host = parsed.hostname.toLowerCase();
+  if (!host || !host.includes(".")) return true;
+
+  return isPrivateOrInternalHost(host);
+}

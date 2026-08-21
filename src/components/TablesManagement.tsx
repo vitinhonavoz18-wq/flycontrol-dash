@@ -446,9 +446,17 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     const loadingToast = toast.loading("Sincronizando pedidos da mesa...");
 
     try {
+      // A rota agora confere quem está pedindo, então o pedido precisa levar
+      // junto a credencial de quem está logado — como mostrar o crachá na
+      // portaria em vez de só dizer o número da mesa.
+      const { data: sessionData } = await supabase.auth.getSession();
+      const accessToken = sessionData.session?.access_token;
       const res = await fetch("/api/sync-table-sessions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({ tenant_id: tenantId }),
       });
       const data = await res.json().catch(() => ({}));

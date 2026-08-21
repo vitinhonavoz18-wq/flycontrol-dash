@@ -1,19 +1,67 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { isUnsafeOutboundWebhookUrl } from "@/lib/server/urlSafety";
 
 // Função auxiliar para gerar headers CORS robustos
 const getCorsHeaders = (request?: Request) => {
   const origin = request?.headers.get("origin") || "*";
+  // O navegador NÃO deve mandar cookie nem sessão junto: estas rotas são
+  // abertas de propósito (o site de pedidos chama de qualquer domínio) e se
+  // identificam pela chave da loja ou pelo segredo da comanda, nunca pelo
+  // cookie de quem está com a aba aberta. Devolver a origem de quem chamou
+  // JUNTO com "pode mandar credencial" seria o mesmo que o porteiro aceitar
+  // qualquer pessoa que diga "sou eu" e ainda entregar a chave.
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Headers":
       "authorization, x-client-info, apikey, content-type, x-api-key, accept, x-idempotency-key",
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Max-Age": "86400",
-    "Access-Control-Allow-Credentials": "true",
     "Content-Type": "application/json",
   };
 };
+
+/**
+ * Cópia do pedido sem os campos que não podem ir para o log.
+ *
+ * O pedido aceita a chave de API dentro do próprio corpo. Sem esta limpeza,
+ * essa chave — que vale como a senha da loja para lançar pedidos — ia
+ * inteira para o log do servidor e para a tabela de registros. É como anotar
+ * a senha do cofre no caderno de recados.
+ *
+ * Telefone e endereço do cliente também saem: registro de erro não é lugar
+ * de guardar dado pessoal de quem pediu a pizza.
+ */
+function redactOrderPayload(payload: any): any {
+  if (!payload || typeof payload !== "object") return payload;
+  if (Array.isArray(payload)) return payload.map(redactOrderPayload);
+
+  const SENSITIVE = new Set([
+    "api_key",
+    "apikey",
+    "authorization",
+    "token",
+    "table_token",
+    "customer_token",
+    "password",
+    "customer_phone",
+    "phone",
+    "customer_address",
+    "address",
+  ]);
+
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(payload as Record<string, unknown>)) {
+    if (SENSITIVE.has(key.toLowerCase())) {
+      out[key] = "[oculto]";
+    } else if (value && typeof value === "object") {
+      out[key] = redactOrderPayload(value);
+    } else {
+      out[key] = value;
+    }
+  }
+  return out;
+}
 
 export const Route = createFileRoute("/api/orders")({
   server: {
@@ -130,7 +178,7 @@ export const Route = createFileRoute("/api/orders")({
             const bodyText = await request.clone().text();
             body = JSON.parse(bodyText);
 
-            console.log("ORDER_RAW_PAYLOAD:", JSON.stringify(body));
+            console.log("ORDER_RAW_PAYLOAD:", JSON.stringify(redactOrderPayload(body)));
           } catch (err) {
             console.error("❌ [API/Orders] JSON inválido");
             console.log("ORDER_RESPONSE_SENT: error (invalid_json)");
@@ -188,7 +236,6 @@ export const Route = createFileRoute("/api/orders")({
                 success: false,
                 error: "db_error",
                 message: "Erro de banco de dados interno",
-                details: pErr.message,
               }),
               { status: 500, headers: cors },
             );
@@ -488,7 +535,7 @@ export const Route = createFileRoute("/api/orders")({
                       JSON.stringify({
                         success: false,
                         error: "session_adopt_failed",
-                        message: uErr.message,
+                        message: "Não foi possível vincular a comanda desta mesa.",
                       }),
                       { status: 409, headers: cors },
                     );
@@ -532,7 +579,7 @@ export const Route = createFileRoute("/api/orders")({
                       JSON.stringify({
                         success: false,
                         error: "session_create_failed",
-                        message: iErr.message,
+                        message: "Não foi possível abrir a comanda desta mesa.",
                       }),
                       { status: 500, headers: cors },
                     );
@@ -606,7 +653,7 @@ export const Route = createFileRoute("/api/orders")({
           };
 
           console.log("ORDER_SAVE_STARTED");
-          console.log("ORDER_INSERT_PAYLOAD:", JSON.stringify(orderToInsert));
+          console.log("ORDER_INSERT_PAYLOAD:", JSON.stringify(redactOrderPayload(orderToInsert)));
 
           const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
             .insert(orderToInsert)
@@ -623,7 +670,6 @@ export const Route = createFileRoute("/api/orders")({
                 success: false,
                 error: "save_error",
                 message: "Erro ao salvar pedido no FlyControl",
-                details: orderError.message,
               }),
               { status: 500, headers: cors },
             );
@@ -775,7 +821,11 @@ export const Route = createFileRoute("/api/orders")({
           console.log("ORDER_RESPONSE_SENT: success");
 
           // 4. Integração FIQON (Assíncrona/Não-bloqueante para o cliente)
-          if (pz.fiqon_enabled && pz.fiqon_webhook_url) {
+          if (
+            pz.fiqon_enabled &&
+            pz.fiqon_webhook_url &&
+            !isUnsafeOutboundWebhookUrl(pz.fiqon_webhook_url)
+          ) {
             console.log("🚀 [API/Orders] Disparando integração FIQON...");
             // Usamos uma IIFE para não aguardar a resposta da FIQON antes de responder ao cliente
             (async () => {
@@ -861,7 +911,7 @@ export const Route = createFileRoute("/api/orders")({
           try {
             await supabaseAdmin.from("external_order_logs").insert({
               api_key_partial: "N/A",
-              payload: typeof body !== "undefined" ? body : null,
+              payload: typeof body !== "undefined" ? redactOrderPayload(body) : null,
               status_code: 500,
               error_message: `Erro não tratado: ${err?.message || String(err)}`,
             });
@@ -892,7 +942,7 @@ async function logExternalOrder(
     const partialKey = apiKey ? `${apiKey.substring(0, 4)}***${apiKey.slice(-4)}` : "N/A";
     await supabaseAdmin.from("external_order_logs").insert({
       api_key_partial: partialKey,
-      payload: payload,
+      payload: redactOrderPayload(payload),
       status_code: statusCode,
       error_message: errorMessage,
     });
