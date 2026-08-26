@@ -1,8 +1,9 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bell, Printer, BarChart3, Lock, Zap, ChefHat, Check } from "lucide-react";
-import { Hero } from "@/components/hero/Hero";
+import { Comanda } from "@/components/landing/Comanda";
 import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING } from "@/lib/billing/plans";
+import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial";
+import logo from "@/assets/flycontrol-logo.png";
 
 export const Route = createFileRoute("/")({
   component: Landing,
@@ -11,207 +12,329 @@ export const Route = createFileRoute("/")({
 const premium = PLAN_PRICING.premium;
 const cents = PLAN_PRICING.cents;
 
+/**
+ * Página inicial do FlyControl.
+ *
+ * Direção: a cozinha à noite. O fundo é preto quente (não azulado), e a única
+ * coisa clara na tela é a comanda saindo da impressora — que é exatamente o
+ * que se vê numa cozinha às 19h40. O laranja da marca deixou de ser degradê
+ * de enfeite e virou sinal: só aparece onde significa alguma coisa.
+ *
+ * A página segue UM pedido, com os horários reais de uma noite. A sequência é
+ * verdadeira — o pedido entra, imprime, sai, e vira dinheiro no fim —, então
+ * numerar por horário informa em vez de decorar.
+ */
 function Landing() {
   return (
-    <div className="bg-[#040406] text-white">
-      {/* ── HERO ─────────────────────────────────────────── */}
-      <Hero />
+    <div className="font-corpo" style={{ background: "#0B0908", color: "#F4EFE4" }}>
+      <Cabecalho />
+      <Abertura />
+      <UmaNoite />
+      <Precos />
+      <Fechamento />
+      <Rodape />
+    </div>
+  );
+}
 
-      {/* ── FEATURES ─────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <div className="mb-14 text-center">
-          <span className="mb-3 inline-block rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
-            Tudo que seu restaurante precisa
-          </span>
-          <h2 className="mt-4 text-3xl font-black tracking-tight md:text-4xl">
-            Uma plataforma. Zero complicação.
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-base text-white/40">
-            Cada funcionalidade foi pensada para o dia a dia real de quem trabalha com food service.
-          </p>
+function Cabecalho() {
+  return (
+    <header className="safe-x sticky top-0 z-40 border-b border-white/5 backdrop-blur-md">
+      <div
+        className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3"
+        style={{ background: "transparent" }}
+      >
+        <img src={logo} alt="FlyControl" className="h-10 w-auto md:h-12" />
+        <nav className="flex items-center gap-1">
+          <Link
+            to="/login"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-white/60 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
+          >
+            Entrar
+          </Link>
+          <Link
+            to="/signup"
+            search={{ plan: undefined, google: undefined }}
+            className="rounded-lg bg-[#FF5A00] px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-[#ff7a2b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
+          >
+            Criar conta
+          </Link>
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function Abertura() {
+  return (
+    <section className="safe-x mx-auto grid max-w-6xl items-center gap-12 px-5 pb-20 pt-14 md:grid-cols-[1.1fr_auto] md:gap-16 md:pb-28 md:pt-20">
+      <div>
+        {/* Sem rótulo de horário aqui: a comanda ao lado já mostra 19:42, e a
+            mesma informação duas vezes no mesmo campo de visão não informa —
+            só ocupa. O relógio como estrutura começa na seção seguinte. */}
+        <h1 className="font-display text-[clamp(2.6rem,7.5vw,4.6rem)]">
+          O pedido entra.
+          <br />
+          A cozinha imprime.
+          <br />
+          <span style={{ color: "#FF5A00" }}>Você não corre atrás</span>
+          <br />
+          de nada.
+        </h1>
+
+        <p className="mt-6 max-w-md text-[17px] leading-relaxed text-white/55">
+          FlyControl cuida da noite inteira do seu restaurante: o pedido chega, a comanda sai, o
+          cliente acompanha e o caixa fecha sozinho no fim.
+        </p>
+
+        <p className="mt-5 font-comanda text-sm tracking-[0.06em] text-white/70">
+          Os primeiros <span className="text-[#FF5A00]">{TRIAL_DURATION_DAYS} dias</span> são por
+          nossa conta.
+        </p>
+
+        <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+          <Link
+            to="/signup"
+            search={{ plan: undefined, google: undefined }}
+            className="rounded-xl bg-[#FF5A00] px-7 py-3.5 text-center text-sm font-bold text-black transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
+          >
+            Criar minha conta
+          </Link>
+          <Link
+            to="/plans"
+            className="rounded-xl border border-white/12 px-7 py-3.5 text-center text-sm font-semibold text-white/70 transition-colors hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
+          >
+            Ver os planos
+          </Link>
         </div>
+      </div>
 
-        <div className="grid gap-4 md:grid-cols-3">
-          {[
-            {
-              icon: Bell,
-              title: "O pedido chega e você já sabe",
-              desc: "Assim que o cliente finaliza o pedido, toca um alerta sonoro e aparece na tela. Ninguém fica esperando por engano, ninguém perde pedido no meio da correria.",
-            },
-            {
-              icon: Printer,
-              title: "Comanda pronta pra cozinha",
-              desc: "Um toque e a comanda sai impressa, organizada, fácil de ler. Sem letra torta, sem confusão de quem pediu o quê.",
-            },
-            {
-              icon: BarChart3,
-              title: "Quanto você vendeu, sem precisar somar nada",
-              desc: "Veja o faturamento do dia, o valor médio de cada pedido e os horários de mais movimento — tudo pronto, sem precisar abrir planilha.",
-            },
-            {
-              icon: Lock,
-              title: "Cada loja só enxerga a própria loja",
-              desc: "Se você tem mais de um estabelecimento no sistema, um nunca vê os pedidos, os clientes ou o faturamento do outro — é como se cada um tivesse seu próprio cofre.",
-            },
-            {
-              icon: ChefHat,
-              title: "O cliente acompanha cada etapa",
-              desc: "Novo, preparando, saiu para entrega, entregue — o cliente vê em que pé está o pedido dele, sem precisar ligar perguntando.",
-            },
-            {
-              icon: Zap,
-              title: "Seu site de pedidos já conversa com o painel",
-              desc: "Já tem um site de pedidos? O pedido cai direto aqui, na hora, sem ninguém copiar nada à mão de um lugar pro outro.",
-            },
-          ].map((f) => (
-            <div
-              key={f.title}
-              className="group rounded-2xl border border-white/6 bg-white/3 p-6 backdrop-blur transition-all duration-300 hover:border-primary/30 hover:bg-white/5 hover:shadow-[0_0_40px_-12px_rgba(255,90,0,0.25)]"
+      <div className="flex justify-center md:justify-end">
+        <Comanda />
+      </div>
+    </section>
+  );
+}
+
+/** As quatro batidas de um pedido. Horários reais, não números decorativos. */
+const NOITE = [
+  {
+    hora: "19:42",
+    titulo: "O pedido chega e você já sabe",
+    texto:
+      "Toca um alerta e o pedido aparece na tela. Ninguém fica esperando por engano, ninguém perde pedido no meio da correria.",
+  },
+  {
+    hora: "19:43",
+    titulo: "A comanda sai pronta pra cozinha",
+    texto:
+      "Um toque e a comanda sai impressa, organizada, fácil de ler. Sem letra torta, sem confusão de quem pediu o quê.",
+  },
+  {
+    hora: "19:47",
+    titulo: "O cliente acompanha sem ligar",
+    texto:
+      "Novo, preparando, saiu para entrega, entregue. Ele vê em que pé está o pedido dele — e para de ligar perguntando.",
+  },
+  {
+    hora: "23:58",
+    titulo: "O caixa fecha sem você somar nada",
+    texto:
+      "Faturamento do dia, valor médio por pedido e os horários de mais movimento, prontos. Sem abrir planilha.",
+  },
+];
+
+function UmaNoite() {
+  return (
+    <section className="safe-x border-t border-white/5 px-5 py-20 md:py-28">
+      <div className="mx-auto max-w-6xl">
+        <h2 className="font-display max-w-lg text-[clamp(1.9rem,4.5vw,3rem)]">
+          Uma noite no seu restaurante
+        </h2>
+        <p className="mt-4 max-w-md text-white/50">
+          Do primeiro pedido ao fechamento do caixa, sem ninguém copiando nada à mão.
+        </p>
+
+        <ol className="mt-14 space-y-0">
+          {NOITE.map((passo) => (
+            <li
+              key={passo.hora}
+              className="grid gap-2 border-t border-white/8 py-7 md:grid-cols-[7rem_1fr_1.2fr] md:gap-8 md:py-9"
             >
-              <div
-                className="mb-4 grid h-10 w-10 place-items-center rounded-xl"
-                style={{
-                  background: "linear-gradient(135deg, rgba(255,90,0,0.2), rgba(255,150,0,0.1))",
-                }}
-              >
-                <f.icon className="h-5 w-5 text-primary" />
-              </div>
-              <h3 className="font-bold text-white">{f.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-white/40">{f.desc}</p>
-            </div>
+              <span className="font-comanda text-sm tracking-[0.2em] text-[#FF5A00]">
+                {passo.hora}
+              </span>
+              <h3 className="font-display text-[1.35rem] leading-tight md:text-[1.5rem]">
+                {passo.titulo}
+              </h3>
+              <p className="max-w-md leading-relaxed text-white/50">{passo.texto}</p>
+            </li>
           ))}
-        </div>
-      </section>
+        </ol>
 
-      {/* ── PREÇOS ───────────────────────────────────────── */}
-      <section className="mx-auto max-w-6xl px-6 py-24">
-        <div className="mb-14 text-center">
-          <span className="mb-3 inline-block rounded-full border border-primary/30 bg-primary/10 px-4 py-1 text-xs font-semibold uppercase tracking-widest text-primary">
-            Sem letra miúda
-          </span>
-          <h2 className="mt-4 text-3xl font-black tracking-tight md:text-4xl">Quanto custa</h2>
-          <p className="mx-auto mt-3 max-w-xl text-base text-white/40">
-            Dois jeitos de pagar. Escolha o que combina com o tamanho da sua operação hoje — dá para
-            trocar depois.
-          </p>
-        </div>
+        <p className="mt-10 max-w-2xl border-t border-white/8 pt-7 text-white/50">
+          E se você tem mais de uma loja no sistema, uma nunca enxerga os pedidos, os clientes ou o
+          faturamento da outra — cada uma tem o próprio cofre.
+        </p>
+      </div>
+    </section>
+  );
+}
 
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border border-primary/30 bg-white/3 p-8 backdrop-blur">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h3 className="text-lg font-bold text-white">{premium.name}</h3>
-              <span className="rounded-full bg-primary px-3 py-1 text-xs font-bold text-white">
-                Plano completo
-              </span>
-            </div>
-            <div className="mb-4">
-              <span className="text-4xl font-black text-primary">
-                {formatCents(premium.monthlyFeeCents)}
-              </span>
-              <span className="text-sm text-white/40">/mês, valor fixo</span>
-            </div>
-            <p className="mb-6 text-sm text-white/50">
-              Você sabe exatamente quanto vai pagar todo mês, não importa quantos pedidos entrarem.
-              Ideal para quem já tem um movimento constante e quer controle total: mesas, garçons e
-              comissões inclusos.
-            </p>
-            <ul className="space-y-2 text-sm text-white/70">
-              {[
-                "Pedidos sem cobrança por unidade",
-                "Mesas, garçons e comissões",
-                "Cardápio e clientes",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
+function Precos() {
+  return (
+    <section className="safe-x border-t border-white/5 px-5 py-20 md:py-28">
+      <div className="mx-auto max-w-6xl">
+        <h2 className="font-display text-[clamp(1.9rem,4.5vw,3rem)]">Quanto custa</h2>
+        <p className="mt-4 max-w-lg text-white/50">
+          Você começa com {TRIAL_DURATION_DAYS} dias grátis. Depois, escolhe o jeito de pagar que
+          combina com o tamanho da sua operação — e dá para trocar quando quiser.
+        </p>
 
-          <div className="rounded-2xl border border-white/6 bg-white/3 p-8 backdrop-blur">
-            <div className="mb-4 flex items-center justify-between gap-2">
-              <h3 className="text-lg font-bold text-white">{cents.name}</h3>
-              <span className="rounded-full border border-white/20 px-3 py-1 text-xs font-bold text-white/70">
-                Pague por pedido
-              </span>
-            </div>
-            <div className="mb-4">
-              <span className="text-4xl font-black text-primary">
-                {formatCents(cents.setupFeeCents)}
-              </span>
-              <span className="text-sm text-white/40"> de cadastro (só uma vez)</span>
-              <p className="mt-1 text-sm font-semibold text-white">
-                + {formatCents(cents.defaultOrderUnitPriceCents)} por pedido válido
-              </p>
-            </div>
-            <p className="mb-6 text-sm text-white/50">
-              Sem mensalidade. Você só paga pelos pedidos que realmente entram. Ideal para quem está
-              começando ou tem um movimento mais variável. Ao passar de{" "}
-              {cents.promotionThresholdOrders} pedidos válidos no mês, o valor por pedido cai para{" "}
-              {formatCents(cents.promotionalOrderUnitPriceCents)} no mês seguinte.
-            </p>
-            <ul className="space-y-2 text-sm text-white/70">
-              {[
-                "Sem mensalidade fixa",
-                "Gestão de pedidos e cardápio",
-                "Fica mais barato quanto mais você vende",
-              ].map((item) => (
-                <li key={item} className="flex items-start gap-2">
-                  <Check className="mt-0.5 h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                  {item}
-                </li>
-              ))}
-            </ul>
-          </div>
+        <div className="mt-12 grid gap-4 md:grid-cols-2">
+          <Plano
+            nome={cents.name}
+            etiqueta="Onde seu cadastro começa"
+            valor={formatCents(cents.setupFeeCents)}
+            unidade="de cadastro, uma vez só"
+            segundaLinha={`+ ${formatCents(cents.defaultOrderUnitPriceCents)} por pedido válido`}
+            destaque
+            explicacao={`Sem mensalidade: você paga pelos pedidos que realmente entram. Ao passar de ${cents.promotionThresholdOrders} pedidos válidos no mês, cada pedido cai para ${formatCents(cents.promotionalOrderUnitPriceCents)} no mês seguinte.`}
+            itens={[
+              "Sem mensalidade fixa",
+              "Gestão de pedidos e cardápio",
+              "Fica mais barato quanto mais você vende",
+            ]}
+          />
+          <Plano
+            nome={premium.name}
+            etiqueta="Mensalidade fixa"
+            valor={formatCents(premium.monthlyFeeCents)}
+            unidade="por mês"
+            explicacao="Você sabe exatamente quanto vai pagar todo mês, não importa quantos pedidos entrarem. Para quem já tem movimento constante e quer tudo: mesas, garçons e comissões inclusos."
+            itens={[
+              "Pedidos sem cobrança por unidade",
+              "Mesas, garçons e comissões",
+              "Cardápio e clientes",
+            ]}
+          />
         </div>
 
-        <p className="mt-8 text-center text-sm text-white/40">
-          <Link to="/plans" className="font-semibold text-primary underline">
-            Ver a comparação completa entre os planos
+        <p className="mt-8">
+          <Link
+            to="/plans"
+            className="text-sm font-semibold text-[#FF5A00] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
+          >
+            Comparar os dois planos lado a lado
           </Link>
         </p>
-      </section>
+      </div>
+    </section>
+  );
+}
 
-      {/* ── CTA FINAL ────────────────────────────────────── */}
-      <section className="px-6 pb-24">
-        <div
-          className="mx-auto max-w-3xl overflow-hidden rounded-3xl p-12 text-center"
-          style={{
-            background:
-              "linear-gradient(135deg, rgba(255,90,0,0.12) 0%, rgba(255,150,0,0.06) 100%)",
-            border: "1px solid rgba(255,90,0,0.2)",
-          }}
-        >
-          <h2 className="text-3xl font-black tracking-tight md:text-4xl">Pronto para decolar?</h2>
-          <p className="mx-auto mt-3 max-w-md text-base text-white/40">
-            Comece hoje, sem cartão de crédito. Configure em minutos.
-          </p>
-          <div className="mt-8 flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
-            <Link to="/signup" search={{ plan: undefined }}>
-              <button
-                className="rounded-xl px-8 py-3.5 text-sm font-bold text-white transition-all duration-300 hover:-translate-y-0.5 hover:shadow-[0_12px_32px_-6px_rgba(255,90,0,0.6)]"
-                style={{
-                  background: "linear-gradient(135deg, #ff5a00, #ff9500)",
-                  boxShadow: "0 6px 20px -6px rgba(255,90,0,0.5)",
-                }}
-              >
-                Criar conta gratuita
-              </button>
-            </Link>
-            <Link to="/login">
-              <button className="rounded-xl border border-white/10 bg-white/5 px-8 py-3.5 text-sm font-semibold text-white/70 transition hover:border-white/20 hover:text-white">
-                Já tenho conta
-              </button>
-            </Link>
-          </div>
-        </div>
-      </section>
+function Plano({
+  nome,
+  etiqueta,
+  valor,
+  unidade,
+  segundaLinha,
+  explicacao,
+  itens,
+  destaque = false,
+}: {
+  nome: string;
+  etiqueta: string;
+  valor: string;
+  unidade: string;
+  segundaLinha?: string;
+  explicacao: string;
+  itens: string[];
+  destaque?: boolean;
+}) {
+  return (
+    <div
+      className="rounded-2xl p-7 md:p-9"
+      style={{
+        background: "#171310",
+        border: destaque ? "1px solid rgba(255,90,0,0.35)" : "1px solid rgba(255,255,255,0.07)",
+      }}
+    >
+      <div className="flex items-baseline justify-between gap-3">
+        <h3 className="font-display text-2xl">{nome}</h3>
+        <span className="font-comanda text-[11px] uppercase tracking-[0.14em] text-white/45">
+          {etiqueta}
+        </span>
+      </div>
 
-      {/* ── FOOTER ───────────────────────────────────────── */}
-      <footer className="border-t border-white/6 py-8 text-center text-xs text-white/20">
-        © {new Date().getFullYear()} FlyControl. Todos os direitos reservados.
-      </footer>
+      <p className="mt-6 flex flex-wrap items-baseline gap-x-2">
+        <span className="font-display text-4xl" style={{ color: "#FF5A00" }}>
+          {valor}
+        </span>
+        <span className="text-sm text-white/45">{unidade}</span>
+      </p>
+      {segundaLinha && <p className="mt-1 font-semibold text-white/85">{segundaLinha}</p>}
+
+      <p className="mt-5 text-[15px] leading-relaxed text-white/50">{explicacao}</p>
+
+      <ul className="mt-6 space-y-2.5 border-t border-white/8 pt-6">
+        {itens.map((item) => (
+          <li key={item} className="flex gap-3 text-[15px] text-white/75">
+            <span className="font-comanda text-[#FF5A00]" aria-hidden="true">
+              ✓
+            </span>
+            {item}
+          </li>
+        ))}
+      </ul>
     </div>
+  );
+}
+
+function Fechamento() {
+  return (
+    <section className="safe-x border-t border-white/5 px-5 py-20 md:py-28">
+      <div className="mx-auto max-w-6xl">
+        <p className="font-comanda text-xs tracking-[0.25em] text-[#FF5A00]">23:59</p>
+        <h2 className="font-display mt-4 max-w-2xl text-[clamp(2rem,5vw,3.4rem)]">
+          Amanhã a noite recomeça. Dessa vez, organizada.
+        </h2>
+        <div className="mt-9 flex flex-col gap-3 sm:flex-row">
+          <Link
+            to="/signup"
+            search={{ plan: undefined, google: undefined }}
+            className="rounded-xl bg-[#FF5A00] px-7 py-3.5 text-center text-sm font-bold text-black transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
+          >
+            Criar minha conta
+          </Link>
+          <Link
+            to="/login"
+            className="rounded-xl border border-white/12 px-7 py-3.5 text-center text-sm font-semibold text-white/70 transition-colors hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
+          >
+            Já tenho conta
+          </Link>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Rodape() {
+  return (
+    <footer className="safe-x border-t border-white/5 px-5 py-9">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
+        <span className="font-comanda text-[11px] tracking-[0.14em] text-white/30">
+          © {new Date().getFullYear()} FLYCONTROL
+        </span>
+        <div className="flex gap-5 text-xs text-white/35">
+          <Link to="/terms" className="transition-colors hover:text-white/70">
+            Termos de uso
+          </Link>
+          <Link to="/privacy" className="transition-colors hover:text-white/70">
+            Privacidade
+          </Link>
+        </div>
+      </div>
+    </footer>
   );
 }

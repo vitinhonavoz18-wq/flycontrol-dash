@@ -164,6 +164,24 @@
 }
 
 @layer utilities {
+  /* ── Vozes da página inicial ──────────────────────────────────────────
+     Três famílias, três funções distintas. Se faltar alguma (rede lenta,
+     bloqueio), a alternativa do sistema entra sem quebrar o layout. */
+  .font-display {
+    font-family: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+    font-weight: 800;
+    letter-spacing: -0.035em;
+    line-height: 0.94;
+  }
+  .font-corpo {
+    font-family: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
+  }
+  /* A letra da impressora térmica. Só aparece dentro da comanda — usá-la em
+     outro lugar tiraria dela justamente o que a torna reconhecível. */
+  .font-comanda {
+    font-family: "Courier Prime", ui-monospace, "Courier New", monospace;
+  }
+
   .text-gradient-fire {
     background-image: var(--gradient-primary);
     -webkit-background-clip: text;
