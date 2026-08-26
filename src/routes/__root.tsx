@@ -99,7 +99,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: "stylesheet", href: appCss },
       // Três vozes, três funções: Bricolage nos títulos (tem personalidade e
       // largura variável), Instrument Sans no texto corrido, e Courier Prime
-      // só na comanda — é a letra da impressora térmica de verdade.
+      // nos números e horários — é a letra da impressora térmica de verdade.
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       { rel: "preconnect", href: "https://fonts.gstatic.com", crossOrigin: "anonymous" },
       {

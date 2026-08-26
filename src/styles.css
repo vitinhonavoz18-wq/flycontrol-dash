@@ -176,8 +176,9 @@
   .font-corpo {
     font-family: "Instrument Sans", ui-sans-serif, system-ui, sans-serif;
   }
-  /* A letra da impressora térmica. Só aparece dentro da comanda — usá-la em
-     outro lugar tiraria dela justamente o que a torna reconhecível. */
+  /* A letra da impressora térmica. Fica reservada para número, horário e
+     valor — o que sai no papel da cozinha. Espalhá-la pelo texto corrido
+     tiraria dela justamente o que a torna reconhecível. */
   .font-comanda {
     font-family: "Courier Prime", ui-monospace, "Courier New", monospace;
   }
@@ -202,6 +203,61 @@
       inset 0 1px 0 rgba(255, 194, 71, 0.15),
       0 0 0 1px rgba(255, 122, 0, 0.25),
       0 8px 30px -12px rgba(255, 90, 0, 0.5);
+  }
+
+  /* ── Mosaico de cardápios da página inicial ───────────────────────────
+     A fita anda sozinha, devagar, e para quando o mouse chega perto ou
+     quando alguém navega por teclado — senão o cartão fugiria justo na
+     hora do clique. Quem pediu menos animação no aparelho recebe a fita
+     parada, e pode arrastá-la com o dedo. */
+  /* As pontas somem no fundo em vez de serem cortadas na faca — medida em
+     pixels, não em porcentagem, para o esmaecimento ser visível também na
+     tela estreita do celular. */
+  .mosaico-palco {
+    mask-image: linear-gradient(90deg, transparent, #000 72px, #000 calc(100% - 72px), transparent);
+    -webkit-mask-image: linear-gradient(
+      90deg,
+      transparent,
+      #000 72px,
+      #000 calc(100% - 72px),
+      transparent
+    );
+  }
+  .mosaico-fita {
+    width: max-content;
+    animation: mosaico-esquerda var(--mosaico-tempo, 64s) linear infinite;
+    will-change: transform;
+  }
+  .mosaico-fita[data-sentido="direita"] {
+    animation-name: mosaico-direita;
+  }
+  .mosaico-palco:hover .mosaico-fita,
+  .mosaico-palco:focus-within .mosaico-fita {
+    animation-play-state: paused;
+  }
+  @keyframes mosaico-esquerda {
+    from {
+      transform: translateX(0);
+    }
+    to {
+      transform: translateX(-50%);
+    }
+  }
+  @keyframes mosaico-direita {
+    from {
+      transform: translateX(-50%);
+    }
+    to {
+      transform: translateX(0);
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mosaico-palco {
+      overflow-x: auto;
+    }
+    .mosaico-fita {
+      animation: none;
+    }
   }
 }
 
@@ -337,9 +393,13 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   html { font-size: 16px; -webkit-tap-highlight-color: transparent; }
   body { font-size: 16px; line-height: 1.45; }
 
-  h1 { font-size: 1.625rem; line-height: 1.2; letter-spacing: -0.01em; }
-  h2 { font-size: 1.25rem;  line-height: 1.25; }
-  h3 { font-size: 1.125rem; line-height: 1.3; }
+  /* Estes tamanhos são para as telas do painel, onde o título é só um rótulo
+     de seção. A página inicial usa .font-display e precisa de título grande —
+     ela diz o próprio tamanho, então fica de fora desta regra. Sem o ":not",
+     o título de abertura encolhia para 26px no celular. */
+  h1:not(.font-display) { font-size: 1.625rem; line-height: 1.2; letter-spacing: -0.01em; }
+  h2:not(.font-display) { font-size: 1.25rem;  line-height: 1.25; }
+  h3:not(.font-display) { font-size: 1.125rem; line-height: 1.3; }
 
   /* Touch targets — botões, links de nav e itens clicáveis */
   button:not([data-slot="sidebar-menu-sub-button"]):not(.no-touch-min),

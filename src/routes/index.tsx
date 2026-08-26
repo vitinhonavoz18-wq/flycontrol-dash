@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Comanda } from "@/components/landing/Comanda";
+import { MosaicoCardapios } from "@/components/landing/MosaicoCardapios";
+import { PainelPedidos } from "@/components/landing/PainelPedidos";
 import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING } from "@/lib/billing/plans";
 import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial";
@@ -16,13 +17,16 @@ const cents = PLAN_PRICING.cents;
  * Página inicial do FlyControl.
  *
  * Direção: a cozinha à noite. O fundo é preto quente (não azulado), e a única
- * coisa clara na tela é a comanda saindo da impressora — que é exatamente o
- * que se vê numa cozinha às 19h40. O laranja da marca deixou de ser degradê
- * de enfeite e virou sinal: só aparece onde significa alguma coisa.
+ * coisa acesa na tela é o painel de pedidos — que é exatamente o que se vê
+ * numa cozinha às 19h40. O laranja da marca deixou de ser degradê de enfeite
+ * e virou sinal: só aparece onde significa alguma coisa.
  *
  * A página segue UM pedido, com os horários reais de uma noite. A sequência é
  * verdadeira — o pedido entra, imprime, sai, e vira dinheiro no fim —, então
  * numerar por horário informa em vez de decorar.
+ *
+ * O mosaico de cardápios entra logo antes do preço, e essa ordem é de
+ * propósito: primeiro a pessoa vê quem já usa, depois vê quanto custa.
  */
 function Landing() {
   return (
@@ -30,6 +34,7 @@ function Landing() {
       <Cabecalho />
       <Abertura />
       <UmaNoite />
+      <MosaicoCardapios />
       <Precos />
       <Fechamento />
       <Rodape />
@@ -65,21 +70,27 @@ function Cabecalho() {
   );
 }
 
+// Lado a lado só a partir de 1024px. Entre 768 e 1023 não cabem os dois: o
+// painel comeria a largura do título e a frase quebraria em pedaços. Nessa
+// faixa o painel desce para baixo do texto, inteiro.
 function Abertura() {
   return (
-    <section className="safe-x mx-auto grid max-w-6xl items-center gap-12 px-5 pb-20 pt-14 md:grid-cols-[1.1fr_auto] md:gap-16 md:pb-28 md:pt-20">
+    <section className="safe-x mx-auto grid max-w-6xl items-center gap-12 px-5 pb-20 pt-14 md:pb-28 md:pt-20 lg:grid-cols-[1fr_minmax(0,460px)] lg:gap-14">
       <div>
-        {/* Sem rótulo de horário aqui: a comanda ao lado já mostra 19:42, e a
+        {/* Sem rótulo de horário aqui: o painel ao lado já mostra 19:42, e a
             mesma informação duas vezes no mesmo campo de visão não informa —
-            só ocupa. O relógio como estrutura começa na seção seguinte. */}
-        <h1 className="font-display text-[clamp(2.6rem,7.5vw,4.6rem)]">
+            só ocupa. O relógio como estrutura começa na seção seguinte.
+
+            O tamanho do título foi medido contra a letra de reserva (a do
+            sistema, mais larga que a Bricolage): se as duas primeiras frases
+            couberem numa linha só com ela, cabem também quando a fonte boa
+            carrega. A última frase quebra onde couber — é a única que pode. */}
+        <h1 className="font-display text-[clamp(1.85rem,7vw,2.6rem)] md:text-[clamp(2.6rem,6vw,4rem)] lg:text-[clamp(2.4rem,4.4vw,3.4rem)]">
           O pedido entra.
           <br />
           A cozinha imprime.
           <br />
-          <span style={{ color: "#FF5A00" }}>Você não corre atrás</span>
-          <br />
-          de nada.
+          <span style={{ color: "#FF5A00" }}>Você não corre atrás de nada.</span>
         </h1>
 
         <p className="mt-6 max-w-md text-[17px] leading-relaxed text-white/55">
@@ -109,8 +120,8 @@ function Abertura() {
         </div>
       </div>
 
-      <div className="flex justify-center md:justify-end">
-        <Comanda />
+      <div className="flex min-w-0 justify-center lg:justify-end">
+        <PainelPedidos />
       </div>
     </section>
   );
@@ -148,7 +159,7 @@ function UmaNoite() {
   return (
     <section className="safe-x border-t border-white/5 px-5 py-20 md:py-28">
       <div className="mx-auto max-w-6xl">
-        <h2 className="font-display max-w-lg text-[clamp(1.9rem,4.5vw,3rem)]">
+        <h2 className="font-display max-w-lg text-[clamp(1.7rem,3.6vw,2.5rem)]">
           Uma noite no seu restaurante
         </h2>
         <p className="mt-4 max-w-md text-white/50">
@@ -185,7 +196,7 @@ function Precos() {
   return (
     <section className="safe-x border-t border-white/5 px-5 py-20 md:py-28">
       <div className="mx-auto max-w-6xl">
-        <h2 className="font-display text-[clamp(1.9rem,4.5vw,3rem)]">Quanto custa</h2>
+        <h2 className="font-display text-[clamp(1.7rem,3.6vw,2.5rem)]">Quanto custa</h2>
         <p className="mt-4 max-w-lg text-white/50">
           Você começa com {TRIAL_DURATION_DAYS} dias grátis. Depois, escolhe o jeito de pagar que
           combina com o tamanho da sua operação — e dá para trocar quando quiser.
