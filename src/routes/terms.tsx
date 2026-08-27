@@ -65,9 +65,8 @@ function TermsPage() {
           <div className="border-t border-border pt-3">
             <h3 className="font-bold text-foreground">{cents.name}</h3>
             <p>
-              Taxa única de cadastro de <strong>{formatCents(cents.setupFeeCents)}</strong>, cobrada
-              uma só vez na primeira fatura, somada à cobrança por pedido válido. Não inclui{" "}
-              {restricted}.
+              <strong>Sem taxa de cadastro e sem mensalidade.</strong> A cobrança é apenas por
+              pedido válido, apurada e faturada ao fim de cada ciclo. Não inclui {restricted}.
             </p>
           </div>
         </div>

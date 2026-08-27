@@ -14,7 +14,7 @@
 
 import { createServerFn } from "@tanstack/react-start";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { asBillingDb } from "@/lib/billing/supabaseBridge";
+import { asBillingDb, type BillingDb } from "@/lib/billing/supabaseBridge";
 import {
   COMPANY_BILLING_MODEL,
   PLAN_PRICING,
@@ -28,8 +28,11 @@ import {
   generateIntentToken,
   hashIntentToken,
   infinityPayWebhookUrl,
+  planRequiresUpfrontPayment,
   resolveCheckoutConfig,
 } from "@/lib/billing/checkout";
+import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
+import { pizzeriaAccessStatusFor } from "@/lib/billing/collections";
 import { createInfinityPayCheckoutLink, infinityPayHandle } from "@/lib/billing/infinitypay/api";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TRIAL_DENIAL_MESSAGES, grantFreeTrial } from "@/lib/billing/trial.server";
@@ -166,6 +169,12 @@ async function createCheckoutIntent(
   subscriptionId: string | null,
 ): Promise<{ url: string; token: string } | null> {
   const amountCents = checkoutAmountCents(planCode);
+
+  // Plano sem nada a cobrar na entrada (o CENTS, hoje). Mandar alguém para
+  // uma tela de pagamento de R$ 0,00 é pior do que não mandar: ele não
+  // consegue pagar, não consegue voltar ativado, e fica achando que o
+  // cadastro falhou. Quem chega aqui é ativado direto, sem checkout.
+  if (amountCents <= 0) return null;
   const token = generateIntentToken();
   const tokenHash = await hashIntentToken(token);
   const expiresAt = new Date(Date.now() + CHECKOUT_INTENT_TTL_MS).toISOString();
@@ -216,6 +225,64 @@ async function createCheckoutIntent(
     expiresAt,
   });
   return inserted ? { url: config.url, token } : null;
+}
+
+/**
+ * Ativa a assinatura de um plano que não cobra nada para começar.
+ *
+ * É o mesmo destino a que o aviso de pagamento da InfinityPay leva: assinatura
+ * ativa, ciclo de cobrança aberto e a loja liberada. A diferença é o motivo de
+ * chegar lá — aqui não houve pagamento porque não havia o que pagar.
+ *
+ * O ciclo precisa ser aberto junto. Sem ele, a conta ficaria ativa recebendo
+ * pedidos e não haveria onde lançar o consumo: é como abrir o restaurante sem
+ * abrir a comanda — os pratos saem e ninguém anota nada para cobrar depois.
+ */
+async function activateWithoutPayment(
+  db: BillingDb,
+  companyId: string,
+  subscriptionId: string,
+  planCode: PlanCode,
+): Promise<boolean> {
+  const nowIso = new Date().toISOString();
+
+  const { error } = await db
+    .from("subscriptions")
+    .update({
+      status: "active",
+      activated_at: nowIso,
+      billing_anchor_day: new Date(nowIso).getUTCDate(),
+      updated_at: nowIso,
+    })
+    .eq("id", subscriptionId);
+
+  if (error) {
+    console.error("[signup] falha ao ativar assinatura sem cobrança:", error);
+    return false;
+  }
+
+  await db.from("subscription_events").insert({
+    subscription_id: subscriptionId,
+    company_id: companyId,
+    event_type: "activated_without_charge",
+    previous_status: "pending_activation",
+    new_status: "active",
+    reason: "Plano sem valor de entrada: nada a cobrar para liberar o acesso",
+    metadata: { plan_code: planCode, upfront_amount_cents: 0 },
+  });
+
+  await openFirstCycle(db, subscriptionId);
+
+  const { error: pizzeriaError } = await supabaseAdmin
+    .from("pizzerias")
+    .update({ subscription_status: pizzeriaAccessStatusFor("active") })
+    .eq("id", companyId);
+
+  if (pizzeriaError) {
+    console.error("[signup] assinatura ativa mas loja não liberou:", pizzeriaError);
+  }
+
+  return true;
 }
 
 /** Slug único: acrescenta sufixo curto enquanto houver colisão. */
@@ -529,8 +596,33 @@ export const createAccount = createServerFn({ method: "POST" })
         };
       }
 
-      // Sem período gratuito (já usado antes, ou migration ainda não aplicada)
-      // o cadastro segue pelo caminho antigo: pagamento primeiro.
+      // Sem período gratuito (já usado antes, ou migration ainda não aplicada).
+      //
+      // Aqui o caminho se abre em dois, e o que decide é se o plano tem algo a
+      // cobrar na entrada:
+      //
+      // - PREMIUM cobra a mensalidade: vai para o checkout, como sempre foi.
+      // - CENTS não cobra mais nada para começar. Não há o que pagar, então
+      //   não há por que segurar a conta: ela nasce ativa e a cobrança só
+      //   aparece no fim do ciclo, em cima dos pedidos que entraram.
+      if (!planRequiresUpfrontPayment(planCode)) {
+        const ativou = await activateWithoutPayment(db, companyId, subscriptionId, planCode);
+        if (ativou) {
+          await provisionAndForget(companyId);
+          return {
+            companyId,
+            companyName: company.name,
+            planCode,
+            subscriptionStatus: "active",
+            checkout: null,
+            trial: null,
+            trialDenied: TRIAL_DENIAL_MESSAGES[trial.reason],
+          };
+        }
+        // Ativação falhou: melhor devolver "aguardando ativação" e deixar a
+        // equipe concluir à mão do que dizer que está pronto sem estar.
+      }
+
       return {
         companyId,
         companyName: company.name,

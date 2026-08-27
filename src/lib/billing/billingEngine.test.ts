@@ -32,7 +32,7 @@ function centsCycle(overrides: Partial<Parameters<typeof calculateCycle>[0]> = {
 describe("preços comerciais", () => {
   it("guarda todos os valores em centavos inteiros", () => {
     expect(PLAN_PRICING.premium.monthlyFeeCents).toBe(37500);
-    expect(PLAN_PRICING.cents.setupFeeCents).toBe(2500);
+    expect(PLAN_PRICING.cents.setupFeeCents).toBe(0);
     expect(PLAN_PRICING.cents.defaultOrderUnitPriceCents).toBe(70);
     expect(PLAN_PRICING.cents.promotionalOrderUnitPriceCents).toBe(45);
     expect(PLAN_PRICING.cents.promotionThresholdOrders).toBe(500);
@@ -195,29 +195,31 @@ describe("PREMIUM", () => {
 });
 
 describe("CENTS — primeiro ciclo", () => {
-  it("cobra a taxa de cadastro somada ao consumo", () => {
-    // Exemplo do briefing: R$ 25,00 + 100 pedidos x R$ 0,70 = R$ 95,00.
+  it("cobra só o consumo: não existe mais taxa de cadastro", () => {
+    // Antes a primeira conta somava R$ 25,00. Hoje, 100 pedidos x R$ 0,70
+    // fecham em R$ 70,00 e nada mais.
     const totals = centsCycle({ billableOrderCount: 100, setupFeeAlreadyCharged: false });
-    expect(totals.setupFeeAmountCents).toBe(2500);
+    expect(totals.setupFeeAmountCents).toBe(0);
     expect(totals.usageAmountCents).toBe(7000);
-    expect(totals.totalAmountCents).toBe(9500);
-    expect(formatCents(totals.totalAmountCents)).toBe("R$ 95,00");
+    expect(totals.totalAmountCents).toBe(7000);
+    expect(formatCents(totals.totalAmountCents)).toBe("R$ 70,00");
   });
 
   it("começa em R$ 0,70 por pedido", () => {
     expect(initialUnitPriceCents("cents")).toBe(CENTS_DEFAULT);
   });
 
-  it("nunca cobra a taxa de cadastro duas vezes", () => {
+  it("cobra o mesmo no primeiro ciclo e nos seguintes", () => {
+    const primeiro = centsCycle({ billableOrderCount: 100, setupFeeAlreadyCharged: false });
     const segundo = centsCycle({ billableOrderCount: 100, setupFeeAlreadyCharged: true });
     expect(segundo.setupFeeAmountCents).toBe(0);
-    expect(segundo.totalAmountCents).toBe(7000);
+    expect(segundo.totalAmountCents).toBe(primeiro.totalAmountCents);
   });
 
-  it("emite itens separados para taxa e consumo", () => {
+  it("emite só o item de consumo, sem linha de taxa de cadastro", () => {
     const totals = centsCycle({ billableOrderCount: 100, setupFeeAlreadyCharged: false });
     const items = buildInvoiceItems("cents", totals);
-    expect(items.map((i) => i.itemType)).toEqual(["setup_fee", "usage"]);
+    expect(items.map((i) => i.itemType)).toEqual(["usage"]);
     expect(items.find((i) => i.itemType === "usage")).toMatchObject({
       quantity: 100,
       unitAmountCents: 70,

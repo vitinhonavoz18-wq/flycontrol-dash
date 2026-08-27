@@ -29,6 +29,7 @@ const CENTS_BENEFITS = [
   "Cardápio",
   "Clientes",
   "Pagamento conforme o uso",
+  "Sem taxa para começar",
   "Sem mensalidade fixa",
 ] as const;
 
@@ -47,7 +48,7 @@ const COMPARISON: readonly ComparisonRow[] = [
   { feature: "Dashboard operacional", premium: true, cents: true },
   { feature: "Cobrança fixa mensal", premium: formatCents(premium.monthlyFeeCents), cents: false },
   { feature: "Cobrança por pedido", premium: false, cents: true },
-  { feature: "Taxa de cadastro", premium: false, cents: formatCents(cents.setupFeeCents) },
+  { feature: "Taxa de cadastro", premium: false, cents: false },
   { feature: "Mesas", premium: true, cents: false },
   { feature: "Garçons", premium: true, cents: false },
   { feature: "Comissões", premium: true, cents: false },
@@ -153,11 +154,11 @@ function PlansPage() {
               </div>
               <div>
                 <span className="text-3xl font-black text-primary">
-                  {formatCents(cents.setupFeeCents)}
+                  {formatCents(cents.defaultOrderUnitPriceCents)}
                 </span>
-                <span className="text-sm text-muted-foreground"> de cadastro</span>
+                <span className="text-sm text-muted-foreground"> por pedido</span>
                 <p className="mt-1 text-sm font-semibold text-foreground">
-                  + {formatCents(cents.defaultOrderUnitPriceCents)} por pedido
+                  Sem taxa de cadastro e sem mensalidade
                 </p>
               </div>
               <p className="text-sm text-muted-foreground">{cents.description}</p>

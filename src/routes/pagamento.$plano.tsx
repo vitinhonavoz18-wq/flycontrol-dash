@@ -211,7 +211,9 @@ function nextStepCopy(planCode: PlanCode): string {
     return "Seu acesso está liberado. Entre no painel para concluir a configuração do estabelecimento e começar a receber pedidos.";
   }
   if (planCode === "cents") {
-    return "Sua taxa de cadastro está paga. Entre no painel para cadastrar seu estabelecimento e o cardápio — a partir daí você paga apenas pelos pedidos válidos.";
+    // Só chega aqui quem começou o cadastro quando ainda existia taxa de
+    // entrada no CENTS. Cadastro novo não passa mais por esta tela.
+    return "Seu acesso está liberado. Entre no painel para cadastrar seu estabelecimento e o cardápio — a partir daí você paga apenas pelos pedidos válidos.";
   }
   return "Pagamento de teste confirmado. Entre no painel para conferir o fluxo completo de cadastro e checkout.";
 }

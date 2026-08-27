@@ -122,12 +122,13 @@ describe("progresso e estimativa", () => {
     expect(formatCents(result.estimatedTotalCents)).toBe("R$ 242,90");
   });
 
-  it("inclui a taxa de cadastro só no primeiro ciclo", () => {
+  it("não soma taxa de cadastro em ciclo nenhum", () => {
+    // A taxa foi removida do CENTS: a previsão do primeiro ciclo é igual à
+    // dos seguintes, só os pedidos.
     const primeiro = progress({ billableOrderCount: 100, setupFeeAlreadyCharged: false });
-    expect(primeiro.setupFeeCents).toBe(2500);
-    expect(primeiro.estimatedTotalCents).toBe(9500); // R$ 25,00 + R$ 70,00
+    expect(primeiro.setupFeeCents).toBe(0);
+    expect(primeiro.estimatedTotalCents).toBe(7000);
 
-    // Depois de faturada, some da estimativa — mantê-la inflaria todo mês.
     const segundo = progress({ billableOrderCount: 100, setupFeeAlreadyCharged: true });
     expect(segundo.setupFeeCents).toBe(0);
     expect(segundo.estimatedTotalCents).toBe(7000);

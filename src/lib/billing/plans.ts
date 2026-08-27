@@ -60,7 +60,11 @@ export const PLAN_PRICING: Readonly<Record<PlanCode, PlanPricing>> = {
     description:
       "Pague de acordo com o volume de pedidos e reduza o valor por pedido ao atingir a meta mensal.",
     billingModel: "usage_per_order",
-    setupFeeCents: 2_500, // R$ 25,00, cobrada uma única vez
+    // Sem taxa de entrada. O CENTS passou a ser só consumo: o cliente entra,
+    // usa os 30 dias grátis e, depois disso, paga apenas pelos pedidos que
+    // realmente entraram. Zero aqui desliga a taxa em TODOS os caminhos —
+    // fatura, previsão do ciclo e checkout de entrada leem este mesmo número.
+    setupFeeCents: 0,
     monthlyFeeCents: 0,
     defaultOrderUnitPriceCents: 70, // R$ 0,70
     promotionalOrderUnitPriceCents: 45, // R$ 0,45

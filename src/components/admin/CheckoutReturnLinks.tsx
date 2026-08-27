@@ -80,8 +80,9 @@ function LinkRow({ plan, origin }: { plan: PlanCode; origin: string | null }) {
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <span className="font-bold">{pricing.name}</span>
         <span className="text-sm text-muted-foreground">
-          checkout de entrada: {formatCents(amountCents)}
-          {pricing.billingModel === "usage_per_order" && " (taxa de cadastro)"}
+          {amountCents > 0
+            ? `checkout de entrada: ${formatCents(amountCents)}`
+            : "sem valor de entrada — a conta é liberada sem passar pelo checkout"}
         </span>
       </div>
 

@@ -156,6 +156,12 @@ function SignupWizard() {
     /** Datas reais devolvidas pelo servidor. Nulo quando não houve trial. */
     trial: { startsAt: string; endsAt: string } | null;
     trialDenied: string | null;
+    /**
+     * `true` quando a conta já nasceu ativa sem ninguém pagar nada — o caso
+     * do CENTS para quem não teve direito ao período grátis. Não há o que
+     * cobrar para entrar, então não há por que segurar o acesso.
+     */
+    active: boolean;
     /** `true` quando já dá para entrar direto, sem passar pelo login. */
     signedIn: boolean;
   } | null>(null);
@@ -289,13 +295,15 @@ function SignupWizard() {
       // Período gratuito liberado: a conta já está de pé. Entramos agora para
       // que a tela de conclusão termine em "Entrar no FlyControl" de verdade,
       // e não em mais um formulário de login.
-      const signedIn = created.trial ? await signInSilently() : false;
+      const jaAtiva = created.subscriptionStatus === "active";
+      const signedIn = created.trial || jaAtiva ? await signInSilently() : false;
 
       setResult({
         companyName: created.companyName,
         activationPending: created.subscriptionStatus === "pending_activation",
         trial: created.trial,
         trialDenied: created.trialDenied,
+        active: jaAtiva,
         signedIn,
       });
     } catch (err) {
@@ -410,17 +418,26 @@ function SignupWizard() {
                 <strong className="text-right">
                   {pricing?.billingModel === "monthly_fixed"
                     ? `${formatCents(pricing.monthlyFeeCents)} por mês`
-                    : `${formatCents(PLAN_PRICING.cents.setupFeeCents)} de cadastro + ${formatCents(PLAN_PRICING.cents.defaultOrderUnitPriceCents)} por pedido`}
+                    : `${formatCents(PLAN_PRICING.cents.defaultOrderUnitPriceCents)} por pedido, sem taxa de cadastro`}
                 </strong>
               </div>
               <div className="flex items-center justify-between gap-2 border-t border-border pt-2">
                 <span className="text-muted-foreground">Situação</span>
-                <Badge
-                  variant="outline"
-                  className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                >
-                  <Clock className="h-3 w-3" aria-hidden="true" /> Aguardando ativação
-                </Badge>
+                {result.active ? (
+                  <Badge
+                    variant="outline"
+                    className="border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400"
+                  >
+                    <Check className="h-3 w-3" aria-hidden="true" /> Conta liberada
+                  </Badge>
+                ) : (
+                  <Badge
+                    variant="outline"
+                    className="border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                  >
+                    <Clock className="h-3 w-3" aria-hidden="true" /> Aguardando ativação
+                  </Badge>
+                )}
               </div>
             </div>
 
@@ -434,14 +451,23 @@ function SignupWizard() {
             )}
 
             {/* Nada de dizer que a conta está ativa antes de estar. */}
-            <p className="text-sm text-muted-foreground">
-              Seu cadastro foi concluído e está aguardando ativação. A cobrança automática por PIX
-              será disponibilizada na próxima etapa da integração; até lá, nossa equipe realiza a
-              validação e a liberação do acesso.
-            </p>
+            {result.active ? (
+              <p className="text-sm text-muted-foreground">
+                Não há nada a pagar para começar: sua conta já está liberada. A cobrança é apenas
+                por pedido válido e a primeira conta fecha ao fim do ciclo.
+              </p>
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                Seu cadastro foi concluído e está aguardando ativação. A cobrança automática por PIX
+                será disponibilizada na próxima etapa da integração; até lá, nossa equipe realiza a
+                validação e a liberação do acesso.
+              </p>
+            )}
 
             <Button asChild className="h-12 w-full">
-              <Link to="/login">Voltar ao login</Link>
+              <Link to={result.active && result.signedIn ? "/dashboard" : "/login"}>
+                {result.active ? "Entrar no FlyControl" : "Voltar ao login"}
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -568,12 +594,10 @@ function SignupWizard() {
                 por pedido. A conta é fechada só no fim do ciclo — nada é cobrado adiantado.
               </p>
               <p className="mt-2 text-sm text-muted-foreground">
-                Há também a taxa única de cadastro de{" "}
-                <strong className="text-foreground">
-                  {formatCents(PLAN_PRICING.cents.setupFeeCents)}
-                </strong>
-                , cobrada uma só vez e apenas na primeira conta — depois do período grátis, nunca
-                antes.
+                Não existe taxa de cadastro nem mensalidade:{" "}
+                <strong className="text-foreground">você não paga nada para começar</strong> e a
+                primeira conta só chega no fim do primeiro ciclo cobrado, com os pedidos que
+                entraram.
               </p>
               <p className="mt-2 text-xs text-muted-foreground">
                 <Link to="/plans" className="text-primary underline">

@@ -44,13 +44,26 @@ export function infinityPayWebhookUrl(origin: string): string {
 /**
  * Valor que o checkout daquele plano deve cobrar na entrada.
  *
- * PREMIUM cobra a mensalidade. CENTS cobra a taxa de cadastro — o consumo por
- * pedido é faturado depois, no fechamento do ciclo, e não passa por este
- * checkout.
+ * PREMIUM cobra a mensalidade. CENTS não cobra nada na entrada desde que a
+ * taxa de cadastro foi zerada — o consumo por pedido é faturado depois, no
+ * fechamento do ciclo, e não passa por este checkout. Por isso este número
+ * pode ser zero, e quem chama precisa tratar esse caso.
  */
 export function checkoutAmountCents(planCode: PlanCode): Cents {
   const pricing = PLAN_PRICING[planCode];
   return pricing.billingModel === "monthly_fixed" ? pricing.monthlyFeeCents : pricing.setupFeeCents;
+}
+
+/**
+ * O plano tem alguma coisa a cobrar ANTES de liberar o acesso?
+ *
+ * Existe porque um plano de valor zero não pode ser mandado para o checkout:
+ * seria como mandar o cliente até o caixa para pagar R$ 0,00 — ele encara uma
+ * tela de pagamento que não tem o que cobrar, e sai de lá sem conta ativa.
+ * Quem responde `false` aqui é ativado direto.
+ */
+export function planRequiresUpfrontPayment(planCode: PlanCode): boolean {
+  return checkoutAmountCents(planCode) > 0;
 }
 
 export type CheckoutConfig =

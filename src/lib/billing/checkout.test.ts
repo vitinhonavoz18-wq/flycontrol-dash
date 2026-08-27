@@ -8,6 +8,7 @@ import {
   generateIntentToken,
   hashIntentToken,
   infinityPayWebhookUrl,
+  planRequiresUpfrontPayment,
   resolveCheckoutConfig,
   shouldTrustCheckoutReturn,
   validateGatewayConfirmation,
@@ -42,11 +43,17 @@ describe("valor esperado do checkout", () => {
     expect(checkoutAmountCents("premium")).toBe(PLAN_PRICING.premium.monthlyFeeCents);
   });
 
-  it("no CENTS cobra a taxa de cadastro, não o consumo", () => {
-    // O consumo por pedido é faturado no fechamento do ciclo e não passa por
-    // este checkout de entrada.
-    expect(checkoutAmountCents("cents")).toBe(PLAN_PRICING.cents.setupFeeCents);
+  it("no CENTS não cobra nada na entrada", () => {
+    // Sem taxa de cadastro, não há valor de entrada. O consumo por pedido é
+    // faturado no fechamento do ciclo e nunca passa por este checkout.
+    expect(checkoutAmountCents("cents")).toBe(0);
     expect(checkoutAmountCents("cents")).not.toBe(PLAN_PRICING.cents.defaultOrderUnitPriceCents);
+  });
+
+  it("diz quem precisa passar pelo checkout antes de ser liberado", () => {
+    // É o que impede mandar alguém para uma tela de pagamento de R$ 0,00.
+    expect(planRequiresUpfrontPayment("premium")).toBe(true);
+    expect(planRequiresUpfrontPayment("cents")).toBe(false);
   });
 });
 
@@ -124,7 +131,7 @@ describe("validação do retorno", () => {
   });
 
   it("recusa retorno pela URL do outro plano", () => {
-    // Pagar o CENTS (R$ 25) e voltar pela URL do PREMIUM não pode virar
+    // Pagar o checkout de um plano e voltar pela URL do PREMIUM não pode virar
     // PREMIUM. É a razão de existirem dois links.
     const verdict = validateIntentForReturn(
       { planCode: "cents", status: "started", expiresAt: future },

@@ -206,12 +206,13 @@ function Precos() {
           <Plano
             nome={cents.name}
             etiqueta="Onde seu cadastro começa"
-            valor={formatCents(cents.setupFeeCents)}
-            unidade="de cadastro, uma vez só"
-            segundaLinha={`+ ${formatCents(cents.defaultOrderUnitPriceCents)} por pedido válido`}
+            valor={formatCents(cents.defaultOrderUnitPriceCents)}
+            unidade="por pedido válido"
+            segundaLinha="Sem taxa de cadastro e sem mensalidade"
             destaque
-            explicacao={`Sem mensalidade: você paga pelos pedidos que realmente entram. Ao passar de ${cents.promotionThresholdOrders} pedidos válidos no mês, cada pedido cai para ${formatCents(cents.promotionalOrderUnitPriceCents)} no mês seguinte.`}
+            explicacao={`Você não paga nada para começar: são ${TRIAL_DURATION_DAYS} dias grátis e, depois, só os pedidos que realmente entram. Ao passar de ${cents.promotionThresholdOrders} pedidos válidos no mês, cada pedido cai para ${formatCents(cents.promotionalOrderUnitPriceCents)} no mês seguinte.`}
             itens={[
+              "Sem taxa para entrar",
               "Sem mensalidade fixa",
               "Gestão de pedidos e cardápio",
               "Fica mais barato quanto mais você vende",

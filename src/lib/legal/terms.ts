@@ -8,9 +8,9 @@
  *
  * Suba a versão sempre que o conteúdo mudar de forma material.
  */
-export const TERMS_VERSION = "2026-08-06.1";
+export const TERMS_VERSION = "2026-08-27.1";
 
-export const TERMS_LAST_UPDATED = "6 de agosto de 2026";
+export const TERMS_LAST_UPDATED = "27 de agosto de 2026";
 
 /**
  * Seções ainda pendentes de redação jurídica.
