@@ -1008,3 +1008,17 @@ REVOKE ALL ON FUNCTION public.marketing_record_result(UUID, TEXT, TEXT, TEXT, TE
 REVOKE ALL ON FUNCTION public.marketing_refresh_campaign_counts(UUID) FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.marketing_release_expired_claims() FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.marketing_cancel_campaign(UUID) FROM PUBLIC, anon, authenticated;
+
+-- =====================================================================
+-- TERCEIRA PARTE: fechar duas frestas de segurança
+--
+-- Encontradas pelo verificador do Supabase depois que a fundação subiu.
+-- Já aplicadas no projeto FLYCONTROL; ficam aqui para quem for montar o
+-- banco do zero.
+-- =====================================================================
+
+REVOKE ALL ON FUNCTION public.marketing_capture_customer()
+  FROM PUBLIC, anon, authenticated;
+
+ALTER FUNCTION public.marketing_normalize_phone(TEXT)
+  SET search_path = public;
