@@ -167,7 +167,7 @@ export function VisaoGeral({ tenantId, aoTrocarAba }: Props) {
                 : "Enquanto estiver desconectado, as mensagens ficam esperando na fila em vez de se perderem."}
             </p>
           </div>
-          <Button variant="outline" size="sm" onClick={() => aoTrocarAba("whatsapp")}>
+          <Button variant="outline" size="sm" onClick={() => aoTrocarAba("config")}>
             Ver conexão
           </Button>
         </CardContent>

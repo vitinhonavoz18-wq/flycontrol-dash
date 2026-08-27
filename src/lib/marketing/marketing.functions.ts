@@ -646,3 +646,78 @@ async function registrarEvento(
     console.warn("[marketing] não consegui registrar o evento", evento, e);
   }
 }
+
+// ---------------------------------------------------------------------------
+// DESCONTO PARA QUEM ACEITA RECEBER OFERTAS
+//
+// Mora em `pizzerias.site_settings`, o mesmo pacote de configurações que já
+// viaja para o site de pedidos junto com o modelo de checkout. Nenhuma
+// integração nova: ele pega carona.
+//
+// O teto de 50% é aplicado AQUI, no servidor, e de novo na entrada do pedido.
+// Não adianta o navegador mandar 90: quem grava é este código, e quem cobra
+// confere de novo. É o caixa conferindo a conta em vez de aceitar o valor
+// escrito no guardanapo.
+// ---------------------------------------------------------------------------
+
+const DESCONTO_ACEITE_TETO = 50;
+
+function normalizarPercent(bruto: unknown): number {
+  const n = typeof bruto === "number" ? bruto : Number(String(bruto ?? "").replace(",", "."));
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  // Meio por cento é o menor passo que faz sentido numa conta de restaurante.
+  return Math.min(Math.round(n * 2) / 2, DESCONTO_ACEITE_TETO);
+}
+
+export const lerDescontoAceite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { tenantId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { tenantId } = await assertOwnsTenant(context.supabase, context.userId, data.tenantId);
+    const { data: loja, error } = await supabaseAdmin
+      .from("pizzerias")
+      .select("site_settings")
+      .eq("id", tenantId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    const cfg = (loja?.site_settings ?? {}) as Record<string, unknown>;
+    return { percent: normalizarPercent(cfg.marketing_opt_in_discount_percent) };
+  });
+
+export const salvarDescontoAceite = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { tenantId: string; percent: number }) => d)
+  .handler(async ({ data, context }) => {
+    const { tenantId } = await assertOwnsTenant(context.supabase, context.userId, data.tenantId);
+
+    const percent = normalizarPercent(data.percent);
+
+    // Lê o pacote inteiro e devolve com a chave trocada. Escrever só a chave
+    // apagaria todo o resto da configuração do site — é como reescrever a
+    // ficha do cliente inteira só para mudar o telefone.
+    const { data: loja, error: e1 } = await supabaseAdmin
+      .from("pizzerias")
+      .select("site_settings")
+      .eq("id", tenantId)
+      .maybeSingle();
+    if (e1) throw new Error(e1.message);
+
+    const atual = (loja?.site_settings ?? {}) as Record<string, unknown>;
+    const novo = { ...atual, marketing_opt_in_discount_percent: percent };
+
+    const { error: e2 } = await supabaseAdmin
+      .from("pizzerias")
+      .update({ site_settings: novo })
+      .eq("id", tenantId);
+    if (e2) throw new Error(e2.message);
+
+    await registrarEvento(
+      tenantId,
+      null,
+      "desconto_aceite_alterado",
+      { de: normalizarPercent(atual.marketing_opt_in_discount_percent), para: percent },
+      context.userId,
+    );
+
+    return { percent };
+  });

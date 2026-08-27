@@ -174,7 +174,7 @@ export const Route = createFileRoute("/api/orders")({
           const { data: pz, error: pErr } = await supabaseAdmin
             .from("pizzerias")
             .select(
-              "id, name, slug, status, is_active, is_open, subscription_status, fiqon_enabled, fiqon_webhook_url",
+              "id, name, slug, status, is_active, is_open, subscription_status, fiqon_enabled, fiqon_webhook_url, site_settings",
             )
             .eq("api_key", apiKey)
             .neq("status", "deleted")
@@ -568,8 +568,58 @@ export const Route = createFileRoute("/api/orders")({
             }
           }
 
+          // ── Desconto por aceitar ofertas ─────────────────────────────
+          //
+          // O site manda quanto ele calculou. NÃO acreditamos nele.
+          //
+          // Quem decide é o percentual guardado aqui, na configuração da
+          // própria loja, e a conta é refeita do zero sobre o subtotal. Se o
+          // que veio do site for diferente, vale o número daqui.
+          //
+          // É o caixa conferindo a conta em vez de aceitar o valor que o
+          // cliente escreveu no guardanapo. Sem isso, bastaria alguém mexer
+          // no que o navegador envia para pedir 90% de desconto.
+          //
+          // Regras: só para pedido que não é de mesa, só se o cliente marcou
+          // que aceita, só sobre os produtos (nunca sobre a entrega), teto de
+          // 50% para um zero digitado a mais não zerar a venda.
+          const percentConfigurado = (() => {
+            const bruto = (pz as any)?.site_settings?.marketing_opt_in_discount_percent;
+            const n = typeof bruto === "number" ? bruto : Number(String(bruto ?? "").replace(",", "."));
+            if (!Number.isFinite(n) || n <= 0) return 0;
+            return Math.min(Math.round(n * 2) / 2, 50);
+          })();
+
+          const subtotalValor = parseMoney(orderData.subtotal || body.subtotal || 0);
+          const aceitouOfertas = customer?.marketing_opt_in === true;
+
+          const descontoConferido =
+            !isTableOrder && aceitouOfertas && percentConfigurado > 0 && subtotalValor > 0
+              ? Math.floor(subtotalValor * percentConfigurado) / 100
+              : 0;
+
+          const descontoQueVeio = parseMoney(
+            orderData.discount || body.discount || 0,
+          );
+          if (Math.abs(descontoQueVeio - descontoConferido) > 0.01) {
+            console.warn(
+              `ORDER_DISCOUNT_MISMATCH: site enviou ${descontoQueVeio}, conferido ${descontoConferido} (percentual da loja: ${percentConfigurado}%)`,
+            );
+          }
+
+          // O total também é refeito, senão o desconto conferido não teria
+          // efeito nenhum no que é cobrado.
+          const entregaValor = isTableOrder
+            ? 0
+            : parseMoney(orderData.delivery_fee || body.delivery_fee || 0);
+          const totalConferido =
+            subtotalValor > 0
+              ? Math.max(0, subtotalValor - descontoConferido + entregaValor)
+              : totalValue;
+
           const orderToInsert: any = {
             tenant_id: pz.id,
+            discount: descontoConferido > 0 ? descontoConferido : null,
             external_order_id: String(
               orderData.id || body.order_id || body.id || `ext_${Date.now()}`,
             ),
@@ -585,11 +635,9 @@ export const Route = createFileRoute("/api/orders")({
             neighborhood: isTableOrder
               ? "Mesa"
               : customer.neighborhood || body.neighborhood || null,
-            total: totalValue,
-            subtotal: parseMoney(orderData.subtotal || body.subtotal || 0),
-            delivery_fee: isTableOrder
-              ? 0
-              : parseMoney(orderData.delivery_fee || body.delivery_fee || 0),
+            total: totalConferido,
+            subtotal: subtotalValor,
+            delivery_fee: entregaValor,
             payment_method: orderData.payment_method || body.payment_method || "Não informado",
             delivery_type: isTableOrder ? "table" : deliveryType,
             order_type: isTableOrder ? "table" : deliveryType,

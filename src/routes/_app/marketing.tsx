@@ -17,6 +17,7 @@ import { ClientesMarketing } from "@/components/marketing/ClientesMarketing";
 import { Campanhas } from "@/components/marketing/Campanhas";
 import { ModelosMensagem } from "@/components/marketing/ModelosMensagem";
 import { ConfiguracoesWhatsApp } from "@/components/marketing/ConfiguracoesWhatsApp";
+import { DescontoAceite } from "@/components/marketing/DescontoAceite";
 
 export const Route = createFileRoute("/_app/marketing")({ component: MarketingPage });
 
@@ -37,7 +38,7 @@ const ABAS = [
   { value: "clientes", label: "Clientes" },
   { value: "campanhas", label: "Campanhas" },
   { value: "modelos", label: "Modelos de mensagem" },
-  { value: "whatsapp", label: "WhatsApp" },
+  { value: "config", label: "Configurações" },
 ];
 
 type Loja = { id: string; name: string };
@@ -140,8 +141,11 @@ function MarketingPage() {
             <TabsContent value="modelos" className="mt-0">
               <ModelosMensagem tenantId={tenantId} />
             </TabsContent>
-            <TabsContent value="whatsapp" className="mt-0">
-              <ConfiguracoesWhatsApp tenantId={tenantId} />
+            <TabsContent value="config" className="mt-0">
+              <div className="space-y-4">
+                <DescontoAceite tenantId={tenantId} />
+                <ConfiguracoesWhatsApp tenantId={tenantId} />
+              </div>
             </TabsContent>
           </div>
         )}
