@@ -1,8 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
   COR_DE_FABRICA,
+  apagadoSobre,
+  bordaSobre,
   corEscolhida,
   clarear,
+  ehEscuro,
   escurecer,
   formatar,
   lerCor,
@@ -10,7 +13,11 @@ import {
   paraHslTexto,
   paraRgbTexto,
   paraTripletoHsl,
+  razaoDeContraste,
+  superficieSobre,
+  textoApagadoSobre,
   textoLegivelSobre,
+  textoPrincipalSobre,
   variacoes,
 } from "./color";
 
@@ -121,6 +128,75 @@ describe("texto legível por cima da cor", () => {
     expect(textoLegivelSobre(lerCor("#FFD500")!).l).toBe(0);
     expect(textoLegivelSobre(lerCor("#101010")!).l).toBe(100);
     expect(textoLegivelSobre(lerCor("#E50914")!).l).toBe(100);
+  });
+});
+
+describe("peças derivadas do fundo escolhido", () => {
+  const FUNDOS = ["#101010", "#F4F1EA", "#14213D", "#FFFFFF", "#000000", "#2E1A47", "#FAFAFA"];
+
+  it("o texto principal sempre passa no critério mais exigente de contraste", () => {
+    // 7:1 é o nível AAA do WCAG. Abaixo de 4,5 alguém com a vista cansada,
+    // ou com o celular no sol, simplesmente não lê a descrição do prato.
+    for (const hex of FUNDOS) {
+      const fundo = lerCor(hex)!;
+      const contraste = razaoDeContraste(textoPrincipalSobre(fundo), fundo);
+      expect(contraste, `texto principal sobre ${hex}`).toBeGreaterThanOrEqual(7);
+    }
+  });
+
+  it("o texto de apoio ainda passa no mínimo para texto corrido", () => {
+    for (const hex of FUNDOS) {
+      const fundo = lerCor(hex)!;
+      const contraste = razaoDeContraste(textoApagadoSobre(fundo), fundo);
+      expect(contraste, `texto de apoio sobre ${hex}`).toBeGreaterThanOrEqual(4.5);
+    }
+  });
+
+  it("o card nunca sai da mesma cor do fundo", () => {
+    // Sem isto, um fundo preto teria card preto: os produtos sumiriam, como
+    // um prato branco servido sobre uma toalha branca.
+    for (const hex of FUNDOS) {
+      const fundo = lerCor(hex)!;
+      expect(paraTripletoHsl(superficieSobre(fundo))).not.toBe(paraTripletoHsl(fundo));
+      expect(paraTripletoHsl(bordaSobre(fundo))).not.toBe(paraTripletoHsl(fundo));
+    }
+  });
+
+  it("clareia sobre fundo escuro e escurece sobre fundo claro", () => {
+    const escuro = lerCor("#101010")!;
+    expect(superficieSobre(escuro).l).toBeGreaterThan(escuro.l);
+    expect(bordaSobre(escuro).l).toBeGreaterThan(escuro.l);
+
+    const branco = lerCor("#FFFFFF")!;
+    expect(superficieSobre(branco).l).toBeLessThan(branco.l);
+    expect(bordaSobre(branco).l).toBeLessThan(branco.l);
+  });
+
+  // ESTES NÚMEROS SÃO O CONTRATO ENTRE OS DOIS SISTEMAS.
+  //
+  // O site público (conectfly, lib/site/brandColor.ts) calcula as mesmas
+  // peças com as mesmas contas, e tem um teste idêntico a este. Se um lado
+  // mudar e o outro não, a prévia passa a prometer uma coisa e o cardápio a
+  // entregar outra — e o teste que quebra é este.
+  it("bate exatamente com a conta que o site público usa", () => {
+    const preto = lerCor("#101010")!;
+    expect(paraTripletoHsl(preto)).toBe("0 0% 6.27%");
+    expect(paraTripletoHsl(superficieSobre(preto))).toBe("0 0% 11.27%");
+    expect(paraTripletoHsl(apagadoSobre(preto))).toBe("0 0% 14.27%");
+    expect(paraTripletoHsl(bordaSobre(preto))).toBe("0 0% 22.27%");
+    expect(paraTripletoHsl(textoPrincipalSobre(preto))).toBe("0 0% 98%");
+    expect(paraTripletoHsl(textoApagadoSobre(preto))).toBe("0 0% 68%");
+
+    const claro = lerCor("#F4F1EA")!;
+    expect(paraTripletoHsl(textoPrincipalSobre(claro))).toBe("222 47% 11%");
+    expect(ehEscuro(claro)).toBe(false);
+  });
+
+  it("reconhece fundo escuro e fundo claro", () => {
+    expect(ehEscuro(lerCor("#101010")!)).toBe(true);
+    expect(ehEscuro(lerCor("#14213D")!)).toBe(true);
+    expect(ehEscuro(lerCor("#F4F1EA")!)).toBe(false);
+    expect(ehEscuro(lerCor("#FFFFFF")!)).toBe(false);
   });
 });
 

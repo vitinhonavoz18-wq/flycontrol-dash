@@ -13,7 +13,17 @@
  * vira propaganda enganosa.
  */
 
-import { lerCor, textoLegivelSobre, paraTripletoHsl, type Hsl } from "./color";
+import {
+  apagadoSobre,
+  bordaSobre,
+  lerCor,
+  paraTripletoHsl,
+  superficieSobre,
+  textoApagadoSobre,
+  textoLegivelSobre,
+  textoPrincipalSobre,
+  type Hsl,
+} from "./color";
 
 /** As peças de cor que o site usa para pintar tudo. Valores em receita HSL. */
 export type TokensTema = {
@@ -140,11 +150,16 @@ export function modelo(id: string | null | undefined): ModeloVisual {
  * não gostou, e volta ao ponto de partida daquele modelo — como desfazer a
  * troca de toalha das mesas e recolocar a original.
  */
-export function coresDoModelo(id: string | null | undefined): { primaria: Hsl; secundaria: Hsl } {
+export function coresDoModelo(id: string | null | undefined): {
+  primaria: Hsl;
+  secundaria: Hsl;
+  fundo: Hsl;
+} {
   const m = modelo(id);
   return {
     primaria: lerCor(m.tokens.primary)!,
     secundaria: lerCor(m.tokens.secondary)!,
+    fundo: lerCor(m.tokens.bg)!,
   };
 }
 
@@ -163,17 +178,45 @@ export function tokensDoTema(
   idModelo: string | null | undefined,
   primaria: Hsl | null,
   secundaria: Hsl | null,
+  fundo: Hsl | null = null,
 ): TokensTema {
   const base = modelo(idModelo).tokens;
+
+  // O fundo entra primeiro porque ele arrasta o resto: card, borda, área
+  // apagada e cor do texto são calculados a partir dele. Escolher preto e
+  // continuar com card branco e letra preta deixaria o cardápio ilegível.
+  const doFundo: Partial<TokensTema> = fundo
+    ? {
+        bg: paraTripletoHsl(fundo),
+        fg: paraTripletoHsl(textoPrincipalSobre(fundo)),
+        card: paraTripletoHsl(superficieSobre(fundo)),
+        muted: paraTripletoHsl(apagadoSobre(fundo)),
+        mutedFg: paraTripletoHsl(textoApagadoSobre(fundo)),
+        border: paraTripletoHsl(bordaSobre(fundo)),
+        headerBg: paraTripletoHsl(superficieSobre(fundo)),
+        headerFg: paraTripletoHsl(textoPrincipalSobre(fundo)),
+      }
+    : {};
+
   return {
     ...base,
+    ...doFundo,
     primary: primaria ? paraTripletoHsl(primaria) : base.primary,
     primaryFg: primaria ? paraTripletoHsl(textoLegivelSobre(primaria)) : base.primaryFg,
     secondary: secundaria ? paraTripletoHsl(secundaria) : base.secondary,
   };
 }
 
-/** As mesmas variáveis de CSS que o site público declara, para a prévia. */
+/**
+ * As mesmas variáveis de CSS que o site público declara, para a prévia.
+ *
+ * Os nomes curtos (`--background`, `--surface`, `--foreground`, `--primary`,
+ * `--secondary`) saem junto, apontando para os mesmos valores. Eles deixam a
+ * separação de papéis explícita — fundo da página, card, texto, marca — sem
+ * precisar renomear as variáveis `--site-*` que todo componente do cardápio
+ * já usa hoje. Renomear tudo de uma vez seria trocar a fiação da casa
+ * inteira para instalar uma tomada.
+ */
 export function variaveisCss(tokens: TokensTema): Record<string, string> {
   return {
     "--site-bg": tokens.bg,
@@ -187,5 +230,11 @@ export function variaveisCss(tokens: TokensTema): Record<string, string> {
     "--site-secondary": tokens.secondary,
     "--site-header-bg": tokens.headerBg,
     "--site-header-fg": tokens.headerFg,
+
+    "--background": tokens.bg,
+    "--surface": tokens.card,
+    "--foreground": tokens.fg,
+    "--primary": tokens.primary,
+    "--secondary": tokens.secondary,
   };
 }

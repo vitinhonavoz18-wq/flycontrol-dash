@@ -262,6 +262,74 @@ export function textoLegivelSobre(cor: Hsl): Hsl {
   return luminancia(cor) > 0.45 ? { h: 0, s: 0, l: 0 } : { h: 0, s: 0, l: 100 };
 }
 
+/** A cor é escura o bastante para pedir texto claro por cima? */
+export function ehEscuro(cor: Hsl): boolean {
+  return luminancia(cor) <= 0.45;
+}
+
+/**
+ * Quanto uma cor se destaca da outra, na régua da acessibilidade (WCAG).
+ *
+ * 1 é invisível, 21 é preto no branco. O mínimo recomendado para texto
+ * corrido é 4,5 — abaixo disso, alguém com a vista cansada ou o celular no
+ * sol simplesmente não lê.
+ */
+export function razaoDeContraste(a: Hsl, b: Hsl): number {
+  const la = luminancia(a);
+  const lb = luminancia(b);
+  const claro = Math.max(la, lb);
+  const escuro = Math.min(la, lb);
+  return Math.round(((claro + 0.05) / (escuro + 0.05)) * 100) / 100;
+}
+
+// ---------------------------------------------------------------------------
+// Peças derivadas do fundo escolhido
+// ---------------------------------------------------------------------------
+//
+// Quando a loja escolhe a cor de fundo, as outras peças da tela precisam
+// acompanhar — senão um fundo preto ficaria com card branco e texto preto
+// por cima, e o cardápio viraria um borrão. Estas contas resolvem isso sem
+// pedir mais nenhuma escolha ao lojista.
+//
+// A regra é sempre a mesma: fundo escuro, as peças por cima clareiam; fundo
+// claro, elas escurecem. É o mesmo raciocínio do prato branco com o molho
+// escuro — o que está em cima precisa contrastar com a louça.
+
+/** Move a luminosidade na direção que "levanta" a peça sobre o fundo. */
+function elevar(fundo: Hsl, passo: number): Hsl {
+  const paraCima = ehEscuro(fundo) || fundo.l < 96;
+  return normalizar({ ...fundo, l: paraCima ? fundo.l + passo : fundo.l - passo });
+}
+
+/** O card do produto: um degrau acima do fundo, nunca a mesma cor. */
+export function superficieSobre(fundo: Hsl): Hsl {
+  return elevar(fundo, 5);
+}
+
+/** Áreas discretas (caixa de total, moldura de foto). */
+export function apagadoSobre(fundo: Hsl): Hsl {
+  return elevar(fundo, 8);
+}
+
+/** O fio que separa um card do outro. Precisa de mais salto para aparecer. */
+export function bordaSobre(fundo: Hsl): Hsl {
+  return normalizar({ ...fundo, l: ehEscuro(fundo) ? fundo.l + 16 : fundo.l - 14 });
+}
+
+/** O texto principal. Não é preto/branco puro: cansa menos a vista. */
+export function textoPrincipalSobre(fundo: Hsl): Hsl {
+  return ehEscuro(fundo) ? { h: 0, s: 0, l: 98 } : { h: 222, s: 47, l: 11 };
+}
+
+/** O texto de apoio (descrição do prato), mais apagado mas ainda legível. */
+export function textoApagadoSobre(fundo: Hsl): Hsl {
+  return normalizar({
+    h: fundo.h,
+    s: Math.min(fundo.s, 20),
+    l: ehEscuro(fundo) ? 68 : 38,
+  });
+}
+
 // ---------------------------------------------------------------------------
 // Ponte com o que já está gravado no banco
 // ---------------------------------------------------------------------------

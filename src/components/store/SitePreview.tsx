@@ -19,6 +19,8 @@ type Props = {
   template: string | null | undefined;
   primaria: Hsl | null;
   secundaria: Hsl | null;
+  /** A cor de fundo escolhida. Arrasta card, borda e cor do texto junto. */
+  fundo: Hsl | null;
   nomeDaLoja: string;
 };
 
@@ -27,10 +29,10 @@ const PRATOS = [
   { nome: "Calabresa", desc: "Calabresa fatiada e cebola", preco: "R$ 52,00", destaque: false },
 ];
 
-export function SitePreview({ template, primaria, secundaria, nomeDaLoja }: Props) {
+export function SitePreview({ template, primaria, secundaria, fundo, nomeDaLoja }: Props) {
   const estilo = useMemo(
-    () => variaveisCss(tokensDoTema(template, primaria, secundaria)) as React.CSSProperties,
-    [template, primaria, secundaria],
+    () => variaveisCss(tokensDoTema(template, primaria, secundaria, fundo)) as React.CSSProperties,
+    [template, primaria, secundaria, fundo],
   );
 
   return (

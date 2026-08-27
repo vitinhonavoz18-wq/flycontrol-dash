@@ -30,6 +30,13 @@ type Loja = {
   primary_color?: string | null;
   secondary_color?: string | null;
   show_item_images?: boolean | null;
+  /**
+   * O pacotinho de configurações extras da loja. A cor de fundo mora aqui,
+   * em `background_color`, e não numa coluna própria: `site_settings` já
+   * existe, já viaja para o site público e já é MESCLADO do outro lado, então
+   * gravar uma chave nova não apaga as outras nem exige mexer no banco.
+   */
+  site_settings?: Record<string, unknown> | null;
 };
 
 type Props = {
@@ -43,6 +50,7 @@ type Rascunho = {
   template: string;
   primaria: Hsl;
   secundaria: Hsl;
+  fundo: Hsl;
   mostrarFotos: boolean;
 };
 
@@ -56,6 +64,9 @@ function rascunhoSalvo(pizzeria: Loja): Rascunho {
     // de um branco vazio que não diz nada sobre como o site está hoje.
     primaria: corEscolhida(pizzeria.primary_color) ?? doModelo.primaria,
     secundaria: corEscolhida(pizzeria.secondary_color) ?? doModelo.secundaria,
+    // Loja antiga não tem esta chave: cai na cor do próprio modelo, que é
+    // exatamente o fundo que ela já mostra hoje. Ninguém muda de cara sozinho.
+    fundo: corEscolhida(pizzeria.site_settings?.background_color) ?? doModelo.fundo,
     mostrarFotos: pizzeria.show_item_images ?? true,
   };
 }
@@ -79,12 +90,14 @@ export function AppearanceEditor({ pizzeria, salvando, onSalvar }: Props) {
     rascunho.template !== salvo.template ||
     !mesmaCor(rascunho.primaria, salvo.primaria) ||
     !mesmaCor(rascunho.secundaria, salvo.secundaria) ||
+    !mesmaCor(rascunho.fundo, salvo.fundo) ||
     rascunho.mostrarFotos !== salvo.mostrarFotos;
 
   const doModeloAtual = coresDoModelo(rascunho.template);
   const naCorDoTema =
     mesmaCor(rascunho.primaria, doModeloAtual.primaria) &&
-    mesmaCor(rascunho.secundaria, doModeloAtual.secundaria);
+    mesmaCor(rascunho.secundaria, doModeloAtual.secundaria) &&
+    mesmaCor(rascunho.fundo, doModeloAtual.fundo);
 
   /** Trocar de modelo traz as cores dele — é o que "escolher um modelo" significa. */
   function escolherModelo(id: string) {
@@ -94,12 +107,18 @@ export function AppearanceEditor({ pizzeria, salvando, onSalvar }: Props) {
       template: id,
       primaria: cores.primaria,
       secundaria: cores.secundaria,
+      fundo: cores.fundo,
     });
   }
 
   function restaurarCoresDoTema() {
     const cores = coresDoModelo(rascunho.template);
-    setRascunho({ ...rascunho, primaria: cores.primaria, secundaria: cores.secundaria });
+    setRascunho({
+      ...rascunho,
+      primaria: cores.primaria,
+      secundaria: cores.secundaria,
+      fundo: cores.fundo,
+    });
   }
 
   async function salvar() {
@@ -108,6 +127,14 @@ export function AppearanceEditor({ pizzeria, salvando, onSalvar }: Props) {
       primary_color: paraTripletoHsl(rascunho.primaria),
       secondary_color: paraTripletoHsl(rascunho.secundaria),
       show_item_images: rascunho.mostrarFotos,
+      // Mesclado com o que já estava lá: `site_settings` guarda também o
+      // modelo de checkout e o desconto de marketing. Gravar só a cor
+      // apagaria os dois — como reescrever a comanda inteira para mudar o
+      // ponto da carne.
+      site_settings: {
+        ...(pizzeria.site_settings ?? {}),
+        background_color: paraTripletoHsl(rascunho.fundo),
+      },
     });
   }
 
@@ -180,6 +207,21 @@ export function AppearanceEditor({ pizzeria, salvando, onSalvar }: Props) {
               </p>
             </div>
 
+            <div className="space-y-2">
+              <Label htmlFor="cor-fundo">Cor de fundo</Label>
+              <ColorPicker
+                id="cor-fundo"
+                rotulo="Cor de fundo"
+                valor={rascunho.fundo}
+                disabled={salvando}
+                onChange={(c) => setRascunho((r) => ({ ...r, fundo: c }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Define a cor de fundo principal do seu cardápio. Os cards dos produtos e a cor do
+                texto se ajustam sozinhos para continuar legíveis.
+              </p>
+            </div>
+
             <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
               <div className="min-w-0">
                 <p className="text-sm font-medium">Exibir fotos nos sabores/itens</p>
@@ -201,6 +243,7 @@ export function AppearanceEditor({ pizzeria, salvando, onSalvar }: Props) {
               template={rascunho.template}
               primaria={rascunho.primaria}
               secundaria={rascunho.secundaria}
+              fundo={rascunho.fundo}
               nomeDaLoja={pizzeria.name || ""}
             />
             <p className="text-xs text-muted-foreground">
