@@ -64,7 +64,13 @@ type InvoiceRow = {
   status: string;
   totalCents: number;
   createdAt: string;
+  /** Quando vence. Nulo em fatura que ainda não tem prazo definido. */
+  dueAt: string | null;
   paidAt: string | null;
+  /** O período que a fatura cobre — "AGO/2026". Vem do ciclo de cobrança. */
+  competencia: string | null;
+  /** Como foi (ou será) paga. Só aparece quando o sistema sabe. */
+  formaDePagamento: string | null;
 };
 
 const INVOICE_STATUS: Record<string, { label: string; className: string }> = {
@@ -87,6 +93,34 @@ const INVOICE_STATUS: Record<string, { label: string; className: string }> = {
   canceled: { label: "Cancelado", className: "border-border bg-muted text-muted-foreground" },
   draft: { label: "Rascunho", className: "border-border bg-muted text-muted-foreground" },
 };
+
+/** "AGO/2026" — o mês de pedidos que a fatura cobre. */
+function formatCompetencia(inicioDoCiclo: string | null): string | null {
+  if (!inicioDoCiclo) return null;
+  const d = new Date(inicioDoCiclo);
+  if (Number.isNaN(d.getTime())) return null;
+  return d
+    .toLocaleDateString("pt-BR", { month: "short", year: "numeric" })
+    .replace(".", "")
+    .replace(" de ", "/")
+    .toUpperCase();
+}
+
+/**
+ * O nome do meio de pagamento em português.
+ *
+ * "manual" quer dizer que ninguém automatizou a cobrança dessa fatura — a
+ * equipe acertou por fora. Dizer "Manual" é mais honesto do que esconder.
+ */
+function formatarFormaDePagamento(bruto: unknown): string | null {
+  const v = String(bruto ?? "")
+    .trim()
+    .toLowerCase();
+  if (!v) return null;
+  if (v === "infinitypay") return "InfinityPay";
+  if (v === "manual") return "Combinado com a equipe";
+  return v;
+}
 
 function formatDate(value: string | null): string {
   if (!value) return "—";
@@ -178,20 +212,32 @@ function BillingPage() {
       .eq("subscription_id", row.id)
       .maybeSingle();
 
+    // O ciclo entra junto para a fatura poder dizer QUAL período ela cobre —
+    // sem isso o cliente vê um valor e uma data de vencimento, sem saber a
+    // que mês de pedidos aquilo se refere.
     const { data: invoiceRows } = await db
       .from("invoices")
-      .select("id, invoice_number, status, total_cents, created_at, paid_at")
+      .select(
+        "id, invoice_number, status, total_cents, created_at, due_at, paid_at, payment_provider, " +
+          "billing_cycles(cycle_start, cycle_end)",
+      )
       .eq("subscription_id", row.id);
 
     const invoices = ((invoiceRows ?? []) as Array<Record<string, unknown>>)
-      .map((i) => ({
-        id: String(i.id),
-        number: String(i.invoice_number),
-        status: String(i.status),
-        totalCents: Number(i.total_cents ?? 0),
-        createdAt: String(i.created_at),
-        paidAt: i.paid_at ? String(i.paid_at) : null,
-      }))
+      .map((i) => {
+        const ciclo = i.billing_cycles as { cycle_start?: string; cycle_end?: string } | null;
+        return {
+          id: String(i.id),
+          number: String(i.invoice_number),
+          status: String(i.status),
+          totalCents: Number(i.total_cents ?? 0),
+          createdAt: String(i.created_at),
+          dueAt: i.due_at ? String(i.due_at) : null,
+          paidAt: i.paid_at ? String(i.paid_at) : null,
+          competencia: formatCompetencia(ciclo?.cycle_start ?? null),
+          formaDePagamento: formatarFormaDePagamento(i.payment_provider),
+        };
+      })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
     // Quantos ciclos cobrados já fecharam: é o que separa "primeiro ciclo
@@ -300,6 +346,9 @@ function BillingPage() {
 
   const pricing = PLAN_PRICING[snapshot.planCode];
   const isUsageBased = snapshot.planCode === "cents";
+  // A conta que vale agora: a mais recente que não foi cancelada. As faturas
+  // já vêm ordenadas da mais nova para a mais velha.
+  const faturaAtual = snapshot.invoices.find((i) => i.status !== "canceled") ?? null;
   const includedFeatures = featuresForPlan(snapshot.planCode);
   const missingFeatures = (
     Object.keys(FEATURE_LABELS) as Array<keyof typeof FEATURE_LABELS>
@@ -631,10 +680,76 @@ function BillingPage() {
         </Card>
       )}
 
+      {faturaAtual && (
+        <Card>
+          <CardContent className="space-y-3 p-4">
+            <h2 className="flex items-center gap-2 text-sm font-bold">
+              <Receipt className="h-4 w-4" aria-hidden="true" /> Fatura atual
+            </h2>
+
+            <div className="flex flex-wrap items-end justify-between gap-3">
+              <div>
+                <p className="text-3xl font-black">{formatCents(faturaAtual.totalCents)}</p>
+                <p className="text-xs text-muted-foreground">
+                  {faturaAtual.competencia
+                    ? `Referente a ${faturaAtual.competencia}`
+                    : faturaAtual.number}
+                </p>
+              </div>
+              <Badge
+                variant="outline"
+                className={`font-bold ${(INVOICE_STATUS[faturaAtual.status] ?? INVOICE_STATUS.draft).className}`}
+              >
+                {(INVOICE_STATUS[faturaAtual.status] ?? INVOICE_STATUS.draft).label}
+              </Badge>
+            </div>
+
+            <dl className="grid gap-x-4 gap-y-2 border-t border-border pt-3 text-sm sm:grid-cols-2">
+              <div className="flex justify-between gap-2 sm:block">
+                <dt className="text-muted-foreground">Emitida em</dt>
+                <dd className="font-medium sm:mt-0.5">{formatDate(faturaAtual.createdAt)}</dd>
+              </div>
+              <div className="flex justify-between gap-2 sm:block">
+                <dt className="text-muted-foreground">Vencimento</dt>
+                <dd className="font-medium sm:mt-0.5">{formatDate(faturaAtual.dueAt)}</dd>
+              </div>
+              <div className="flex justify-between gap-2 sm:block">
+                <dt className="text-muted-foreground">Número</dt>
+                <dd className="font-mono text-xs font-medium sm:mt-0.5">{faturaAtual.number}</dd>
+              </div>
+              {faturaAtual.formaDePagamento && (
+                <div className="flex justify-between gap-2 sm:block">
+                  <dt className="text-muted-foreground">Forma de pagamento</dt>
+                  <dd className="font-medium sm:mt-0.5">{faturaAtual.formaDePagamento}</dd>
+                </div>
+              )}
+              {faturaAtual.paidAt && (
+                <div className="flex justify-between gap-2 sm:block">
+                  <dt className="text-muted-foreground">Paga em</dt>
+                  <dd className="font-medium sm:mt-0.5">{formatDate(faturaAtual.paidAt)}</dd>
+                </div>
+              )}
+            </dl>
+
+            {/* O botão só existe quando há um link de pagamento de verdade.
+                Botão bonito que não faz nada é pior que botão nenhum: o
+                cliente clica, não acontece nada, e ele acha que o sistema
+                comeu o pagamento dele. */}
+            {pendingChargeUrl && faturaAtual.status === "pending" && (
+              <Button asChild className="h-11 w-full gap-2 sm:w-auto">
+                <a href={pendingChargeUrl} target="_blank" rel="noreferrer">
+                  Pagar fatura <ExternalLink className="h-4 w-4" aria-hidden="true" />
+                </a>
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="space-y-3 p-4">
           <h2 className="flex items-center gap-2 text-sm font-bold">
-            <Receipt className="h-4 w-4" aria-hidden="true" /> Faturas
+            <Receipt className="h-4 w-4" aria-hidden="true" /> Histórico de faturas
           </h2>
 
           {snapshot.invoices.length === 0 ? (
@@ -646,26 +761,36 @@ function BillingPage() {
               {snapshot.invoices.map((invoice) => {
                 const style = INVOICE_STATUS[invoice.status] ?? INVOICE_STATUS.draft;
                 return (
-                  <li
-                    key={invoice.id}
-                    className="flex flex-wrap items-center justify-between gap-2 py-3"
-                  >
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium">{invoice.number}</p>
-                      <p className="text-xs text-muted-foreground">
-                        Emitida em {formatDate(invoice.createdAt)}
-                        {invoice.paidAt && ` · paga em ${formatDate(invoice.paidAt)}`}
-                      </p>
+                  <li key={invoice.id} className="py-3">
+                    {/* Uma linha só no computador; empilhado no celular. Uma
+                        tabela de verdade não cabe em 390px sem virar rolagem
+                        lateral, e ninguém confere fatura de lado. */}
+                    <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium">
+                          {invoice.competencia ?? invoice.number}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {invoice.competencia && `${invoice.number} · `}
+                          Emitida em {formatDate(invoice.createdAt)}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        <Badge
+                          variant="outline"
+                          className={`text-[10px] font-bold ${style.className}`}
+                        >
+                          {style.label}
+                        </Badge>
+                        <strong className="text-sm">{formatCents(invoice.totalCents)}</strong>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <Badge
-                        variant="outline"
-                        className={`text-[10px] font-bold ${style.className}`}
-                      >
-                        {style.label}
-                      </Badge>
-                      <strong className="text-sm">{formatCents(invoice.totalCents)}</strong>
-                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {invoice.dueAt && `Vence em ${formatDate(invoice.dueAt)}`}
+                      {invoice.paidAt &&
+                        `${invoice.dueAt ? " · " : ""}Paga em ${formatDate(invoice.paidAt)}`}
+                      {invoice.formaDePagamento && ` · ${invoice.formaDePagamento}`}
+                    </p>
                   </li>
                 );
               })}

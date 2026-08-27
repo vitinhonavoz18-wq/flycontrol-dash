@@ -16,6 +16,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -693,9 +694,8 @@ function SignupWizard() {
                   error={errors.password}
                   hint="Ao menos 8 caracteres, com letra e número."
                 >
-                  <Input
+                  <PasswordInput
                     id="password"
-                    type="password"
                     autoComplete="new-password"
                     className="h-11"
                     value={owner.password}
@@ -709,14 +709,15 @@ function SignupWizard() {
                   label="Confirmar senha"
                   error={errors.passwordConfirmation}
                 >
-                  <Input
+                  <PasswordInput
                     id="passwordConfirmation"
-                    type="password"
                     autoComplete="new-password"
                     className="h-11"
                     value={owner.passwordConfirmation}
                     aria-invalid={!!errors.passwordConfirmation}
-                    onChange={(e) => setOwner({ ...owner, passwordConfirmation: e.target.value })}
+                    onChange={(e) =>
+                      setOwner({ ...owner, passwordConfirmation: e.target.value })
+                    }
                   />
                 </Field>
               </>

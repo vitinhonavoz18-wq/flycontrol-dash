@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { Loader2, UtensilsCrossed } from "lucide-react";
 import { toast } from "sonner";
@@ -52,7 +53,13 @@ function WaiterLoginPage() {
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="p">Senha</Label>
-              <Input id="p" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <PasswordInput
+                id="p"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>
               {loading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null} Entrar

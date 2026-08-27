@@ -903,6 +903,7 @@ function Dashboard() {
         open={flyStatus.open}
         onOpenChange={(o) => setFlyStatus((s) => ({ ...s, open: o }))}
         kind={flyStatus.kind}
+        orderId={flyStatus.order?.id ?? ""}
         orderNumber={flyStatus.order?.order_number ?? ""}
         customerName={flyStatus.order?.customer_name ?? ""}
         customerPhone={flyStatus.order?.customer_phone ?? ""}
