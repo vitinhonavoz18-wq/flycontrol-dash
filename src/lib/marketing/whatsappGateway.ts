@@ -41,13 +41,7 @@ export type MensagemWhatsApp = MensagemTexto | MensagemImagem;
 
 /** Status interno. NUNCA use o nome que o fornecedor deu — traduza para cá. */
 export type StatusMensagem =
-  | "pending"
-  | "queued"
-  | "processing"
-  | "sent"
-  | "delivered"
-  | "failed"
-  | "cancelled";
+  "pending" | "queued" | "processing" | "sent" | "delivered" | "failed" | "cancelled";
 
 export type ResultadoEnvio =
   | { ok: true; providerMessageId?: string; status: StatusMensagem }
@@ -147,7 +141,11 @@ function interpretarWebhookPadrao(corpo: unknown): EventoWebhook | null {
   const c = corpo as Record<string, unknown>;
 
   const recipientId = pegarTexto(c, ["recipient_id", "recipientId"]);
-  const providerMessageId = pegarTexto(c, ["provider_message_id", "providerMessageId", "message_id"]);
+  const providerMessageId = pegarTexto(c, [
+    "provider_message_id",
+    "providerMessageId",
+    "message_id",
+  ]);
   if (!recipientId && !providerMessageId) return null;
 
   return {

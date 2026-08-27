@@ -116,6 +116,10 @@ export function construirFiltro(f: FiltroSegmento): FiltroResolvido {
  * navegador mandou.
  */
 export function aplicarFiltro<T>(query: T, f: FiltroResolvido): T {
+  // O construtor de consultas do Supabase muda de tipo a cada filtro
+  // encadeado; descrever isso em tipos aqui não acrescenta segurança nenhuma,
+  // porque quem garante a coluna certa é o banco.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   let q = query as any;
 
   // O consentimento vem primeiro, e não depende do filtro escolhido.

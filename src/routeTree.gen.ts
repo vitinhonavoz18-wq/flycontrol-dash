@@ -47,6 +47,7 @@ import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizze
 import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
 import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.close-cycles'
+import { Route as ApiMarketingQueueRouteImport } from './routes/api/marketing.queue'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
 import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
@@ -57,6 +58,8 @@ import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/publ
 import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/public/request-close-table'
 import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
 import { Route as ApiWebhooksInfinitypayRouteImport } from './routes/api/webhooks.infinitypay'
+import { Route as ApiWebhooksWhatsappStatusRouteImport } from './routes/api/webhooks.whatsapp-status'
+import { Route as ApiMarketingQueueResultRouteImport } from './routes/api/marketing.queue.result'
 import { Route as ApiPizzeriasIdDeactivateRouteImport } from './routes/api/pizzerias.$id.deactivate'
 import { Route as ApiPizzeriasIdDeleteRouteImport } from './routes/api/pizzerias.$id.delete'
 import { Route as ApiPizzeriasIdProvisionRouteImport } from './routes/api/pizzerias.$id.provision'
@@ -251,6 +254,11 @@ const ApiBillingCloseCyclesRoute = ApiBillingCloseCyclesRouteImport.update({
   path: '/api/billing/close-cycles',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMarketingQueueRoute = ApiMarketingQueueRouteImport.update({
+  id: '/api/marketing/queue',
+  path: '/api/marketing/queue',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPizzeriasCreateRoute = ApiPizzeriasCreateRouteImport.update({
   id: '/api/pizzerias/create',
   path: '/api/pizzerias/create',
@@ -303,6 +311,17 @@ const ApiWebhooksInfinitypayRoute = ApiWebhooksInfinitypayRouteImport.update({
   id: '/api/webhooks/infinitypay',
   path: '/api/webhooks/infinitypay',
   getParentRoute: () => rootRouteImport,
+} as any)
+const ApiWebhooksWhatsappStatusRoute =
+  ApiWebhooksWhatsappStatusRouteImport.update({
+    id: '/api/webhooks/whatsapp-status',
+    path: '/api/webhooks/whatsapp-status',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiMarketingQueueResultRoute = ApiMarketingQueueResultRouteImport.update({
+  id: '/result',
+  path: '/result',
+  getParentRoute: () => ApiMarketingQueueRoute,
 } as any)
 const ApiPizzeriasIdDeactivateRoute =
   ApiPizzeriasIdDeactivateRouteImport.update({
@@ -364,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
+  '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -374,7 +394,9 @@ export interface FileRoutesByFullPath {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
+  '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/admin/': typeof AppAdminIndexRoute
+  '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
@@ -416,6 +438,7 @@ export interface FileRoutesByTo {
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
+  '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -426,7 +449,9 @@ export interface FileRoutesByTo {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
+  '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/admin': typeof AppAdminIndexRoute
+  '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
@@ -471,6 +496,7 @@ export interface FileRoutesById {
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
+  '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -481,7 +507,9 @@ export interface FileRoutesById {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
+  '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/_app/admin/': typeof AppAdminIndexRoute
+  '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
@@ -526,6 +554,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/users'
     | '/api/billing/close-cycles'
+    | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -536,7 +565,9 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/api/webhooks/infinitypay'
+    | '/api/webhooks/whatsapp-status'
     | '/admin/'
+    | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
@@ -578,6 +609,7 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/users'
     | '/api/billing/close-cycles'
+    | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -588,7 +620,9 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/api/webhooks/infinitypay'
+    | '/api/webhooks/whatsapp-status'
     | '/admin'
+    | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
@@ -632,6 +666,7 @@ export interface FileRouteTypes {
     | '/_app/admin/subscriptions'
     | '/_app/admin/users'
     | '/api/billing/close-cycles'
+    | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -642,7 +677,9 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/api/webhooks/infinitypay'
+    | '/api/webhooks/whatsapp-status'
     | '/_app/admin/'
+    | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
@@ -667,6 +704,7 @@ export interface RootRouteChildren {
   PagamentoPlanoRoute: typeof PagamentoPlanoRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiBillingCloseCyclesRoute: typeof ApiBillingCloseCyclesRoute
+  ApiMarketingQueueRoute: typeof ApiMarketingQueueRouteWithChildren
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPizzeriasFiqonTestRoute: typeof ApiPizzeriasFiqonTestRoute
   ApiPizzeriasSyncMenuRoute: typeof ApiPizzeriasSyncMenuRoute
@@ -677,6 +715,7 @@ export interface RootRouteChildren {
   ApiPublicRequestCloseTableRoute: typeof ApiPublicRequestCloseTableRoute
   ApiPublicTableSessionStatusRoute: typeof ApiPublicTableSessionStatusRoute
   ApiWebhooksInfinitypayRoute: typeof ApiWebhooksInfinitypayRoute
+  ApiWebhooksWhatsappStatusRoute: typeof ApiWebhooksWhatsappStatusRoute
   ApiPizzeriasIdDeactivateRoute: typeof ApiPizzeriasIdDeactivateRoute
   ApiPizzeriasIdDeleteRoute: typeof ApiPizzeriasIdDeleteRoute
   ApiPizzeriasIdProvisionRoute: typeof ApiPizzeriasIdProvisionRoute
@@ -951,6 +990,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBillingCloseCyclesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/marketing/queue': {
+      id: '/api/marketing/queue'
+      path: '/api/marketing/queue'
+      fullPath: '/api/marketing/queue'
+      preLoaderRoute: typeof ApiMarketingQueueRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pizzerias/create': {
       id: '/api/pizzerias/create'
       path: '/api/pizzerias/create'
@@ -1020,6 +1066,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/webhooks/infinitypay'
       preLoaderRoute: typeof ApiWebhooksInfinitypayRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/webhooks/whatsapp-status': {
+      id: '/api/webhooks/whatsapp-status'
+      path: '/api/webhooks/whatsapp-status'
+      fullPath: '/api/webhooks/whatsapp-status'
+      preLoaderRoute: typeof ApiWebhooksWhatsappStatusRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/marketing/queue/result': {
+      id: '/api/marketing/queue/result'
+      path: '/result'
+      fullPath: '/api/marketing/queue/result'
+      preLoaderRoute: typeof ApiMarketingQueueResultRouteImport
+      parentRoute: typeof ApiMarketingQueueRoute
     }
     '/api/pizzerias/$id/deactivate': {
       id: '/api/pizzerias/$id/deactivate'
@@ -1112,6 +1172,17 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface ApiMarketingQueueRouteChildren {
+  ApiMarketingQueueResultRoute: typeof ApiMarketingQueueResultRoute
+}
+
+const ApiMarketingQueueRouteChildren: ApiMarketingQueueRouteChildren = {
+  ApiMarketingQueueResultRoute: ApiMarketingQueueResultRoute,
+}
+
+const ApiMarketingQueueRouteWithChildren =
+  ApiMarketingQueueRoute._addFileChildren(ApiMarketingQueueRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
@@ -1130,6 +1201,7 @@ const rootRouteChildren: RootRouteChildren = {
   PagamentoPlanoRoute: PagamentoPlanoRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiBillingCloseCyclesRoute: ApiBillingCloseCyclesRoute,
+  ApiMarketingQueueRoute: ApiMarketingQueueRouteWithChildren,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPizzeriasFiqonTestRoute: ApiPizzeriasFiqonTestRoute,
   ApiPizzeriasSyncMenuRoute: ApiPizzeriasSyncMenuRoute,
@@ -1140,6 +1212,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicRequestCloseTableRoute: ApiPublicRequestCloseTableRoute,
   ApiPublicTableSessionStatusRoute: ApiPublicTableSessionStatusRoute,
   ApiWebhooksInfinitypayRoute: ApiWebhooksInfinitypayRoute,
+  ApiWebhooksWhatsappStatusRoute: ApiWebhooksWhatsappStatusRoute,
   ApiPizzeriasIdDeactivateRoute: ApiPizzeriasIdDeactivateRoute,
   ApiPizzeriasIdDeleteRoute: ApiPizzeriasIdDeleteRoute,
   ApiPizzeriasIdProvisionRoute: ApiPizzeriasIdProvisionRoute,
