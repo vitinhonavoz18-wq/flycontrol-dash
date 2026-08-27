@@ -68,11 +68,24 @@ export function DescontoAceite({ tenantId }: { tenantId: string }) {
       });
       setSalvo(r.percent);
       setPercent(r.percent > 0 ? String(r.percent) : "");
-      toast.success(
-        r.percent > 0
-          ? `Pronto: quem aceitar receber ofertas ganha ${r.percent}% de desconto.`
-          : "Desconto desligado. A caixinha continua aparecendo, sem oferta.",
-      );
+
+      // Salvar aqui não basta: o site de pedidos tem banco próprio, e o valor
+      // precisa ser empurrado para lá. Se o empurrão falhar, dizer "salvou" e
+      // pronto faria o dono achar que está valendo no site quando não está.
+      if (!r.sincronizou) {
+        toast.warning(
+          `Guardado no painel, mas o site de pedidos ainda não recebeu${
+            r.erroSincronia ? `: ${r.erroSincronia}` : "."
+          } Tente salvar de novo em instantes.`,
+          { duration: 8000 },
+        );
+      } else {
+        toast.success(
+          r.percent > 0
+            ? `Pronto: quem aceitar receber ofertas ganha ${r.percent}% de desconto. Já vale no site.`
+            : "Desconto desligado. A caixinha continua aparecendo, sem oferta.",
+        );
+      }
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não consegui salvar");
     } finally {

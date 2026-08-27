@@ -11,6 +11,7 @@ import {
   variaveisDesconhecidas,
 } from "./templateVars";
 import { normalizePhone } from "./phone";
+import { syncToExternal } from "@/utils/menuSync";
 
 /* Enquanto o arquivo de tipos gerado não conhecer as tabelas novas (ver
    `db.ts`), as linhas que voltam do banco chegam sem tipo. Depois de regerar
@@ -711,6 +712,50 @@ export const salvarDescontoAceite = createServerFn({ method: "POST" })
       .eq("id", tenantId);
     if (e2) throw new Error(e2.message);
 
+    // ── E agora a parte que faltava ──────────────────────────────────────
+    //
+    // Os dois sistemas têm bancos SEPARADOS. Guardar aqui não faz o site de
+    // pedidos saber de nada — é como anotar o preço novo no caderno da
+    // cozinha e o garçom continuar com o cardápio velho na mão.
+    //
+    // Então, depois de salvar, empurramos a configuração para o site pelo
+    // mesmo caminho que a tela "Minha Loja" já usa. O SiteCreatorFly mescla
+    // com o que ele tem: manda só esta chave, não apaga o resto.
+    //
+    // Se o empurrão falhar, o valor CONTINUA salvo aqui e a resposta avisa.
+    // A tela mostra o aviso em vez de dizer "salvou" e deixar o dono achando
+    // que está no ar quando não está.
+    let sincronizou = true;
+    let erroSincronia: string | undefined;
+    try {
+      const { data: loja2 } = await supabaseAdmin
+        .from("pizzerias")
+        .select("slug, api_key, sync_endpoint")
+        .eq("id", tenantId)
+        .maybeSingle();
+
+      const endpoint = (loja2 as any)?.sync_endpoint;
+      if (!endpoint) {
+        sincronizou = false;
+        erroSincronia = "Esta loja ainda não tem o endereço de sincronização configurado.";
+      } else {
+        const r = await syncToExternal({
+          type: "restaurant",
+          action: "update",
+          id: tenantId,
+          pizzeriaSlug: (loja2 as any)?.slug,
+          pizzeriaApiKey: (loja2 as any)?.api_key,
+          syncEndpoint: endpoint,
+          data: { site_settings: novo },
+        });
+        sincronizou = r.success;
+        erroSincronia = r.error;
+      }
+    } catch (e) {
+      sincronizou = false;
+      erroSincronia = e instanceof Error ? e.message : "Falha ao falar com o site";
+    }
+
     await registrarEvento(
       tenantId,
       null,
@@ -719,5 +764,5 @@ export const salvarDescontoAceite = createServerFn({ method: "POST" })
       context.userId,
     );
 
-    return { percent };
+    return { percent, sincronizou, erroSincronia };
   });
