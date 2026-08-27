@@ -27,6 +27,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppDocsRouteImport } from './routes/_app/docs'
 import { Route as AppFinanceRouteImport } from './routes/_app/finance'
 import { Route as AppFlydeliveryRouteImport } from './routes/_app/flydelivery'
+import { Route as AppMarketingRouteImport } from './routes/_app/marketing'
 import { Route as AppMenuRouteImport } from './routes/_app/menu'
 import { Route as AppMyStoreRouteImport } from './routes/_app/my-store'
 import { Route as AppSearchOrdersRouteImport } from './routes/_app/search-orders'
@@ -152,6 +153,11 @@ const AppFinanceRoute = AppFinanceRouteImport.update({
 const AppFlydeliveryRoute = AppFlydeliveryRouteImport.update({
   id: '/flydelivery',
   path: '/flydelivery',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppMarketingRoute = AppMarketingRouteImport.update({
+  id: '/marketing',
+  path: '/marketing',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMenuRoute = AppMenuRouteImport.update({
@@ -364,6 +370,7 @@ export interface FileRoutesByFullPath {
   '/docs': typeof AppDocsRoute
   '/finance': typeof AppFinanceRoute
   '/flydelivery': typeof AppFlydeliveryRoute
+  '/marketing': typeof AppMarketingRoute
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
   '/search-orders': typeof AppSearchOrdersRoute
@@ -419,6 +426,7 @@ export interface FileRoutesByTo {
   '/docs': typeof AppDocsRoute
   '/finance': typeof AppFinanceRoute
   '/flydelivery': typeof AppFlydeliveryRoute
+  '/marketing': typeof AppMarketingRoute
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
   '/search-orders': typeof AppSearchOrdersRoute
@@ -477,6 +485,7 @@ export interface FileRoutesById {
   '/_app/docs': typeof AppDocsRoute
   '/_app/finance': typeof AppFinanceRoute
   '/_app/flydelivery': typeof AppFlydeliveryRoute
+  '/_app/marketing': typeof AppMarketingRoute
   '/_app/menu': typeof AppMenuRoute
   '/_app/my-store': typeof AppMyStoreRoute
   '/_app/search-orders': typeof AppSearchOrdersRoute
@@ -535,6 +544,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/finance'
     | '/flydelivery'
+    | '/marketing'
     | '/menu'
     | '/my-store'
     | '/search-orders'
@@ -590,6 +600,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/finance'
     | '/flydelivery'
+    | '/marketing'
     | '/menu'
     | '/my-store'
     | '/search-orders'
@@ -647,6 +658,7 @@ export interface FileRouteTypes {
     | '/_app/docs'
     | '/_app/finance'
     | '/_app/flydelivery'
+    | '/_app/marketing'
     | '/_app/menu'
     | '/_app/my-store'
     | '/_app/search-orders'
@@ -848,6 +860,13 @@ declare module '@tanstack/react-router' {
       path: '/flydelivery'
       fullPath: '/flydelivery'
       preLoaderRoute: typeof AppFlydeliveryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/marketing': {
+      id: '/_app/marketing'
+      path: '/marketing'
+      fullPath: '/marketing'
+      preLoaderRoute: typeof AppMarketingRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/menu': {
@@ -1145,6 +1164,7 @@ interface AppRouteChildren {
   AppDocsRoute: typeof AppDocsRoute
   AppFinanceRoute: typeof AppFinanceRoute
   AppFlydeliveryRoute: typeof AppFlydeliveryRoute
+  AppMarketingRoute: typeof AppMarketingRoute
   AppMenuRoute: typeof AppMenuRoute
   AppMyStoreRoute: typeof AppMyStoreRoute
   AppSearchOrdersRoute: typeof AppSearchOrdersRoute
@@ -1162,6 +1182,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDocsRoute: AppDocsRoute,
   AppFinanceRoute: AppFinanceRoute,
   AppFlydeliveryRoute: AppFlydeliveryRoute,
+  AppMarketingRoute: AppMarketingRoute,
   AppMenuRoute: AppMenuRoute,
   AppMyStoreRoute: AppMyStoreRoute,
   AppSearchOrdersRoute: AppSearchOrdersRoute,

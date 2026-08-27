@@ -23,6 +23,7 @@ import {
   UtensilsCrossed,
   Wallet,
   Trophy,
+  Megaphone,
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -167,6 +168,7 @@ function AppLayoutInner() {
     { to: "/menu", label: "Cardápio", icon: Menu },
     { to: "/flydelivery", label: "FlyDelivery", icon: Smartphone },
     { to: "/combos", label: "Combos", icon: PieChart },
+    { to: "/marketing", label: "Marketing", icon: Megaphone },
     { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },
     { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
     { to: "/settings", label: "Configurações", icon: Settings },
@@ -314,7 +316,13 @@ function AppLayoutInner() {
       </aside>
 
       {/* Mobile Header & Sidebar */}
-      <div className="flex-1 flex flex-col min-h-screen">
+      {/* `min-w-0` não é enfeite: sem ele, esta coluna cresce junto com o
+          conteúdo mais largo da tela e empurra a página inteira para o lado.
+          Era isso que fazia o painel deslizar na horizontal no celular — o
+          Dashboard chegava a 1067px de largura numa tela de 390px. O
+          `overflow-x-hidden` que já existia no <main> não resolvia, porque
+          quem estava esticando era esta caixa aqui de fora. */}
+      <div className="flex-1 min-w-0 flex flex-col min-h-screen">
         {/* Cabeçalho mais baixo com o aparelho deitado: 64px de altura em uma
             tela de 360px é 18% do espaço vertical. `safe-x` afasta o conteúdo
             de recortes laterais, que só existem em paisagem. */}

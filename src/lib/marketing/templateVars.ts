@@ -37,7 +37,9 @@ export const DESCRICAO_VARIAVEIS: Record<Variavel, string> = {
   cupom: "Código do cupom da campanha",
   desconto: "Desconto do cupom (ex.: 15%)",
   link_cardapio: "Endereço do seu cardápio",
-  ultimo_pedido: "Quando ele pediu pela última vez",
+  // O exemplo evita o erro mais comum: escrever "Faz {{ultimo_pedido}}" e a
+  // mensagem sair "Faz há 32 dias".
+  ultimo_pedido: 'Quando ele pediu pela última vez — já vem como "há 32 dias"',
 };
 
 export type ValoresVariaveis = Partial<Record<Variavel, string | null | undefined>>;
