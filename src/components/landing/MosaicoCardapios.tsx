@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { MapPin, Store } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { corEscolhida, paraHex } from "@/lib/theme/color";
 
 /**
  * Prova social: os cardápios que já estão no ar.
@@ -111,7 +112,12 @@ function preencher(lista: Cardapio[]): Cardapio[] {
 }
 
 function Cartao({ cardapio, decorativo = false }: { cardapio: Cardapio; decorativo?: boolean }) {
-  const cor = cardapio.primary_color || "#FF5A00";
+  // A cor da loja pode estar gravada como receita do site ("38 92% 50%") ou
+  // como código hex. Aqui ela precisa virar um código que o navegador aceita
+  // sozinho, senão o cartão sai sem cor — e o `|| "#FF5A00"` nem chega a
+  // socorrer, porque um texto inválido não é vazio.
+  const escolhida = corEscolhida(cardapio.primary_color);
+  const cor = escolhida ? paraHex(escolhida) : "#FF5A00";
   const lugar = cardapio.neighborhood || cardapio.address?.split(",")[1]?.trim() || null;
   const endereco = cardapio.public_url || `https://conectfly.com/${cardapio.slug}`;
 

@@ -31,6 +31,7 @@ import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { syncToExternal } from "@/utils/menuSync";
 import { CheckoutLayoutPicker } from "@/components/store/CheckoutLayoutPicker";
+import { AppearanceEditor } from "@/components/store/AppearanceEditor";
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
@@ -48,15 +49,9 @@ const BUSINESS_TYPES = [
   "Outro",
 ];
 
-// Os 5 modelos visuais que o SiteCreatorFly já sabe renderizar
-// (TemplateRenderer.tsx). O id é o que vai salvo em `selected_template`.
-const TEMPLATES = [
-  { id: "black", name: "Black Premium", desc: "Escuro, elegante e gastronômico." },
-  { id: "white", name: "White Clean", desc: "Versão clara, leve e moderna." },
-  { id: "pizza_hut_style", name: "Pizza Red", desc: "Estilo fast-food, visual vermelho." },
-  { id: "burger_style", name: "Burger Showcase", desc: "Moderno, foco em hamburguerias." },
-  { id: "bar_prime", name: "Bar Prime", desc: "Visual moderno para bares, drinks e eventos." },
-];
+// Os 5 modelos visuais e as cores de cada um vivem em `lib/theme/templates.ts`,
+// que também alimenta a prévia da aba Aparência — uma lista só, para a prévia
+// nunca mostrar um modelo que o site não tem.
 
 // Campos desta tela que `prepareDataForExternal('restaurant', ...)` (em
 // utils/menuSync.ts) sabe traduzir para o SiteCreatorFly. Campos fora deste
@@ -172,26 +167,44 @@ function StoreEditor({
   // botão único de "Salvar" que junta tudo: cada mudança já vale sozinha, e
   // o aviso mostrado reflete o que realmente aconteceu com essa mudança.
   async function handleUpdate(field: string, value: any) {
-    if (!pizzeria) return;
+    await handleUpdateMany({ [field]: value });
+  }
+
+  /**
+   * Grava vários campos de uma vez e avisa o site público uma vez só.
+   *
+   * A aba Aparência precisa disso: modelo, cor primária, cor secundária e o
+   * interruptor das fotos saem juntos quando o lojista aperta "Salvar
+   * alterações". Mandar um de cada vez faria o site trocar de cara quatro
+   * vezes seguidas na frente de quem estivesse pedindo naquele momento.
+   *
+   * Devolve `true` só quando tudo deu certo — inclusive o aviso ao site.
+   */
+  async function handleUpdateMany(campos: Record<string, unknown>): Promise<boolean> {
+    if (!pizzeria) return false;
     setSaving(true);
     const { error } = await supabase
       .from("pizzerias")
-      .update({ [field]: value } as any)
+      .update(campos as any)
       .eq("id", pizzeria.id);
 
     if (error) {
       toast.error("Erro ao salvar: " + error.message);
       setSaving(false);
-      return;
+      return false;
     }
 
-    setPizzeria((prev: any) => ({ ...prev, [field]: value }));
+    setPizzeria((prev: any) => ({ ...prev, ...campos }));
 
-    if (RESTAURANT_SYNC_FIELDS.has(field) && pizzeria.slug) {
+    const paraSincronizar = Object.fromEntries(
+      Object.entries(campos).filter(([campo]) => RESTAURANT_SYNC_FIELDS.has(campo)),
+    );
+
+    if (Object.keys(paraSincronizar).length > 0 && pizzeria.slug) {
       if (!pizzeria.api_key) {
         toast.error("Salvo no FlyControl, mas esta loja ainda não está conectada ao site público.");
         setSaving(false);
-        return;
+        return false;
       }
 
       let syncEndpoint = pizzeria.sync_endpoint;
@@ -207,7 +220,7 @@ function StoreEditor({
           "Salvo no FlyControl, mas não consegui conectar esta loja ao site público agora. Tente novamente em instantes.",
         );
         setSaving(false);
-        return;
+        return false;
       }
 
       const syncResult = await syncToExternal({
@@ -217,7 +230,7 @@ function StoreEditor({
         pizzeriaSlug: pizzeria.slug,
         pizzeriaApiKey: pizzeria.api_key,
         syncEndpoint,
-        data: { [field]: value },
+        data: paraSincronizar,
       });
 
       if (!syncResult.success) {
@@ -225,12 +238,13 @@ function StoreEditor({
           `Salvo no FlyControl, mas não foi possível atualizar o site público${syncResult.error ? ` (${syncResult.error})` : ""}. Tente novamente em instantes.`,
         );
         setSaving(false);
-        return;
+        return false;
       }
     }
 
     toast.success("Salvo com sucesso!");
     setSaving(false);
+    return true;
   }
 
   // `site_settings` é uma coluna única no banco (um "pacotinho" de várias
@@ -322,7 +336,7 @@ function StoreEditor({
         <h1 className="text-3xl font-bold">Minha Loja</h1>
         <p className="text-muted-foreground">
           Como sua loja aparece e funciona no site público — cada mudança já salva e publica na
-          hora.
+          hora. Só a aba Aparência espera você apertar "Salvar alterações".
         </p>
       </div>
 
@@ -664,92 +678,7 @@ function StoreEditor({
         </TabsContent>
 
         <TabsContent value="appearance" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Palette className="h-4 w-4 text-primary" /> Aparência
-              </CardTitle>
-              <CardDescription>Modelo visual e cores da marca no site público.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <Label>Modelo Visual do Site</Label>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
-                  {TEMPLATES.map((t) => (
-                    <button
-                      key={t.id}
-                      type="button"
-                      onClick={() => handleUpdate("selected_template", t.id)}
-                      disabled={saving}
-                      className={`rounded-lg border-2 p-3 text-left transition-colors ${
-                        (pizzeria.selected_template || "black") === t.id
-                          ? "border-primary bg-primary/5"
-                          : "border-input hover:border-primary/40"
-                      }`}
-                    >
-                      <p className="text-sm font-bold">{t.name}</p>
-                      <p className="text-[10px] text-muted-foreground">{t.desc}</p>
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="primary-color">Cor Primária (HSL)</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="primary-color"
-                      placeholder='Ex: "0 84% 55%"'
-                      defaultValue={pizzeria.primary_color || ""}
-                      onBlur={(e) => handleUpdate("primary_color", e.target.value)}
-                      className="flex-1"
-                    />
-                    <span
-                      className="h-9 w-9 shrink-0 rounded-md border"
-                      style={{
-                        background: pizzeria.primary_color
-                          ? `hsl(${pizzeria.primary_color})`
-                          : undefined,
-                      }}
-                    />
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="secondary-color">Cor Secundária (HSL)</Label>
-                  <div className="flex items-center gap-2">
-                    <Input
-                      id="secondary-color"
-                      placeholder='Ex: "45 93% 58%"'
-                      defaultValue={pizzeria.secondary_color || ""}
-                      onBlur={(e) => handleUpdate("secondary_color", e.target.value)}
-                      className="flex-1"
-                    />
-                    <span
-                      className="h-9 w-9 shrink-0 rounded-md border"
-                      style={{
-                        background: pizzeria.secondary_color
-                          ? `hsl(${pizzeria.secondary_color})`
-                          : undefined,
-                      }}
-                    />
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center justify-between rounded-lg border p-3">
-                <div>
-                  <p className="text-sm font-medium">Exibir fotos nos sabores/itens</p>
-                  <p className="text-[10px] text-muted-foreground">
-                    Habilita o anexo de fotos no cardápio público
-                  </p>
-                </div>
-                <Switch
-                  checked={pizzeria.show_item_images ?? true}
-                  onCheckedChange={(checked) => handleUpdate("show_item_images", checked)}
-                  disabled={saving}
-                />
-              </div>
-            </CardContent>
-          </Card>
+          <AppearanceEditor pizzeria={pizzeria} salvando={saving} onSalvar={handleUpdateMany} />
         </TabsContent>
 
         <TabsContent value="behavior" className="space-y-6">
