@@ -87,6 +87,12 @@ BEGIN
   -- Celular tem 9 dígitos e começa com 9; fixo tem 8. Aceitamos os dois, mas
   -- só o celular serve para WhatsApp — quem decide isso é a coluna is_mobile.
   IF length(numero) NOT IN (8, 9) THEN RETURN NULL; END IF;
+  -- Telefone fixo no Brasil nunca começa com 9. Oito dígitos começando com 9
+  -- é celular com um dígito faltando — o erro de digitação mais comum, e
+  -- mandar mensagem para ele é mandar para o número de outra pessoa.
+  IF length(numero) = 8 AND left(numero, 1) = '9' THEN RETURN NULL; END IF;
+  -- Celular de 9 dígitos sempre começa com 9.
+  IF length(numero) = 9 AND left(numero, 1) <> '9' THEN RETURN NULL; END IF;
 
   RETURN '55' || ddd || numero;
 END;

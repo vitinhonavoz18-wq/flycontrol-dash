@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { normalizePhone } from "@/lib/marketing/phone";
 
 // Função auxiliar para gerar headers CORS robustos
 const getCorsHeaders = (request?: Request) => {
@@ -773,6 +774,37 @@ export const Route = createFileRoute("/api/orders")({
 
           await logExternalOrder(apiKey, body, 200);
           console.log("ORDER_RESPONSE_SENT: success");
+
+          // 3.5 Aceite de propaganda, se o cliente marcou no site.
+          //
+          // O cadastro do cliente no caderno de marketing acontece sozinho, no
+          // banco, a cada pedido. O que NÃO acontece sozinho é a permissão de
+          // mandar promoção — essa depende de a pessoa ter marcado a caixa no
+          // checkout, e é só isso que este trecho grava.
+          //
+          // Fica fora do caminho crítico e com o erro engolido: se falhar,
+          // perdemos um aceite (chato, o cliente marca de novo no próximo
+          // pedido), mas o pedido já foi salvo e respondido. Perder pedido é
+          // que não pode.
+          if (customer?.marketing_opt_in === true) {
+            try {
+              const tel = normalizePhone(orderToInsert.customer_phone);
+              if (tel) {
+                await (supabaseAdmin as any)
+                  .from("marketing_customers")
+                  .update({
+                    marketing_opt_in: true,
+                    marketing_opt_in_at: new Date().toISOString(),
+                    marketing_opt_in_source: "checkout",
+                    marketing_opt_out_at: null,
+                  })
+                  .eq("tenant_id", pz.id)
+                  .eq("phone_e164", tel.e164);
+              }
+            } catch (e) {
+              console.warn("[API/Orders] não consegui registrar o aceite de ofertas:", e);
+            }
+          }
 
           // 4. Integração FIQON (Assíncrona/Não-bloqueante para o cliente)
           if (pz.fiqon_enabled && pz.fiqon_webhook_url) {
