@@ -12,6 +12,7 @@ import {
 } from "./templateVars";
 import { normalizePhone } from "./phone";
 import { syncToExternal } from "@/utils/menuSync";
+import { ensureRestaurantProvisioned } from "@/lib/provisioning/ensureProvisioned.server";
 
 /* Enquanto o arquivo de tipos gerado não conhecer as tabelas novas (ver
    `db.ts`), as linhas que voltam do banco chegam sem tipo. Depois de regerar
@@ -728,16 +729,35 @@ export const salvarDescontoAceite = createServerFn({ method: "POST" })
     let sincronizou = true;
     let erroSincronia: string | undefined;
     try {
-      const { data: loja2 } = await supabaseAdmin
+      let { data: loja2 } = await supabaseAdmin
         .from("pizzerias")
         .select("slug, api_key, sync_endpoint")
         .eq("id", tenantId)
         .maybeSingle();
 
+      // Loja recém-cadastrada costuma chegar aqui sem o endereço de
+      // sincronização — a conexão com o site é feita em segundo plano no
+      // cadastro e pode não ter terminado, ou ter falhado.
+      //
+      // Antes desta parte, a tela simplesmente desistia e avisava. Só que a
+      // tela "Minha Loja" já sabia se virar sozinha nessa hora, e esta não —
+      // por isso o desconto funcionava nas lojas antigas (que já tinham
+      // passado por lá) e não nas novas. Agora as duas fazem a mesma coisa:
+      // pedem a conexão na hora e seguem.
+      if (!(loja2 as any)?.sync_endpoint) {
+        await ensureRestaurantProvisioned(tenantId);
+        const { data: recarregada } = await supabaseAdmin
+          .from("pizzerias")
+          .select("slug, api_key, sync_endpoint")
+          .eq("id", tenantId)
+          .maybeSingle();
+        loja2 = recarregada;
+      }
+
       const endpoint = (loja2 as any)?.sync_endpoint;
       if (!endpoint) {
         sincronizou = false;
-        erroSincronia = "Esta loja ainda não tem o endereço de sincronização configurado.";
+        erroSincronia = "não consegui conectar esta loja ao site de pedidos agora";
       } else {
         const r = await syncToExternal({
           type: "restaurant",

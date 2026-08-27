@@ -11,6 +11,7 @@ import {
 const provisionado = {
   sf_restaurant_id: "rest_123",
   public_url: "https://conectfly.com.br/pizzaria-teste",
+  sync_endpoint: "https://conectfly.com.br/api/public/menu-sync/pizzaria-teste/tok_123",
   provision_status: PROVISION_DONE,
 };
 
@@ -26,6 +27,29 @@ describe("CENÁRIO 2 — execução duplicada não cria um segundo cardápio", (
     for (let i = 0; i < 5; i++) {
       expect(decideProvisioning(provisionado).action).toBe("skip");
     }
+  });
+});
+
+describe("CENÁRIO 2b — loja conectada pela metade", () => {
+  it("com vínculo e URL, mas sem endereço de sincronização, provisiona de novo", () => {
+    // Este era o estado que travava lojas novas: o cardápio abria normalmente,
+    // então tudo PARECIA certo, mas nada que o dono mudasse no painel chegava
+    // até lá — e a decisão antiga dizia "já provisionado", então nunca se
+    // consertava sozinho. É o telefone da cozinha anotado errado: o salão
+    // funciona, o pedido é que nunca chega no fogão.
+    const decisao = decideProvisioning({ ...provisionado, sync_endpoint: null });
+    expect(decisao).toEqual({ action: "provision", reason: "missing_sync_endpoint" });
+  });
+
+  it("endereço em branco conta como ausente", () => {
+    expect(decideProvisioning({ ...provisionado, sync_endpoint: "   " }).action).toBe("provision");
+  });
+
+  it("quem não informa o campo continua sendo tratado como pela metade", () => {
+    // Segurança para chamadas antigas que ainda não selecionam a coluna:
+    // pedir provisionamento à toa é barato; deixar a loja muda, não.
+    const { sync_endpoint: _ignorado, ...semCampo } = provisionado;
+    expect(decideProvisioning(semCampo).action).toBe("provision");
   });
 });
 

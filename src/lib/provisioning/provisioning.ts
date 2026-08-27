@@ -20,14 +20,25 @@ export type ProvisionStatus =
 export type ProvisionSubject = {
   sf_restaurant_id: string | null;
   public_url: string | null;
+  /**
+   * O endereço para onde o FlyControl empurra cardápio e configurações.
+   *
+   * Sem ele a loja fica "meio conectada": o cardápio aparece no ar, mas nada
+   * que o dono mudar no painel chega lá. É o telefone da cozinha anotado
+   * errado — o salão funciona, só que o pedido nunca chega no fogão.
+   */
+  sync_endpoint?: string | null;
   provision_status: string | null;
 };
 
 export type ProvisionDecision =
-  /** Já tem tenant e URL: não há o que fazer, e nem chamada de rede a gastar. */
+  /** Já tem tenant, URL e endereço de sincronização: nada a fazer. */
   | { action: "skip"; reason: "already_provisioned" }
   /** Falta alguma peça — provisiona. O SiteCreatorFly devolve o mesmo tenant. */
-  | { action: "provision"; reason: "missing_link" | "missing_url" | "retry_after_failure" };
+  | {
+      action: "provision";
+      reason: "missing_link" | "missing_url" | "missing_sync_endpoint" | "retry_after_failure";
+    };
 
 /**
  * Decide se vale chamar o SiteCreatorFly.
@@ -40,8 +51,15 @@ export type ProvisionDecision =
 export function decideProvisioning(subject: ProvisionSubject): ProvisionDecision {
   const hasLink = Boolean(subject.sf_restaurant_id?.trim());
   const hasUrl = Boolean(subject.public_url?.trim());
+  const hasSync = Boolean(subject.sync_endpoint?.trim());
 
-  if (hasLink && hasUrl) return { action: "skip", reason: "already_provisioned" };
+  if (hasLink && hasUrl && hasSync) return { action: "skip", reason: "already_provisioned" };
+
+  // Vínculo e URL, mas sem endereço de sincronização: a loja parece pronta —
+  // o cardápio abre — e mesmo assim NADA que o dono mudar no painel chega
+  // até ela. Antes desta linha, esse estado era considerado "provisionado" e
+  // nunca mais se consertava sozinho: a decisão só olhava vínculo e URL.
+  if (hasLink && hasUrl) return { action: "provision", reason: "missing_sync_endpoint" };
 
   // Vínculo sem URL acontece quando o provisionamento antigo gravou pela
   // metade. Chamar de novo é barato e o outro lado devolve o mesmo tenant.

@@ -62,6 +62,7 @@ type CompanyRow = {
   owner_id: string | null;
   sf_restaurant_id: string | null;
   public_url: string | null;
+  sync_endpoint: string | null;
   provision_status: string | null;
 };
 
@@ -75,7 +76,9 @@ export async function ensureRestaurantProvisioned(companyId: string): Promise<En
 
   const { data, error } = await supabaseAdmin
     .from("pizzerias")
-    .select("id, name, slug, api_key, owner_id, sf_restaurant_id, public_url, provision_status")
+    .select(
+      "id, name, slug, api_key, owner_id, sf_restaurant_id, public_url, sync_endpoint, provision_status",
+    )
     .eq("id", id)
     .maybeSingle();
 
