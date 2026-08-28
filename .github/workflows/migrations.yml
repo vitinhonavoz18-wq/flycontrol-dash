@@ -1,0 +1,120 @@
+# Aplica as migrações do banco no Supabase.
+#
+# POR QUE ESTE ARQUIVO EXISTE
+#
+# Até agora, toda vez que uma mudança mexia na estrutura do banco (uma regra
+# de contagem, uma tabela nova, uma trava contra cobrança repetida), alguém
+# precisava abrir o Supabase e colar o SQL na mão. Isso é o tipo de passo que
+# um dia é esquecido — e aí o site vai para o ar esperando uma regra nova que
+# o banco ainda não tem. É como trocar o cardápio da parede e esquecer de
+# avisar a cozinha: o cliente pede o prato novo e ninguém sabe fazer.
+#
+# Agora isso acontece sozinho, junto com a publicação.
+#
+# A TRAVA DE SEGURANÇA
+#
+# Antes de aplicar qualquer coisa, ele PERGUNTA ao Supabase o que está
+# faltando e mostra a lista. Se aparecer mais migração pendente do que o
+# limite abaixo, ele PARA e avisa, em vez de sair aplicando dezenas de
+# arquivos antigos de uma vez.
+#
+# Isso protege contra o caso perigoso: se o histórico do Supabase estiver
+# desencontrado do repositório, uma aplicação cega tentaria rodar todas as
+# migrações desde o começo do projeto. É a diferença entre repor o que faltou
+# no estoque e refazer o inventário inteiro do zero.
+name: Migrações do banco
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "supabase/migrations/**"
+  workflow_dispatch:
+    inputs:
+      modo:
+        description: "conferir = só mostra o que falta | aplicar = aplica de verdade"
+        type: choice
+        options: [conferir, aplicar]
+        default: conferir
+      limite:
+        description: "Máximo de migrações que ele pode aplicar de uma vez"
+        default: "5"
+
+env:
+  PROJECT_ID: knhenchgntttraaeewlj
+
+jobs:
+  migrar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Conferir se as chaves existem
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SENHA: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          faltando=""
+          [ -z "$TOKEN" ] && faltando="$faltando SUPABASE_ACCESS_TOKEN"
+          [ -z "$SENHA" ] && faltando="$faltando SUPABASE_DB_PASSWORD"
+          if [ -n "$faltando" ]; then
+            echo "::error::Faltam estas chaves nos segredos do repositório:$faltando"
+            echo ""
+            echo "Como resolver, uma vez só:"
+            echo "  1. No Supabase, gere um token em https://supabase.com/dashboard/account/tokens"
+            echo "  2. A senha do banco está em Project Settings > Database > Database password"
+            echo "  3. Neste repositório, vá em Settings > Secrets and variables > Actions"
+            echo "     e crie SUPABASE_ACCESS_TOKEN e SUPABASE_DB_PASSWORD."
+            exit 1
+          fi
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Ligar ao projeto
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase link --project-ref "$PROJECT_ID"
+
+      - name: Ver o que está faltando
+        id: plano
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          set -o pipefail
+          supabase db push --dry-run 2>&1 | tee plano.txt
+          # Cada migração pendente aparece como um arquivo .sql na saída.
+          pendentes=$(grep -cE '^\s*[0-9]{10,}_.*\.sql' plano.txt || true)
+          echo "pendentes=$pendentes" >> "$GITHUB_OUTPUT"
+          echo "### Migrações pendentes: $pendentes" >> "$GITHUB_STEP_SUMMARY"
+          sed -n '1,80p' plano.txt >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Trava de segurança
+        env:
+          PENDENTES: ${{ steps.plano.outputs.pendentes }}
+          LIMITE: ${{ github.event.inputs.limite || '5' }}
+        run: |
+          if [ "$PENDENTES" -gt "$LIMITE" ]; then
+            echo "::error::$PENDENTES migrações pendentes, acima do limite de $LIMITE."
+            echo "Isso costuma significar que o histórico do Supabase está"
+            echo "desencontrado do repositório. NADA foi aplicado."
+            echo "Confira a lista acima antes de liberar."
+            exit 1
+          fi
+          echo "$PENDENTES migração(ões) pendente(s) — dentro do limite de $LIMITE."
+
+      - name: Aplicar
+        if: github.event_name == 'push' || github.event.inputs.modo == 'aplicar'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: supabase db push
+
+      - name: Só conferi, não apliquei
+        if: github.event_name == 'workflow_dispatch' && github.event.inputs.modo != 'aplicar'
+        run: |
+          echo "Modo conferir. A lista acima é o que SERIA aplicado."
+          echo "Nada foi alterado no banco."
