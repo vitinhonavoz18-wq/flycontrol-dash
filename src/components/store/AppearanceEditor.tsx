@@ -8,6 +8,8 @@ import { ColorPicker } from "@/components/store/ColorPicker";
 import { SitePreview } from "@/components/store/SitePreview";
 import { MODELOS, MODELO_PADRAO, coresDoModelo } from "@/lib/theme/templates";
 import { corEscolhida, paraTripletoHsl, type Hsl } from "@/lib/theme/color";
+import { MenuLayoutPicker } from "@/components/store/MenuLayoutPicker";
+import { layoutPorId, type LayoutId } from "@/lib/menu/layouts";
 
 /**
  * A aba "Aparência" da tela Minha Loja.
@@ -30,6 +32,8 @@ type Loja = {
   primary_color?: string | null;
   secondary_color?: string | null;
   show_item_images?: boolean | null;
+  /** O tipo do negócio, editado na aba Identidade. Aqui só é lido. */
+  business_type?: string | null;
   /**
    * O pacotinho de configurações extras da loja. A cor de fundo mora aqui,
    * em `background_color`, e não numa coluna própria: `site_settings` já
@@ -52,6 +56,13 @@ type Rascunho = {
   secundaria: Hsl;
   fundo: Hsl;
   mostrarFotos: boolean;
+  /**
+   * O layout escolhido, ou `null` para "usar o recomendado pelo meu tipo de
+   * negócio". Guardar `null` em vez do id recomendado é de propósito: assim,
+   * se o lojista trocar o tipo do estabelecimento depois, o cardápio
+   * acompanha sozinho em vez de ficar preso na escolha antiga.
+   */
+  layout: LayoutId | null;
 };
 
 /** Lê a loja como está salva e monta o ponto de partida do rascunho. */
@@ -68,6 +79,7 @@ function rascunhoSalvo(pizzeria: Loja): Rascunho {
     // exatamente o fundo que ela já mostra hoje. Ninguém muda de cara sozinho.
     fundo: corEscolhida(pizzeria.site_settings?.background_color) ?? doModelo.fundo,
     mostrarFotos: pizzeria.show_item_images ?? true,
+    layout: layoutPorId(pizzeria.site_settings?.menu_layout)?.id ?? null,
   };
 }
 
@@ -91,7 +103,8 @@ export function AppearanceEditor({ pizzeria, salvando, onSalvar }: Props) {
     !mesmaCor(rascunho.primaria, salvo.primaria) ||
     !mesmaCor(rascunho.secundaria, salvo.secundaria) ||
     !mesmaCor(rascunho.fundo, salvo.fundo) ||
-    rascunho.mostrarFotos !== salvo.mostrarFotos;
+    rascunho.mostrarFotos !== salvo.mostrarFotos ||
+    rascunho.layout !== salvo.layout;
 
   const doModeloAtual = coresDoModelo(rascunho.template);
   const naCorDoTema =
@@ -134,6 +147,10 @@ export function AppearanceEditor({ pizzeria, salvando, onSalvar }: Props) {
       site_settings: {
         ...(pizzeria.site_settings ?? {}),
         background_color: paraTripletoHsl(rascunho.fundo),
+        // String vazia, e não a chave removida: o site mescla o que chega com
+        // o que já tem, então apagar a chave aqui deixaria a escolha antiga
+        // viva do outro lado. Vazio é o que o site lê como "sem escolha".
+        menu_layout: rascunho.layout ?? "",
       },
     });
   }
@@ -175,6 +192,15 @@ export function AppearanceEditor({ pizzeria, salvando, onSalvar }: Props) {
             Escolher um modelo carrega as cores dele. Depois disso você pode trocar as cores como
             quiser.
           </p>
+        </div>
+
+        <div className="border-t pt-5">
+          <MenuLayoutPicker
+            businessType={pizzeria.business_type}
+            valor={rascunho.layout}
+            disabled={salvando}
+            onChange={(l) => setRascunho((r) => ({ ...r, layout: l }))}
+          />
         </div>
 
         <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(0,340px)]">
