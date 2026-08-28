@@ -7,8 +7,24 @@ import { cn } from "@/lib/utils";
 
 const BUCKET = "menu-images";
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
-const COMPRESS_THRESHOLD = 800 * 1024; // 800 KB
-const MAX_DIMENSION = 1600;
+
+/**
+ * O maior lado que uma foto de produto pode ter depois do envio.
+ *
+ * No cardápio, a foto aparece num espaço de mais ou menos 350 pontos de
+ * largura no celular. Guardar 1600 obrigava o navegador do cliente a abrir a
+ * foto inteira, em tamanho grande, e só então encolher para caber — para cada
+ * produto da lista. É como levar a caixa fechada da geladeira até a mesa para
+ * servir um copo de refrigerante: o copo é o mesmo, o esforço não.
+ *
+ * Medido num cardápio de 200 produtos, com o processador 4x mais lento (um
+ * Android intermediário): 6 segundos de rolagem custavam 653 milissegundos de
+ * desenho com fotos de 1600, e 299 com fotos pequenas. Menos da metade.
+ *
+ * 900 dá folga de sobra: cobre o celular de tela grande e o computador, e
+ * ainda sobra resolução se um dia a foto for usada maior.
+ */
+const MAX_DIMENSION = 900;
 const SIGNED_URL_TTL = 60 * 60 * 24 * 365 * 50; // ~50 years
 const ACCEPTED = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
@@ -21,17 +37,34 @@ interface ImageUploadProps {
 }
 
 async function compressIfNeeded(file: File): Promise<Blob> {
-  if (file.size <= COMPRESS_THRESHOLD && file.type === "image/webp") return file;
+  // A decisão é pelo TAMANHO DA FOTO, não pelo peso do arquivo.
+  //
+  // Antes, um arquivo WebP com menos de 800 KB passava direto — mesmo tendo
+  // 4000 pontos de largura. E é justamente esse o caso que pesa: WebP comprime
+  // tão bem que uma foto enorme cabe em poucos KB no disco, mas ao ser aberta
+  // na tela do cliente ela volta a ocupar o tamanho original na memória. É a
+  // barraca de camping: dobrada cabe na mochila, montada ocupa a sala inteira.
   const bitmap = await createImageBitmap(file);
-  const scale = Math.min(1, MAX_DIMENSION / Math.max(bitmap.width, bitmap.height));
+  const maiorLado = Math.max(bitmap.width, bitmap.height);
+  if (file.type === "image/webp" && maiorLado <= MAX_DIMENSION) {
+    bitmap.close();
+    return file;
+  }
+  const scale = Math.min(1, MAX_DIMENSION / maiorLado);
   const w = Math.round(bitmap.width * scale);
   const h = Math.round(bitmap.height * scale);
   const canvas = document.createElement("canvas");
   canvas.width = w;
   canvas.height = h;
   const ctx = canvas.getContext("2d");
-  if (!ctx) return file;
+  if (!ctx) {
+    bitmap.close();
+    return file;
+  }
   ctx.drawImage(bitmap, 0, 0, w, h);
+  // Libera a foto aberta na memória; num envio em lote isso evita a aba
+  // engasgar depois da décima imagem.
+  bitmap.close();
   return await new Promise<Blob>((resolve) => {
     canvas.toBlob(
       (blob) => resolve(blob ?? file),
