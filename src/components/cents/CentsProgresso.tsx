@@ -53,6 +53,7 @@ export function CentsProgresso({ tenantId, aoCarregar }: Props) {
   const [pulso, setPulso] = useState(0);
   const [chegouAgora, setChegouAgora] = useState(false);
   const nivelAnterior = useRef<number | null>(null);
+  const totalAnterior = useRef<number | null>(null);
 
   // Guardado numa referência para o aviso à página não reiniciar a busca a
   // cada desenho da tela — senão o cartão ficaria pedindo os números em
@@ -66,6 +67,22 @@ export function CentsProgresso({ tenantId, aoCarregar }: Props) {
       setDados(r);
       setFalhou(false);
       avisar.current?.(r);
+
+      // O "+1 pedido" só aparece quando a conta REALMENTE subiu.
+      //
+      // Um pedido entra na conta quando vira operação (sai de "novo" para
+      // "preparando"), e não no instante em que cai na tela. Se o aviso
+      // piscasse a cada pedido que chega, o lojista veria "+1" e o número do
+      // lado parado — como o garçom cantar o pedido antes de a cozinha
+      // aceitar.
+      const antes = totalAnterior.current;
+      const agora = r?.pedidos ?? null;
+      totalAnterior.current = agora;
+      if (antes !== null && agora !== null && agora > antes) {
+        setChegouAgora(true);
+        setPulso((p) => p + 1);
+        window.setTimeout(() => setChegouAgora(false), 2600);
+      }
     } catch {
       setFalhou(true);
       avisar.current?.(null);
@@ -79,8 +96,12 @@ export function CentsProgresso({ tenantId, aoCarregar }: Props) {
     void carregar();
   }, [carregar, tentativa]);
 
-  // Pedido novo em tempo real. Reaproveita o mesmo canal do Supabase que o
-  // resto do painel já usa — não existe uma segunda ligação só para isto.
+  // Movimento de pedido em tempo real.
+  //
+  // Escuta o pedido que chega E o pedido que muda de status, porque é a
+  // mudança de status que faz o pedido entrar (ou sair) da conta: um pedido
+  // cancelado precisa fazer o número descer na hora, não só o pedido novo
+  // fazer subir.
   useEffect(() => {
     if (!tenantId) return;
     const canal = supabase
@@ -89,13 +110,11 @@ export function CentsProgresso({ tenantId, aoCarregar }: Props) {
         "postgres_changes",
         // O filtro por loja não é enfeite: sem ele, o painel de uma empresa
         // reagiria ao pedido de outra.
-        { event: "INSERT", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` },
+        { event: "*", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` },
         () => {
-          setChegouAgora(true);
-          setPulso((p) => p + 1);
-          // Quem decide se este pedido conta é o servidor.
+          // Quem decide se este pedido conta é o servidor. A tela só pergunta
+          // de novo e mostra a resposta.
           void carregar();
-          window.setTimeout(() => setChegouAgora(false), 2600);
         },
       )
       .subscribe();
