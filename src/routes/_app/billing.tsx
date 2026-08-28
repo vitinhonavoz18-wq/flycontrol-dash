@@ -11,6 +11,8 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { toast } from "sonner";
+import { CentsProgresso } from "@/components/cents/CentsProgresso";
+import type { ProgressoNaTela } from "@/lib/billing/cents.functions";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -42,6 +44,7 @@ export const Route = createFileRoute("/_app/billing")({ component: BillingPage }
 const UNDEFINED_TABLE = "42P01";
 
 type Snapshot = {
+  companyId: string;
   companyName: string;
   planCode: PlanCode;
   planName: string;
@@ -133,6 +136,16 @@ function BillingPage() {
   const [snapshot, setSnapshot] = useState<Snapshot | null>(null);
   const [loading, setLoading] = useState(true);
   const [unavailable, setUnavailable] = useState<"missing_tables" | "no_subscription" | null>(null);
+
+  // Quem manda no preço nesta tela. Quando o servidor responde que esta loja
+  // já está nas faixas do CENTS, o quadro antigo de meta sai de cena: dois
+  // quadros dizendo preços diferentes é como ter dois cardápios na parede.
+  const [cents, setCents] = useState<ProgressoNaTela | null>(null);
+  // `pronto` separa "ainda não perguntei" de "perguntei e não tem faixas".
+  // Sem essa distinção o quadro antigo apareceria por um instante e sumiria,
+  // e o lojista veria um preço piscar na tela.
+  const [centsPronto, setCentsPronto] = useState(false);
+  const comFaixas = cents?.comFaixas === true;
 
   const load = useCallback(async () => {
     if (!user?.id) return;
@@ -245,6 +258,7 @@ function BillingPage() {
     const closedUsageCycles = invoices.filter((i) => i.status !== "canceled").length;
 
     setSnapshot({
+      companyId: company.id,
       companyName: company.name,
       planCode,
       planName: row.plans?.name ?? PLAN_PRICING[planCode].name,
@@ -358,6 +372,18 @@ function BillingPage() {
     <div className="space-y-6 p-4 sm:p-6 md:p-8">
       <SectionHeader title="Plano e cobrança" description={snapshot.companyName} />
 
+      {/* A progressão do CENTS. Some sozinha para quem não está no CENTS ou
+          ainda não entrou na política de faixas — o componente decide isso a
+          partir do que o servidor responde, e a tela antiga continua abaixo,
+          intacta, para todo o resto. */}
+      <CentsProgresso
+        tenantId={snapshot.companyId}
+        aoCarregar={(d) => {
+          setCents(d);
+          setCentsPronto(true);
+        }}
+      />
+
       {pendingChargeUrl && (
         <Card className="border-amber-500/40 bg-amber-500/5">
           <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4">
@@ -407,9 +433,13 @@ function BillingPage() {
             <div>
               <dt className="text-muted-foreground">Cobrança</dt>
               <dd className="font-medium">
-                {isUsageBased
-                  ? `${formatCents(snapshot.progress?.unitPriceCents ?? pricing.defaultOrderUnitPriceCents)}/pedido`
-                  : `${formatCents(pricing.monthlyFeeCents)}/mês`}
+                {!isUsageBased
+                  ? `${formatCents(pricing.monthlyFeeCents)}/mês`
+                  : // Nas faixas, o preço vale para o PRÓXIMO pedido — é o
+                    // único número que o lojista pode conferir olhando a tela.
+                    comFaixas && cents
+                    ? `${formatCents(cents.precoDoProximoPedidoCents)}/pedido`
+                    : `${formatCents(snapshot.progress?.unitPriceCents ?? pricing.defaultOrderUnitPriceCents)}/pedido`}
               </dd>
             </div>
             <div>
@@ -512,92 +542,103 @@ function BillingPage() {
         </Card>
       )}
 
-      {/* Progresso da meta: só faz sentido em plano por uso, e só depois do
-          período grátis. Mostrar "estimativa deste ciclo" durante o trial
-          exibiria um valor a pagar onde não existe valor a pagar. */}
-      {isUsageBased && snapshot.progress && snapshot.phase !== "free_trial" && (
-        <Card>
-          <CardContent className="space-y-4 p-4">
-            <div className="flex flex-wrap items-end justify-between gap-2">
-              <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Pedidos válidos neste ciclo
-                </p>
-                <p className="text-2xl font-black">
-                  {snapshot.progress.billableOrderCount}
-                  <span className="text-base font-medium text-muted-foreground">
-                    {" "}
-                    de {snapshot.progress.thresholdOrders}
-                  </span>
+      {/* Progresso da meta ANTIGO (meta única de 500 pedidos valendo para o
+          ciclo seguinte). Só faz sentido em plano por uso, e só depois do
+          período grátis — mostrar "estimativa deste ciclo" durante o trial
+          exibiria um valor a pagar onde não existe valor a pagar.
+
+          E some por completo quando a loja já está nas faixas: os dois
+          quadros contam histórias diferentes do mesmo mês ("R$ 0,70 por
+          pedido, faltam 153 para R$ 0,45" contra "R$ 0,60 agora, faltam 63
+          para R$ 0,50"). Um dos dois estaria mentindo. */}
+      {isUsageBased &&
+        snapshot.progress &&
+        snapshot.phase !== "free_trial" &&
+        centsPronto &&
+        !comFaixas && (
+          <Card>
+            <CardContent className="space-y-4 p-4">
+              <div className="flex flex-wrap items-end justify-between gap-2">
+                <div>
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                    Pedidos válidos neste ciclo
+                  </p>
+                  <p className="text-2xl font-black">
+                    {snapshot.progress.billableOrderCount}
+                    <span className="text-base font-medium text-muted-foreground">
+                      {" "}
+                      de {snapshot.progress.thresholdOrders}
+                    </span>
+                  </p>
+                </div>
+                <p className="text-sm font-bold text-primary">
+                  {snapshot.progress.percent.toFixed(1)}%
                 </p>
               </div>
-              <p className="text-sm font-bold text-primary">
-                {snapshot.progress.percent.toFixed(1)}%
-              </p>
-            </div>
 
-            <div
-              className="h-3 overflow-hidden rounded-full bg-muted"
-              role="progressbar"
-              aria-valuenow={snapshot.progress.billableOrderCount}
-              aria-valuemin={0}
-              aria-valuemax={snapshot.progress.thresholdOrders}
-              aria-label={`${snapshot.progress.billableOrderCount} de ${snapshot.progress.thresholdOrders} pedidos válidos`}
-            >
               <div
-                className={`h-full rounded-full transition-[width] duration-300 ${
-                  snapshot.progress.state === "losing_promotion" ? "bg-amber-500" : "bg-primary"
+                className="h-3 overflow-hidden rounded-full bg-muted"
+                role="progressbar"
+                aria-valuenow={snapshot.progress.billableOrderCount}
+                aria-valuemin={0}
+                aria-valuemax={snapshot.progress.thresholdOrders}
+                aria-label={`${snapshot.progress.billableOrderCount} de ${snapshot.progress.thresholdOrders} pedidos válidos`}
+              >
+                <div
+                  className={`h-full rounded-full transition-[width] duration-300 ${
+                    snapshot.progress.state === "losing_promotion" ? "bg-amber-500" : "bg-primary"
+                  }`}
+                  style={{ width: `${snapshot.progress.percent}%` }}
+                />
+              </div>
+
+              <p
+                className={`rounded-lg p-3 text-sm ${
+                  snapshot.progress.state === "losing_promotion"
+                    ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
+                    : "bg-primary/5 text-foreground"
                 }`}
-                style={{ width: `${snapshot.progress.percent}%` }}
-              />
-            </div>
-
-            <p
-              className={`rounded-lg p-3 text-sm ${
-                snapshot.progress.state === "losing_promotion"
-                  ? "bg-amber-500/10 text-amber-700 dark:text-amber-400"
-                  : "bg-primary/5 text-foreground"
-              }`}
-            >
-              {snapshot.progress.message}
-            </p>
-
-            <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs">
-              <div>
-                <dt className="text-muted-foreground">Preço atual</dt>
-                <dd className="font-bold">
-                  {formatCents(snapshot.progress.unitPriceCents)} por pedido
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Preço no próximo ciclo</dt>
-                <dd className="font-bold">
-                  {formatCents(snapshot.progress.nextCycleUnitPriceCents)} por pedido
-                </dd>
-              </div>
-            </dl>
-
-            <div className="rounded-lg border border-border bg-muted/30 p-3">
-              <div className="flex items-center justify-between gap-2">
-                <span className="text-sm text-muted-foreground">Estimativa deste ciclo</span>
-                <strong className="text-lg text-primary">
-                  {formatCents(snapshot.progress.estimatedTotalCents)}
-                </strong>
-              </div>
-              {snapshot.progress.setupFeeCents > 0 && (
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Inclui a taxa única de cadastro de {formatCents(snapshot.progress.setupFeeCents)}.
-                </p>
-              )}
-              {/* Deixar claro que é estimativa evita a sensação de cobrança
-                  surpresa quando o valor final diferir. */}
-              <p className="mt-1 text-xs text-muted-foreground">
-                Valor estimado pelos pedidos já registrados. Pode mudar até o fechamento do ciclo.
+              >
+                {snapshot.progress.message}
               </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
+
+              <dl className="grid grid-cols-2 gap-3 border-t border-border pt-3 text-xs">
+                <div>
+                  <dt className="text-muted-foreground">Preço atual</dt>
+                  <dd className="font-bold">
+                    {formatCents(snapshot.progress.unitPriceCents)} por pedido
+                  </dd>
+                </div>
+                <div>
+                  <dt className="text-muted-foreground">Preço no próximo ciclo</dt>
+                  <dd className="font-bold">
+                    {formatCents(snapshot.progress.nextCycleUnitPriceCents)} por pedido
+                  </dd>
+                </div>
+              </dl>
+
+              <div className="rounded-lg border border-border bg-muted/30 p-3">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm text-muted-foreground">Estimativa deste ciclo</span>
+                  <strong className="text-lg text-primary">
+                    {formatCents(snapshot.progress.estimatedTotalCents)}
+                  </strong>
+                </div>
+                {snapshot.progress.setupFeeCents > 0 && (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Inclui a taxa única de cadastro de{" "}
+                    {formatCents(snapshot.progress.setupFeeCents)}.
+                  </p>
+                )}
+                {/* Deixar claro que é estimativa evita a sensação de cobrança
+                  surpresa quando o valor final diferir. */}
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Valor estimado pelos pedidos já registrados. Pode mudar até o fechamento do ciclo.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
       {!isUsageBased && snapshot.progress && snapshot.phase !== "free_trial" && (
         <Card>

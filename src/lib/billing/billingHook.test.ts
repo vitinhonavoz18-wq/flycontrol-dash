@@ -10,16 +10,36 @@ import { BILLABLE_STATUSES, usageIdempotencyKey } from "./billingEngine";
  *
  * Duas cópias divergindo cobrariam errado em silêncio. Estes testes leem a
  * migration e comparam, para a divergência quebrar a suíte.
+ *
+ * As migrations aparecem aqui na ordem em que o banco as aplica.
+ *
+ * Uma função pode ser redefinida depois. Ler só a primeira versão testaria um
+ * texto que o banco já substituiu — como conferir o cardápio do ano passado
+ * para saber o preço de hoje. Por isso lemos todas e, quando houver mais de
+ * uma definição da mesma função, vale a ÚLTIMA.
  */
-const MIGRATION_PATH = "supabase/migrations/20260806140000_billing_usage_hook.sql";
-const sql = readFileSync(MIGRATION_PATH, "utf8");
+const MIGRATION_PATHS = [
+  "supabase/migrations/20260806140000_billing_usage_hook.sql",
+  "supabase/migrations/20260828120000_pedido_restaurado_volta_a_contar.sql",
+];
+const sql = MIGRATION_PATHS.map((p) => readFileSync(p, "utf8")).join("\n");
+
+/** A definição que realmente vale de uma função: a última escrita. */
+function definicaoVigente(nome: string): string {
+  const todas = [
+    ...sql.matchAll(
+      new RegExp(`CREATE OR REPLACE FUNCTION public\\.${nome}[\\s\\S]*?\\$\\$;`, "g"),
+    ),
+  ];
+  expect(todas.length, `função ${nome} não encontrada nas migrations`).toBeGreaterThan(0);
+  return todas[todas.length - 1][0];
+}
 
 /** Extrai os literais da lista `IN (...)` de is_billable_order_status. */
 function extractSqlBillableStatuses(): string[] {
-  const fn = sql.match(/CREATE OR REPLACE FUNCTION public\.is_billable_order_status[\s\S]*?\$\$;/);
-  expect(fn, "função is_billable_order_status não encontrada na migration").not.toBeNull();
+  const fn = definicaoVigente("is_billable_order_status");
 
-  const list = fn![0].match(/IN\s*\(([\s\S]*?)\)/);
+  const list = fn.match(/IN\s*\(([\s\S]*?)\)/);
   expect(list, "lista IN (...) não encontrada").not.toBeNull();
 
   return [...list![1].matchAll(/'([^']+)'/g)].map((m) => m[1]);
@@ -55,7 +75,7 @@ describe("garantias estruturais do gancho", () => {
 
   it("nunca derruba a operação do restaurante", () => {
     // Sem o EXCEPTION, uma falha de cobrança abortaria o UPDATE do pedido.
-    const fn = sql.match(/CREATE OR REPLACE FUNCTION public\.record_order_usage[\s\S]*?\$\$;/)![0];
+    const fn = definicaoVigente("record_order_usage");
     expect(fn).toContain("EXCEPTION WHEN OTHERS THEN");
     expect(fn).toMatch(/RAISE WARNING/);
     // O caminho de exceção devolve NEW: o pedido segue gravado.
@@ -81,6 +101,24 @@ describe("garantias estruturais do gancho", () => {
     expect(sql).toMatch(/GREATEST\(billable_order_count - 1, 0\)/);
   });
 
+  it("volta a cobrar um pedido restaurado, com etiqueta nova", () => {
+    // Sem o sufixo de "2ª via", a nova cobrança tentaria a mesma etiqueta do
+    // primeiro lançamento, bateria no ON CONFLICT e o pedido restaurado
+    // ficaria de graça para sempre.
+    const fn = definicaoVigente("record_order_usage");
+    expect(fn).toMatch(/v_key := v_key \|\| ':' \|\| v_reversals/);
+    // A contagem de idas e voltas sai do próprio caderno de eventos.
+    expect(fn).toMatch(/COUNT\(\*\) FILTER \(WHERE event_type = 'order_reversal'\)/);
+  });
+
+  it("confere o saldo do pedido antes de cobrar ou estornar", () => {
+    // É a trava contra dois avisos no mesmo instante: nenhum pedido é cobrado
+    // duas vezes nem estornado duas vezes, mesmo que a etiqueta fosse igual.
+    const fn = definicaoVigente("record_order_usage");
+    expect(fn).toMatch(/COALESCE\(SUM\(quantity\), 0\)/);
+    expect(fn).toMatch(/IF v_saldo > 0 THEN\s*\n\s*RETURN NEW;/);
+  });
+
   it("ignora planos de mensalidade fixa", () => {
     // No PREMIUM o pedido é métrica, não faturamento.
     expect(sql).toContain("s.billing_model = 'usage_per_order'");
@@ -93,25 +131,25 @@ describe("garantias estruturais do gancho", () => {
   it("não abre ciclo por efeito colateral de um pedido", () => {
     // Abrir ciclo é decisão de ativação/fechamento. Criar um a partir de um
     // pedido geraria ciclo com data de início errada.
-    const fn = sql.match(/CREATE OR REPLACE FUNCTION public\.record_order_usage[\s\S]*?\$\$;/)![0];
+    const fn = definicaoVigente("record_order_usage");
     expect(fn).not.toContain("open_billing_cycle");
     expect(fn).not.toMatch(/INSERT INTO public\.billing_cycles/);
   });
 
   it("roda com privilégios próprios, já que o cliente não escreve em usage_events", () => {
-    const fn = sql.match(/CREATE OR REPLACE FUNCTION public\.record_order_usage[\s\S]*?\$\$;/)![0];
+    const fn = definicaoVigente("record_order_usage");
     expect(fn).toContain("SECURITY DEFINER");
     expect(fn).toContain("SET search_path = public");
   });
 
   it("abre ciclo de forma idempotente", () => {
-    const fn = sql.match(/CREATE OR REPLACE FUNCTION public\.open_billing_cycle[\s\S]*?\$\$;/)![0];
+    const fn = definicaoVigente("open_billing_cycle");
     // Já existe ciclo aberto? Devolve o existente em vez de criar o segundo.
     expect(fn).toMatch(/IF v_existing IS NOT NULL THEN[\s\S]*?RETURN v_existing/);
   });
 
   it("trata o dia âncora inexistente no mês seguinte, como o TypeScript", () => {
-    const fn = sql.match(/CREATE OR REPLACE FUNCTION public\.open_billing_cycle[\s\S]*?\$\$;/)![0];
+    const fn = definicaoVigente("open_billing_cycle");
     expect(fn).toContain("v_anchor_day > v_days_next_month");
   });
 });

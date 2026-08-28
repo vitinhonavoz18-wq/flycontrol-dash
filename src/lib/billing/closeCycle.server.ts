@@ -13,6 +13,7 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { buildInvoiceItems, calculateCycle, determineNextCycleUnitPrice } from "./billingEngine";
+import { politicaParaCiclo } from "./centsTiers";
 import { computeCycleStartAfter } from "./trial";
 import { getPlanPricing, type PlanCode } from "./plans";
 
@@ -184,12 +185,24 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
     .eq("subscription_id", typedSub.id)
     .maybeSingle();
 
+  // Qual tabela de preços vale para ESTE ciclo.
+  //
+  // Quem decide é a data em que o ciclo abriu, não a data de hoje. Assim um
+  // ciclo de julho fechado com atraso em setembro continua sendo cobrado com
+  // o preço de julho — é o mesmo princípio da comanda: o cliente paga o preço
+  // que estava no cardápio quando pediu, não o que subiu depois.
+  const politicaDoCiclo = politicaParaCiclo(
+    typedCycle.cycle_start,
+    process.env as Record<string, string | undefined>,
+  );
+
   const totals = calculateCycle({
     planCode,
     unitPriceCents: typedCycle.unit_price_cents,
     promotionThresholdOrders: typedCycle.promotion_threshold_orders,
     billableOrderCount,
     setupFeeAlreadyCharged: !!setupCharged,
+    centsPolicy: politicaDoCiclo.versao,
   });
 
   const now = new Date();
@@ -279,11 +292,15 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
     );
   }
 
-  // Abre o próximo ciclo já com o preço definido pela qualificação. É aqui
-  // que R$ 0,45 passa a valer — nunca no ciclo que atingiu a meta.
+  // Abre o próximo ciclo já com o preço de largada.
+  //
+  // Nas faixas, o mês novo sempre começa na primeira faixa: o desconto se
+  // conquista dentro do mês e não passa para o mês seguinte. Na regra antiga
+  // é aqui que R$ 0,45 passava a valer — nunca no ciclo que bateu a meta.
   const nextUnitPrice = determineNextCycleUnitPrice({
     planCode,
     qualifiedForNextCycle: totals.qualifiedForNextCycle,
+    centsPolicy: totals.centsPolicy,
   });
   const nextStart = computeCycleStartAfter({
     cycleType: typedCycle.cycle_type,

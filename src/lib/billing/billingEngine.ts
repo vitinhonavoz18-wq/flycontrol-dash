@@ -11,7 +11,12 @@
  */
 
 import { assertCents, multiplyCents, sumCents, type Cents } from "./money";
-import { POLITICA_CENTS_V2, custoTotalCents, distribuirPorFaixa } from "./centsTiers";
+import {
+  POLITICA_CENTS_V2,
+  custoTotalCents,
+  distribuirPorFaixa,
+  faixaDoPedido,
+} from "./centsTiers";
 import { getPlanPricing, type BillingModel, type PlanCode } from "./plans";
 
 // ---------------------------------------------------------------------------
@@ -194,7 +199,18 @@ export function calculateCycle(input: CycleInput): CycleTotals {
     monthlyFeeAmountCents,
     discountAmountCents,
     totalAmountCents,
-    qualifiedForNextCycle: qualifiesForPromotion(input),
+    // Com faixas, a promoção antiga NÃO existe mais.
+    //
+    // A regra velha dava R$ 0,45 no mês seguinte a quem batesse 500 pedidos.
+    // Se ela continuasse rodando por baixo, o ciclo novo abriria marcado como
+    // promocional e guardaria R$ 0,45 na ficha — um preço que a conta das
+    // faixas nunca usa, mas que apareceria em tela e em relatório. É a
+    // etiqueta antiga esquecida no produto depois da troca de preço: ninguém
+    // cobra por ela, mas todo mundo que passa lê e pergunta.
+    //
+    // Nas faixas todo ciclo começa do zero, na primeira faixa. O desconto se
+    // conquista dentro do mês e não é herdado pelo mês seguinte.
+    qualifiedForNextCycle: politicaDeFaixas ? false : qualifiesForPromotion(input),
   };
 }
 
@@ -216,21 +232,26 @@ export function qualifiesForPromotion(input: {
 }
 
 /**
- * Preço unitário do PRÓXIMO ciclo.
+ * Preço unitário com que o PRÓXIMO ciclo abre.
  *
- * Regra comercial completa:
+ * Com faixas (CENTS V2): sempre o preço da primeira faixa. Cada mês recomeça
+ * na largada — é o cartão de fidelidade que zera quando vira o mês.
+ *
+ * Regra antiga (V1), mantida só para quem ainda não entrou nas faixas:
  * - Atingiu a meta neste ciclo  → próximo ciclo a R$ 0,45.
  * - Não atingiu                 → próximo ciclo a R$ 0,70, mesmo que este
  *                                 ciclo esteja no preço promocional.
- *
- * A qualificação vale por ciclo: manter R$ 0,45 exige bater a meta sempre.
  */
 export function determineNextCycleUnitPrice(input: {
   planCode: PlanCode;
   qualifiedForNextCycle: boolean;
+  centsPolicy?: string;
 }): Cents {
   const pricing = getPlanPricing(input.planCode);
   if (pricing.billingModel !== "usage_per_order") return 0;
+  if (input.centsPolicy === POLITICA_CENTS_V2.versao) {
+    return faixaDoPedido(POLITICA_CENTS_V2, 1).precoCents;
+  }
   return input.qualifiedForNextCycle
     ? pricing.promotionalOrderUnitPriceCents
     : pricing.defaultOrderUnitPriceCents;

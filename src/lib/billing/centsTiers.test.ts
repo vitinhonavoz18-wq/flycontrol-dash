@@ -375,3 +375,86 @@ describe("a fatura sai discriminada por faixa", () => {
     }
   });
 });
+
+// ---------------------------------------------------------------------------
+// A tabela financeira, número por número (item 46 do pedido)
+// ---------------------------------------------------------------------------
+
+/**
+ * A tabela que qualquer pessoa pode conferir na mão.
+ *
+ * Cada linha é uma quantidade de pedidos no mês e tudo o que o sistema tem de
+ * dizer sobre ela: em que nível a loja está, quanto vai custar o PRÓXIMO
+ * pedido, qual é a próxima meta, quantos pedidos faltam e quanto já é a
+ * conta acumulada. As viradas (99/100/101, 249/250/251, 499/500/501) estão
+ * todas aqui de propósito: é onde erro de um pedido para mais ou para menos
+ * costuma se esconder.
+ *
+ * Se algum dia o preço mudar, esta tabela é o primeiro lugar a conferir.
+ */
+const TABELA: Array<{
+  pedidos: number;
+  nivel: number;
+  proximoPedidoCents: number;
+  meta: number | null;
+  faltam: number | null;
+  totalCents: number;
+}> = [
+  { pedidos: 0, nivel: 1, proximoPedidoCents: 70, meta: 100, faltam: 100, totalCents: 0 },
+  { pedidos: 1, nivel: 1, proximoPedidoCents: 70, meta: 100, faltam: 99, totalCents: 70 },
+  { pedidos: 99, nivel: 1, proximoPedidoCents: 70, meta: 100, faltam: 1, totalCents: 6930 },
+  // Bateu 100: o desconto já vale para o pedido 101 em diante.
+  { pedidos: 100, nivel: 2, proximoPedidoCents: 60, meta: 250, faltam: 150, totalCents: 7000 },
+  { pedidos: 101, nivel: 2, proximoPedidoCents: 60, meta: 250, faltam: 149, totalCents: 7060 },
+  { pedidos: 249, nivel: 2, proximoPedidoCents: 60, meta: 250, faltam: 1, totalCents: 15940 },
+  { pedidos: 250, nivel: 3, proximoPedidoCents: 50, meta: 500, faltam: 250, totalCents: 16000 },
+  { pedidos: 251, nivel: 3, proximoPedidoCents: 50, meta: 500, faltam: 249, totalCents: 16050 },
+  { pedidos: 499, nivel: 3, proximoPedidoCents: 50, meta: 500, faltam: 1, totalCents: 28450 },
+  // Bateu 500: CENTS MAX. Não existe meta seguinte.
+  { pedidos: 500, nivel: 4, proximoPedidoCents: 40, meta: null, faltam: null, totalCents: 28500 },
+  { pedidos: 501, nivel: 4, proximoPedidoCents: 40, meta: null, faltam: null, totalCents: 28540 },
+  { pedidos: 1000, nivel: 4, proximoPedidoCents: 40, meta: null, faltam: null, totalCents: 48500 },
+];
+
+describe("tabela financeira conferível na mão", () => {
+  it.each(TABELA)(
+    "$pedidos pedidos: nível $nivel, próximo pedido a $proximoPedidoCents centavos",
+    ({ pedidos, nivel, proximoPedidoCents, meta, faltam, totalCents }) => {
+      const p = progressoCents(P, pedidos);
+
+      expect(p.pedidos).toBe(pedidos);
+      expect(p.faixaAtual.nivel).toBe(nivel);
+      expect(p.precoDoProximoPedidoCents).toBe(proximoPedidoCents);
+      expect(p.totalCents).toBe(totalCents);
+      expect(p.noMaximo).toBe(nivel === 4);
+
+      if (meta === null) {
+        expect(p.proxima).toBeNull();
+      } else {
+        expect(p.proxima?.meta).toBe(meta);
+        expect(p.proxima?.faltam).toBe(faltam);
+      }
+    },
+  );
+
+  it.each(TABELA)(
+    "$pedidos pedidos: a soma das faixas fecha o total",
+    ({ pedidos, totalCents }) => {
+      const pedacos = distribuirPorFaixa(P, pedidos);
+      expect(pedacos.reduce((s, x) => s + x.subtotalCents, 0)).toBe(totalCents);
+      // Nenhum pedido some no meio do caminho.
+      expect(pedacos.reduce((s, x) => s + x.quantidade, 0)).toBe(pedidos);
+    },
+  );
+
+  it("a tabela é conferível a mão, pedido a pedido, do 0 ao 1000", () => {
+    // A prova mais simples de todas: somar o preço de cada pedido, um por um,
+    // tem de dar exatamente o mesmo que a conta por faixas.
+    let soma = 0;
+    for (let n = 1; n <= 1000; n++) {
+      soma += faixaDoPedido(P, n).precoCents;
+      expect(custoTotalCents(P, n), `${n} pedidos`).toBe(soma);
+    }
+    expect(soma).toBe(48500);
+  });
+});

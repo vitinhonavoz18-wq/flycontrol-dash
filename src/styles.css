@@ -433,3 +433,14 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .chips-scroll::-webkit-scrollbar { display: none; }
   .chips-scroll > * { scroll-snap-align: start; flex-shrink: 0; }
 }
+
+/* A flutuação do indicador do CENTS: respiração, não pulo.
+   Fica desligada quando o sistema pede menos animação. */
+@keyframes cents-flutua {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-3px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-\[cents-flutua_2\.6s_ease-in-out_infinite\] { animation: none; }
+}
