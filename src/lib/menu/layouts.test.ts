@@ -36,6 +36,12 @@ describe("catálogo de layouts", () => {
     }
   });
 
+  it("TODO layout começa pela capa — a logo nunca some", () => {
+    // O que muda entre um nicho e outro é a NAVEGAÇÃO, nunca a identidade da
+    // loja. Um cardápio que abre sem a logo é uma loja sem placa na porta.
+    for (const l of LAYOUTS) expect(l.ordem[0], l.id).toBe("capa");
+  });
+
   it("todo layout monta o cardápio de produtos", () => {
     for (const l of LAYOUTS) expect(l.ordem, l.id).toContain("cardapio");
   });

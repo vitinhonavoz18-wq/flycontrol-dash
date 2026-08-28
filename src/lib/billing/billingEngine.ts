@@ -11,6 +11,7 @@
  */
 
 import { assertCents, multiplyCents, sumCents, type Cents } from "./money";
+import { POLITICA_CENTS_V2, custoTotalCents, distribuirPorFaixa } from "./centsTiers";
 import { getPlanPricing, type BillingModel, type PlanCode } from "./plans";
 
 // ---------------------------------------------------------------------------
@@ -111,6 +112,15 @@ export type CycleInput = {
    * pode ser reprocessado, mas a taxa continua sendo uma só.
    */
   setupFeeAlreadyCharged: boolean;
+  /**
+   * Qual política de preço do CENTS este ciclo contratou.
+   *
+   * Ausente = a política antiga (um preço só, o congelado em
+   * `unitPriceCents`). É o que mantém intacta a conta de todo ciclo que já
+   * estava aberto antes das faixas existirem: mudar a regra no meio do mês
+   * seria mudar o preço depois de o cliente já ter vendido.
+   */
+  centsPolicy?: string;
 };
 
 export type CycleTotals = {
@@ -123,6 +133,8 @@ export type CycleTotals = {
   monthlyFeeAmountCents: Cents;
   discountAmountCents: Cents;
   totalAmountCents: Cents;
+  /** A política de faixas usada, quando houve. Vira o detalhe da fatura. */
+  centsPolicy?: string;
   /** Se o ciclo atingiu a meta e libera o preço promocional para o PRÓXIMO. */
   qualifiedForNextCycle: boolean;
 };
@@ -144,9 +156,19 @@ export function calculateCycle(input: CycleInput): CycleTotals {
   const isUsageBased = pricing.billingModel === "usage_per_order";
 
   // Em plano mensal fixo os pedidos são métrica, não faturamento.
-  const usageAmountCents = isUsageBased
-    ? multiplyCents(unitPriceCents, input.billableOrderCount)
-    : 0;
+  //
+  // No CENTS com faixas, a conta é progressiva: os primeiros pedidos custam
+  // mais caro e os seguintes vão barateando, como conta de luz. O desconto
+  // conquistado vale DALI PARA FRENTE — quem faz 600 pedidos não paga R$ 0,40
+  // nos 600.
+  const politicaDeFaixas =
+    isUsageBased && input.centsPolicy === POLITICA_CENTS_V2.versao ? POLITICA_CENTS_V2 : null;
+
+  const usageAmountCents = !isUsageBased
+    ? 0
+    : politicaDeFaixas
+      ? custoTotalCents(politicaDeFaixas, input.billableOrderCount)
+      : multiplyCents(unitPriceCents, input.billableOrderCount);
 
   const setupFeeAmountCents =
     !input.setupFeeAlreadyCharged && pricing.setupFeeCents > 0 ? pricing.setupFeeCents : 0;
@@ -166,6 +188,7 @@ export function calculateCycle(input: CycleInput): CycleTotals {
     billingModel: pricing.billingModel,
     unitPriceCents,
     billableOrderCount: input.billableOrderCount,
+    centsPolicy: politicaDeFaixas?.versao,
     usageAmountCents,
     setupFeeAmountCents,
     monthlyFeeAmountCents,
@@ -261,13 +284,30 @@ export function buildInvoiceItems(planCode: PlanCode, totals: CycleTotals): Invo
   }
 
   if (totals.billingModel === "usage_per_order" && totals.billableOrderCount > 0) {
-    items.push({
-      itemType: "usage",
-      description: "Pedidos válidos no ciclo",
-      quantity: totals.billableOrderCount,
-      unitAmountCents: totals.unitPriceCents,
-      totalAmountCents: totals.usageAmountCents,
-    });
+    // Com faixas, a fatura sai discriminada: uma linha por faixa usada. Uma
+    // linha só, com um preço médio, faria o cliente conferir a conta e não
+    // conseguir refazê-la — é o tipo de fatura que gera ligação para o
+    // suporte.
+    if (totals.centsPolicy === POLITICA_CENTS_V2.versao) {
+      for (const pedaco of distribuirPorFaixa(POLITICA_CENTS_V2, totals.billableOrderCount)) {
+        const ate = pedaco.faixa.ate === null ? "+" : `–${pedaco.faixa.ate}`;
+        items.push({
+          itemType: "usage",
+          description: `Pedidos ${pedaco.faixa.de}${ate} (${pedaco.faixa.rotulo})`,
+          quantity: pedaco.quantidade,
+          unitAmountCents: pedaco.faixa.precoCents,
+          totalAmountCents: pedaco.subtotalCents,
+        });
+      }
+    } else {
+      items.push({
+        itemType: "usage",
+        description: "Pedidos válidos no ciclo",
+        quantity: totals.billableOrderCount,
+        unitAmountCents: totals.unitPriceCents,
+        totalAmountCents: totals.usageAmountCents,
+      });
+    }
   }
 
   return items;
