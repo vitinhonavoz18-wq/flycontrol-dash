@@ -155,7 +155,14 @@ jobs:
           supabase db push --dry-run > plano.txt 2>&1 || true
           cat plano.txt
 
-          pendentes=$(grep -cE '^\s*[0-9]{10,}_.*\.sql' plano.txt || true)
+          # Conta os nomes de arquivo de migração que aparecem na resposta.
+          #
+          # O padrão é DE PROPÓSITO folgado: ele pode contar a mais, nunca a
+          # menos. Contar a mais faz a trava fechar sem necessidade — chato, e
+          # resolve-se olhando a lista. Contar a menos faria a trava abrir
+          # achando que não tem nada, que é o erro que machuca. Entre o alarme
+          # tocar à toa e o alarme não tocar no incêndio, escolhemos o primeiro.
+          pendentes=$(grep -cE '[0-9]{10,}_.*\.sql' plano.txt || true)
           desencontrado=nao
           grep -q "Remote migration versions not found" plano.txt && desencontrado=sim
 
