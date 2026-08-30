@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { provisionRestaurantInSF } from "@/integrations/sitecreatorfly/provision.server";
-import { requireGlobalAdmin } from "@/integrations/supabase/adminGuard.server";
+import { requirePermission } from "@/integrations/supabase/adminGuard.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -48,7 +48,7 @@ export const Route = createFileRoute("/api/pizzerias/create")({
         // criar uma empresa nova (com chave de API própria) sem se
         // identificar, como abrir uma loja usando o nome de outra pessoa.
         try {
-          await requireGlobalAdmin(request, cors);
+          await requirePermission(request, cors, "gerenciar_lojas");
         } catch (guardResponse) {
           if (guardResponse instanceof Response) return guardResponse;
           throw guardResponse;

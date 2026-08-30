@@ -4416,6 +4416,8 @@ export type Database = {
         Args: { _pizzeria_id: string; _user_id: string };
         Returns: boolean;
       };
+      pode_ver_loja: { Args: { p_store_id: string }; Returns: boolean };
+      tem_permissao: { Args: { p_permissao: string }; Returns: boolean };
       recalculate_table_session_totals: {
         Args: { p_session_id: string };
         Returns: undefined;

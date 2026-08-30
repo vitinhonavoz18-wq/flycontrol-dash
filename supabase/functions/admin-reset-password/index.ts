@@ -29,16 +29,14 @@ serve(async (req) => {
       })
     }
 
-    // Check if the requester is a super_admin
-    const { data: roleData, error: roleError } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'super_admin')
-      .maybeSingle()
+    // Precisa da chave "redefinir_senha". Trocar a senha de outra pessoa é
+    // entrar na conta dela — a ação merece uma chave própria, não vem de
+    // brinde junto com o acesso ao painel.
+    const { data: podeRedefinir, error: permErro } = await supabaseClient
+      .rpc('tem_permissao', { p_permissao: 'redefinir_senha' })
 
-    if (roleError || !roleData) {
-      return new Response(JSON.stringify({ error: 'Forbidden: Only super admins can reset passwords' }), {
+    if (permErro || !podeRedefinir) {
+      return new Response(JSON.stringify({ error: 'Forbidden: você não tem permissão para redefinir senhas' }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
         status: 403,
       })

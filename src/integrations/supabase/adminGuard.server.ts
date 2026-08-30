@@ -71,3 +71,31 @@ export async function requireGlobalAdmin(
   }
   return caller;
 }
+
+/**
+ * Só passa quem tem a chave específica daquela ação.
+ *
+ * Antes, todo endereço sensível perguntava apenas "você é administrador?" — e
+ * administrador podia tudo. Agora cada porta pede a chave dela: quem cuida do
+ * suporte não abre a porta do financeiro, e quem cuida do financeiro não apaga
+ * conta de cliente.
+ *
+ * Quem é super_admin continua abrindo todas — a função `tem_permissao` no
+ * banco responde sim para ele em qualquer chave. Ou seja: nada do que já
+ * funcionava para o dono da plataforma para de funcionar.
+ */
+export async function requirePermission(
+  request: Request,
+  cors: Record<string, string>,
+  permissao: string,
+): Promise<AuthedCaller> {
+  const caller = await requireBearerCaller(request, cors);
+  const { data: pode, error } = await caller.supabase.rpc("tem_permissao", {
+    p_permissao: permissao,
+  });
+  if (error || !pode) {
+    console.warn(`[permissao] ${caller.userId} tentou usar "${permissao}" sem ter a chave.`);
+    throw unauthorized(cors, 403, "forbidden");
+  }
+  return caller;
+}
