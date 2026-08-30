@@ -446,9 +446,23 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     const loadingToast = toast.loading("Sincronizando pedidos da mesa...");
 
     try {
+      // O endereço agora pede identificação. Sem mandar o crachá de quem está
+      // logado, o servidor recusa — é a mesma lógica da catraca: o crachá vai
+      // junto, não fica na mesa.
+      const { data: sessao } = await supabase.auth.getSession();
+      const token = sessao.session?.access_token;
+      if (!token) {
+        toast.dismiss(loadingToast);
+        toast.error("Sua sessão expirou. Entre novamente para sincronizar.");
+        return;
+      }
+
       const res = await fetch("/api/sync-table-sessions", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({ tenant_id: tenantId }),
       });
       const data = await res.json().catch(() => ({}));
