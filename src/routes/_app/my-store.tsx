@@ -25,6 +25,7 @@ import {
   LayoutGrid,
   ShoppingBag,
   ShieldCheck,
+  Type,
 } from "lucide-react";
 import { FlyStatusSettings } from "@/components/flystatus/FlyStatusSettings";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
@@ -32,6 +33,7 @@ import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { syncToExternal } from "@/utils/menuSync";
 import { CheckoutLayoutPicker } from "@/components/store/CheckoutLayoutPicker";
 import { AppearanceEditor } from "@/components/store/AppearanceEditor";
+import { MenuTextsEditor } from "@/components/store/MenuTextsEditor";
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
@@ -341,7 +343,7 @@ function StoreEditor({
       </div>
 
       <Tabs defaultValue="identity" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-8 h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 mb-8 h-auto">
           <TabsTrigger value="identity" className="gap-2">
             <Store className="h-4 w-4" /> Identidade
           </TabsTrigger>
@@ -356,6 +358,9 @@ function StoreEditor({
           </TabsTrigger>
           <TabsTrigger value="behavior" className="gap-2">
             <LayoutGrid className="h-4 w-4" /> Comportamento
+          </TabsTrigger>
+          <TabsTrigger value="texts" className="gap-2">
+            <Type className="h-4 w-4" /> Textos
           </TabsTrigger>
           <TabsTrigger value="hero" className="gap-2">
             <ImageIcon className="h-4 w-4" /> Capa (Hero)
@@ -679,6 +684,24 @@ function StoreEditor({
 
         <TabsContent value="appearance" className="space-y-6">
           <AppearanceEditor pizzeria={pizzeria} salvando={saving} onSalvar={handleUpdateMany} />
+        </TabsContent>
+
+        <TabsContent value="texts" className="space-y-6">
+          <MenuTextsEditor
+            siteSettings={pizzeria.site_settings}
+            salvando={saving}
+            // Os textos entram no mesmo pacotinho das outras configurações da
+            // loja, e por isso viajam para o site público pelo caminho que já
+            // existe — sem endereço novo nem sincronização própria.
+            aoSalvar={(textos) =>
+              handleUpdateMany({
+                site_settings: {
+                  ...(pizzeria.site_settings || {}),
+                  menu_texts: textos,
+                },
+              })
+            }
+          />
         </TabsContent>
 
         <TabsContent value="behavior" className="space-y-6">
