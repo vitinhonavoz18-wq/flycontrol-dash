@@ -78,30 +78,59 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: supabase link --project-ref "$PROJECT_ID"
 
+      # Fotografia do estado, lado a lado: o que o repositório tem e o que o
+      # banco diz já ter aplicado. Só leitura — não altera nada.
+      - name: Comparar repositório e banco
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "## Repositório x banco" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          supabase migration list 2>&1 | tee lista.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
       - name: Ver o que está faltando
         id: plano
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          set -o pipefail
-          supabase db push --dry-run 2>&1 | tee plano.txt
-          # Cada migração pendente aparece como um arquivo .sql na saída.
+          # Sem `set -e` aqui de propósito: quando o histórico está
+          # desencontrado, este comando falha — e é justamente essa mensagem
+          # que precisamos LER. Falhar antes de mostrar seria como o médico
+          # desmaiar antes de contar o diagnóstico.
+          supabase db push --dry-run > plano.txt 2>&1 || true
+          cat plano.txt
+
           pendentes=$(grep -cE '^\s*[0-9]{10,}_.*\.sql' plano.txt || true)
+          desencontrado=nao
+          grep -q "Remote migration versions not found" plano.txt && desencontrado=sim
+
           echo "pendentes=$pendentes" >> "$GITHUB_OUTPUT"
-          echo "### Migrações pendentes: $pendentes" >> "$GITHUB_STEP_SUMMARY"
-          sed -n '1,80p' plano.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "desencontrado=$desencontrado" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Pendentes: $pendentes | histórico desencontrado: $desencontrado"
+            echo '```'
+            sed -n '1,60p' plano.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Trava de segurança
         env:
           PENDENTES: ${{ steps.plano.outputs.pendentes }}
+          DESENCONTRADO: ${{ steps.plano.outputs.desencontrado }}
           LIMITE: ${{ github.event.inputs.limite || '5' }}
         run: |
+          if [ "$DESENCONTRADO" = "sim" ]; then
+            echo "::error::O histórico do banco não bate com o repositório."
+            echo "O banco diz ter aplicado migrações que não existem aqui."
+            echo "NADA foi aplicado. Veja a comparação no resumo desta execução."
+            exit 1
+          fi
           if [ "$PENDENTES" -gt "$LIMITE" ]; then
             echo "::error::$PENDENTES migrações pendentes, acima do limite de $LIMITE."
-            echo "Isso costuma significar que o histórico do Supabase está"
-            echo "desencontrado do repositório. NADA foi aplicado."
-            echo "Confira a lista acima antes de liberar."
+            echo "NADA foi aplicado. Confira a lista acima antes de liberar."
             exit 1
           fi
           echo "$PENDENTES migração(ões) pendente(s) — dentro do limite de $LIMITE."
