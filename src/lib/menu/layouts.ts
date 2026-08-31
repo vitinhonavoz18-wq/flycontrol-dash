@@ -13,6 +13,8 @@
  * Nome e descrição podem divergir sem estragar nada — o identificador, não.
  */
 
+import type { ModoDeNavegacao } from "@/lib/site/menuBehavior";
+
 export type LayoutId =
   | "generic"
   | "pizza"
@@ -34,6 +36,13 @@ export type LayoutDeCardapio = {
   ordem: readonly string[];
   colunas: 1 | 2 | 3 | 4;
   buscaEmDestaque: boolean;
+  /**
+   * O modo de navegação que combina com este layout — uma SUGESTÃO, não uma
+   * ordem. Vale só para a loja que nunca escolheu nada na aba Comportamento;
+   * quem escolheu, manda. Precisa ser igual ao do SiteCreatorFly, senão o
+   * painel promete uma coisa e o cardápio faz outra.
+   */
+  modoDeNavegacaoPadrao?: ModoDeNavegacao;
 };
 
 export const LAYOUTS: readonly LayoutDeCardapio[] = [
@@ -71,6 +80,7 @@ export const LAYOUTS: readonly LayoutDeCardapio[] = [
   },
   {
     id: "restaurant",
+    modoDeNavegacaoPadrao: "navigation",
     nome: "Restaurante",
     descricao: "Categorias organizadas e espaço para descrever bem cada prato.",
     ordem: ["capa", "categorias", "populares", "cardapio", "combos", "bebidas"],
@@ -79,6 +89,7 @@ export const LAYOUTS: readonly LayoutDeCardapio[] = [
   },
   {
     id: "japanese",
+    modoDeNavegacaoPadrao: "navigation",
     nome: "Japonês e sushi",
     descricao: "Combinados em destaque e a quantidade de peças visível no card.",
     ordem: ["capa", "combos", "categorias", "populares", "cardapio", "bebidas"],
@@ -87,6 +98,7 @@ export const LAYOUTS: readonly LayoutDeCardapio[] = [
   },
   {
     id: "bakery",
+    modoDeNavegacaoPadrao: "navigation",
     nome: "Padaria e cafeteria",
     descricao: "Compra rápida, com mais itens à vista e busca por perto.",
     ordem: ["capa", "busca", "populares", "categorias", "cardapio", "bebidas"],
@@ -95,6 +107,7 @@ export const LAYOUTS: readonly LayoutDeCardapio[] = [
   },
   {
     id: "beverage",
+    modoDeNavegacaoPadrao: "navigation",
     nome: "Adega e distribuidora",
     descricao: "Busca em primeiro lugar e prateleira de produtos, como uma loja.",
     ordem: ["capa", "busca", "categorias", "populares", "cardapio", "bebidas", "combos"],
@@ -103,6 +116,7 @@ export const LAYOUTS: readonly LayoutDeCardapio[] = [
   },
   {
     id: "pharmacy",
+    modoDeNavegacaoPadrao: "navigation",
     nome: "Farmácia",
     descricao: "Catálogo com busca no topo, do jeito que se procura remédio.",
     ordem: ["capa", "busca", "categorias", "cardapio", "populares", "combos", "bebidas"],
@@ -111,6 +125,7 @@ export const LAYOUTS: readonly LayoutDeCardapio[] = [
   },
   {
     id: "market",
+    modoDeNavegacaoPadrao: "navigation",
     nome: "Mercado e conveniência",
     descricao: "Muitas categorias, muitos itens na tela e carrinho sempre à mão.",
     ordem: ["capa", "busca", "categorias", "cardapio", "populares", "combos", "bebidas"],
