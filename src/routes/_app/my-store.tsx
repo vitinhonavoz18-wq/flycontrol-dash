@@ -25,6 +25,7 @@ import {
   LayoutGrid,
   ShoppingBag,
   ShieldCheck,
+  Type,
 } from "lucide-react";
 import { FlyStatusSettings } from "@/components/flystatus/FlyStatusSettings";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
@@ -32,6 +33,19 @@ import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { syncToExternal } from "@/utils/menuSync";
 import { CheckoutLayoutPicker } from "@/components/store/CheckoutLayoutPicker";
 import { AppearanceEditor } from "@/components/store/AppearanceEditor";
+import { MenuTextsEditor } from "@/components/store/MenuTextsEditor";
+import { HeroScheduleEditor } from "@/components/store/HeroScheduleEditor";
+import { layoutPorId } from "@/lib/menu/layouts";
+import {
+  COMBOS_INFO,
+  lojistaEscolheuModo,
+  MODO_PADRAO_GLOBAL,
+  MODOS_DE_NAVEGACAO,
+  MODOS_INFO,
+  resolverModoDeNavegacao,
+  VISIBILIDADES_DE_COMBOS,
+  visibilidadeDeCombosDe,
+} from "@/lib/site/menuBehavior";
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
@@ -251,7 +265,13 @@ function StoreEditor({
   // configurações juntas) — por isso, ao mudar uma só, primeiro juntamos ela
   // com o que já estava salvo nas outras, para não apagar as demais.
   function handleSiteSettingUpdate(key: string, value: any) {
-    const merged = { ...(pizzeria?.site_settings || {}), [key]: value };
+    // Valor nulo é o pedido de APAGAR a escolha ("voltar ao automático"), e
+    // ele precisa VIAJAR até o site público. Se aqui a chave só sumisse do
+    // pacote, o site continuaria com a configuração antiga: a sincronização
+    // junta o que chega com o que já existe lá, então o que não chega é o que
+    // fica. É como riscar um nome só na sua cópia da lista de reservas — a
+    // cópia da portaria continua com o nome escrito.
+    const merged = { ...(pizzeria?.site_settings || {}), [key]: value ?? null };
     handleUpdate("site_settings", merged);
   }
 
@@ -277,6 +297,14 @@ function StoreEditor({
       </div>
     );
   }
+
+  // O comportamento do cardápio, calculado exatamente como o site público
+  // calcula. Se este cálculo divergir do de lá, o painel promete uma coisa e o
+  // cardápio faz outra — que é justamente o problema que esta tela tinha.
+  const layoutDaLoja = layoutPorId(pizzeria.site_settings?.menu_layout);
+  const padraoDoLayout = layoutDaLoja?.modoDeNavegacaoPadrao ?? null;
+  const escolheuModo = lojistaEscolheuModo(pizzeria.site_settings);
+  const modoNoAr = resolverModoDeNavegacao(pizzeria.site_settings, padraoDoLayout);
 
   return (
     <div className="p-6 md:p-8 max-w-6xl mx-auto space-y-8">
@@ -341,7 +369,7 @@ function StoreEditor({
       </div>
 
       <Tabs defaultValue="identity" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 mb-8 h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 mb-8 h-auto">
           <TabsTrigger value="identity" className="gap-2">
             <Store className="h-4 w-4" /> Identidade
           </TabsTrigger>
@@ -356,6 +384,9 @@ function StoreEditor({
           </TabsTrigger>
           <TabsTrigger value="behavior" className="gap-2">
             <LayoutGrid className="h-4 w-4" /> Comportamento
+          </TabsTrigger>
+          <TabsTrigger value="texts" className="gap-2">
+            <Type className="h-4 w-4" /> Textos
           </TabsTrigger>
           <TabsTrigger value="hero" className="gap-2">
             <ImageIcon className="h-4 w-4" /> Capa (Hero)
@@ -681,6 +712,24 @@ function StoreEditor({
           <AppearanceEditor pizzeria={pizzeria} salvando={saving} onSalvar={handleUpdateMany} />
         </TabsContent>
 
+        <TabsContent value="texts" className="space-y-6">
+          <MenuTextsEditor
+            siteSettings={pizzeria.site_settings}
+            salvando={saving}
+            // Os textos entram no mesmo pacotinho das outras configurações da
+            // loja, e por isso viajam para o site público pelo caminho que já
+            // existe — sem endereço novo nem sincronização própria.
+            aoSalvar={(textos) =>
+              handleUpdateMany({
+                site_settings: {
+                  ...(pizzeria.site_settings || {}),
+                  menu_texts: textos,
+                },
+              })
+            }
+          />
+        </TabsContent>
+
         <TabsContent value="behavior" className="space-y-6">
           <Card>
             <CardHeader>
@@ -698,25 +747,56 @@ function StoreEditor({
                   <select
                     id="entry-mode"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    defaultValue={pizzeria.site_settings?.entry_mode || "navigation"}
-                    onChange={(e) => handleSiteSettingUpdate("entry_mode", e.target.value)}
+                    // Controlado, e não `defaultValue`: o que aparece na tela é
+                    // o que está gravado, sempre. Com `defaultValue` a tela
+                    // podia continuar mostrando a opção antiga depois de salvar
+                    // — como um cardápio impresso que não acompanha a cozinha.
+                    value={escolheuModo ? String(pizzeria.site_settings?.entry_mode) : ""}
+                    disabled={saving}
+                    onChange={(e) => handleSiteSettingUpdate("entry_mode", e.target.value || null)}
                   >
-                    <option value="navigation">Navegação por Categorias</option>
-                    <option value="direct">Exibição Direta (rolagem única)</option>
-                    <option value="cards">Cards de Categoria</option>
+                    <option value="">
+                      {padraoDoLayout
+                        ? `Automático — ${MODOS_INFO[padraoDoLayout].rotulo}`
+                        : `Automático — ${MODOS_INFO[MODO_PADRAO_GLOBAL].rotulo}`}
+                    </option>
+                    {MODOS_DE_NAVEGACAO.map((m) => (
+                      <option key={m} value={m}>
+                        {MODOS_INFO[m].rotulo}
+                      </option>
+                    ))}
                   </select>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                      No ar agora: {MODOS_INFO[modoNoAr].rotulo}
+                    </span>
+                    {" — "}
+                    {MODOS_INFO[modoNoAr].descricao}
+                  </p>
+                  {!escolheuModo && (
+                    <p className="text-[10px] text-muted-foreground">
+                      Nada escolhido aqui: o cardápio usa
+                      {padraoDoLayout
+                        ? ` o padrão do layout "${layoutDaLoja?.nome}"`
+                        : " o padrão de sempre"}
+                      .
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="combos-visibility">Visibilidade dos Combos</Label>
                   <select
                     id="combos-visibility"
                     className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                    defaultValue={pizzeria.site_settings?.combos_visibility || "auto"}
+                    value={visibilidadeDeCombosDe(pizzeria.site_settings)}
+                    disabled={saving}
                     onChange={(e) => handleSiteSettingUpdate("combos_visibility", e.target.value)}
                   >
-                    <option value="auto">Automático (só se existir combo)</option>
-                    <option value="always">Sempre mostrar</option>
-                    <option value="hide">Ocultar</option>
+                    {VISIBILIDADES_DE_COMBOS.map((v) => (
+                      <option key={v} value={v}>
+                        {COMBOS_INFO[v]}
+                      </option>
+                    ))}
                   </select>
                 </div>
               </div>
@@ -817,6 +897,28 @@ function StoreEditor({
               )}
             </CardContent>
           </Card>
+
+          {/* A capa fixa acima continua sendo a CAPA PADRÃO: é ela que aparece
+              quando não há programação valendo. A automação entra abaixo. */}
+          <HeroScheduleEditor
+            siteSettings={pizzeria.site_settings}
+            capaFixa={{
+              tipo: pizzeria.hero_media_type === "video" ? "video" : "imagem",
+              url:
+                pizzeria.hero_media_type === "video"
+                  ? pizzeria.hero_video_url
+                  : pizzeria.hero_image_url,
+            }}
+            salvando={saving}
+            aoSalvar={(programacao) =>
+              handleUpdateMany({
+                site_settings: {
+                  ...(pizzeria.site_settings || {}),
+                  hero_schedule: programacao,
+                },
+              })
+            }
+          />
         </TabsContent>
       </Tabs>
     </div>

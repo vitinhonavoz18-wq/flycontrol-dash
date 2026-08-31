@@ -32,10 +32,13 @@ on:
   workflow_dispatch:
     inputs:
       modo:
-        description: "conferir = só mostra o que falta | aplicar = aplica de verdade"
+        description: "conferir = só mostra | aplicar = aplica | reparar = acerta o histórico"
         type: choice
-        options: [conferir, aplicar]
+        options: [conferir, aplicar, reparar]
         default: conferir
+      aplicadas_ate:
+        description: "reparar: marcar como já aplicadas as migrações ATÉ esta versão (inclusive)"
+        default: ""
       limite:
         description: "Máximo de migrações que ele pode aplicar de uma vez"
         default: "5"
@@ -78,30 +81,115 @@ jobs:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: supabase link --project-ref "$PROJECT_ID"
 
+      # Fotografia do estado, lado a lado: o que o repositório tem e o que o
+      # banco diz já ter aplicado. Só leitura — não altera nada.
+      - name: Comparar repositório e banco
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+        run: |
+          echo "## Repositório x banco" >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          supabase migration list 2>&1 | tee lista.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      # Acerta o CADERNO de registro — não mexe em uma tabela sequer.
+      #
+      # O banco tem um caderno onde anota quais mudanças já foram feitas. Esse
+      # caderno ficou desencontrado: quem aplicava as mudanças antes anotava
+      # com o carimbo de hora dele, não com o nome do nosso arquivo. É o
+      # estoque que existe na prateleira mas está lançado com outro código no
+      # sistema — o produto está lá, a ficha é que não bate.
+      #
+      # Este passo só reescreve a ficha. Nenhuma tabela, função ou dado é
+      # tocado: o que já está no banco continua exatamente como está.
+      - name: Reparar o histórico
+        if: github.event.inputs.modo == 'reparar'
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          ATE: ${{ github.event.inputs.aplicadas_ate }}
+        run: |
+          if [ -z "$ATE" ]; then
+            echo "::error::Informe 'aplicadas_ate' com a última versão já aplicada."
+            exit 1
+          fi
+
+          # 1. Registros do banco que não têm arquivo aqui: viram "revertidos".
+          #    São anotações de quem aplicava antes; a mudança em si continua
+          #    no banco, só a linha do caderno some.
+          #
+          #    A lista sai da própria resposta do Supabase, que já diz quais
+          #    são — em vez de a gente tentar adivinhar lendo uma tabela.
+          supabase db push --dry-run > diag.txt 2>&1 || true
+          orfas=$(grep -o 'repair --status reverted.*' diag.txt \
+            | sed 's/repair --status reverted//' | tr -s ' ')
+          if [ -n "$orfas" ]; then
+            echo "Removendo do caderno estas anotações sem arquivo:"
+            echo "$orfas"
+            # shellcheck disable=SC2086
+            supabase migration repair --status reverted $orfas
+          fi
+
+          # 2. Nossos arquivos até a versão informada: marcados como aplicados.
+          nossas=$(ls supabase/migrations/*.sql \
+            | sed 's#.*/##; s/_.*//' \
+            | awk -v ate="$ATE" '$1 <= ate')
+          echo "Marcando como já aplicadas (até $ATE):"
+          echo "$nossas" | tr '\n' ' '; echo
+          # shellcheck disable=SC2086
+          supabase migration repair --status applied $nossas
+
+          echo "### Histórico acertado até $ATE" >> "$GITHUB_STEP_SUMMARY"
+
       - name: Ver o que está faltando
         id: plano
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         run: |
-          set -o pipefail
-          supabase db push --dry-run 2>&1 | tee plano.txt
-          # Cada migração pendente aparece como um arquivo .sql na saída.
-          pendentes=$(grep -cE '^\s*[0-9]{10,}_.*\.sql' plano.txt || true)
+          # Sem `set -e` aqui de propósito: quando o histórico está
+          # desencontrado, este comando falha — e é justamente essa mensagem
+          # que precisamos LER. Falhar antes de mostrar seria como o médico
+          # desmaiar antes de contar o diagnóstico.
+          supabase db push --dry-run > plano.txt 2>&1 || true
+          cat plano.txt
+
+          # Conta os nomes de arquivo de migração que aparecem na resposta.
+          #
+          # O padrão é DE PROPÓSITO folgado: ele pode contar a mais, nunca a
+          # menos. Contar a mais faz a trava fechar sem necessidade — chato, e
+          # resolve-se olhando a lista. Contar a menos faria a trava abrir
+          # achando que não tem nada, que é o erro que machuca. Entre o alarme
+          # tocar à toa e o alarme não tocar no incêndio, escolhemos o primeiro.
+          pendentes=$(grep -cE '[0-9]{10,}_.*\.sql' plano.txt || true)
+          desencontrado=nao
+          grep -q "Remote migration versions not found" plano.txt && desencontrado=sim
+
           echo "pendentes=$pendentes" >> "$GITHUB_OUTPUT"
-          echo "### Migrações pendentes: $pendentes" >> "$GITHUB_STEP_SUMMARY"
-          sed -n '1,80p' plano.txt >> "$GITHUB_STEP_SUMMARY"
+          echo "desencontrado=$desencontrado" >> "$GITHUB_OUTPUT"
+          {
+            echo "## Pendentes: $pendentes | histórico desencontrado: $desencontrado"
+            echo '```'
+            sed -n '1,60p' plano.txt
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Trava de segurança
         env:
           PENDENTES: ${{ steps.plano.outputs.pendentes }}
+          DESENCONTRADO: ${{ steps.plano.outputs.desencontrado }}
           LIMITE: ${{ github.event.inputs.limite || '5' }}
         run: |
+          if [ "$DESENCONTRADO" = "sim" ]; then
+            echo "::error::O histórico do banco não bate com o repositório."
+            echo "O banco diz ter aplicado migrações que não existem aqui."
+            echo "NADA foi aplicado. Veja a comparação no resumo desta execução."
+            exit 1
+          fi
           if [ "$PENDENTES" -gt "$LIMITE" ]; then
             echo "::error::$PENDENTES migrações pendentes, acima do limite de $LIMITE."
-            echo "Isso costuma significar que o histórico do Supabase está"
-            echo "desencontrado do repositório. NADA foi aplicado."
-            echo "Confira a lista acima antes de liberar."
+            echo "NADA foi aplicado. Confira a lista acima antes de liberar."
             exit 1
           fi
           echo "$PENDENTES migração(ões) pendente(s) — dentro do limite de $LIMITE."
