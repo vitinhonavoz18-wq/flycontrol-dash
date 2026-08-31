@@ -34,6 +34,7 @@ import { syncToExternal } from "@/utils/menuSync";
 import { CheckoutLayoutPicker } from "@/components/store/CheckoutLayoutPicker";
 import { AppearanceEditor } from "@/components/store/AppearanceEditor";
 import { MenuTextsEditor } from "@/components/store/MenuTextsEditor";
+import { HeroScheduleEditor } from "@/components/store/HeroScheduleEditor";
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
@@ -840,6 +841,28 @@ function StoreEditor({
               )}
             </CardContent>
           </Card>
+
+          {/* A capa fixa acima continua sendo a CAPA PADRÃO: é ela que aparece
+              quando não há programação valendo. A automação entra abaixo. */}
+          <HeroScheduleEditor
+            siteSettings={pizzeria.site_settings}
+            capaFixa={{
+              tipo: pizzeria.hero_media_type === "video" ? "video" : "imagem",
+              url:
+                pizzeria.hero_media_type === "video"
+                  ? pizzeria.hero_video_url
+                  : pizzeria.hero_image_url,
+            }}
+            salvando={saving}
+            aoSalvar={(programacao) =>
+              handleUpdateMany({
+                site_settings: {
+                  ...(pizzeria.site_settings || {}),
+                  hero_schedule: programacao,
+                },
+              })
+            }
+          />
         </TabsContent>
       </Tabs>
     </div>
