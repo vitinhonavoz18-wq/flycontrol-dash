@@ -14,6 +14,7 @@ import { MenuSyncSection } from "./MenuSyncSection";
 import { MenuTemplatePicker } from "./MenuTemplatePicker";
 import { MenuImportDialog } from "./MenuImportDialog";
 import { vocabularioDaLoja } from "@/lib/menu/vocabulario";
+import { useAuth } from "@/lib/auth";
 
 interface MenuManagerProps {
   pizzeriaId: string;
@@ -41,6 +42,17 @@ function abasDoCardapio(v: ReturnType<typeof vocabularioDaLoja>): readonly Scrol
 }
 
 export function MenuManager({ pizzeriaId }: MenuManagerProps) {
+  // O bloco de sincronização é ferramenta de manutenção, não de lojista.
+  //
+  // Ele mostra endereço de servidor, botão de reconectar e o link do site por
+  // onde o cardápio sai — encanamento interno do FlyControl. Para o dono do
+  // restaurante isso não é recurso nenhum: é caixa de disjuntor aberta na
+  // parede do salão. O cardápio já sincroniza sozinho a cada alteração, então
+  // não há nada que ele precise apertar ali.
+  //
+  // Continua à mão para quem administra a plataforma, que é quem conserta uma
+  // loja que perdeu a conexão.
+  const { isSuperAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState("categories");
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -114,7 +126,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
   return (
     <div className="space-y-4">
-      <MenuSyncSection pizzeriaId={pizzeriaId} onSyncSuccess={loadCategories} />
+      {isSuperAdmin && <MenuSyncSection pizzeriaId={pizzeriaId} onSyncSuccess={loadCategories} />}
 
       <div className="flex justify-end">
         <MenuImportDialog

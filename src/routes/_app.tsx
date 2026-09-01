@@ -161,7 +161,7 @@ function AppLayoutInner() {
 
   type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; feature?: Feature };
   const allItems: NavItem[] = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { to: "/dashboard", label: "Pedidos", icon: LayoutDashboard },
     { to: "/tables", label: "Mesas", icon: LayoutGrid, feature: "tables" },
     { to: "/search-orders", label: "Buscar Pedidos", icon: Search },
     { to: "/my-store", label: "Minha Loja", icon: Store },

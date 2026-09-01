@@ -21,7 +21,6 @@ import logo from "@/assets/flycontrol-logo-hero.png";
 const LINKS = [
   { href: "#produto", rotulo: "Produto" },
   { href: "#recursos", rotulo: "Recursos" },
-  { href: "#integracoes", rotulo: "Integrações" },
   { href: "#planos", rotulo: "Planos" },
 ] as const;
 

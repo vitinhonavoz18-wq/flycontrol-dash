@@ -14,7 +14,6 @@ const COLUNAS = [
     itens: [
       { rotulo: "Produto", href: "#produto" },
       { rotulo: "Recursos", href: "#recursos" },
-      { rotulo: "Integrações", href: "#integracoes" },
       { rotulo: "Planos", href: "#planos" },
     ],
   },

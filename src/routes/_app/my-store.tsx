@@ -216,7 +216,7 @@ function StoreEditor({
 
     if (Object.keys(paraSincronizar).length > 0 && pizzeria.slug) {
       if (!pizzeria.api_key) {
-        toast.error("Salvo no FlyControl, mas esta loja ainda não está conectada ao site público.");
+        toast.error("Salvo, mas o cardápio online desta loja ainda não está no ar.");
         setSaving(false);
         return false;
       }
@@ -231,7 +231,7 @@ function StoreEditor({
 
       if (!syncEndpoint) {
         toast.error(
-          "Salvo no FlyControl, mas não consegui conectar esta loja ao site público agora. Tente novamente em instantes.",
+          "Salvo, mas não consegui publicar no cardápio online agora. Tente novamente em instantes.",
         );
         setSaving(false);
         return false;
@@ -249,7 +249,7 @@ function StoreEditor({
 
       if (!syncResult.success) {
         toast.error(
-          `Salvo no FlyControl, mas não foi possível atualizar o site público${syncResult.error ? ` (${syncResult.error})` : ""}. Tente novamente em instantes.`,
+          `Salvo, mas não foi possível atualizar o cardápio online${syncResult.error ? ` (${syncResult.error})` : ""}. Tente novamente em instantes.`,
         );
         setSaving(false);
         return false;
@@ -317,7 +317,7 @@ function StoreEditor({
           <p className="text-amber-800 dark:text-amber-300">
             <strong>Modo administrador:</strong> você está editando a loja{" "}
             <strong>{pizzeria.name}</strong>, não a sua própria conta. Toda alteração aqui já salva
-            e publica no site público dessa loja na hora.
+            e publica no cardápio online dessa loja na hora.
           </p>
         </div>
       )}
@@ -363,7 +363,7 @@ function StoreEditor({
       <div>
         <h1 className="text-3xl font-bold">Minha Loja</h1>
         <p className="text-muted-foreground">
-          Como sua loja aparece e funciona no site público — cada mudança já salva e publica na
+          Como sua loja aparece e funciona para quem vai pedir — cada mudança já salva e publica na
           hora. Só a aba Aparência espera você apertar "Salvar alterações".
         </p>
       </div>
@@ -477,7 +477,7 @@ function StoreEditor({
                     />
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    Só do FlyControl — o site público não usa este campo hoje.
+                    Só do FlyControl — não aparece no cardápio online.
                   </p>
                 </div>
               </div>
@@ -555,7 +555,7 @@ function StoreEditor({
                     onBlur={(e) => handleUpdate("neighborhood", e.target.value)}
                   />
                   <p className="text-[10px] text-muted-foreground">
-                    Só do FlyControl — o site público não usa este campo hoje.
+                    Só do FlyControl — não aparece no cardápio online.
                   </p>
                 </div>
               </div>
@@ -592,7 +592,7 @@ function StoreEditor({
               <CardTitle className="flex items-center gap-2">
                 <ShoppingBag className="h-4 w-4 text-primary" /> Modos de Atendimento
               </CardTitle>
-              <CardDescription>Como o cliente pode comprar no site público.</CardDescription>
+              <CardDescription>Como o cliente pode comprar no cardápio online.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center justify-between rounded-lg border p-3">
@@ -813,7 +813,7 @@ function StoreEditor({
                 <div>
                   <p className="text-sm font-medium">Exibir botão "Ir pra sacola" (carrinho)</p>
                   <p className="text-[10px] text-muted-foreground">
-                    Mostra ou oculta o acesso ao carrinho no site público
+                    Mostra ou oculta o acesso ao carrinho no cardápio online
                   </p>
                 </div>
                 <Switch

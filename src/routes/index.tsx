@@ -1,8 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { MosaicoCardapios } from "@/components/landing/MosaicoCardapios";
 import { AmbientParticles } from "@/components/landing/AmbientParticles";
 import { DashboardShowcase } from "@/components/landing/DashboardShowcase";
-import { EcosystemSection } from "@/components/landing/EcosystemSection";
 import { FloatingNotification } from "@/components/landing/FloatingNotification";
 import { Navbar } from "@/components/landing/Navbar";
 import { OperationFlow } from "@/components/landing/OperationFlow";
@@ -84,7 +82,7 @@ function Landing() {
             src: "/images/flycontrol-dashboard.webp",
             alt: "Quadro de pedidos do FlyControl, com as colunas Novo pedido, Em preparo e Saiu para entrega",
             largura: 1920,
-            altura: 1200,
+            altura: 1500,
           }}
         />
 
@@ -92,19 +90,19 @@ function Landing() {
           id="recursos"
           etiqueta="Seu cardápio. Sua marca."
           titulo="Venda do seu jeito."
-          texto="Categorias, produtos, tamanhos, combos e bebidas no painel — e o cardápio do cliente atualizado junto, sem você mexer em duas telas."
+          texto="Categorias, produtos, tamanhos, combos e bebidas. O que você salva no painel é o que o cliente vê na hora de pedir."
           pontos={[
             "Categorias e produtos com foto",
             "Combos, bordas e adicionais",
             "Três modos de navegação para o cliente",
-            "O que você salva aqui aparece lá",
+            "Atualização na hora, sem republicar nada",
           ]}
           espelhado
           imagem={{
             src: "/images/flycontrol-cardapio.webp",
-            alt: "Tela de cardápio do FlyControl, com a lista de categorias e a sincronização com o site público",
+            alt: "Tela de cardápio do FlyControl, com a lista de categorias do estabelecimento",
             largura: 1600,
-            altura: 1000,
+            altura: 1250,
           }}
         />
 
@@ -191,13 +189,10 @@ function Landing() {
             src: "/images/flycontrol-financeiro.webp",
             alt: "Tela de gestão financeira do FlyControl, com faturamento, ticket médio e vendas por canal",
             largura: 1600,
-            altura: 1000,
+            altura: 1250,
           }}
         />
 
-        <EcosystemSection />
-        <Integracoes />
-        <MosaicoCardapios />
         <PricingSection />
         <ChamadaFinal />
       </main>
@@ -284,7 +279,7 @@ function Hero() {
             src="/images/flycontrol-dashboard.webp"
             alt="Painel do FlyControl mostrando os pedidos em andamento, separados por etapa"
             largura={1920}
-            altura={1200}
+            altura={1500}
             prioridade
           />
 
@@ -334,65 +329,6 @@ function UmaPlataforma() {
         </div>
 
         <OperationFlow />
-      </div>
-    </section>
-  );
-}
-
-/**
- * As integrações que existem de verdade.
- *
- * Nenhum logo de terceiro, nenhuma palavra "parceiro oficial". São conexões
- * técnicas que o sistema tem hoje — e listar só isso é o que impede a página
- * de prometer uma integração que o cliente vai procurar e não achar.
- */
-const INTEGRACOES = [
-  { nome: "SiteCreatorFly", texto: "O cardápio e o site de pedidos da sua loja." },
-  { nome: "FlyDelivery", texto: "O módulo de entregas dentro do painel." },
-  { nome: "WhatsApp", texto: "Envio das campanhas de marketing." },
-  { nome: "InfinitePay", texto: "Cobrança da assinatura do FlyControl." },
-  { nome: "Impressora térmica", texto: "Comanda impressa direto da tela do pedido." },
-  { nome: "FlyStatus", texto: "A página onde o cliente acompanha o pedido." },
-] as const;
-
-function Integracoes() {
-  return (
-    <section
-      id="integracoes"
-      aria-labelledby="integracoes-titulo"
-      className="border-t px-5 py-24 sm:px-8 md:py-32"
-      style={{ borderColor: "var(--fly-border-subtle)" }}
-    >
-      <div className="mx-auto max-w-[1240px]">
-        <Reveal className="max-w-2xl">
-          <SectionLabel>Integrações</SectionLabel>
-          <SectionHeading id="integracoes-titulo">Conectado ao que você já usa.</SectionHeading>
-          <SectionText className="max-w-lg">Extensões da operação, não o centro dela.</SectionText>
-        </Reveal>
-
-        <ul
-          className="mt-16 grid gap-px overflow-hidden md:grid-cols-2 lg:grid-cols-3"
-          style={{ background: "var(--fly-border-subtle)" }}
-        >
-          {INTEGRACOES.map((item, indice) => (
-            <Reveal as="li" key={item.nome} atraso={indice * 70}>
-              <div className="h-full px-6 py-8" style={{ background: "var(--fly-background)" }}>
-                <h3
-                  className="text-[18px] tracking-[-0.02em]"
-                  style={{ color: "var(--fly-text-primary)" }}
-                >
-                  {item.nome}
-                </h3>
-                <p
-                  className="mt-2 text-[15px] leading-[1.55]"
-                  style={{ color: "var(--fly-text-secondary)" }}
-                >
-                  {item.texto}
-                </p>
-              </div>
-            </Reveal>
-          ))}
-        </ul>
       </div>
     </section>
   );
