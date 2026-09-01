@@ -22,15 +22,24 @@ import { canTransition, isSubscriptionStatus, type SubscriptionStatus } from "./
 type Db = BillingDb;
 
 /**
- * Só administradores globais passam daqui.
+ * Só quem tem a chave daquela ação passa daqui.
  *
- * `is_admin()` é a mesma função que as policies de RLS usam, então a
- * verificação da aplicação e a do banco nunca divergem.
+ * `tem_permissao()` é a mesma função que o banco usa, então a verificação da
+ * aplicação e a do banco nunca divergem. Quem é super_admin responde sim a
+ * qualquer chave — para o dono da plataforma nada muda.
+ *
+ * A chave que interessa aqui é `confirmar_pagamento`: ativar, suspender ou
+ * reativar assinatura é o que liga e desliga o acesso de um cliente pagante.
+ * Não é coisa para quem só responde chamado de suporte.
  */
-async function assertGlobalAdmin(supabase: Db): Promise<void> {
-  const { data: isAdmin, error } = await supabase.rpc("is_admin");
+async function assertPermissao(supabase: Db, permissao: string): Promise<void> {
+  const { data: pode, error } = await supabase.rpc("tem_permissao", { p_permissao: permissao });
   if (error) throw new Error("Não foi possível verificar suas permissões.");
-  if (!isAdmin) throw new Error("Esta ação é restrita a administradores da plataforma.");
+  if (!pode) {
+    throw new Error(
+      "Você não tem permissão para esta ação. Peça a liberação a um administrador da plataforma.",
+    );
+  }
 }
 
 type SubscriptionRow = {
@@ -95,7 +104,7 @@ export const changeSubscriptionStatus = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const supabase = asBillingDb(context.supabase);
-    await assertGlobalAdmin(supabase);
+    await assertPermissao(supabase, "confirmar_pagamento");
 
     const subscription = await loadSubscription(supabase, data.subscriptionId);
     const target = data.targetStatus as SubscriptionStatus;
@@ -191,7 +200,7 @@ export const changeSubscriptionPlan = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const supabase = asBillingDb(context.supabase);
-    await assertGlobalAdmin(supabase);
+    await assertPermissao(supabase, "confirmar_pagamento");
 
     const subscription = await loadSubscription(supabase, data.subscriptionId);
     const planCode = data.planCode as PlanCode;
@@ -299,7 +308,7 @@ export const createSubscriptionForCompany = createServerFn({ method: "POST" })
   })
   .handler(async ({ data, context }) => {
     const supabase = asBillingDb(context.supabase);
-    await assertGlobalAdmin(supabase);
+    await assertPermissao(supabase, "confirmar_pagamento");
 
     const { data: existing } = await supabase
       .from("subscriptions")

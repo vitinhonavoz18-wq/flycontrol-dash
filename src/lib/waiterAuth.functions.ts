@@ -66,8 +66,42 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 // ============================================================
 // Opaque session token (HMAC-signed) for waiter portal
 // ============================================================
+/**
+ * A chave que carimba o crachá do garçom.
+ *
+ * O crachá é um texto assinado: "garçom X, loja Y, vale até tal hora" mais um
+ * carimbo que só quem tem a chave consegue fazer. Sem a chave certa, ninguém
+ * fabrica um crachá aceito.
+ *
+ * O QUE ESTAVA ERRADO
+ *
+ * A chave tinha dois planos B ruins. O primeiro era a chave publicável do
+ * Supabase — que está DENTRO da página, visível para qualquer visitante. O
+ * segundo era o texto fixo "fly-waiter-fallback", escrito neste arquivo, que
+ * está no repositório. Nos dois casos, o carimbo virava um carimbo de
+ * papelaria: qualquer pessoa compraria um igual e entraria como garçom de
+ * qualquer loja — abrindo mesas, vendo comandas e fechando contas.
+ *
+ * Agora não há plano B. Se não houver um segredo de verdade configurado, o
+ * portal do garçom recusa o login e diz o que falta, em vez de fingir que
+ * está protegido.
+ */
+function segredoDoCracha(): string {
+  const proprio = (process.env.WAITER_SESSION_SECRET || "").trim();
+  if (proprio.length >= 32) return proprio;
+
+  // A chave de serviço do Supabase é secreta de verdade (só existe no
+  // servidor), então serve enquanto o segredo próprio não for configurado.
+  const servico = (process.env.SUPABASE_SERVICE_ROLE_KEY || "").trim();
+  if (servico.length >= 32) return servico;
+
+  throw new Error(
+    "Portal do garçom indisponível: falta configurar WAITER_SESSION_SECRET no servidor.",
+  );
+}
+
 async function getHmacKey() {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "fly-waiter-fallback";
+  const secret = segredoDoCracha();
   return crypto.subtle.importKey(
     "raw", new TextEncoder().encode(secret) as unknown as BufferSource,
     { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"],
@@ -133,7 +167,7 @@ export const createWaiter = createServerFn({ method: "POST" })
     await assertOwnsTenant(context.supabase, context.userId, data.tenantId);
     if (!data.fullName.trim()) throw new Error("Nome obrigatório");
     if (!data.username.trim()) throw new Error("Usuário obrigatório");
-    if (data.password.length < 4) throw new Error("Senha deve ter no mínimo 4 caracteres");
+    if (data.password.length < 6) throw new Error("Senha deve ter no mínimo 6 caracteres");
 
     const username = data.username.trim().toLowerCase();
     const password_hash = await hashPassword(data.password);
@@ -176,7 +210,7 @@ export const updateWaiter = createServerFn({ method: "POST" })
     if (data.phone !== undefined) patch.phone = data.phone.trim() || null;
     if (data.isActive !== undefined) patch.is_active = data.isActive;
     if (data.newPassword) {
-      if (data.newPassword.length < 4) throw new Error("Senha deve ter no mínimo 4 caracteres");
+      if (data.newPassword.length < 6) throw new Error("Senha deve ter no mínimo 6 caracteres");
       patch.password_hash = await hashPassword(data.newPassword);
     }
     if (Object.keys(patch).length === 0) return { ok: true };
@@ -236,9 +270,7 @@ export const waiterLogin = createServerFn({ method: "POST" })
 export const claimTableSession = createServerFn({ method: "POST" })
   .inputValidator((d: { token: string; sessionId: string }) => d)
   .handler(async ({ data }) => {
-    const auth = await verifyWaiterToken(data.token);
-    if (!auth) throw new Error("Sessão de garçom expirada");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { auth, supabaseAdmin } = await authed(data.token);
     const { data: sess, error: sErr } = await supabaseAdmin
       .from("table_sessions")
       .select("id, restaurant_id, status, waiter_id")
@@ -258,10 +290,32 @@ export const claimTableSession = createServerFn({ method: "POST" })
 // Waiter portal data fetchers + actions (token-authenticated)
 // ============================================================
 
+/**
+ * Confere o crachá E confere se ele ainda vale.
+ *
+ * Só olhar o carimbo não basta: o crachá dura 12 horas, então um garçom
+ * demitido às 9h continuaria entrando até as 21h. É o crachá antigo que ainda
+ * abre a porta dos fundos depois da demissão.
+ *
+ * Por isso, a cada ação, também se pergunta ao banco: este garçom ainda
+ * existe e ainda está ativo nesta loja? Desativou ou excluiu, o acesso cai no
+ * mesmo instante.
+ */
 async function authed(token: string) {
   const auth = await verifyWaiterToken(token);
   if (!auth) throw new Error("Sessão de garçom expirada");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  const { data: garcom } = await supabaseAdmin
+    .from("waiters")
+    .select("id, is_active, tenant_id")
+    .eq("id", auth.waiterId)
+    .maybeSingle();
+
+  if (!garcom || !garcom.is_active || garcom.tenant_id !== auth.tenantId) {
+    throw new Error("Seu acesso foi encerrado. Fale com o responsável pela loja.");
+  }
+
   return { auth, supabaseAdmin };
 }
 

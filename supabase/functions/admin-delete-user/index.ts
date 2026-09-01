@@ -24,15 +24,16 @@ serve(async (req) => {
 
     if (!user) throw new Error('Unauthorized')
 
-    // Verificar se é super_admin
-    const { data: roleData } = await supabaseClient
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', user.id)
-      .eq('role', 'super_admin')
-      .single()
+    // Precisa da chave "apagar_usuario" — e não só de ser administrador.
+    // Apagar a conta de uma pessoa é irreversível e bloqueia o e-mail dela
+    // para sempre; é a ação mais pesada do painel. Quem é super_admin
+    // continua passando (ele tem todas as chaves).
+    const { data: podeApagar, error: permErro } = await supabaseClient
+      .rpc('tem_permissao', { p_permissao: 'apagar_usuario' })
 
-    if (!roleData) throw new Error('Forbidden: Only super admins can delete users')
+    if (permErro || !podeApagar) {
+      throw new Error('Forbidden: você não tem permissão para apagar usuários')
+    }
 
     const { userId } = await req.json()
     if (!userId) throw new Error('User ID is required')

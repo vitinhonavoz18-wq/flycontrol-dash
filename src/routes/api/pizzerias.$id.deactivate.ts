@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { requireGlobalAdmin } from "@/integrations/supabase/adminGuard.server";
+import { requirePermission } from "@/integrations/supabase/adminGuard.server";
 import { deactivatePizzeria } from "@/lib/server/pizzeriaLifecycle.server";
 
 const cors = {
@@ -26,7 +26,7 @@ export const Route = createFileRoute("/api/pizzerias/$id/deactivate")({
 
         let caller;
         try {
-          caller = await requireGlobalAdmin(request, cors);
+          caller = await requirePermission(request, cors, "apagar_loja");
         } catch (guardResponse) {
           if (guardResponse instanceof Response) return guardResponse;
           throw guardResponse;

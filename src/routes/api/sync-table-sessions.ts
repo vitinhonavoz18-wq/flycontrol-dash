@@ -1,5 +1,22 @@
+/**
+ * Reorganiza os pedidos de mesa de UMA loja: liga cada pedido à comanda certa
+ * e refaz a soma da conta.
+ *
+ * POR QUE ESTE ARQUIVO PEDE LOGIN AGORA
+ *
+ * Ele mexe no banco com a chave mestra do servidor — a que enxerga todas as
+ * lojas. Antes, bastava mandar o código de uma loja no corpo da requisição e
+ * ele obedecia, sem perguntar quem estava mandando. Qualquer pessoa que
+ * descobrisse o endereço conseguia remexer nas comandas de qualquer
+ * restaurante, inclusive reescrevendo o valor de contas abertas.
+ *
+ * É o telefone da cozinha aceitando qualquer voz que ligue dizendo "refaz a
+ * conta da mesa 5". Agora ele confere de quem é a voz: só o dono daquela loja
+ * (ou um administrador) consegue pedir.
+ */
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireBearerCaller } from "@/integrations/supabase/adminGuard.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -20,13 +37,37 @@ export const Route = createFileRoute("/api/sync-table-sessions")({
     handlers: {
       OPTIONS: async () => new Response(null, { status: 204, headers: cors }),
       POST: async ({ request }) => {
+        // Quem está chamando? Sem um token válido, a requisição para aqui.
+        let caller: Awaited<ReturnType<typeof requireBearerCaller>>;
+        try {
+          caller = await requireBearerCaller(request, cors);
+        } catch (resposta) {
+          if (resposta instanceof Response) return resposta;
+          throw resposta;
+        }
+
         try {
           const { tenant_id } = await request.json();
           if (!tenant_id) {
             return new Response(JSON.stringify({ success: false, error: "missing_tenant_id" }), { status: 400, headers: cors });
           }
 
-          console.log("SYNC_TABLE_SESSIONS_START tenant:", tenant_id);
+          // A loja pedida é mesmo desta pessoa? A leitura passa pelo cliente
+          // do próprio usuário, então as travas do banco (RLS) valem: a linha
+          // só aparece para o dono ou para um administrador. Um código de loja
+          // alheia simplesmente não é encontrado.
+          const { data: loja } = await caller.supabase
+            .from("pizzerias")
+            .select("id")
+            .eq("id", tenant_id)
+            .maybeSingle();
+
+          if (!loja) {
+            console.warn("SYNC_TABLE_SESSIONS_NEGADO usuario:", caller.userId, "loja:", tenant_id);
+            return new Response(JSON.stringify({ success: false, error: "forbidden" }), { status: 403, headers: cors });
+          }
+
+          console.log("SYNC_TABLE_SESSIONS_START tenant:", tenant_id, "por:", caller.userId);
 
           // 1. Open sessions for tenant
           const { data: sessions, error: sErr } = await supabaseAdmin

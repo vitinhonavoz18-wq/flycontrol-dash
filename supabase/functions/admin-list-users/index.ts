@@ -29,17 +29,15 @@ serve(async (req) => {
       });
     }
 
-    // Check if the requester is a super_admin
-    const { data: roleData, error: roleError } = await supabaseClient
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", user.id)
-      .eq("role", "super_admin")
-      .maybeSingle();
+    // Precisa da chave "ver_dados_pessoais". Esta lista traz e-mail e dados
+    // cadastrais de todo mundo que já se cadastrou — é a agenda inteira da
+    // plataforma, não uma tela de conferência qualquer.
+    const { data: podeVer, error: permErro } = await supabaseClient
+      .rpc("tem_permissao", { p_permissao: "ver_dados_pessoais" });
 
-    if (roleError || !roleData) {
+    if (permErro || !podeVer) {
       return new Response(
-        JSON.stringify({ error: "Forbidden: Only super admins can list users" }),
+        JSON.stringify({ error: "Forbidden: você não tem permissão para ver dados pessoais" }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 403,
