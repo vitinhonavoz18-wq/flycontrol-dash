@@ -31,7 +31,9 @@ const sql = readdirSync(DIR)
 /** A definição que realmente vale de uma função: a última escrita. */
 function definicaoVigente(nome: string): string {
   const todas = [
-    ...sql.matchAll(new RegExp(`CREATE OR REPLACE FUNCTION public\\.${nome}[\\s\\S]*?\\$\\$;`, "g")),
+    ...sql.matchAll(
+      new RegExp(`CREATE OR REPLACE FUNCTION public\\.${nome}[\\s\\S]*?\\$\\$;`, "g"),
+    ),
   ];
   expect(todas.length, `função ${nome} não encontrada nas migrations`).toBeGreaterThan(0);
   return todas[todas.length - 1][0];
@@ -43,7 +45,9 @@ describe("SEC-01 — ninguém se promove a administrador sozinho", () => {
   it("existe um gatilho vigiando a ficha do usuário", () => {
     expect(sql).toContain("CREATE TRIGGER trg_proteger_coluna_is_admin");
     // Sem o INSERT, bastaria apagar a própria ficha e criá-la já marcada.
-    expect(sql).toMatch(/trg_proteger_coluna_is_admin[\s\S]{0,120}BEFORE INSERT OR UPDATE ON public\.profiles/);
+    expect(sql).toMatch(
+      /trg_proteger_coluna_is_admin[\s\S]{0,120}BEFORE INSERT OR UPDATE ON public\.profiles/,
+    );
   });
 
   it("ficha nova nunca nasce administradora", () => {
@@ -80,9 +84,7 @@ describe("SEC-07 — as funções privilegiadas do Clube CENTS estão trancadas"
   ];
 
   it.each(SO_PELO_SERVIDOR)("%s não é alcançável pela internet", (assinatura) => {
-    expect(sql).toContain(
-      `REVOKE ALL ON FUNCTION ${assinatura} FROM PUBLIC, anon, authenticated;`,
-    );
+    expect(sql).toContain(`REVOKE ALL ON FUNCTION ${assinatura} FROM PUBLIC, anon, authenticated;`);
     expect(sql).toContain(`GRANT EXECUTE ON FUNCTION ${assinatura} TO service_role;`);
   });
 
@@ -122,7 +124,9 @@ describe("SEC-07 — a matrícula no clube confere quem chamou", () => {
   });
 
   it("continua fazendo exatamente o que fazia antes", () => {
-    expect(fn()).toContain("PERFORM public.club_get_or_create_active_cycle(p_company_id, p_club_id)");
+    expect(fn()).toContain(
+      "PERFORM public.club_get_or_create_active_cycle(p_company_id, p_club_id)",
+    );
     expect(fn()).toContain("PERFORM public.club_recalculate_level(p_company_id, p_club_id)");
   });
 });
