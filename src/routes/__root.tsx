@@ -19,6 +19,29 @@ import { InstallBanner } from "@/components/pwa/InstallBanner";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 
+/**
+ * O endereço oficial do site e a imagem que aparece na prévia do link.
+ *
+ * Quando alguém cola o endereço do FlyControl no WhatsApp, o WhatsApp não
+ * abre o site: ele manda um robô buscar só o cabeçalho da página e lê estas
+ * linhas para montar o cartãozinho da prévia. Por isso o endereço da imagem
+ * precisa ser COMPLETO (começando com https://) — o robô não está "dentro"
+ * do site para entender um caminho curto como "/imagem.jpg".
+ *
+ * É como o endereço no envelope: dentro do prédio basta dizer "apartamento
+ * 42", mas o carteiro que vem de fora precisa da rua, do número e da cidade.
+ *
+ * O `-v2` no nome do arquivo é de propósito. WhatsApp e Facebook guardam a
+ * imagem antiga por semanas; trocando o nome do arquivo eles são obrigados a
+ * buscar a nova — é o mesmo motivo de trocar a placa da vitrine em vez de
+ * repintar por cima.
+ */
+const SITE_URL = "https://flycontrol.conectfly.com.br/";
+const IMAGEM_DA_PREVIA = "https://flycontrol.conectfly.com.br/flycontrol-social-preview-v2.jpg";
+const TITULO = "FlyControl — o centro de operações do seu estabelecimento";
+const DESCRICAO =
+  "Pedidos, clientes, cardápio, operação e financeiro em uma plataforma só. 30 dias grátis e implementação gratuita.";
+
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -64,36 +87,38 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
       { name: "apple-mobile-web-app-title", content: "FlyControl" },
       { name: "mobile-web-app-capable", content: "yes" },
-      { title: "FlyControl — Painel central de delivery" },
-      {
-        name: "description",
-        content:
-          "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria.",
-      },
-      { property: "og:title", content: "FlyControl — Painel central de delivery" },
-      {
-        property: "og:description",
-        content:
-          "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria.",
-      },
-      { name: "twitter:title", content: "FlyControl — Painel central de delivery" },
-      {
-        name: "twitter:description",
-        content:
-          "Gestão de pedidos em tempo real, impressão automática e controle multi-loja para sua pizzaria.",
-      },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/102b2e79-2d68-465b-becd-e35dc5e0015d/id-preview-a1327d07--81d7e9ad-58d1-4e8a-8987-4f210224d49e.lovable.app-1778257035358.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/102b2e79-2d68-465b-becd-e35dc5e0015d/id-preview-a1327d07--81d7e9ad-58d1-4e8a-8987-4f210224d49e.lovable.app-1778257035358.png",
-      },
-      { name: "twitter:card", content: "summary_large_image" },
+      { title: TITULO },
+      { name: "description", content: DESCRICAO },
+
+      // A prévia do link. Uma configuração só, para o WhatsApp não ter duas
+      // imagens para escolher e acabar pegando a errada.
       { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "FlyControl" },
+      { property: "og:locale", content: "pt_BR" },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:title", content: TITULO },
+      { property: "og:description", content: DESCRICAO },
+      { property: "og:image", content: IMAGEM_DA_PREVIA },
+      { property: "og:image:secure_url", content: IMAGEM_DA_PREVIA },
+      { property: "og:image:type", content: "image/jpeg" },
+      // Dizer a medida adianta o desenho do cartão: sem isso o WhatsApp
+      // precisa baixar a imagem inteira antes de saber que espaço reservar,
+      // e às vezes desiste no meio e mostra só o texto.
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      {
+        property: "og:image:alt",
+        content: "Painel do FlyControl com os pedidos em andamento",
+      },
+
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: TITULO },
+      { name: "twitter:description", content: DESCRICAO },
+      { name: "twitter:image", content: IMAGEM_DA_PREVIA },
+      {
+        name: "twitter:image:alt",
+        content: "Painel do FlyControl com os pedidos em andamento",
+      },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
