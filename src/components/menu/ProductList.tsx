@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
 
 interface ProductListProps {
   pizzeriaId: string;
@@ -43,6 +44,7 @@ interface ProductListProps {
   pizzeriaApiKey?: string;
   syncEndpoint?: string;
   onRefresh?: () => void;
+  vocabulario: VocabularioDoCardapio;
 }
 
 export function ProductList({
@@ -54,6 +56,7 @@ export function ProductList({
   pizzeriaApiKey,
   syncEndpoint,
   onRefresh,
+  vocabulario,
 }: ProductListProps) {
   const [products, setProducts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -588,7 +591,7 @@ export function ProductList({
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="standard">Padrão / Produto</SelectItem>
-                  <SelectItem value="flavor">Sabor</SelectItem>
+                  <SelectItem value="flavor">{vocabulario.tipoSabor}</SelectItem>
                   <SelectItem value="beverage">Bebida</SelectItem>
                 </SelectContent>
               </Select>

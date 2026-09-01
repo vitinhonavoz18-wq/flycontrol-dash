@@ -16,6 +16,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
 
 interface PizzaSizeListProps {
   pizzeriaId: string;
@@ -23,6 +24,7 @@ interface PizzaSizeListProps {
   pizzeriaApiKey?: string;
   syncEndpoint?: string;
   onRefresh?: () => void;
+  vocabulario: VocabularioDoCardapio;
 }
 
 export function PizzaSizeList({
@@ -31,6 +33,7 @@ export function PizzaSizeList({
   pizzeriaApiKey,
   syncEndpoint,
   onRefresh,
+  vocabulario,
 }: PizzaSizeListProps) {
   const [sizes, setSizes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -262,7 +265,7 @@ export function PizzaSizeList({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold flex items-center gap-2">
-          <Ruler className="h-5 w-5 text-primary" /> Tamanhos & Preços de Pizza
+          <Ruler className="h-5 w-5 text-primary" /> {vocabulario.tituloTamanhos}
         </h3>
         <Button onClick={openCreate} className="gap-2">
           <Plus className="h-4 w-4" /> Novo Tamanho
@@ -281,7 +284,7 @@ export function PizzaSizeList({
                   <h4 className="font-bold text-lg">{size.name}</h4>
                   <p className="text-xs text-muted-foreground">
                     {size.slices} fatias • Até {size.max_flavors}{" "}
-                    {size.max_flavors === 1 ? "sabor" : "sabores"}
+                    {size.max_flavors === 1 ? vocabulario.sabor : vocabulario.sabores}
                   </p>
                 </div>
                 <div className="text-right">
@@ -357,7 +360,7 @@ export function PizzaSizeList({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="size-flavors">Máx. de Sabores</Label>
+                <Label htmlFor="size-flavors">{vocabulario.rotuloMaxSabores}</Label>
                 <Input
                   id="size-flavors"
                   type="number"

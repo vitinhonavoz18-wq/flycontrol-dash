@@ -341,8 +341,19 @@ export async function syncToExternal(
 
 function prepareDataForExternal(type: MenuType, data: any) {
   if (type === "category") {
+    // A descrição e a foto viajam junto com o nome.
+    //
+    // Antes só o nome atravessava, e por isso o lojista escrevia "Cervejas
+    // geladas para todos os gostos" na categoria e o cardápio do cliente
+    // continuava mostrando a categoria pelada. Era como escrever a placa da
+    // prateleira e deixar a placa na gaveta.
+    //
+    // `undefined` some do pacote e o site mantém o que já tinha; `null`
+    // (foto removida de propósito) viaja e apaga lá também.
     return {
       name: data.name,
+      description: data.description ?? null,
+      image_url: data.image_url ?? null,
       active: data.active !== undefined ? data.active : true,
       sort_order: data.order_index, // FlyControl uses order_index, SiteCreatorFly expects sort_order
     };

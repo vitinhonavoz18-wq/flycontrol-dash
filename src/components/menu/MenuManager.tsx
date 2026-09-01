@@ -13,6 +13,7 @@ import { PizzeriaConfig } from "./PizzeriaConfig";
 import { MenuSyncSection } from "./MenuSyncSection";
 import { MenuTemplatePicker } from "./MenuTemplatePicker";
 import { MenuImportDialog } from "./MenuImportDialog";
+import { vocabularioDaLoja } from "@/lib/menu/vocabulario";
 
 interface MenuManagerProps {
   pizzeriaId: string;
@@ -20,15 +21,24 @@ interface MenuManagerProps {
 
 const DEFAULT_SYNC_ENDPOINT = "https://watjejwgtieqfkpebkfz.supabase.co/functions/v1/menu-sync";
 
-/** Abas do cardápio, em um só lugar — a ordem aqui é a ordem na tela. */
-const MENU_TABS: readonly ScrollableTabItem[] = [
-  { value: "categories", label: "Categorias" },
-  { value: "products", label: "Sabores" },
-  { value: "pizza_sizes", label: "Tamanhos" },
-  { value: "beverages", label: "Bebidas" },
-  { value: "extras", label: "Bordas/Adic." },
-  { value: "config", label: "Config.", emphasis: true },
-];
+/**
+ * Abas do cardápio, em um só lugar — a ordem aqui é a ordem na tela.
+ *
+ * Os nomes vêm do vocabulário do nicho: uma farmácia não vê "Sabores" nem
+ * "Bordas". Os IDENTIFICADORES (`products`, `extras`, …) nunca mudam — é por
+ * eles que a tela sabe qual lista abrir, então trocar a placa não troca a
+ * prateleira.
+ */
+function abasDoCardapio(v: ReturnType<typeof vocabularioDaLoja>): readonly ScrollableTabItem[] {
+  return [
+    { value: "categories", label: "Categorias" },
+    { value: "products", label: v.abaProdutos },
+    { value: "pizza_sizes", label: v.abaTamanhos },
+    { value: "beverages", label: "Bebidas" },
+    { value: "extras", label: v.abaExtras },
+    { value: "config", label: "Config.", emphasis: true },
+  ];
+}
 
 export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   const [activeTab, setActiveTab] = useState("categories");
@@ -54,7 +64,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   async function loadPizzeria() {
     const { data } = await supabase
       .from("pizzerias")
-      .select("id, name, slug, api_key, sync_endpoint")
+      // `business_type` e `site_settings` entram para a tela saber falar a
+      // língua do nicho — farmácia não tem sabor nem borda.
+      .select("id, name, slug, api_key, sync_endpoint, business_type, site_settings")
       .eq("id", pizzeriaId)
       .single();
     if (data) setPizzeria(data);
@@ -98,6 +110,8 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
     );
   }
 
+  const vocabulario = vocabularioDaLoja(pizzeria);
+
   return (
     <div className="space-y-4">
       <MenuSyncSection pizzeriaId={pizzeriaId} onSyncSuccess={loadCategories} />
@@ -117,11 +131,12 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <ScrollableTabs items={MENU_TABS} value={activeTab} className="mb-2" />
+        <ScrollableTabs items={abasDoCardapio(vocabulario)} value={activeTab} className="mb-2" />
 
         <div className="mt-6">
           <TabsContent value="categories" className="m-0 focus-visible:outline-none">
             <CategoryList
+              vocabulario={vocabulario}
               pizzeriaId={pizzeriaId}
               categories={categories}
               onRefresh={handleLocalRefresh}
@@ -133,11 +148,12 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
           <TabsContent value="products" className="m-0 focus-visible:outline-none">
             <ProductList
+              vocabulario={vocabulario}
               key={`products-${refreshKey}`}
               pizzeriaId={pizzeriaId}
               categories={categories.filter((c) => c.active)}
               type="standard"
-              title="Sabores & Produtos"
+              title={vocabulario.tituloProdutos}
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
               syncEndpoint={pizzeria?.sync_endpoint}
@@ -147,6 +163,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
           <TabsContent value="pizza_sizes" className="m-0 focus-visible:outline-none">
             <PizzaSizeList
+              vocabulario={vocabulario}
               pizzeriaId={pizzeriaId}
               pizzeriaSlug={pizzeria?.slug}
               pizzeriaApiKey={pizzeria?.api_key}
@@ -157,6 +174,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
           <TabsContent value="beverages" className="m-0 focus-visible:outline-none">
             <ProductList
+              vocabulario={vocabulario}
               key={`beverages-${refreshKey}`}
               pizzeriaId={pizzeriaId}
               categories={categories.filter((c) => c.active)}
@@ -171,6 +189,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
 
           <TabsContent value="extras" className="m-0 focus-visible:outline-none">
             <ExtraList
+              vocabulario={vocabulario}
               key={`extras-${refreshKey}`}
               pizzeriaId={pizzeriaId}
               pizzeriaSlug={pizzeria?.slug}

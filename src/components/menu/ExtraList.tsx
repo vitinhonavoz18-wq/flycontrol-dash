@@ -23,6 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
 
 interface ExtraListProps {
   pizzeriaId: string;
@@ -30,6 +31,7 @@ interface ExtraListProps {
   pizzeriaApiKey?: string;
   syncEndpoint?: string;
   onRefresh?: () => void;
+  vocabulario: VocabularioDoCardapio;
 }
 
 export function ExtraList({
@@ -38,6 +40,7 @@ export function ExtraList({
   pizzeriaApiKey,
   syncEndpoint,
   onRefresh,
+  vocabulario,
 }: ExtraListProps) {
   const [extras, setExtras] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -284,7 +287,7 @@ export function ExtraList({
   return (
     <div className="space-y-8">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Bordas & Adicionais</h3>
+        <h3 className="text-lg font-semibold">{vocabulario.tituloExtras}</h3>
         <Button onClick={openCreate} className="gap-2">
           <Plus className="h-4 w-4" /> Novo Complemento
         </Button>
@@ -294,7 +297,7 @@ export function ExtraList({
         <section className="space-y-4">
           <h4 className="font-bold flex items-center gap-2 text-primary">
             <span className="h-2 w-2 rounded-full bg-primary" />
-            Bordas Recheadas
+            {vocabulario.grupoBordas}
           </h4>
           <div className="space-y-3">
             {bordas.map((ext) => (
@@ -313,7 +316,7 @@ export function ExtraList({
         <section className="space-y-4">
           <h4 className="font-bold flex items-center gap-2 text-primary">
             <span className="h-2 w-2 rounded-full bg-primary" />
-            Adicionais
+            {vocabulario.grupoAdicionais}
           </h4>
           <div className="space-y-3">
             {adicionais.map((ext) => (
