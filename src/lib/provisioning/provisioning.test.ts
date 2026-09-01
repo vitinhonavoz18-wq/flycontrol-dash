@@ -121,7 +121,7 @@ describe("estados usam a coluna que já existe", () => {
     // Inventar um quarto estado sem migration faria a gravação ser recusada
     // exatamente no meio do provisionamento.
     const sql = readFileSync(
-      "supabase/migrations/20260713033021_68fd0f27-60ee-4b37-8177-60e485ceb73c.sql",
+      "DATABASE/supabase/migrations/20260713033021_68fd0f27-60ee-4b37-8177-60e485ceb73c.sql",
       "utf8",
     );
     for (const estado of [PROVISION_PENDING, PROVISION_DONE, PROVISION_FAILED]) {

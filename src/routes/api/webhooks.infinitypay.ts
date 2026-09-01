@@ -19,6 +19,7 @@
 
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { reabrirVitrine } from "@/lib/billing/vitrine.server";
 import { asBillingDb, type BillingDb } from "@/lib/billing/supabaseBridge";
 import { checkInfinityPayPayment } from "@/lib/billing/infinitypay/api";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
@@ -284,6 +285,18 @@ async function handleInvoicePayment(
         .from("pizzerias")
         .update({ subscription_status: pizzeriaAccessStatusFor("active") })
         .eq("id", invoice.company_id);
+
+      // Reabre a vitrine que a suspensão fechou. Sem isto o lojista paga,
+      // recupera o painel, os pedidos voltam a ser aceitos — e o site dele
+      // continua fechado para o cliente final. Falha aqui é só aviso: o
+      // acesso já foi devolvido, e a próxima sincronização de cardápio
+      // corrige a vitrine.
+      const vitrine = await reabrirVitrine(invoice.company_id);
+      if (!vitrine.ok) {
+        console.error(
+          `[infinitypay] fatura ${invoice.id} paga, mas a vitrine não reabriu: ${vitrine.erro}`,
+        );
+      }
 
       await db.from("subscription_events").insert({
         subscription_id: subscription.id,

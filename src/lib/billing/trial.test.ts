@@ -13,7 +13,7 @@ import {
 import { PLAN_PRICING } from "./plans";
 import { isOperational } from "./subscriptionStatus";
 
-const MIGRATION = "supabase/migrations/20260820120000_free_trial.sql";
+const MIGRATION = "DATABASE/supabase/migrations/20260820120000_free_trial.sql";
 const sql = () => readFileSync(MIGRATION, "utf8");
 
 const DIA = 86_400_000;

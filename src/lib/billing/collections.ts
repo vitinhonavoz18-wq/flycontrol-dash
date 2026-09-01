@@ -9,14 +9,16 @@
  */
 
 /**
- * Dias de tolerância depois do vencimento antes de suspender o acesso.
+ * Horas de tolerância depois do vencimento antes de suspender o acesso.
  *
  * Cortar o acesso no exato instante do vencimento derrubaria um restaurante
- * por um PIX que ainda está compensando. Três dias é curto o suficiente para
- * não deixar acumular calote, longo o suficiente para não punir um atraso
- * de horas.
+ * por um PIX que ainda está compensando. Vinte e quatro horas é o prazo que
+ * cobre a compensação de um pagamento feito no dia do vencimento, sem deixar
+ * o atraso virar hábito.
+ *
+ * Era 3 dias até 01/09/2026, quando passou a 24 horas por decisão comercial.
  */
-export const OVERDUE_GRACE_DAYS = 3;
+export const OVERDUE_GRACE_HOURS = 24;
 
 export type CollectionsAction = "none" | "mark_past_due" | "suspend";
 
@@ -39,7 +41,7 @@ export function decideCollectionsAction(input: {
 }): CollectionsAction {
   if (input.now < input.dueAt) return "none";
 
-  const graceEndsAt = new Date(input.dueAt.getTime() + OVERDUE_GRACE_DAYS * 24 * 60 * 60 * 1000);
+  const graceEndsAt = new Date(input.dueAt.getTime() + OVERDUE_GRACE_HOURS * 60 * 60 * 1000);
 
   if (input.now >= graceEndsAt) {
     return input.subscriptionStatus === "suspended" ? "none" : "suspend";

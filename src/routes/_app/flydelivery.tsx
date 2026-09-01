@@ -36,6 +36,8 @@ import {
 import { Loader2, MapPin, Plus, Smartphone, Trash2, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
+// Ainda não lançado: some do menu, e o servidor responde 503 antes de
+// chegar aqui (ver ROTAS_NAO_LANCADAS em src/lib/naoLancadas.ts).
 export const Route = createFileRoute("/_app/flydelivery")({ component: FlyDeliveryPage });
 
 type Pizzeria = {

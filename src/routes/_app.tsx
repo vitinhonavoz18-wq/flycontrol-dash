@@ -11,7 +11,6 @@ import {
   Users,
   LogOut,
   Settings,
-  BookOpen,
   Menu,
   X,
   PieChart,
@@ -159,22 +158,40 @@ function AppLayoutInner() {
     );
   }
 
-  type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; feature?: Feature };
+  type NavItem = {
+    to: string;
+    label: string;
+    icon: typeof LayoutDashboard;
+    feature?: Feature;
+    /**
+     * Funcionalidade que ainda não está no ar. Some do menu, e a própria rota
+     * responde 503 (ver NAO_LANCADAS em src/lib/naoLancadas.ts).
+     *
+     * É uma palavra só para religar: apagar esta linha devolve o item ao menu.
+     * Melhor do que apagar o código da tela, que jogaria fora trabalho pronto
+     * e depois teria que ser reescrito do zero.
+     */
+    naoLancada?: boolean;
+  };
   const allItems: NavItem[] = [
-    { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    // "Pedidos" e não "Dashboard": é a tela onde o pedido é acompanhado e
+    // movido, e é o nome que quem trabalha no salão usa.
+    { to: "/dashboard", label: "Pedidos", icon: LayoutDashboard },
     { to: "/tables", label: "Mesas", icon: LayoutGrid, feature: "tables" },
     { to: "/search-orders", label: "Buscar Pedidos", icon: Search },
     { to: "/my-store", label: "Minha Loja", icon: Store },
     { to: "/menu", label: "Cardápio", icon: Menu },
-    { to: "/flydelivery", label: "FlyDelivery", icon: Smartphone },
+    { to: "/flydelivery", label: "FlyDelivery", icon: Smartphone, naoLancada: true },
     { to: "/combos", label: "Combos", icon: PieChart },
-    { to: "/marketing", label: "Marketing", icon: Megaphone },
+    { to: "/marketing", label: "Marketing", icon: Megaphone, naoLancada: true },
     { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },
     { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
+    // "Documentação" saiu do menu: virou a aba "Documentos" dentro de
+    // Configurações. A rota /docs continua existindo para não quebrar link
+    // antigo que alguém tenha salvo.
     { to: "/settings", label: "Configurações", icon: Settings },
     { to: "/waiters", label: "Garçons", icon: UtensilsCrossed, feature: "waiters" },
     { to: "/commissions", label: "Comissões", icon: Wallet, feature: "commissions" },
-    { to: "/docs", label: "Documentação", icon: BookOpen },
   ];
   // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
   // não assinam a própria plataforma, então o item some para eles. Quem
@@ -182,7 +199,10 @@ function AppLayoutInner() {
   // Admin.
   const showAdmin = isSuperAdmin || isHardcodedAdmin;
   const items = allItems.filter(
-    (it) => (!it.feature || hasFeature(it.feature)) && !(it.to === "/billing" && showAdmin),
+    (it) =>
+      !it.naoLancada &&
+      (!it.feature || hasFeature(it.feature)) &&
+      !(it.to === "/billing" && showAdmin),
   );
 
   const adminItems = [

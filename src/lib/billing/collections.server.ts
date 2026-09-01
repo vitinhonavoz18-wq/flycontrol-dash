@@ -7,10 +7,11 @@
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "./supabaseBridge";
 import {
-  OVERDUE_GRACE_DAYS,
+  OVERDUE_GRACE_HOURS,
   decideCollectionsAction,
   pizzeriaAccessStatusFor,
 } from "./collections";
+import { fecharVitrine } from "./vitrine.server";
 
 export type ReconcileResult = {
   checked: number;
@@ -88,7 +89,21 @@ export async function reconcileOverdueInvoices(): Promise<ReconcileResult> {
         .update({ subscription_status: pizzeriaAccessStatusFor(targetStatus) })
         .eq("id", invoice.company_id);
 
+      // Fechar o painel não fecha a vitrine: o cardápio digital é servido pelo
+      // SiteCreatorFly, que tem banco próprio e só sabe o que a gente conta.
+      // Sem este aviso, o cliente final continuaria vendo a loja aberta e
+      // montando um pedido que o /api/orders recusaria só no final — a pior
+      // experiência possível, a de descobrir no caixa que a loja estava fechada.
       if (action === "suspend") {
+        const fechada = await fecharVitrine(invoice.company_id);
+        if (!fechada.ok) {
+          // Não interrompe a suspensão: o pedido já está barrado no
+          // /api/orders de qualquer jeito. Isto é aviso, não bloqueio.
+          result.errors.push(
+            `Loja ${invoice.company_id} suspensa, mas a vitrine não fechou: ${fechada.erro}`,
+          );
+        }
+
         await db
           .from("invoices")
           .update({ status: "overdue", updated_at: nowIso })
@@ -103,7 +118,7 @@ export async function reconcileOverdueInvoices(): Promise<ReconcileResult> {
         new_status: targetStatus,
         reason:
           action === "suspend"
-            ? `Fatura vencida há mais de ${OVERDUE_GRACE_DAYS} dias sem pagamento.`
+            ? `Fatura vencida há mais de ${OVERDUE_GRACE_HOURS} horas sem pagamento.`
             : "Fatura vencida, dentro do prazo de tolerância.",
         metadata: { invoice_id: invoice.id, due_at: invoice.due_at },
       });

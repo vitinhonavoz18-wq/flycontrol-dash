@@ -15,7 +15,7 @@ import { COMPANY_BILLING_MODEL } from "./plans";
 // A migration original criou a constraint; a de teste.sql a substituiu por
 // inteiro (DROP + ADD) para acrescentar o par do plano interno `teste`. É a
 // segunda que descreve o par vigente no banco hoje.
-const MIGRATION = "supabase/migrations/20260814120000_teste_plan.sql";
+const MIGRATION = "DATABASE/supabase/migrations/20260814120000_teste_plan.sql";
 const sql = readFileSync(MIGRATION, "utf8");
 
 /** Extrai os pares (plan_type, billing_model) aceitos pela constraint. */

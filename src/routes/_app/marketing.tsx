@@ -19,6 +19,8 @@ import { ModelosMensagem } from "@/components/marketing/ModelosMensagem";
 import { ConfiguracoesWhatsApp } from "@/components/marketing/ConfiguracoesWhatsApp";
 import { DescontoAceite } from "@/components/marketing/DescontoAceite";
 
+// Ainda não lançado: some do menu, e o servidor responde 503 antes de
+// chegar aqui (ver ROTAS_NAO_LANCADAS em src/lib/naoLancadas.ts).
 export const Route = createFileRoute("/_app/marketing")({ component: MarketingPage });
 
 /**

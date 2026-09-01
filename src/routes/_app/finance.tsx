@@ -173,7 +173,17 @@ function Finance() {
   const nav = useNavigate();
 
   const [mounted, setMounted] = useState(false);
-  const [period, setPeriod] = useState<Period>("month");
+  // Abre nos últimos 30 dias corridos, e não em "este mês".
+  //
+  // "Este mês" reinicia no dia 1º: quem abrisse a tela na virada veria o
+  // painel zerado e concluiria que o sistema perdeu os pedidos dele — mesmo
+  // com o mês anterior inteiro gravado e os contadores de cobrança certos.
+  // É a diferença entre perguntar "quanto vendi nos últimos 30 dias" e
+  // "quanto vendi desde a virada da meia-noite de ontem".
+  //
+  // Os outros períodos continuam todos disponíveis no seletor, "este mês"
+  // inclusive — o que mudou foi só por onde a tela começa.
+  const [period, setPeriod] = useState<Period>("30days");
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
   const [selectedPizzeriaId, setSelectedPizzeriaId] = useState<string>("all");
   const [orders, setOrders] = useState<OrderRow[]>([]);

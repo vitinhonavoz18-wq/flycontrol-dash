@@ -19,8 +19,8 @@ import { BILLABLE_STATUSES, usageIdempotencyKey } from "./billingEngine";
  * uma definição da mesma função, vale a ÚLTIMA.
  */
 const MIGRATION_PATHS = [
-  "supabase/migrations/20260806140000_billing_usage_hook.sql",
-  "supabase/migrations/20260828120000_pedido_restaurado_volta_a_contar.sql",
+  "DATABASE/supabase/migrations/20260806140000_billing_usage_hook.sql",
+  "DATABASE/supabase/migrations/20260828120000_pedido_restaurado_volta_a_contar.sql",
 ];
 const sql = MIGRATION_PATHS.map((p) => readFileSync(p, "utf8")).join("\n");
 

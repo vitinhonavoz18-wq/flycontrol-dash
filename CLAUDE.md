@@ -52,3 +52,29 @@ Regras:
 
 Dinheiro é sempre tratado em centavos inteiros — nunca com casas decimais —
 para não acontecer erro de arredondamento na cobrança.
+
+## Banco de dados
+
+Tudo que é banco vive em `DATABASE/supabase/` — migrations, funções, gatilhos,
+Edge Functions e os roteiros de reversão. Nenhum `.sql` fora dali.
+
+A pasta `supabase` por dentro é exigência da ferramenta, não escolha: o robô
+que aplica as mudanças é apontado para lá com `--workdir DATABASE`. Há testes
+em `src/lib/server/databaseLayout.test.ts` que quebram se esse apontamento se
+perder, porque a falha seria silenciosa.
+
+**`DATABASE/README.md` é o mapa** — leia antes de mexer no banco. Ele explica,
+entre outras coisas, por que o mesmo restaurante é chamado de cinco nomes
+diferentes (`tenant_id`, `company_id`, `pizzeria_id`, `restaurant_id`,
+`target_store_id`) e por que unificar isso hoje quebraria a cobrança.
+
+Regras que não se negociam:
+
+1. **Migration já aplicada nunca é editada nem renomeada.** Correção é arquivo
+   novo, com data nova. O histórico fica.
+2. **Tabela nova usa `tenant_id`** para dizer de qual restaurante é a linha.
+   Nunca uma sexta variação.
+3. **O código fala inglês, a explicação fala português.** Tabelas, colunas,
+   funções e gatilhos em inglês (é o que 100% das tabelas já usam); comentários
+   e nomes de arquivo de migration em português, porque quem lê para decidir é
+   o dono do negócio.

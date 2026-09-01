@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
 import {
-  OVERDUE_GRACE_DAYS,
+  OVERDUE_GRACE_HOURS,
   decideCollectionsAction,
   pizzeriaAccessStatusFor,
 } from "./collections";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
 
 describe("decideCollectionsAction", () => {
   it("não faz nada antes do vencimento", () => {
@@ -24,13 +24,15 @@ describe("decideCollectionsAction", () => {
 
   it("não repete a marcação de atraso se já estiver past_due", () => {
     const dueAt = new Date("2026-08-20T00:00:00Z");
-    const now = new Date(dueAt.getTime() + DAY_MS);
+    // Dentro da tolerância: metade dela, para o teste continuar valendo se o
+    // prazo mudar de novo.
+    const now = new Date(dueAt.getTime() + (OVERDUE_GRACE_HOURS / 2) * HOUR_MS);
     expect(decideCollectionsAction({ dueAt, now, subscriptionStatus: "past_due" })).toBe("none");
   });
 
-  it(`dá ${OVERDUE_GRACE_DAYS} dias de tolerância antes de suspender`, () => {
+  it(`dá ${OVERDUE_GRACE_HOURS} horas de tolerância antes de suspender`, () => {
     const dueAt = new Date("2026-08-20T00:00:00Z");
-    const justBeforeGraceEnds = new Date(dueAt.getTime() + OVERDUE_GRACE_DAYS * DAY_MS - 1000);
+    const justBeforeGraceEnds = new Date(dueAt.getTime() + OVERDUE_GRACE_HOURS * HOUR_MS - 1000);
     expect(
       decideCollectionsAction({ dueAt, now: justBeforeGraceEnds, subscriptionStatus: "past_due" }),
     ).toBe("none");
@@ -38,7 +40,7 @@ describe("decideCollectionsAction", () => {
 
   it("suspende depois do prazo de tolerância vencido", () => {
     const dueAt = new Date("2026-08-20T00:00:00Z");
-    const afterGrace = new Date(dueAt.getTime() + OVERDUE_GRACE_DAYS * DAY_MS + 1000);
+    const afterGrace = new Date(dueAt.getTime() + OVERDUE_GRACE_HOURS * HOUR_MS + 1000);
     expect(
       decideCollectionsAction({ dueAt, now: afterGrace, subscriptionStatus: "past_due" }),
     ).toBe("suspend");
@@ -48,7 +50,7 @@ describe("decideCollectionsAction", () => {
     // O cron pode não rodar todo dia — a assinatura pode nunca ter sido
     // marcada past_due e já estar muito além do prazo.
     const dueAt = new Date("2026-08-20T00:00:00Z");
-    const afterGrace = new Date(dueAt.getTime() + (OVERDUE_GRACE_DAYS + 10) * DAY_MS);
+    const afterGrace = new Date(dueAt.getTime() + (OVERDUE_GRACE_HOURS + 240) * HOUR_MS);
     expect(decideCollectionsAction({ dueAt, now: afterGrace, subscriptionStatus: "active" })).toBe(
       "suspend",
     );
@@ -56,7 +58,7 @@ describe("decideCollectionsAction", () => {
 
   it("não repete a suspensão se já estiver suspensa", () => {
     const dueAt = new Date("2026-08-20T00:00:00Z");
-    const afterGrace = new Date(dueAt.getTime() + (OVERDUE_GRACE_DAYS + 1) * DAY_MS);
+    const afterGrace = new Date(dueAt.getTime() + (OVERDUE_GRACE_HOURS + 1) * HOUR_MS);
     expect(
       decideCollectionsAction({ dueAt, now: afterGrace, subscriptionStatus: "suspended" }),
     ).toBe("none");

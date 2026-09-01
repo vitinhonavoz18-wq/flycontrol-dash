@@ -17,7 +17,7 @@ import { TEXTOS_DO_CARDAPIO, CHAVE_NO_SITE_SETTINGS } from "./menuTexts";
  * Este arquivo lê o SQL de verdade e compara com o catálogo, para a
  * divergência quebrar a suíte em vez de aparecer no cardápio de alguém.
  */
-const CAMINHO = "supabase/migrations/20260830120000_textos_do_cardapio.sql";
+const CAMINHO = "DATABASE/supabase/migrations/20260830120000_textos_do_cardapio.sql";
 const sql = readFileSync(CAMINHO, "utf8");
 
 describe("a regra da tela e a do banco são a mesma", () => {

@@ -40,4 +40,4 @@ dist-ssr
 # Rascunhos do programa de linha de comando do Supabase. São arquivos de
 # cache da máquina de quem roda, não do projeto — nunca devem ir para o
 # repositório.
-supabase/.temp/
+DATABASE/supabase/.temp/
