@@ -4,7 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "./supabaseBridge";
 import {
   POLITICA_CENTS_V2,
-  politicaParaCiclo,
+  politicaPorVersao,
   progressoCents,
   marcosDaTrilha,
   type MarcoDaTrilha,
@@ -93,7 +93,7 @@ export const progressoDoCents = createServerFn({ method: "POST" })
     const { data: assinatura } = await db
       .from("subscriptions")
       .select(
-        "id, plans(code), billing_cycles!subscriptions_current_cycle_fkey(id, cycle_start, cycle_end, billable_order_count)",
+        "id, plans(code), billing_cycles!subscriptions_current_cycle_fkey(id, cycle_start, cycle_end, billable_order_count, cents_policy)",
       )
       .eq("company_id", companyId)
       .maybeSingle();
@@ -106,16 +106,16 @@ export const progressoDoCents = createServerFn({ method: "POST" })
         cycle_start: string;
         cycle_end: string;
         billable_order_count: number;
+        cents_policy: string | null;
       } | null;
     } | null;
 
     if (!linha || linha.plans?.code !== "cents") return null;
 
     const ciclo = linha.billing_cycles;
-    const politica = politicaParaCiclo(
-      ciclo?.cycle_start ?? null,
-      process.env as Record<string, string | undefined>,
-    );
+    // O carimbo do próprio ciclo. A tela mostra a tabela pela qual este
+    // ciclo vai ser cobrado, e não a que estiver vigente hoje.
+    const politica = politicaPorVersao(ciclo?.cents_policy);
 
     // A contagem vem da soma dos eventos de uso, e não do contador da linha:
     // se os dois divergirem, os eventos é que são a verdade auditável — é a

@@ -13,7 +13,7 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { buildInvoiceItems, calculateCycle, determineNextCycleUnitPrice } from "./billingEngine";
-import { politicaParaCiclo } from "./centsTiers";
+import { POLITICA_CENTS_VIGENTE, politicaPorVersao } from "./centsTiers";
 import { computeCycleStartAfter } from "./trial";
 import { getPlanPricing, type PlanCode } from "./plans";
 
@@ -39,6 +39,8 @@ type CycleRow = {
   cycle_type: string | null;
   unit_price_cents: number;
   promotion_threshold_orders: number;
+  /** A tabela de preços carimbada quando este ciclo abriu. */
+  cents_policy: string | null;
 };
 
 type SubscriptionRow = {
@@ -100,7 +102,7 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
     .from("billing_cycles")
     .select(
       "id, subscription_id, company_id, status, cycle_start, cycle_end, cycle_type, " +
-        "unit_price_cents, promotion_threshold_orders",
+        "unit_price_cents, promotion_threshold_orders, cents_policy",
     )
     .eq("id", cycleId)
     .maybeSingle();
@@ -185,16 +187,14 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
     .eq("subscription_id", typedSub.id)
     .maybeSingle();
 
-  // Qual tabela de preços vale para ESTE ciclo.
+  // Qual tabela de preços vale para ESTE ciclo: a que ficou CARIMBADA nele
+  // quando abriu.
   //
-  // Quem decide é a data em que o ciclo abriu, não a data de hoje. Assim um
-  // ciclo de julho fechado com atraso em setembro continua sendo cobrado com
-  // o preço de julho — é o mesmo princípio da comanda: o cliente paga o preço
-  // que estava no cardápio quando pediu, não o que subiu depois.
-  const politicaDoCiclo = politicaParaCiclo(
-    typedCycle.cycle_start,
-    process.env as Record<string, string | undefined>,
-  );
+  // Não é a tabela de hoje. Um ciclo de julho fechado com atraso em setembro
+  // continua sendo cobrado com o preço de julho — é o princípio da comanda: o
+  // cliente paga o preço que estava no cardápio quando pediu, não o que subiu
+  // depois.
+  const politicaDoCiclo = politicaPorVersao(typedCycle.cents_policy);
 
   const totals = calculateCycle({
     planCode,
@@ -316,6 +316,7 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
       p_unit_price_cents: nextUnitPrice,
       p_qualified_from_previous: totals.qualifiedForNextCycle,
       p_cycle_type: "usage",
+      p_cents_policy: POLITICA_CENTS_VIGENTE.versao,
     });
     nextCycleId = (nextId as string | null) ?? null;
   }
@@ -414,6 +415,7 @@ async function closeFreeTrialCycle(
     p_unit_price_cents: getPlanPricing(planCode).defaultOrderUnitPriceCents,
     p_qualified_from_previous: false,
     p_cycle_type: "usage",
+    p_cents_policy: POLITICA_CENTS_VIGENTE.versao,
   });
   const nextCycleId = (nextId as string | null) ?? null;
 

@@ -18,6 +18,7 @@ import { COMPANY_BILLING_MODEL, isPublicPlanCode, type PlanCode } from "./plans"
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { asBillingDb, type BillingDb } from "./supabaseBridge";
 import { canTransition, isSubscriptionStatus, type SubscriptionStatus } from "./subscriptionStatus";
+import { POLITICA_CENTS_VIGENTE } from "./centsTiers";
 
 type Db = BillingDb;
 
@@ -152,6 +153,7 @@ export const changeSubscriptionStatus = createServerFn({ method: "POST" })
     if (target === "active") {
       const { data: openedId, error: cycleError } = await supabase.rpc("open_billing_cycle", {
         p_subscription_id: subscription.id,
+        p_cents_policy: POLITICA_CENTS_VIGENTE.versao,
       });
       if (cycleError) {
         // A assinatura já está ativa; falhar aqui não deve desfazer isso.

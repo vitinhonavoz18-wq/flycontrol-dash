@@ -14,9 +14,15 @@
  */
 
 import type { BillingDb } from "./supabaseBridge";
+import { POLITICA_CENTS_VIGENTE } from "./centsTiers";
 
 export async function openFirstCycle(db: BillingDb, subscriptionId: string): Promise<void> {
-  const { error } = await db.rpc("open_billing_cycle", { p_subscription_id: subscriptionId });
+  const { error } = await db.rpc("open_billing_cycle", {
+    p_subscription_id: subscriptionId,
+    // Carimba a tabela de preços no ciclo. Depois de aberto, ele não muda de
+    // preço — nem se a tabela vigente mudar amanhã.
+    p_cents_policy: POLITICA_CENTS_VIGENTE.versao,
+  });
   if (error) {
     console.error(`[billing] assinatura ${subscriptionId} ativada mas ciclo não abriu:`, error);
   }

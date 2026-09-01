@@ -10,7 +10,7 @@ import {
   politicaPorVersao,
   posicaoNaTrilha,
   progressoCents,
-  politicaParaCiclo,
+  POLITICA_CENTS_VIGENTE,
   proximaMeta,
 } from "./centsTiers";
 import { formatCents } from "./money";
@@ -284,39 +284,36 @@ describe("versões da política", () => {
   });
 });
 
-describe("vigência — o interruptor que evita mudar preço no meio do mês", () => {
-  it("sem a data configurada, nada muda para ninguém", () => {
-    // O padrão é não mexer. Uma variável esquecida não pode virar mudança de
-    // preço para a base inteira.
-    expect(politicaParaCiclo("2030-01-01", {}).versao).toBe("cents_v1");
-    expect(politicaParaCiclo("2030-01-01", { CENTS_V2_VIGENCIA: "" }).versao).toBe("cents_v1");
-    expect(politicaParaCiclo("2030-01-01", { CENTS_V2_VIGENCIA: "  " }).versao).toBe("cents_v1");
+describe("cada ciclo carrega a sua própria tabela de preço", () => {
+  it("o ciclo é lido pelo CARIMBO dele, não pela tabela de hoje", () => {
+    // Este é o coração da mudança. Antes, a tabela era decidida na hora de
+    // fechar a conta, olhando uma configuração do servidor — e mexer nessa
+    // configuração mudava o preço de meses já vendidos. Agora o ciclo guarda
+    // a versão dele e o fechamento obedece ao que está escrito na linha.
+    expect(politicaPorVersao("cents_v1").versao).toBe("cents_v1");
+    expect(politicaPorVersao("cents_v2").versao).toBe("cents_v2");
   });
 
-  it("ciclo aberto antes da vigência termina com a regra antiga", () => {
-    // Trocar a regra no meio do ciclo seria mudar o preço depois de o cliente
-    // já ter vendido.
-    const env = { CENTS_V2_VIGENCIA: "2026-09-01" };
-    expect(politicaParaCiclo("2026-08-15", env).versao).toBe("cents_v1");
-    expect(politicaParaCiclo("2026-08-31T23:59:59Z", env).versao).toBe("cents_v1");
-  });
-
-  it("ciclo aberto a partir da vigência nasce com faixas", () => {
-    const env = { CENTS_V2_VIGENCIA: "2026-09-01" };
-    expect(politicaParaCiclo("2026-09-01", env).versao).toBe("cents_v2");
-    expect(politicaParaCiclo("2026-10-05", env).versao).toBe("cents_v2");
-  });
-
-  it("data mal preenchida não vira desconto acidental", () => {
-    const env = { CENTS_V2_VIGENCIA: "primeiro de setembro" };
-    expect(politicaParaCiclo("2026-10-05", env).versao).toBe("cents_v1");
-  });
-
-  it("ciclo sem data de início cai na regra antiga", () => {
-    const env = { CENTS_V2_VIGENCIA: "2026-09-01" };
-    for (const v of [null, undefined, "", "não é data"]) {
-      expect(politicaParaCiclo(v, env).versao).toBe("cents_v1");
+  it("carimbo ausente ou desconhecido cai na tabela antiga", () => {
+    // Na dúvida, preço cheio. Inventar um desconto que ninguém contratou é
+    // pior do que cobrar o de sempre.
+    for (const v of [null, undefined, "", "cents_v9", 7, {}]) {
+      expect(politicaPorVersao(v).versao).toBe("cents_v1");
     }
+  });
+
+  it("os ciclos novos nascem com as faixas progressivas", () => {
+    // Se alguém trocar a política vigente sem querer, este teste avisa.
+    expect(POLITICA_CENTS_VIGENTE.versao).toBe("cents_v2");
+    expect(POLITICA_CENTS_VIGENTE.faixas.map((f) => f.precoCents)).toEqual([70, 60, 50, 40]);
+  });
+
+  it("mudar a política vigente não mexe em ciclo já aberto", () => {
+    // Um ciclo carimbado como v1 continua v1 mesmo com a vigente sendo v2 —
+    // é o que impede mudar o combinado com o cliente no meio do mês.
+    const cicloAntigo = { cents_policy: "cents_v1" };
+    expect(politicaPorVersao(cicloAntigo.cents_policy).versao).toBe("cents_v1");
+    expect(POLITICA_CENTS_VIGENTE.versao).not.toBe(cicloAntigo.cents_policy);
   });
 });
 

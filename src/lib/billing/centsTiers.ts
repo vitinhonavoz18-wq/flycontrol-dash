@@ -88,6 +88,16 @@ export const POLITICA_CENTS_V2: PoliticaCents = {
  * continuam sendo calculados como sempre foram — trocar a regra no meio do
  * mês seria mudar o preço depois de o cliente já ter vendido.
  */
+/**
+ * A política que os ciclos NOVOS recebem ao abrir.
+ *
+ * Trocar esta constante NÃO mexe em nenhum ciclo que já existe: cada ciclo
+ * carrega a sua própria tabela de preço, carimbada na abertura e gravada na
+ * linha dele. Aqui se decide só o que o próximo ciclo vai receber — como
+ * trocar o cardápio da parede sem reescrever as contas já fechadas.
+ */
+export const POLITICA_CENTS_VIGENTE: PoliticaCents = POLITICA_CENTS_V2;
+
 export const POLITICA_CENTS_V1: PoliticaCents = {
   versao: "cents_v1",
   faixas: [{ nivel: 1, de: 1, ate: null, precoCents: 70, rotulo: "Padrão" }],
@@ -331,44 +341,3 @@ export function marcosDaTrilha(politica: PoliticaCents, total: number): MarcoDaT
 // ---------------------------------------------------------------------------
 // Vigência: a partir de quando as faixas valem
 // ---------------------------------------------------------------------------
-
-/**
- * A data em que as faixas passam a valer, no formato `2026-09-01`.
- *
- * SEM ESTA VARIÁVEL PREENCHIDA, NADA MUDA PARA NINGUÉM. É o interruptor:
- * enquanto ela estiver vazia, todo ciclo continua sendo calculado como
- * sempre foi — um preço só, o congelado na abertura.
- *
- * Ela existe porque trocar a regra no meio de um ciclo seria mudar o preço
- * depois de o cliente já ter vendido. Com a data, só os ciclos que ABREM
- * daquele dia em diante nascem com faixas; os que já estavam rodando
- * terminam com a regra que começaram.
- */
-export const VARIAVEL_DE_VIGENCIA = "CENTS_V2_VIGENCIA";
-
-/**
- * Qual política um ciclo usa, a partir do dia em que ele abriu.
- *
- * A resposta é sempre a mesma para o mesmo ciclo — a data de abertura não
- * muda depois. É isso que garante que uma fatura fechada continue valendo o
- * que valia, mesmo que a vigência seja alterada amanhã.
- */
-export function politicaParaCiclo(
-  inicioDoCiclo: Date | string | null | undefined,
-  env: Record<string, string | undefined>,
-): PoliticaCents {
-  const bruto = env[VARIAVEL_DE_VIGENCIA]?.trim();
-  if (!bruto) return POLITICA_CENTS_V1;
-
-  const vigencia = new Date(bruto);
-  if (Number.isNaN(vigencia.getTime())) {
-    console.warn(`[cents] ${VARIAVEL_DE_VIGENCIA} não é uma data válida: "${bruto}"`);
-    return POLITICA_CENTS_V1;
-  }
-
-  if (!inicioDoCiclo) return POLITICA_CENTS_V1;
-  const inicio = new Date(inicioDoCiclo);
-  if (Number.isNaN(inicio.getTime())) return POLITICA_CENTS_V1;
-
-  return inicio.getTime() >= vigencia.getTime() ? POLITICA_CENTS_V2 : POLITICA_CENTS_V1;
-}

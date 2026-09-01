@@ -21,6 +21,24 @@ type Props = { tenantId: string; aoTrocarAba: (aba: string) => void };
 
 type Resumo = Awaited<ReturnType<typeof resumoMarketing>>;
 
+/**
+ * O pacote que voltou é mesmo um resumo, com os números dentro?
+ *
+ * Os quatro contadores são obrigatórios: é com eles que a tela é desenhada.
+ * Faltando qualquer um, é melhor mostrar "não consegui carregar" do que
+ * tentar escrever um número que não existe e derrubar o módulo inteiro.
+ */
+function temOsNumeros(valor: unknown): valor is Resumo {
+  if (!valor || typeof valor !== "object") return false;
+  const r = valor as Record<string, unknown>;
+  return (
+    typeof r.totalClientes === "number" &&
+    typeof r.aptos === "number" &&
+    typeof r.campanhasFeitas === "number" &&
+    typeof r.mensagensEnviadas === "number"
+  );
+}
+
 export function VisaoGeral({ tenantId, aoTrocarAba }: Props) {
   const buscar = useServerFn(resumoMarketing);
   const [dados, setDados] = useState<Resumo | null>(null);
@@ -34,7 +52,22 @@ export function VisaoGeral({ tenantId, aoTrocarAba }: Props) {
     setFalhou(false);
     buscar({ data: { tenantId } })
       .then((r) => {
-        if (!cancelado) setDados(r);
+        if (cancelado) return;
+        // Confere se o que voltou tem MESMO os números antes de confiar nele.
+        //
+        // Quando a busca falha, nem sempre a resposta chega como erro: às
+        // vezes ela chega como um pacote sem os números dentro. Aceitar esse
+        // pacote como bom derrubava a tela inteira do Marketing na hora de
+        // escrever o total de clientes — a página virava "Algo deu errado" e
+        // o lojista perdia o módulo todo.
+        //
+        // É o entregador chegando com a sacola vazia: o certo é conferir a
+        // sacola na porta, e não descobrir na mesa que não veio comida.
+        if (!temOsNumeros(r)) {
+          setFalhou(true);
+          return;
+        }
+        setDados(r);
       })
       .catch((e: Error) => {
         if (cancelado) return;
