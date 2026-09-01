@@ -11,6 +11,7 @@ import {
   decideCollectionsAction,
   pizzeriaAccessStatusFor,
 } from "./collections";
+import { fecharVitrine } from "./vitrine.server";
 
 export type ReconcileResult = {
   checked: number;
@@ -131,52 +132,4 @@ export async function reconcileOverdueInvoices(): Promise<ReconcileResult> {
   }
 
   return result;
-}
-
-/**
- * Avisa o SiteCreatorFly que a loja parou de atender.
- *
- * O cardápio digital do cliente final NÃO é servido por este sistema: ele mora
- * no SiteCreatorFly, que tem banco de dados próprio. Os dois conversam pelo
- * endpoint de sincronização — o mesmo caminho que já leva mudança de preço e
- * de horário.
- *
- * `is_open: false` é o sinal que aquele lado entende como "não está atendendo".
- * É o mesmo botão de "fechar a loja" que o lojista já usa quando fecha mais
- * cedo, só que acionado pela cobrança em vez de pela mão dele.
- *
- * Reabre sozinho: quando o pagamento é confirmado e a assinatura volta a
- * `active`, a sincronização seguinte manda o `is_open` verdadeiro da loja.
- */
-async function fecharVitrine(companyId: string): Promise<{ ok: boolean; erro?: string }> {
-  const { data } = await supabaseAdmin
-    .from("pizzerias")
-    .select("slug, api_key, sync_endpoint, sf_restaurant_id, name")
-    .eq("id", companyId)
-    .maybeSingle();
-
-  const loja = data as {
-    slug: string | null;
-    api_key: string | null;
-    sync_endpoint: string | null;
-    sf_restaurant_id: string | null;
-    name: string | null;
-  } | null;
-
-  // Loja que nunca foi provisionada no SiteCreatorFly não tem vitrine para
-  // fechar. Não é erro: é o caso de quem só usa o painel.
-  if (!loja?.sync_endpoint || !loja.sf_restaurant_id) return { ok: true };
-
-  const { syncToExternal } = await import("@/utils/menuSync");
-  const r = await syncToExternal({
-    type: "restaurant",
-    action: "update",
-    externalId: loja.sf_restaurant_id,
-    data: { name: loja.name, is_open: false },
-    pizzeriaSlug: loja.slug ?? "",
-    pizzeriaApiKey: loja.api_key ?? "",
-    syncEndpoint: loja.sync_endpoint,
-  });
-
-  return r.success ? { ok: true } : { ok: false, erro: r.error ?? "erro desconhecido" };
 }
