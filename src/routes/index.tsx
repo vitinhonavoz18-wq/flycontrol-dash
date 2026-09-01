@@ -1,352 +1,449 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { MosaicoCardapios } from "@/components/landing/MosaicoCardapios";
-import { PainelPedidos } from "@/components/landing/PainelPedidos";
-import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING } from "@/lib/billing/plans";
+import { AmbientParticles } from "@/components/landing/AmbientParticles";
+import { DashboardShowcase } from "@/components/landing/DashboardShowcase";
+import { EcosystemSection } from "@/components/landing/EcosystemSection";
+import { FloatingNotification } from "@/components/landing/FloatingNotification";
+import { Navbar } from "@/components/landing/Navbar";
+import { OperationFlow } from "@/components/landing/OperationFlow";
+import { PricingSection } from "@/components/landing/PricingSection";
+import { ProductShowcase } from "@/components/landing/ProductShowcase";
+import { SiteFooter } from "@/components/landing/SiteFooter";
+import { StepFlow } from "@/components/landing/StepFlow";
+import { Reveal, SectionHeading, SectionLabel, SectionText } from "@/components/landing/primitivos";
 import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial";
-import logo from "@/assets/flycontrol-logo.png";
 
 export const Route = createFileRoute("/")({
   component: Landing,
+  head: () => ({
+    meta: [
+      { title: "FlyControl — o centro de operações do seu estabelecimento" },
+      {
+        name: "description",
+        content:
+          "Pedidos, clientes, cardápio, operação e financeiro em uma plataforma só. " +
+          `${TRIAL_DURATION_DAYS} dias grátis e implementação gratuita.`,
+      },
+    ],
+  }),
 });
 
-const premium = PLAN_PRICING.premium;
-const cents = PLAN_PRICING.cents;
-
 /**
- * Página inicial do FlyControl.
+ * A página que o visitante vê antes de entrar no FlyControl.
  *
- * Direção: a cozinha à noite. O fundo é preto quente (não azulado), e a única
- * coisa acesa na tela é o painel de pedidos — que é exatamente o que se vê
- * numa cozinha às 19h40. O laranja da marca deixou de ser degradê de enfeite
- * e virou sinal: só aparece onde significa alguma coisa.
+ * A IDEIA: CENTRO DE OPERAÇÕES
  *
- * A página segue UM pedido, com os horários reais de uma noite. A sequência é
- * verdadeira — o pedido entra, imprime, sai, e vira dinheiro no fim —, então
- * numerar por horário informa em vez de decorar.
+ * A pessoa que abre esta página está com um problema concreto — pedido
+ * perdido, planilha que ninguém preenche, três sistemas que não conversam. A
+ * página não tenta emocioná-la; ela mostra o painel funcionando e diz o que
+ * ele faz.
  *
- * O mosaico de cardápios entra logo antes do preço, e essa ordem é de
- * propósito: primeiro a pessoa vê quem já usa, depois vê quanto custa.
+ * POR QUE O PRINT É O PROTAGONISTA
+ *
+ * Foto de gente sorrindo com tablet não vende sistema — qualquer software do
+ * mundo usa a mesma foto. O que convence é ver a tela. Por isso o Hero tem
+ * pouca coisa: um título, duas frases, dois botões e o painel de verdade,
+ * flutuando devagar.
+ *
+ * O QUE A PÁGINA NÃO FAZ
+ *
+ * Não inventa recurso. Cada frase daqui corresponde a uma tela que existe no
+ * sistema hoje. Não usa contagem regressiva, vaga limitada nem preço riscado.
+ * E não muda a cor da marca: o laranja é o mesmo da logo.
  */
 function Landing() {
   return (
-    <div className="font-corpo" style={{ background: "#0B0908", color: "#F4EFE4" }}>
-      <Cabecalho />
-      <Abertura />
-      <UmaNoite />
-      <MosaicoCardapios />
-      <Precos />
-      <Fechamento />
-      <Rodape />
-    </div>
-  );
-}
-
-function Cabecalho() {
-  return (
-    <header className="safe-x sticky top-0 z-40 border-b border-white/5 backdrop-blur-md">
-      <div
-        className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-5 py-3"
-        style={{ background: "transparent" }}
-      >
-        <img src={logo} alt="FlyControl" className="h-10 w-auto md:h-12" />
-        <nav className="flex items-center gap-1">
-          <Link
-            to="/login"
-            className="rounded-lg px-4 py-2 text-sm font-medium text-white/60 transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
-          >
-            Entrar
-          </Link>
-          <Link
-            to="/signup"
-            search={{ plan: undefined, google: undefined }}
-            className="rounded-lg bg-[#FF5A00] px-4 py-2 text-sm font-semibold text-black transition-colors hover:bg-[#ff7a2b] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
-          >
-            Criar conta
-          </Link>
-        </nav>
-      </div>
-    </header>
-  );
-}
-
-// Lado a lado só a partir de 1024px. Entre 768 e 1023 não cabem os dois: o
-// painel comeria a largura do título e a frase quebraria em pedaços. Nessa
-// faixa o painel desce para baixo do texto, inteiro.
-function Abertura() {
-  return (
-    <section className="safe-x mx-auto grid max-w-6xl items-center gap-12 px-5 pb-20 pt-14 md:pb-28 md:pt-20 lg:grid-cols-[1fr_minmax(0,460px)] lg:gap-14">
-      <div>
-        {/* Sem rótulo de horário aqui: o painel ao lado já mostra 19:42, e a
-            mesma informação duas vezes no mesmo campo de visão não informa —
-            só ocupa. O relógio como estrutura começa na seção seguinte.
-
-            O tamanho do título foi medido contra a letra de reserva (a do
-            sistema, mais larga que a Bricolage): se as duas primeiras frases
-            couberem numa linha só com ela, cabem também quando a fonte boa
-            carrega. A última frase quebra onde couber — é a única que pode. */}
-        <h1 className="font-display text-[clamp(1.85rem,7vw,2.6rem)] md:text-[clamp(2.6rem,6vw,4rem)] lg:text-[clamp(2.4rem,4.4vw,3.4rem)]">
-          O pedido entra.
-          <br />
-          A cozinha imprime.
-          <br />
-          <span style={{ color: "#FF5A00" }}>Você não corre atrás de nada.</span>
-        </h1>
-
-        <p className="mt-6 max-w-md text-[17px] leading-relaxed text-white/55">
-          FlyControl cuida da noite inteira do seu restaurante: o pedido chega, a comanda sai, o
-          cliente acompanha e o caixa fecha sozinho no fim.
-        </p>
-
-        <p className="mt-5 font-comanda text-sm tracking-[0.06em] text-white/70">
-          Os primeiros <span className="text-[#FF5A00]">{TRIAL_DURATION_DAYS} dias</span> são por
-          nossa conta.
-        </p>
-
-        <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-          <Link
-            to="/signup"
-            search={{ plan: undefined, google: undefined }}
-            className="rounded-xl bg-[#FF5A00] px-7 py-3.5 text-center text-sm font-bold text-black transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
-          >
-            Criar minha conta
-          </Link>
-          <Link
-            to="/plans"
-            className="rounded-xl border border-white/12 px-7 py-3.5 text-center text-sm font-semibold text-white/70 transition-colors hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
-          >
-            Ver os planos
-          </Link>
-        </div>
-      </div>
-
-      <div className="flex min-w-0 justify-center lg:justify-end">
-        <PainelPedidos />
-      </div>
-    </section>
-  );
-}
-
-/** As quatro batidas de um pedido. Horários reais, não números decorativos. */
-const NOITE = [
-  {
-    hora: "19:42",
-    titulo: "O pedido chega e você já sabe",
-    texto:
-      "Toca um alerta e o pedido aparece na tela. Ninguém fica esperando por engano, ninguém perde pedido no meio da correria.",
-  },
-  {
-    hora: "19:43",
-    titulo: "A comanda sai pronta pra cozinha",
-    texto:
-      "Um toque e a comanda sai impressa, organizada, fácil de ler. Sem letra torta, sem confusão de quem pediu o quê.",
-  },
-  {
-    hora: "19:47",
-    titulo: "O cliente acompanha sem ligar",
-    texto:
-      "Novo, preparando, saiu para entrega, entregue. Ele vê em que pé está o pedido dele — e para de ligar perguntando.",
-  },
-  {
-    hora: "23:58",
-    titulo: "O caixa fecha sem você somar nada",
-    texto:
-      "Faturamento do dia, valor médio por pedido e os horários de mais movimento, prontos. Sem abrir planilha.",
-  },
-];
-
-function UmaNoite() {
-  return (
-    <section className="safe-x border-t border-white/5 px-5 py-20 md:py-28">
-      <div className="mx-auto max-w-6xl">
-        <h2 className="font-display max-w-lg text-[clamp(1.7rem,3.6vw,2.5rem)]">
-          Uma noite no seu restaurante
-        </h2>
-        <p className="mt-4 max-w-md text-white/50">
-          Do primeiro pedido ao fechamento do caixa, sem ninguém copiando nada à mão.
-        </p>
-
-        <ol className="mt-14 space-y-0">
-          {NOITE.map((passo) => (
-            <li
-              key={passo.hora}
-              className="grid gap-2 border-t border-white/8 py-7 md:grid-cols-[7rem_1fr_1.2fr] md:gap-8 md:py-9"
-            >
-              <span className="font-comanda text-sm tracking-[0.2em] text-[#FF5A00]">
-                {passo.hora}
-              </span>
-              <h3 className="font-display text-[1.35rem] leading-tight md:text-[1.5rem]">
-                {passo.titulo}
-              </h3>
-              <p className="max-w-md leading-relaxed text-white/50">{passo.texto}</p>
-            </li>
-          ))}
-        </ol>
-
-        <p className="mt-10 max-w-2xl border-t border-white/8 pt-7 text-white/50">
-          E se você tem mais de uma loja no sistema, uma nunca enxerga os pedidos, os clientes ou o
-          faturamento da outra — cada uma tem o próprio cofre.
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function Precos() {
-  return (
-    <section className="safe-x border-t border-white/5 px-5 py-20 md:py-28">
-      <div className="mx-auto max-w-6xl">
-        <h2 className="font-display text-[clamp(1.7rem,3.6vw,2.5rem)]">Quanto custa</h2>
-        <p className="mt-4 max-w-lg text-white/50">
-          Você começa com {TRIAL_DURATION_DAYS} dias grátis. Depois, escolhe o jeito de pagar que
-          combina com o tamanho da sua operação — e dá para trocar quando quiser.
-        </p>
-
-        <div className="mt-12 grid gap-4 md:grid-cols-2">
-          <Plano
-            nome={cents.name}
-            etiqueta="Onde seu cadastro começa"
-            valor={formatCents(cents.defaultOrderUnitPriceCents)}
-            unidade="por pedido válido"
-            segundaLinha="Sem taxa de cadastro e sem mensalidade"
-            destaque
-            explicacao={`Você não paga nada para começar: são ${TRIAL_DURATION_DAYS} dias grátis e, depois, só os pedidos que realmente entram. Ao passar de ${cents.promotionThresholdOrders} pedidos válidos no mês, cada pedido cai para ${formatCents(cents.promotionalOrderUnitPriceCents)} no mês seguinte.`}
-            itens={[
-              "Sem taxa para entrar",
-              "Sem mensalidade fixa",
-              "Gestão de pedidos e cardápio",
-              "Fica mais barato quanto mais você vende",
-            ]}
-          />
-          <Plano
-            nome={premium.name}
-            etiqueta="Mensalidade fixa"
-            valor={formatCents(premium.monthlyFeeCents)}
-            unidade="por mês"
-            explicacao="Você sabe exatamente quanto vai pagar todo mês, não importa quantos pedidos entrarem. Para quem já tem movimento constante e quer tudo: mesas, garçons e comissões inclusos."
-            itens={[
-              "Pedidos sem cobrança por unidade",
-              "Mesas, garçons e comissões",
-              "Cardápio e clientes",
-            ]}
-          />
-        </div>
-
-        <p className="mt-8">
-          <Link
-            to="/plans"
-            className="text-sm font-semibold text-[#FF5A00] underline underline-offset-4 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
-          >
-            Comparar os dois planos lado a lado
-          </Link>
-        </p>
-      </div>
-    </section>
-  );
-}
-
-function Plano({
-  nome,
-  etiqueta,
-  valor,
-  unidade,
-  segundaLinha,
-  explicacao,
-  itens,
-  destaque = false,
-}: {
-  nome: string;
-  etiqueta: string;
-  valor: string;
-  unidade: string;
-  segundaLinha?: string;
-  explicacao: string;
-  itens: string[];
-  destaque?: boolean;
-}) {
-  return (
     <div
-      className="rounded-2xl p-7 md:p-9"
-      style={{
-        background: "#171310",
-        border: destaque ? "1px solid rgba(255,90,0,0.35)" : "1px solid rgba(255,255,255,0.07)",
-      }}
+      className="font-fly"
+      style={{ background: "var(--fly-background)", color: "var(--fly-text-primary)" }}
     >
-      <div className="flex items-baseline justify-between gap-3">
-        <h3 className="font-display text-2xl">{nome}</h3>
-        <span className="font-comanda text-[11px] uppercase tracking-[0.14em] text-white/45">
-          {etiqueta}
-        </span>
-      </div>
+      <Navbar />
 
-      <p className="mt-6 flex flex-wrap items-baseline gap-x-2">
-        <span className="font-display text-4xl" style={{ color: "#FF5A00" }}>
-          {valor}
-        </span>
-        <span className="text-sm text-white/45">{unidade}</span>
-      </p>
-      {segundaLinha && <p className="mt-1 font-semibold text-white/85">{segundaLinha}</p>}
+      <main id="topo">
+        <Hero />
+        <UmaPlataforma />
 
-      <p className="mt-5 text-[15px] leading-relaxed text-white/50">{explicacao}</p>
+        <ProductShowcase
+          id="produto"
+          etiqueta="Pedidos"
+          titulo={
+            <>
+              Do pedido recebido
+              <br />
+              até a entrega.
+            </>
+          }
+          texto="O pedido entra na tela, você aceita, a cozinha recebe a comanda e o cliente acompanha em que pé está. Sem ninguém copiando nada à mão."
+          pontos={[
+            "Pedido novo com alerta sonoro",
+            "Quadro por etapa: novo, em preparo, saiu",
+            "Comanda impressa direto para a cozinha",
+            "Delivery, retirada e mesa no mesmo quadro",
+          ]}
+          imagem={{
+            src: "/images/flycontrol-dashboard.webp",
+            alt: "Quadro de pedidos do FlyControl, com as colunas Novo pedido, Em preparo e Saiu para entrega",
+            largura: 1920,
+            altura: 1200,
+          }}
+        />
 
-      <ul className="mt-6 space-y-2.5 border-t border-white/8 pt-6">
-        {itens.map((item) => (
-          <li key={item} className="flex gap-3 text-[15px] text-white/75">
-            <span className="font-comanda text-[#FF5A00]" aria-hidden="true">
-              ✓
-            </span>
-            {item}
-          </li>
-        ))}
-      </ul>
+        <ProductShowcase
+          id="recursos"
+          etiqueta="Seu cardápio. Sua marca."
+          titulo="Venda do seu jeito."
+          texto="Categorias, produtos, tamanhos, combos e bebidas no painel — e o cardápio do cliente atualizado junto, sem você mexer em duas telas."
+          pontos={[
+            "Categorias e produtos com foto",
+            "Combos, bordas e adicionais",
+            "Três modos de navegação para o cliente",
+            "O que você salva aqui aparece lá",
+          ]}
+          espelhado
+          imagem={{
+            src: "/images/flycontrol-cardapio.webp",
+            alt: "Tela de cardápio do FlyControl, com a lista de categorias e a sincronização com o site público",
+            largura: 1600,
+            altura: 1000,
+          }}
+        />
+
+        <ProductShowcase
+          etiqueta="Operação presencial"
+          titulo={
+            <>
+              O salão também
+              <br />é operação.
+            </>
+          }
+          texto="Mesa aberta, comanda somando, garçom identificado e comissão calculada no fim. O que acontece no salão entra na mesma conta do delivery."
+          pontos={[
+            "Mesas e comandas abertas",
+            "Garçons com acesso próprio",
+            "Comissão por garçom",
+            "Fechamento da mesa no painel",
+          ]}
+          visual={
+            <StepFlow
+              degraus={[
+                { titulo: "Mesa aberta", detalhe: "O garçom identifica a mesa e começa a comanda" },
+                {
+                  titulo: "Pedidos somando",
+                  detalhe: "Cada item entra na conta da mesa",
+                  ativo: true,
+                },
+                { titulo: "Fechamento", detalhe: "A conta fecha e a comissão é calculada" },
+              ]}
+            />
+          }
+        />
+
+        <ProductShowcase
+          etiqueta="Clientes"
+          titulo={
+            <>
+              Transforme pedidos
+              <br />
+              em clientes recorrentes.
+            </>
+          }
+          texto="Cada pedido também deixa um cliente na sua base. Dali saem as campanhas para quem já comprou — com o consentimento pedido no checkout."
+          pontos={[
+            "Base de clientes formada pelos pedidos",
+            "Segmentação por comportamento de compra",
+            "Campanhas por WhatsApp",
+            "Consentimento pedido no checkout",
+          ]}
+          espelhado
+          visual={
+            <StepFlow
+              degraus={[
+                { titulo: "Clientes", detalhe: "A base que os próprios pedidos formaram" },
+                { titulo: "Segmentação", detalhe: "Quem comprou, quando e o quê" },
+                {
+                  titulo: "Campanha",
+                  detalhe: "A mensagem sai para o grupo escolhido",
+                  ativo: true,
+                },
+                { titulo: "Nova venda", detalhe: "O pedido volta para o mesmo quadro" },
+              ]}
+            />
+          }
+        />
+
+        <ProductShowcase
+          etiqueta="Financeiro"
+          titulo={
+            <>
+              Veja o dinheiro
+              <br />
+              por trás da operação.
+            </>
+          }
+          texto="Faturamento, ticket médio, vendas por canal e desempenho por produto — no período que você escolher, sem abrir planilha."
+          pontos={[
+            "Faturamento e ticket médio",
+            "Vendas por mesa, retirada e delivery",
+            "Desempenho diário",
+            "Distribuição por forma de pagamento",
+          ]}
+          imagem={{
+            src: "/images/flycontrol-financeiro.webp",
+            alt: "Tela de gestão financeira do FlyControl, com faturamento, ticket médio e vendas por canal",
+            largura: 1600,
+            altura: 1000,
+          }}
+        />
+
+        <EcosystemSection />
+        <Integracoes />
+        <MosaicoCardapios />
+        <PricingSection />
+        <ChamadaFinal />
+      </main>
+
+      <SiteFooter />
     </div>
   );
 }
 
-function Fechamento() {
+/**
+ * O Hero.
+ *
+ * Poucas coisas na primeira tela, de propósito: rótulo, título, duas frases,
+ * dois botões e o painel. Cada item a mais aqui rouba atenção do único que
+ * importa — o produto funcionando.
+ */
+function Hero() {
   return (
-    <section className="safe-x border-t border-white/5 px-5 py-20 md:py-28">
-      <div className="mx-auto max-w-6xl">
-        <p className="font-comanda text-xs tracking-[0.25em] text-[#FF5A00]">23:59</p>
-        <h2 className="font-display mt-4 max-w-2xl text-[clamp(2rem,5vw,3.4rem)]">
-          Amanhã a noite recomeça. Dessa vez, organizada.
-        </h2>
-        <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-          <Link
-            to="/signup"
-            search={{ plan: undefined, google: undefined }}
-            className="rounded-xl bg-[#FF5A00] px-7 py-3.5 text-center text-sm font-bold text-black transition-transform hover:-translate-y-0.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
+    <section
+      aria-labelledby="hero-titulo"
+      className="relative overflow-hidden px-5 pb-24 pt-28 sm:px-8 sm:pt-36 lg:pb-32 lg:pt-44"
+    >
+      {/* Sentinela invisível: quando ela sai da tela, a barra do topo escurece.
+          Existe só para o observador ter o que observar. */}
+      <span id="fly-topo" aria-hidden="true" className="absolute left-0 top-0 h-1 w-1" />
+
+      <AmbientParticles />
+
+      <div className="relative mx-auto grid max-w-[1240px] items-center gap-14 lg:grid-cols-[minmax(0,1.12fr)_minmax(0,1fr)] lg:gap-16">
+        <div>
+          <SectionLabel>Centro de operações</SectionLabel>
+
+          <h1
+            id="hero-titulo"
+            className="fly-display mt-6"
+            style={{ color: "var(--fly-text-primary)" }}
           >
-            Criar minha conta
-          </Link>
-          <Link
-            to="/login"
-            className="rounded-xl border border-white/12 px-7 py-3.5 text-center text-sm font-semibold text-white/70 transition-colors hover:border-white/30 hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#FF5A00]"
-          >
-            Já tenho conta
-          </Link>
+            Sua operação.
+            <br />
+            Sob controle.
+          </h1>
+
+          <p className="fly-body-lg mt-8 max-w-lg" style={{ color: "var(--fly-text-secondary)" }}>
+            Pedidos, clientes, cardápio, operação, financeiro e crescimento conectados em uma única
+            plataforma.
+          </p>
+          <p className="fly-body mt-3 max-w-lg" style={{ color: "var(--fly-text-muted)" }}>
+            Do primeiro pedido à gestão completa.
+          </p>
+
+          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+            <Link
+              to="/signup"
+              search={{ plan: undefined, google: undefined }}
+              className="rounded-full px-7 py-3.5 text-center text-[15px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{
+                background: "var(--fly-primary)",
+                color: "#000",
+                outlineColor: "var(--fly-primary)",
+              }}
+            >
+              Começar grátis
+            </Link>
+            <a
+              href="#produto"
+              className="rounded-full border px-7 py-3.5 text-center text-[15px] transition-colors hover:border-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              style={{
+                borderColor: "var(--fly-border-strong)",
+                color: "var(--fly-text-primary)",
+                outlineColor: "var(--fly-primary)",
+              }}
+            >
+              Conhecer o FlyControl
+            </a>
+          </div>
+
+          <p className="mt-6 text-[13px]" style={{ color: "var(--fly-text-muted)" }}>
+            {TRIAL_DURATION_DAYS} dias grátis • Implementação gratuita
+          </p>
+        </div>
+
+        <div className="relative">
+          <DashboardShowcase
+            src="/images/flycontrol-dashboard.webp"
+            alt="Painel do FlyControl mostrando os pedidos em andamento, separados por etapa"
+            largura={1920}
+            altura={1200}
+            prioridade
+          />
+
+          {/* Dois avisos, não seis. Eles sugerem que o sistema está vivo; se
+              virarem enxame, viram enfeite. */}
+          <FloatingNotification
+            titulo="Novo pedido recebido"
+            detalhe="Pedido #1842 · 3 itens"
+            className="-left-8 top-2 xl:-left-16"
+          />
+          <FloatingNotification
+            titulo="Pedido confirmado"
+            detalhe="Saiu para entrega"
+            className="-right-4 bottom-6 xl:-right-10"
+            atraso={4}
+          />
         </div>
       </div>
     </section>
   );
 }
 
-function Rodape() {
+/** A segunda seção: o argumento em uma frase, e as seis etapas da operação. */
+function UmaPlataforma() {
   return (
-    <footer className="safe-x border-t border-white/5 px-5 py-9">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4">
-        <span className="font-comanda text-[11px] tracking-[0.14em] text-white/30">
-          © {new Date().getFullYear()} FLYCONTROL
-        </span>
-        <div className="flex gap-5 text-xs text-white/35">
-          <Link to="/terms" className="transition-colors hover:text-white/70">
-            Termos de uso
-          </Link>
-          <Link to="/privacy" className="transition-colors hover:text-white/70">
-            Privacidade
+    <section
+      aria-labelledby="plataforma-titulo"
+      className="border-t px-5 py-24 sm:px-8 md:py-32"
+      style={{ borderColor: "var(--fly-border-subtle)" }}
+    >
+      <div className="mx-auto max-w-[1240px]">
+        <div className="grid gap-10 lg:grid-cols-2 lg:gap-20">
+          <Reveal>
+            <SectionLabel>Uma plataforma. Toda a operação.</SectionLabel>
+            <SectionHeading id="plataforma-titulo">
+              Você vende.
+              <br />O FlyControl organiza.
+            </SectionHeading>
+          </Reveal>
+
+          <Reveal atraso={120} className="lg:pt-16">
+            <SectionText className="max-w-lg">
+              Centralize a rotina do estabelecimento sem depender de várias ferramentas separadas.
+              Menos ferramentas, mais controle.
+            </SectionText>
+          </Reveal>
+        </div>
+
+        <OperationFlow />
+      </div>
+    </section>
+  );
+}
+
+/**
+ * As integrações que existem de verdade.
+ *
+ * Nenhum logo de terceiro, nenhuma palavra "parceiro oficial". São conexões
+ * técnicas que o sistema tem hoje — e listar só isso é o que impede a página
+ * de prometer uma integração que o cliente vai procurar e não achar.
+ */
+const INTEGRACOES = [
+  { nome: "SiteCreatorFly", texto: "O cardápio e o site de pedidos da sua loja." },
+  { nome: "FlyDelivery", texto: "O módulo de entregas dentro do painel." },
+  { nome: "WhatsApp", texto: "Envio das campanhas de marketing." },
+  { nome: "InfinitePay", texto: "Cobrança da assinatura do FlyControl." },
+  { nome: "Impressora térmica", texto: "Comanda impressa direto da tela do pedido." },
+  { nome: "FlyStatus", texto: "A página onde o cliente acompanha o pedido." },
+] as const;
+
+function Integracoes() {
+  return (
+    <section
+      id="integracoes"
+      aria-labelledby="integracoes-titulo"
+      className="border-t px-5 py-24 sm:px-8 md:py-32"
+      style={{ borderColor: "var(--fly-border-subtle)" }}
+    >
+      <div className="mx-auto max-w-[1240px]">
+        <Reveal className="max-w-2xl">
+          <SectionLabel>Integrações</SectionLabel>
+          <SectionHeading id="integracoes-titulo">Conectado ao que você já usa.</SectionHeading>
+          <SectionText className="max-w-lg">Extensões da operação, não o centro dela.</SectionText>
+        </Reveal>
+
+        <ul
+          className="mt-16 grid gap-px overflow-hidden md:grid-cols-2 lg:grid-cols-3"
+          style={{ background: "var(--fly-border-subtle)" }}
+        >
+          {INTEGRACOES.map((item, indice) => (
+            <Reveal as="li" key={item.nome} atraso={indice * 70}>
+              <div className="h-full px-6 py-8" style={{ background: "var(--fly-background)" }}>
+                <h3
+                  className="text-[18px] tracking-[-0.02em]"
+                  style={{ color: "var(--fly-text-primary)" }}
+                >
+                  {item.nome}
+                </h3>
+                <p
+                  className="mt-2 text-[15px] leading-[1.55]"
+                  style={{ color: "var(--fly-text-secondary)" }}
+                >
+                  {item.texto}
+                </p>
+              </div>
+            </Reveal>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+/** A última tela: uma frase, um botão, e o preto de novo. */
+function ChamadaFinal() {
+  return (
+    <section
+      aria-labelledby="final-titulo"
+      className="border-t px-5 py-28 sm:px-8 md:py-40"
+      style={{ borderColor: "var(--fly-border-subtle)", background: "var(--fly-background)" }}
+    >
+      <Reveal className="mx-auto max-w-[1240px] text-center">
+        <h2
+          id="final-titulo"
+          className="fly-headline mx-auto max-w-3xl"
+          style={{ color: "var(--fly-text-primary)" }}
+        >
+          Sua operação pode
+          <br />
+          funcionar melhor.
+        </h2>
+
+        <p
+          className="fly-body-lg mx-auto mt-8 max-w-xl"
+          style={{ color: "var(--fly-text-secondary)" }}
+        >
+          Centralize pedidos, gestão e crescimento em uma plataforma criada para acompanhar sua
+          empresa.
+        </p>
+
+        <div className="mt-12">
+          <Link
+            to="/signup"
+            search={{ plan: undefined, google: undefined }}
+            className="inline-flex rounded-full px-8 py-4 text-[15px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            style={{
+              background: "var(--fly-primary)",
+              color: "#000",
+              outlineColor: "var(--fly-primary)",
+            }}
+          >
+            Começar {TRIAL_DURATION_DAYS} dias grátis
           </Link>
         </div>
-      </div>
-    </footer>
+
+        <p className="mt-5 text-[13px]" style={{ color: "var(--fly-text-muted)" }}>
+          Implementação gratuita
+        </p>
+      </Reveal>
+    </section>
   );
 }
