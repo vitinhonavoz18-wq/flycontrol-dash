@@ -86,7 +86,7 @@ function MenuPage() {
         <div className="min-w-0">
           <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">Cardápio</h1>
           <p className="text-sm text-muted-foreground sm:text-base">
-            Gerencie as categorias, produtos e preços da sua pizzaria.
+            Gerencie as categorias, produtos e preços da sua loja.
           </p>
         </div>
         {/* O seletor ocupa a largura toda no celular e encolhe no desktop. */}

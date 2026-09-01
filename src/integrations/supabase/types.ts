@@ -2058,6 +2058,7 @@ export type Database = {
           external_id: string | null;
           external_source: string | null;
           id: string;
+          image_url: string | null;
           last_synced_at: string | null;
           name: string;
           order_index: number | null;
@@ -2071,6 +2072,7 @@ export type Database = {
           external_id?: string | null;
           external_source?: string | null;
           id?: string;
+          image_url?: string | null;
           last_synced_at?: string | null;
           name: string;
           order_index?: number | null;
@@ -2084,6 +2086,7 @@ export type Database = {
           external_id?: string | null;
           external_source?: string | null;
           id?: string;
+          image_url?: string | null;
           last_synced_at?: string | null;
           name?: string;
           order_index?: number | null;

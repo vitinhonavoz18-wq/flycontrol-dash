@@ -9,6 +9,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, GripVertical, Loader2 } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
 import { SectionHeader } from "@/components/layout/SectionHeader";
+import { ImageUpload } from "@/components/ui/image-upload";
+import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
 
 import {
   Dialog,
@@ -25,6 +27,7 @@ interface CategoryListProps {
   pizzeriaSlug?: string;
   pizzeriaApiKey?: string;
   syncEndpoint?: string;
+  vocabulario: VocabularioDoCardapio;
 }
 
 export function CategoryList({
@@ -34,17 +37,20 @@ export function CategoryList({
   pizzeriaSlug,
   pizzeriaApiKey,
   syncEndpoint,
+  vocabulario,
 }: CategoryListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<any>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   function openCreate() {
     setEditingCategory(null);
     setName("");
     setDescription("");
+    setImageUrl(null);
     setIsDialogOpen(true);
   }
 
@@ -52,6 +58,7 @@ export function CategoryList({
     setEditingCategory(cat);
     setName(cat.name);
     setDescription(cat.description || "");
+    setImageUrl(cat.image_url || null);
     setIsDialogOpen(true);
   }
 
@@ -65,6 +72,7 @@ export function CategoryList({
     const payload = {
       name,
       description,
+      image_url: imageUrl,
       pizzeria_id: pizzeriaId,
       order_index: editingCategory ? editingCategory.order_index : categories.length,
       active: editingCategory ? editingCategory.active : true,
@@ -265,6 +273,15 @@ export function CategoryList({
                   className="h-5 w-5 shrink-0 cursor-move text-muted-foreground"
                   aria-hidden="true"
                 />
+                {cat.image_url ? (
+                  <img
+                    src={cat.image_url}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="h-10 w-10 shrink-0 rounded-md object-cover"
+                  />
+                ) : null}
                 <div className="min-w-0">
                   <h4 className="truncate font-bold">{cat.name}</h4>
                   {cat.description && (
@@ -328,7 +345,7 @@ export function CategoryList({
                 id="name"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Pizzas Tradicionais, Bebidas, etc."
+                placeholder={vocabulario.exemploNomeCategoria}
               />
             </div>
             <div className="space-y-2">
@@ -337,8 +354,19 @@ export function CategoryList({
                 id="description"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
-                placeholder="Ex: Todas as pizzas acompanham molho de tomate."
+                placeholder={vocabulario.exemploDescricaoCategoria}
               />
+            </div>
+            {/* A foto da categoria só aparece para o cliente quando o cardápio
+                está em "Cards de Categoria" ou "Navegação por Categorias"
+                (Minha Loja → Comportamento). Sem foto, o cartão sai com um
+                fundo neutro — nada quebra. */}
+            <div className="space-y-2">
+              <Label>Foto da categoria (opcional)</Label>
+              <ImageUpload value={imageUrl} onChange={setImageUrl} folder="categories" />
+              <p className="text-xs text-muted-foreground">
+                Aparece no cartão desta categoria no cardápio do cliente.
+              </p>
             </div>
           </div>
           <DialogFooter>
