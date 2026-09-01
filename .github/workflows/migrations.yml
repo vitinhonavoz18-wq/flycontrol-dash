@@ -28,7 +28,7 @@ on:
   push:
     branches: [main]
     paths:
-      - "supabase/migrations/**"
+      - "DATABASE/supabase/migrations/**"
   workflow_dispatch:
     inputs:
       modo:
@@ -79,7 +79,7 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: supabase link --project-ref "$PROJECT_ID"
+        run: supabase --workdir DATABASE link --project-ref "$PROJECT_ID"
 
       # Fotografia do estado, lado a lado: o que o repositório tem e o que o
       # banco diz já ter aplicado. Só leitura — não altera nada.
@@ -90,7 +90,7 @@ jobs:
         run: |
           echo "## Repositório x banco" >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
-          supabase migration list 2>&1 | tee lista.txt >> "$GITHUB_STEP_SUMMARY"
+          supabase --workdir DATABASE migration list 2>&1 | tee lista.txt >> "$GITHUB_STEP_SUMMARY"
           echo '```' >> "$GITHUB_STEP_SUMMARY"
 
       # Acerta o CADERNO de registro — não mexe em uma tabela sequer.
@@ -121,24 +121,24 @@ jobs:
           #
           #    A lista sai da própria resposta do Supabase, que já diz quais
           #    são — em vez de a gente tentar adivinhar lendo uma tabela.
-          supabase db push --dry-run > diag.txt 2>&1 || true
+          supabase --workdir DATABASE db push --dry-run > diag.txt 2>&1 || true
           orfas=$(grep -o 'repair --status reverted.*' diag.txt \
             | sed 's/repair --status reverted//' | tr -s ' ')
           if [ -n "$orfas" ]; then
             echo "Removendo do caderno estas anotações sem arquivo:"
             echo "$orfas"
             # shellcheck disable=SC2086
-            supabase migration repair --status reverted $orfas
+            supabase --workdir DATABASE migration repair --status reverted $orfas
           fi
 
           # 2. Nossos arquivos até a versão informada: marcados como aplicados.
-          nossas=$(ls supabase/migrations/*.sql \
+          nossas=$(ls DATABASE/supabase/migrations/*.sql \
             | sed 's#.*/##; s/_.*//' \
             | awk -v ate="$ATE" '$1 <= ate')
           echo "Marcando como já aplicadas (até $ATE):"
           echo "$nossas" | tr '\n' ' '; echo
           # shellcheck disable=SC2086
-          supabase migration repair --status applied $nossas
+          supabase --workdir DATABASE migration repair --status applied $nossas
 
           echo "### Histórico acertado até $ATE" >> "$GITHUB_STEP_SUMMARY"
 
@@ -152,7 +152,7 @@ jobs:
           # desencontrado, este comando falha — e é justamente essa mensagem
           # que precisamos LER. Falhar antes de mostrar seria como o médico
           # desmaiar antes de contar o diagnóstico.
-          supabase db push --dry-run > plano.txt 2>&1 || true
+          supabase --workdir DATABASE db push --dry-run > plano.txt 2>&1 || true
           cat plano.txt
 
           # Conta os nomes de arquivo de migração que aparecem na resposta.
@@ -199,7 +199,7 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        run: supabase db push
+        run: supabase --workdir DATABASE db push
 
       - name: Só conferi, não apliquei
         if: github.event_name == 'workflow_dispatch' && github.event.inputs.modo != 'aplicar'

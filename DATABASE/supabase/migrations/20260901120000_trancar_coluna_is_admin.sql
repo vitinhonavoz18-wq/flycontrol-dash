@@ -45,7 +45,7 @@
 -- conferente enxergaria "o gerente" em todo mundo que passasse, e não
 -- conferiria nada. Rodando como quem chama, ele vê o visitante como visitante.
 
-CREATE OR REPLACE FUNCTION public.proteger_coluna_is_admin()
+CREATE OR REPLACE FUNCTION public.protect_is_admin_column()
 RETURNS trigger
 LANGUAGE plpgsql
 SET search_path = public
@@ -77,20 +77,20 @@ BEGIN
 END;
 $$;
 
-COMMENT ON FUNCTION public.proteger_coluna_is_admin() IS
+COMMENT ON FUNCTION public.protect_is_admin_column() IS
   'Impede que um usuário comum marque a si mesmo como administrador. Corrige o campo em silêncio e deixa o resto da gravação passar.';
 
 -- O gatilho vigia INSERT e UPDATE. Sem o INSERT, bastaria apagar a própria
 -- ficha e criá-la de novo já marcada.
-DROP TRIGGER IF EXISTS trg_proteger_coluna_is_admin ON public.profiles;
+DROP TRIGGER IF EXISTS trg_protect_is_admin_column ON public.profiles;
 
-CREATE TRIGGER trg_proteger_coluna_is_admin
+CREATE TRIGGER trg_protect_is_admin_column
   BEFORE INSERT OR UPDATE ON public.profiles
   FOR EACH ROW
-  EXECUTE FUNCTION public.proteger_coluna_is_admin();
+  EXECUTE FUNCTION public.protect_is_admin_column();
 
 -- A função é chamada pelo gatilho, nunca pela internet. Quando o banco dispara
 -- um gatilho, ele não pede permissão de quem fez a gravação — então fechar a
 -- porta da rua não atrapalha o funcionamento. Mesmo tratamento que
 -- `marketing_capture_customer` já recebeu.
-REVOKE ALL ON FUNCTION public.proteger_coluna_is_admin() FROM PUBLIC, anon, authenticated;
+REVOKE ALL ON FUNCTION public.protect_is_admin_column() FROM PUBLIC, anon, authenticated;

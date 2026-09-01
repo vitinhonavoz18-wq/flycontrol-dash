@@ -19,7 +19,7 @@ import { describe, expect, it } from "vitest";
 
 import { readdirSync } from "node:fs";
 
-const DIR = "supabase/migrations";
+const DIR = "DATABASE/supabase/migrations";
 
 /** Todas as migrations concatenadas na ordem em que o banco as aplica. */
 const sql = readdirSync(DIR)
@@ -40,13 +40,13 @@ function definicaoVigente(nome: string): string {
 }
 
 describe("SEC-01 — ninguém se promove a administrador sozinho", () => {
-  const fn = () => definicaoVigente("proteger_coluna_is_admin");
+  const fn = () => definicaoVigente("protect_is_admin_column");
 
   it("existe um gatilho vigiando a ficha do usuário", () => {
-    expect(sql).toContain("CREATE TRIGGER trg_proteger_coluna_is_admin");
+    expect(sql).toContain("CREATE TRIGGER trg_protect_is_admin_column");
     // Sem o INSERT, bastaria apagar a própria ficha e criá-la já marcada.
     expect(sql).toMatch(
-      /trg_proteger_coluna_is_admin[\s\S]{0,120}BEFORE INSERT OR UPDATE ON public\.profiles/,
+      /trg_protect_is_admin_column[\s\S]{0,120}BEFORE INSERT OR UPDATE ON public\.profiles/,
     );
   });
 
@@ -158,11 +158,11 @@ describe("existe caminho de volta escrito para as duas etapas", () => {
     "20260901120000_trancar_coluna_is_admin",
     "20260901121000_trancar_funcoes_privilegiadas",
   ])("%s tem arquivo de desfazer", (nome) => {
-    const roteiro = readFileSync(`supabase/rollback/${nome}.desfazer.sql`, "utf8");
+    const roteiro = readFileSync(`DATABASE/supabase/rollback/${nome}.desfazer.sql`, "utf8");
     expect(roteiro).toContain("NÃO É UMA MIGRATION");
   });
 
-  it("os roteiros de volta ficam FORA de supabase/migrations", () => {
+  it("os roteiros de volta ficam FORA de DATABASE/supabase/migrations", () => {
     // Se caíssem lá dentro, o banco os aplicaria sozinho e desfaria a correção
     // no mesmo instante em que ela foi feita.
     const migrations = readdirSync(DIR);

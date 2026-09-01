@@ -11,5 +11,5 @@
 --
 -- Nenhum dado é tocado, nem na ida nem na volta.
 
-DROP TRIGGER IF EXISTS trg_proteger_coluna_is_admin ON public.profiles;
-DROP FUNCTION IF EXISTS public.proteger_coluna_is_admin();
+DROP TRIGGER IF EXISTS trg_protect_is_admin_column ON public.profiles;
+DROP FUNCTION IF EXISTS public.protect_is_admin_column();
