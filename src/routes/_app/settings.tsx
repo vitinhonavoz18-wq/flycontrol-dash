@@ -1,4 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { DocsContent } from "@/components/docs/DocsContent";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -474,68 +476,89 @@ function Settings() {
         <AddPizzeriaDialog onSuccess={loadPizzerias} />
       </div>
 
-      {/* Painel de integração com o site público */}
-      <div className="mb-8 rounded-xl border border-primary/30 bg-card p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <Plug className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Integração com o Site Público</h2>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Utilize os campos abaixo para configurar a integração no painel do seu site público:
-            </p>
-            <CopyField label="URL base do FLYCONTROL" value={baseUrl} />
-            <CopyField label="Endpoint de Criação Automática" value={createEndpoint} />
-            <CopyField label="Endpoint de Envio de Pedidos" value={ordersEndpoint} />
-          </div>
-          <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
-            <div className="mb-1 font-medium text-foreground">
-              Como conectar uma pizzaria existente
+      {/* A documentação virou aba daqui em vez de item próprio no menu: é
+          material de consulta, não tarefa do dia a dia, e o menu lateral fica
+          para o que se usa todo dia. */}
+      <Tabs defaultValue="geral">
+        <TabsList className="mb-6">
+          <TabsTrigger value="geral">Geral</TabsTrigger>
+          <TabsTrigger value="documentos">Documentos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="geral" className="mt-0">
+          {/* Painel de integração com o site público */}
+          <div className="mb-8 rounded-xl border border-primary/30 bg-card p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <Plug className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Integração com o Site Público</h2>
             </div>
-            1. No seu site público, copie a <strong>API Key</strong> da pizzaria.
-            <br />
-            2. Aqui no FlyControl, clique no botão <strong>
-              "Adicionar Pizzaria Existente"
-            </strong>{" "}
-            acima.
-            <br />
-            3. Cole a API Key e dê um nome para identificá-la.
-            <br />
-            4. No seu site público, certifique-se de que a <strong>URL base</strong> aponta para o
-            endereço acima.
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Utilize os campos abaixo para configurar a integração no painel do seu site
+                  público:
+                </p>
+                <CopyField label="URL base do FLYCONTROL" value={baseUrl} />
+                <CopyField label="Endpoint de Criação Automática" value={createEndpoint} />
+                <CopyField label="Endpoint de Envio de Pedidos" value={ordersEndpoint} />
+              </div>
+              <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+                <div className="mb-1 font-medium text-foreground">
+                  Como conectar uma pizzaria existente
+                </div>
+                1. No seu site público, copie a <strong>API Key</strong> da pizzaria.
+                <br />
+                2. Aqui no FlyControl, clique no botão{" "}
+                <strong>"Adicionar Pizzaria Existente"</strong> acima.
+                <br />
+                3. Cole a API Key e dê um nome para identificá-la.
+                <br />
+                4. No seu site público, certifique-se de que a <strong>URL base</strong> aponta para
+                o endereço acima.
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div className="mb-8">
-        <NotificationSettings />
-      </div>
-
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold">Suas pizzarias</h2>
-        {pizzerias.length > 0 && (
-          <div className="w-full sm:w-auto">
-            <PizzeriaSelector pizzerias={pizzerias} activeId={activeId} onSelect={handleSelect} />
+          <div className="mb-8">
+            <NotificationSettings />
           </div>
-        )}
-      </div>
 
-      {!pizzerias.length && (
-        <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>
-      )}
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold">Suas pizzarias</h2>
+            {pizzerias.length > 0 && (
+              <div className="w-full sm:w-auto">
+                <PizzeriaSelector
+                  pizzerias={pizzerias}
+                  activeId={activeId}
+                  onSelect={handleSelect}
+                />
+              </div>
+            )}
+          </div>
 
-      {activePizzeria && (
-        <PizzeriaSettingsPanel
-          key={activePizzeria.id}
-          pizzeria={activePizzeria}
-          origin={origin}
-          onUpdated={(patch) =>
-            setPizzerias((prev) =>
-              prev.map((x) => (x.id === activePizzeria.id ? { ...x, ...patch } : x)),
-            )
-          }
-        />
-      )}
+          {!pizzerias.length && (
+            <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>
+          )}
+
+          {activePizzeria && (
+            <PizzeriaSettingsPanel
+              key={activePizzeria.id}
+              pizzeria={activePizzeria}
+              origin={origin}
+              onUpdated={(patch) =>
+                setPizzerias((prev) =>
+                  prev.map((x) => (x.id === activePizzeria.id ? { ...x, ...patch } : x)),
+                )
+              }
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="documentos" className="mt-0">
+          {/* Sem casca própria: o DocsContent já traz o título e o espaçamento
+              dele, e envolver de novo criaria margem dobrada. */}
+          <DocsContent />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

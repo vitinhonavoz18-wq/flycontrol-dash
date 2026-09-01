@@ -2,6 +2,7 @@ import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { renderErrorPage } from "./lib/error-page";
+import { respostaSeNaoLancada } from "./lib/naoLancadas";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -98,6 +99,16 @@ async function runDailyBillingCron(env: Record<string, string | undefined>): Pro
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
     try {
+      // Funcionalidade ainda não lançada: 503 antes de qualquer coisa.
+      //
+      // A checagem mora AQUI, na porta de entrada do servidor, e não dentro da
+      // rota. Tentar lançar a resposta de dentro do `beforeLoad` da rota não
+      // funciona: o TanStack tenta serializar o valor lançado para mandar ao
+      // navegador, um `Response` não é serializável, e o que chega ao visitante
+      // é um 500 com "Seroval Error" — testado e descartado.
+      const naoLancada = respostaSeNaoLancada(request.url);
+      if (naoLancada) return naoLancada;
+
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
       return await normalizeCatastrophicSsrResponse(response);
