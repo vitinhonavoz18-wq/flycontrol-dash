@@ -21,6 +21,7 @@ import { ImageUpload } from "@/components/ui/image-upload";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
 import { mensagemDoErro } from "@/lib/errors";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 interface ComboManagerProps {
   pizzeriaId: string;
@@ -46,16 +47,36 @@ type ItemDoCombo = {
   product_type?: string | null;
 };
 
+/** Um item do combo enquanto está sendo montado no formulário. */
+type ItemEmEdicao = { product_name: string; quantity: number; product_type: string };
+
+/** Um combo da lista, com os campos que esta tela lê. */
+type Combo = {
+  id: string;
+  name: string;
+  description?: string | null;
+  original_price: number;
+  combo_price: number;
+  image_url?: string | null;
+  active: boolean | null;
+  highlight: boolean | null;
+  available_days?: string[] | null;
+  start_time?: string | null;
+  end_time?: string | null;
+  external_id?: string | null;
+  combo_items?: ItemDoCombo[] | null;
+};
+
 export function ComboManager({
   pizzeriaId,
   pizzeriaSlug,
   pizzeriaApiKey,
   syncEndpoint,
 }: ComboManagerProps) {
-  const [combos, setCombos] = useState<any[]>([]);
+  const [combos, setCombos] = useState<Combo[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCombo, setEditingCombo] = useState<any>(null);
+  const [editingCombo, setEditingCombo] = useState<Combo | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Form states
@@ -69,9 +90,7 @@ export function ComboManager({
   const [availableDays, setAvailableDays] = useState<string[]>([]);
   const [startTime, setStartTime] = useState("");
   const [endTime, setEndTime] = useState("");
-  const [items, setItems] = useState<
-    { product_name: string; quantity: number; product_type: string }[]
-  >([]);
+  const [items, setItems] = useState<ItemEmEdicao[]>([]);
 
   useEffect(() => {
     loadCombos();
@@ -109,19 +128,27 @@ export function ComboManager({
     setIsDialogOpen(true);
   }
 
-  async function openEdit(combo: any) {
+  async function openEdit(combo: Combo) {
     setEditingCombo(combo);
     setName(combo.name);
     setDescription(combo.description || "");
     setOriginalPrice(combo.original_price.toString());
     setComboPrice(combo.combo_price.toString());
     setImageUrl(combo.image_url || "");
-    setActive(combo.active);
-    setHighlight(combo.highlight);
+    setActive(combo.active ?? true);
+    setHighlight(combo.highlight ?? false);
     setAvailableDays(combo.available_days || []);
     setStartTime(combo.start_time || "00:00");
     setEndTime(combo.end_time || "23:59");
-    setItems(combo.combo_items || []);
+    // O formulário exige os três campos preenchidos; o banco pode ter linha
+    // antiga com campo vazio. Aqui cada item ganha um valor de partida.
+    setItems(
+      (combo.combo_items ?? []).map((it) => ({
+        product_name: it.product_name ?? "",
+        quantity: it.quantity ?? 1,
+        product_type: it.product_type ?? "pizza",
+      })),
+    );
     setIsDialogOpen(true);
   }
 
@@ -132,7 +159,7 @@ export function ComboManager({
     }
 
     setSaving(true);
-    const comboPayload: any = {
+    const comboPayload: TablesInsert<"combos"> = {
       pizzeria_id: pizzeriaId,
       name,
       description,
@@ -154,7 +181,7 @@ export function ComboManager({
           type: "combo",
           action: editingCombo ? "update" : "create",
           id: editingCombo?.id,
-          externalId: editingCombo?.external_id,
+          externalId: editingCombo?.external_id ?? undefined,
           data: {
             ...comboPayload,
             items: items.filter((it) => it.product_name.trim() !== ""),
@@ -249,7 +276,7 @@ export function ComboManager({
     }
   }
 
-  async function toggleField(combo: any, field: string) {
+  async function toggleField(combo: Combo, field: "active" | "highlight") {
     const newValue = !combo[field];
 
     if (pizzeriaSlug && pizzeriaApiKey && combo.external_id) {
@@ -287,9 +314,10 @@ export function ComboManager({
       }
     }
 
-    const updateData: any = {};
-    updateData[field] = newValue;
-    updateData.updated_at = new Date().toISOString();
+    const updateData: TablesUpdate<"combos"> = {
+      [field]: newValue,
+      updated_at: new Date().toISOString(),
+    };
 
     const { error } = await supabase.from("combos").update(updateData).eq("id", combo.id);
 
@@ -301,7 +329,7 @@ export function ComboManager({
     }
   }
 
-  async function handleDelete(combo: any) {
+  async function handleDelete(combo: Combo) {
     if (!confirm("Tem certeza que deseja excluir este combo?")) return;
 
     if (pizzeriaSlug && pizzeriaApiKey && combo.external_id) {
@@ -348,9 +376,13 @@ export function ComboManager({
   const addItem = () =>
     setItems([...items, { product_name: "", quantity: 1, product_type: "pizza" }]);
   const removeItem = (index: number) => setItems(items.filter((_, i) => i !== index));
-  const updateItem = (index: number, field: string, value: any) => {
+  const updateItem = <Campo extends keyof ItemEmEdicao>(
+    index: number,
+    field: Campo,
+    value: ItemEmEdicao[Campo],
+  ) => {
     const newItems = [...items];
-    (newItems[index] as any)[field] = value;
+    newItems[index] = { ...newItems[index], [field]: value };
     setItems(newItems);
   };
 
@@ -421,7 +453,7 @@ export function ComboManager({
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-medium text-muted-foreground">Ativo</span>
                   <Switch
-                    checked={combo.active}
+                    checked={combo.active ?? false}
                     onCheckedChange={() => toggleField(combo, "active")}
                   />
                 </div>

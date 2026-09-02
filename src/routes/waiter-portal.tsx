@@ -25,7 +25,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getWaiterSession, clearWaiterSession } from "@/lib/waiterSession";
+import { getWaiterSession, clearWaiterSession, type WaiterSession } from "@/lib/waiterSession";
 import { WaiterNotificationCenter } from "@/components/waiter/WaiterNotificationCenter";
 import { ScanTableSheet } from "@/components/waiter/ScanTableSheet";
 import {
@@ -37,6 +37,35 @@ import {
 } from "@/lib/waiterAuth.functions";
 import { mensagemDoErro } from "@/lib/errors";
 import type { OrderItem } from "@/types/order";
+
+/** Uma comanda na lista do garçom. */
+type ComandaDoGarcom = {
+  id: string;
+  table_number: string | number | null;
+  table_name?: string | null;
+  status: string;
+  customer_name?: string | null;
+  opened_at: string;
+  service_fee_enabled?: boolean | null;
+  service_fee_percent?: number | null;
+  total_amount?: number | null;
+  subtotal_amount?: number | null;
+  service_fee_amount?: number | null;
+  orders_count?: number | null;
+  closed_at?: string | null;
+};
+
+/** Um pedido ainda não entregue, na aba "Pedidos". */
+type PedidoPendente = {
+  id: string;
+  order_number?: number | null;
+  status?: string | null;
+  created_at: string;
+  items?: unknown;
+  table_number?: string | number | null;
+  customer_name?: string | null;
+  total?: number | null;
+};
 
 export const Route = createFileRoute("/waiter-portal")({ component: WaiterPortal });
 
@@ -63,8 +92,8 @@ function WaiterPortal() {
 
   // Notification taps jump to Tables tab and highlight the target session
   useEffect(() => {
-    function onOpenSession(e: any) {
-      const tn = e?.detail?.tableNumber;
+    function onOpenSession(e: Event) {
+      const tn = (e as CustomEvent<{ tableNumber?: string | number }>).detail?.tableNumber;
       if (tn) {
         setHighlightTable(String(tn));
         setTab("tables");
@@ -236,7 +265,7 @@ function MyTablesTab({
   const listPending = useServerFn(listMyPendingOrders);
   const listReq = useServerFn(listMyAssignedCloseRequests);
   const reqClose = useServerFn(waiterRequestClose);
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<ComandaDoGarcom[]>([]);
   const [pendingBySession, setPendingBySession] = useState<Map<string, number>>(new Map());
   const [reqBySession, setReqBySession] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(false);
@@ -373,7 +402,7 @@ function TableCard({
   onClose,
   onDismissHighlight,
 }: {
-  r: any;
+  r: ComandaDoGarcom;
   now: number;
   pendingItems: number;
   customerRequests: number;
@@ -449,7 +478,7 @@ function TableCard({
         <Indicator
           icon={<ClipboardList className="h-4 w-4" />}
           label="Pedidos"
-          value={r.orders_count}
+          value={r.orders_count ?? 0}
         />
         <Indicator
           icon={<Receipt className="h-4 w-4" />}
@@ -567,13 +596,13 @@ function PendingOrdersTab({
   waiterId: string;
 }) {
   const list = useServerFn(listMyPendingOrders);
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<PedidoPendente[]>([]);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows((await list({ data: { token } })) as any[]);
+      setRows((await list({ data: { token } })) as PedidoPendente[]);
     } catch (e) {
       toast.error(mensagemDoErro(e));
     } finally {
@@ -671,8 +700,9 @@ function PendingOrdersTab({
 function HistoryTab({ token, tenantId }: { token: string; tenantId: string; waiterId: string }) {
   const listSess = useServerFn(listMyAssignedSessions);
   const dash = useServerFn(getWaiterDashboard);
-  const [closed, setClosed] = useState<any[]>([]);
-  const [kpi, setKpi] = useState<any>(null);
+  const [closed, setClosed] = useState<ComandaDoGarcom[]>([]);
+  type PainelDoGarcom = Awaited<ReturnType<typeof getWaiterDashboard>>;
+  const [kpi, setKpi] = useState<PainelDoGarcom | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
@@ -803,7 +833,7 @@ function MiniKpi({ icon, label, value }: { icon: React.ReactNode; label: string;
 // ============================================================
 // PROFILE
 // ============================================================
-function ProfileTab({ sess, onLogout }: { sess: any; onLogout: () => void }) {
+function ProfileTab({ sess, onLogout }: { sess: WaiterSession; onLogout: () => void }) {
   return (
     <div className="space-y-3">
       <SectionHeader title="Meu Perfil" />
