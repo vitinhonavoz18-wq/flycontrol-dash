@@ -21,6 +21,24 @@ async function authHeader(): Promise<Record<string, string>> {
   return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
 }
 
+/**
+ * O cardápio como o site público devolve.
+ *
+ * Cada versão do cardápio digital agrupa as coisas de um jeito — umas mandam
+ * "products", outras "normalized_products", umas separam bebida em "drinks",
+ * outras em "beverages". Todos os campos são opcionais por isso.
+ */
+type CardapioRecebido = {
+  categories?: unknown[];
+  products?: unknown[];
+  beverages?: unknown[];
+  drinks?: unknown[];
+  combos?: unknown[];
+  borders?: Record<string, unknown>[];
+  additionals?: Record<string, unknown>[];
+  normalized_products?: { category_name?: string | null }[];
+};
+
 export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionProps) {
   const [syncEndpoint, setSyncEndpoint] = useState("");
   const [loading, setLoading] = useState(true);
@@ -165,7 +183,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       }
 
       if (response.ok && jsonResponse?.success) {
-        const menuRoot: any =
+        const menuRoot: CardapioRecebido =
           jsonResponse.menu && typeof jsonResponse.menu === "object"
             ? { ...jsonResponse, ...jsonResponse.menu }
             : jsonResponse;
@@ -173,7 +191,8 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         const categoriesCount =
           (menuRoot.categories?.length || 0) +
           (menuRoot.normalized_products?.reduce(
-            (acc: any, p: any) => (p.category_name ? acc.add(p.category_name) : acc),
+            (acc: Set<string>, p: { category_name?: string | null }) =>
+              p.category_name ? acc.add(p.category_name) : acc,
             new Set(),
           ).size || 0);
 
@@ -305,7 +324,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
 
       // SiteCreatorFly returns { success, restaurant, menu: { categories, products, ... } }.
       // Unwrap the "menu" envelope when present so we look at the right level.
-      const menuRoot: any =
+      const menuRoot: CardapioRecebido =
         externalMenu.menu && typeof externalMenu.menu === "object"
           ? { ...externalMenu, ...externalMenu.menu }
           : externalMenu;
@@ -313,7 +332,8 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       const categoriesCount =
         (menuRoot.categories?.length || 0) +
         (menuRoot.normalized_products?.reduce(
-          (acc: any, p: any) => (p.category_name ? acc.add(p.category_name) : acc),
+          (acc: Set<string>, p: { category_name?: string | null }) =>
+            p.category_name ? acc.add(p.category_name) : acc,
           new Set(),
         ).size || 0);
 

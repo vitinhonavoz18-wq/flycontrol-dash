@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { provisionRestaurantInSF } from "@/integrations/sitecreatorfly/provision.server";
 import { requireGlobalAdmin } from "@/integrations/supabase/adminGuard.server";
 import { adminCors } from "@/lib/server/http";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 const cors = adminCors({
   headers: "authorization, x-client-info, apikey, content-type, x-api-key",
@@ -51,6 +52,9 @@ export const Route = createFileRoute("/api/pizzerias/create")({
           throw guardResponse;
         }
 
+        // Cadastro vindo de fora: cada campo é conferido logo abaixo antes
+        // de virar loja no banco.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let body: any;
         try {
           body = await request.json();
@@ -100,7 +104,7 @@ export const Route = createFileRoute("/api/pizzerias/create")({
 
         const api_key = String(body?.api_key || "").trim() || genKey();
 
-        const insertData: any = {
+        const insertData: TablesInsert<"pizzerias"> = {
           name,
           slug,
           phone: phone || null,
@@ -147,7 +151,7 @@ export const Route = createFileRoute("/api/pizzerias/create")({
         });
 
         if (provision.ok) {
-          const update: any = {
+          const update: TablesUpdate<"pizzerias"> = {
             provisioned_at: new Date().toISOString(),
             provision_error: null,
             provision_status: "provisioned",
@@ -184,7 +188,7 @@ export const Route = createFileRoute("/api/pizzerias/create")({
         console.error("[Provision] Marking pizzeria as failed:", provision.error);
         await supabaseAdmin
           .from("pizzerias")
-          .update({ provision_status: "failed", provision_error: provision.error } as any)
+          .update({ provision_status: "failed", provision_error: provision.error })
           .eq("id", data.id);
 
         return new Response(

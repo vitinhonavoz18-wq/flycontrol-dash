@@ -73,6 +73,10 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
       },
 
       POST: async ({ request }) => {
+        // O cardápio inteiro chega de fora, em formato que varia por versão
+        // do site público. Cada pedaço é conferido abaixo antes de virar
+        // linha no banco.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let body: any;
         try {
           body = await request.json();
@@ -148,12 +152,12 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
 
         // Self-healing helper: never overwrite a valid existing external_id.
         // Returns a payload copy safe to pass to update().
-        const preserveExternalId = <T extends { external_id?: any }>(
+        const preserveExternalId = <T extends { external_id?: string | null }>(
           payload: T,
           existing: { external_id: string | null } | null | undefined,
           incoming: string | undefined,
         ): T => {
-          const clone: any = { ...payload };
+          const clone: T & { external_id?: string | null } = { ...payload };
           if (existing?.external_id) {
             // Existing row already has a valid external_id — keep it untouched.
             delete clone.external_id;
@@ -182,7 +186,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
               .eq("pizzeria_id", pizzeriaId)
               .eq("external_id", externalId)
               .maybeSingle();
-            existing = data as any;
+            existing = data;
           }
           if (!existing) {
             const { data } = await supabaseAdmin
@@ -191,7 +195,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
               .eq("pizzeria_id", pizzeriaId)
               .eq("name", catName)
               .maybeSingle();
-            existing = data as any;
+            existing = data;
           }
 
           if (existing) {

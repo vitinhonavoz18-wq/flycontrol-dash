@@ -16,10 +16,45 @@ interface SyncParams {
   action: "create" | "update" | "delete" | "status";
   id?: string;
   externalId?: string;
-  data?: any;
+  data?: DadosDoItem;
   pizzeriaSlug: string;
   pizzeriaApiKey: string;
   syncEndpoint?: string;
+}
+
+/**
+ * Os dados de UM item do cardápio a caminho do site público.
+ *
+ * O formato muda conforme o tipo — uma categoria não tem preço, uma pizza tem
+ * sabores, um combo tem itens dentro. Por isso é um pacote de campos livres:
+ * quem monta e quem lê estão em sistemas diferentes, e o contrato entre eles é
+ * o nome dos campos, não uma forma fixa.
+ */
+export type DadosDoItem = Record<string, unknown>;
+
+/**
+ * A resposta do site público a uma sincronização.
+ *
+ * Cada versão devolve o identificador do item num lugar diferente: solto,
+ * dentro de `data`, ou dentro de uma chave com o nome do tipo. Por isso os
+ * campos conhecidos aparecem aqui e o resto fica livre.
+ */
+type RespostaDoSite = {
+  success?: boolean;
+  message?: string;
+  error?: string;
+  id?: string;
+  data?: { id?: string } | null;
+  [outraChave: string]: unknown;
+};
+
+/** Lê o `id` de dentro de um pedaço de resposta de formato desconhecido. */
+function idDentroDe(valor: unknown): string | undefined {
+  if (valor && typeof valor === "object" && "id" in valor) {
+    const id = (valor as { id?: unknown }).id;
+    if (typeof id === "string") return id;
+  }
+  return undefined;
 }
 
 type Protocol = "rest" | "legacy";
@@ -97,8 +132,8 @@ const SF_ID_PREFIXES = [
  * Strip internal FlyControl prefix from a SiteCreatorFly external ID.
  * SF stores raw UUIDs in Postgres UUID columns; prefixed IDs are rejected.
  */
-function normalizeExternalId(externalId?: string): string | undefined {
-  if (!externalId) return externalId;
+function normalizeExternalId(externalId?: unknown): string | undefined {
+  if (typeof externalId !== "string" || !externalId) return undefined;
   for (const prefix of SF_ID_PREFIXES) {
     if (externalId.startsWith(prefix)) {
       const stripped = externalId.slice(prefix.length);
@@ -109,7 +144,7 @@ function normalizeExternalId(externalId?: string): string | undefined {
   return externalId;
 }
 
-function mapExternalType(type: string, data?: any): MenuType {
+function mapExternalType(type: string, data?: DadosDoItem): MenuType {
   if (type === "category") return "category";
   if (type === "beverage") return "beverage";
   if (type === "combo") return "combo";
@@ -168,7 +203,7 @@ export async function syncToExternal(
   try {
     let url: string;
     let method: string;
-    let bodyObj: any | undefined;
+    let bodyObj: Record<string, unknown> | undefined;
 
     if (protocol === "rest") {
       const resourcePath = REST_RESOURCE_PATH[externalType] ?? externalType;
@@ -233,7 +268,7 @@ export async function syncToExternal(
       // ============ LEGACY (unchanged behavior) ============
       url = rawEndpoint;
       method = "POST";
-      const legacyBody: any = {
+      const legacyBody: Record<string, unknown> = {
         action,
         type: externalType,
         slug: pizzeriaSlug,
@@ -278,7 +313,7 @@ export async function syncToExternal(
 
     // Any successful 2xx response is considered a sync success.
     if (response.ok) {
-      let parsed: any = null;
+      let parsed: RespostaDoSite | null = null;
       if (contentType.includes("application/json") && text) {
         try {
           parsed = JSON.parse(text);
@@ -309,7 +344,8 @@ export async function syncToExternal(
         console.error("[SyncExternal] Erro retornado pela API REST:", errorMsg);
         return { success: false, error: `api_error:${errorMsg}` };
       }
-      const newId = parsed?.id ?? parsed?.data?.id ?? parsed?.[externalType]?.id ?? externalId;
+      const newId =
+        parsed?.id ?? parsed?.data?.id ?? idDentroDe(parsed?.[externalType]) ?? externalId;
       return { success: true, externalId: newId };
     }
 
@@ -340,7 +376,7 @@ export async function syncToExternal(
   }
 }
 
-function prepareDataForExternal(type: MenuType, data: any) {
+function prepareDataForExternal(type: MenuType, data: DadosDoItem = {}) {
   if (type === "category") {
     // A descrição e a foto viajam junto com o nome.
     //
