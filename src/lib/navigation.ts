@@ -35,7 +35,7 @@ import {
   Wallet,
 } from "lucide-react";
 import type { Feature } from "@/lib/planPermissions";
-import { emDesenvolvimento } from "@/lib/feature-flags";
+import { emDesenvolvimento } from "@/lib/featureFlags";
 
 export type NavItem = {
   to: string;
@@ -108,7 +108,7 @@ export const ADMIN_MOBILE_ITEMS: readonly NavItem[] = [
  * 1. item de recurso pago só aparece para quem tem o recurso no plano;
  * 2. "Plano e cobrança" some para quem administra a plataforma — administrador
  *    não assina o próprio sistema; ele usa "Clientes e Planos", no Painel Admin;
- * 3. área ainda em obra some para todo mundo (ver `feature-flags.ts`).
+ * 3. área ainda em obra some para todo mundo (ver `featureFlags.ts`).
  */
 export function visibleOwnerItems(
   items: readonly NavItem[],

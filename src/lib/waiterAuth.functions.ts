@@ -1,6 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertOwnsTenantWithFeature } from "@/lib/server/plan-guard";
+import { requireSupabaseAuth } from "@/integrations/supabase/authMiddleware";
+import { assertOwnsTenantWithFeature } from "@/lib/server/planGuard";
 
 // ============================================================
 // Password hashing (PBKDF2 via WebCrypto — Cloudflare Worker safe)

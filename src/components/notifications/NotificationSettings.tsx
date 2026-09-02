@@ -11,7 +11,7 @@ import {
   playSound,
   unlockAudio,
   type NotificationSettings as Settings,
-} from "@/lib/notification-sounds";
+} from "@/lib/notificationSounds";
 
 export function NotificationSettings() {
   const [settings, setSettings] = useState<Settings>({ enabled: true, volume: 0.7 });

@@ -14,7 +14,7 @@ import {
 } from "@/integrations/supabase/publicConfig";
 import { AuthProvider } from "@/lib/auth";
 import { Toaster } from "@/components/ui/sonner";
-import { ThemeProvider } from "@/components/theme-provider";
+import { ThemeProvider } from "@/components/theme/ThemeProvider";
 import { InstallBanner } from "@/components/pwa/InstallBanner";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";

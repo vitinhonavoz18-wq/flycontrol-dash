@@ -1,5 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireSupabaseAuth } from "@/integrations/supabase/authMiddleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "./supabaseBridge";
 import {

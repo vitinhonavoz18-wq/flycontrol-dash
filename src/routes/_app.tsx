@@ -1,7 +1,7 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import { Button } from "@/components/ui/button";
 import { LogOut, Settings, Menu, X, Sun, Moon } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
@@ -10,7 +10,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/mobile/BottomNav";
-import { PlanProvider, usePlan } from "@/lib/plan-context";
+import { PlanProvider, usePlan } from "@/lib/planContext";
 import type { Feature } from "@/lib/planPermissions";
 import { ADMIN_SIDEBAR_ITEMS, SIDEBAR_ITEMS, visibleOwnerItems } from "@/lib/navigation";
 

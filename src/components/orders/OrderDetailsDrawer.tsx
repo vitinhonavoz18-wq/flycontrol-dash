@@ -9,7 +9,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import type { Order, OrderItem } from "@/types/order";
-import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-utils";
+import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/orderUtils";
 import { OrderTimer } from "./OrderTimer";
 import {
   countItems,

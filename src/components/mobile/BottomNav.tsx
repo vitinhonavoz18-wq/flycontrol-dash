@@ -22,7 +22,7 @@ export function BottomNav() {
 
   // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
   // não assinam a própria plataforma, então o item some para eles.
-  // Também somem daqui as áreas ainda em obra — ver src/lib/feature-flags.ts.
+  // Também somem daqui as áreas ainda em obra — ver src/lib/featureFlags.ts.
   const ownerItems = visibleOwnerItems(MOBILE_MORE_ITEMS, { isPlatformAdmin });
 
   const isActive = (it: NavItem) => isNavItemActive(it, path);

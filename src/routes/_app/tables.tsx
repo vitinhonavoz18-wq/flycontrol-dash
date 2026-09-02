@@ -2,11 +2,11 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { TablesManagement } from "@/components/TablesManagement";
+import { TablesManagement } from "@/components/tables/TablesManagement";
 import { Loader2, Store } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
-import { RequireFeature } from "@/components/PremiumFeatureLock";
+import { RequireFeature } from "@/components/plan/PremiumFeatureLock";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 
 export const Route = createFileRoute("/_app/tables")({ component: TablesPage });

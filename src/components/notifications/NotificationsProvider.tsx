@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { playSound, unlockAudio, isAudioBlocked } from "@/lib/notification-sounds";
+import { playSound, unlockAudio, isAudioBlocked } from "@/lib/notificationSounds";
 import { claimOrderAlert } from "@/lib/orderAlertClaim";
 import { Button } from "@/components/ui/button";
 import { Volume2 } from "lucide-react";

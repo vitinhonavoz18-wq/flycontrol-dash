@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
-import { GoogleIcon } from "@/components/GoogleIcon";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 import { toast } from "sonner";
 import logo from "@/assets/flycontrol-logo.png";
 

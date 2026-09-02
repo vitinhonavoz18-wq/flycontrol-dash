@@ -4,7 +4,7 @@ import { Check, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING } from "@/lib/billing/plans";
-import { usePlan } from "@/lib/plan-context";
+import { usePlan } from "@/lib/planContext";
 import { FEATURE_LABELS, type Feature } from "@/lib/planPermissions";
 
 /**
@@ -14,10 +14,10 @@ import { FEATURE_LABELS, type Feature } from "@/lib/planPermissions";
  * quanto custa. Bloquear sem oferecer o caminho de saída é frustrar o cliente
  * sem converter.
  *
- * Isto é UX. O bloqueio de verdade está no servidor (`plan-guard.ts`) e na
+ * Isto é UX. O bloqueio de verdade está no servidor (`planGuard.ts`) e na
  * RLS — esconder a tela nunca foi a proteção.
  */
-export function PremiumFeatureLock({ feature }: { feature?: Feature }) {
+function PremiumFeatureLock({ feature }: { feature?: Feature }) {
   const premium = PLAN_PRICING.premium;
   const featureName = feature ? FEATURE_LABELS[feature] : null;
   const allRestricted = Object.values(FEATURE_LABELS);

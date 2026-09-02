@@ -34,7 +34,7 @@ import {
 import { Loader2, Plus, KeyRound, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { listWaiters, createWaiter, updateWaiter, deleteWaiter } from "@/lib/waiterAuth.functions";
-import { RequireFeature } from "@/components/PremiumFeatureLock";
+import { RequireFeature } from "@/components/plan/PremiumFeatureLock";
 
 export const Route = createFileRoute("/_app/waiters")({ component: WaitersPage });
 

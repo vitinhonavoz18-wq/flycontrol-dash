@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireSupabaseAuth } from "@/integrations/supabase/authMiddleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { assertOwnsTenant } from "@/lib/server/plan-guard";
+import { assertOwnsTenant } from "@/lib/server/planGuard";
 import { buscarImagem, MOTIVO_LEGIVEL, paraBase64 } from "./mediaGuard";
 import { montarMensagem, normalizarTelefone, type FlyStatusKind } from "./mensagem";
 

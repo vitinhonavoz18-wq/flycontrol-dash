@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, RotateCcw, Loader2 } from "lucide-react";
-import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-utils";
+import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/orderUtils";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/_app/search-orders")({ component: SearchOrdersPage });

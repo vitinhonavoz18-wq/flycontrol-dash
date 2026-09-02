@@ -48,7 +48,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
 // Helpers para processamento de pedidos (compatível com Dashboard.tsx)
-import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-utils";
+import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/orderUtils";
 
 interface TablesManagementProps {
   tenantId: string;

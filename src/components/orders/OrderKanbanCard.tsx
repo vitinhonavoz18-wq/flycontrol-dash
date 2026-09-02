@@ -5,7 +5,7 @@ import { Bike, GripVertical, Loader2, MapPin, StickyNote } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import type { Order } from "@/types/order";
-import { normalizeOrderType } from "@/utils/order-utils";
+import { normalizeOrderType } from "@/utils/orderUtils";
 import { OrderTimer } from "./OrderTimer";
 import {
   countItems,

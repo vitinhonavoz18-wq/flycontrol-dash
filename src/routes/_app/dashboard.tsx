@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-utils";
+import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/orderUtils";
 import { Order, OrderItem } from "@/types/order";
 
 import { Button } from "@/components/ui/button";
@@ -97,7 +97,6 @@ const STATUSES = [
   },
 ];
 
-// normalizeOrderType agora é importado de @/utils/order-utils
 
 function playBeep() {
   try {
@@ -943,7 +942,6 @@ function OrderCard({
   const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
   const orderType = normalizeOrderType(o);
 
-  // formatItemName e getItemPrice agora são importados de @/utils/order-utils
 
   return (
     <div

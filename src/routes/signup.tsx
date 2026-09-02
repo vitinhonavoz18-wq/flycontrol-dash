@@ -20,7 +20,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
-import { GoogleIcon } from "@/components/GoogleIcon";
+import { GoogleIcon } from "@/components/icons/GoogleIcon";
 import { CHECKOUT_TOKEN_STORAGE_KEY } from "@/lib/billing/checkout";
 import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";

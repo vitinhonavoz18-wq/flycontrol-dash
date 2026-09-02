@@ -1,4 +1,4 @@
-import { useAdminGlobalMetrics } from "@/hooks/admin/use-admin-metrics";
+import { useAdminGlobalMetrics } from "@/hooks/admin/useAdminMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -13,7 +13,7 @@ import {
   PieChart,
   Pie
 } from "recharts";
-import { useAdminPizzerias } from "@/hooks/admin/use-admin-pizzerias";
+import { useAdminPizzerias } from "@/hooks/admin/useAdminPizzerias";
 
 export const AnalyticsDashboard = () => {
   const { data: metrics, isLoading: loadingMetrics } = useAdminGlobalMetrics();

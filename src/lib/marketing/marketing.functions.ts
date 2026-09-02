@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireSupabaseAuth } from "@/integrations/supabase/authMiddleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { mkt, mktRpc } from "./db";
-import { assertOwnsTenant } from "@/lib/server/plan-guard";
+import { assertOwnsTenant } from "@/lib/server/planGuard";
 import { aplicarFiltro, construirFiltro, descreverSegmento, type FiltroSegmento } from "./segments";
 import {
   renderizarMensagem,

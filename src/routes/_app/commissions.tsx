@@ -30,7 +30,7 @@ import {
   getCommissionReport,
   listTenantWaiters,
 } from "@/lib/commissions.functions";
-import { RequireFeature } from "@/components/PremiumFeatureLock";
+import { RequireFeature } from "@/components/plan/PremiumFeatureLock";
 
 export const Route = createFileRoute("/_app/commissions")({ component: CommissionsPage });
 
