@@ -11,7 +11,6 @@ import {
   Users,
   LogOut,
   Settings,
-  BookOpen,
   Menu,
   X,
   PieChart,
@@ -33,6 +32,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/mobile/BottomNav";
 import { PlanProvider, usePlan } from "@/lib/plan-context";
 import type { Feature } from "@/lib/planPermissions";
+import { emDesenvolvimento } from "@/lib/feature-flags";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
@@ -174,7 +174,6 @@ function AppLayoutInner() {
     { to: "/settings", label: "Configurações", icon: Settings },
     { to: "/waiters", label: "Garçons", icon: UtensilsCrossed, feature: "waiters" },
     { to: "/commissions", label: "Comissões", icon: Wallet, feature: "commissions" },
-    { to: "/docs", label: "Documentação", icon: BookOpen },
   ];
   // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
   // não assinam a própria plataforma, então o item some para eles. Quem
@@ -182,7 +181,12 @@ function AppLayoutInner() {
   // Admin.
   const showAdmin = isSuperAdmin || isHardcodedAdmin;
   const items = allItems.filter(
-    (it) => (!it.feature || hasFeature(it.feature)) && !(it.to === "/billing" && showAdmin),
+    (it) =>
+      (!it.feature || hasFeature(it.feature)) &&
+      !(it.to === "/billing" && showAdmin) &&
+      // Áreas ainda em obra (FlyDelivery, Marketing, Plano e cobrança) somem do
+      // menu — ver src/lib/feature-flags.ts.
+      !emDesenvolvimento(it.to),
   );
 
   const adminItems = [

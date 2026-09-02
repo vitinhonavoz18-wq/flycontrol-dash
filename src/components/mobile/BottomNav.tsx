@@ -14,7 +14,6 @@ import {
   PieChart,
   UtensilsCrossed,
   Wallet,
-  BookOpen,
   LogOut,
   Users,
   CreditCard,
@@ -23,6 +22,7 @@ import {
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
+import { emDesenvolvimento } from "@/lib/feature-flags";
 
 type Item = {
   to: string;
@@ -46,7 +46,6 @@ const MORE_OWNER: Item[] = [
   { to: "/waiters", label: "Garçons", icon: UtensilsCrossed },
   { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
   { to: "/settings", label: "Configurações", icon: Settings },
-  { to: "/docs", label: "Documentação", icon: BookOpen },
 ];
 
 const MORE_ADMIN: Item[] = [
@@ -92,7 +91,10 @@ export function BottomNav() {
 
   // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
   // não assinam a própria plataforma, então o item some para eles.
-  const ownerItems = MORE_OWNER.filter((it) => !(it.to === "/billing" && showAdmin));
+  // Também somem daqui as áreas ainda em obra — ver src/lib/feature-flags.ts.
+  const ownerItems = MORE_OWNER.filter(
+    (it) => !(it.to === "/billing" && showAdmin) && !emDesenvolvimento(it.to),
+  );
 
   const isActive = (it: Item) => (it.match ? it.match(path) : path === it.to);
   const moreIsActive =
