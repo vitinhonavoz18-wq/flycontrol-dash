@@ -32,13 +32,27 @@ export function HallOfFameStrip() {
       </CardHeader>
       <CardContent className="flex flex-wrap gap-3">
         {rows.map((r) => (
-          <div key={r.company_slug} className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/30">
+          <div
+            key={r.company_slug}
+            className="flex items-center gap-2 rounded-lg border px-3 py-2 bg-muted/30"
+          >
             <span className="font-medium text-sm">{r.company_name}</span>
             {r.legend && (
-              <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30" variant="outline">👑 LENDA</Badge>
+              <Badge
+                className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30"
+                variant="outline"
+              >
+                👑 LENDA
+              </Badge>
             )}
             {r.level_name && (
-              <Badge variant="outline" style={{ borderColor: r.level_color ?? undefined, color: r.level_color ?? undefined }}>
+              <Badge
+                variant="outline"
+                style={{
+                  borderColor: r.level_color ?? undefined,
+                  color: r.level_color ?? undefined,
+                }}
+              >
                 {r.level_icon} {r.level_name}
               </Badge>
             )}

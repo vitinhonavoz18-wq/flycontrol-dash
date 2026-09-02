@@ -20,7 +20,9 @@ export function normalizeOrderType(o: any) {
   const serviceMode = String(o.service_mode || "").toLowerCase();
   const fulfillmentType = String(o.fulfillment_type || "").toLowerCase();
   const deliveryType = String(o.delivery_type || "").toLowerCase();
-  const address = String(o.customer_address || o.address || o.delivery_address || o.location || "").toLowerCase();
+  const address = String(
+    o.customer_address || o.address || o.delivery_address || o.location || "",
+  ).toLowerCase();
 
   const tableNumber = o.table_number || o.tableNumber || o.mesa;
 

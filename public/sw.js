@@ -22,11 +22,7 @@ const OFFLINE_URL = "/offline.html";
 
 /** Nunca entra em cache, mesmo sendo do mesmo site: dado que muda a cada segundo. */
 function isNeverCache(pathname) {
-  return (
-    pathname.startsWith("/api/") ||
-    pathname.startsWith("/_serverFn") ||
-    pathname === "/sw.js"
-  );
+  return pathname.startsWith("/api/") || pathname.startsWith("/_serverFn") || pathname === "/sw.js";
 }
 
 /** Arquivos com nome versionado pelo build (hash no nome) — seguro cachear "para sempre". */

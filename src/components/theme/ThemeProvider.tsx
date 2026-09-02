@@ -8,7 +8,9 @@ interface ThemeProviderProps {
   storageKey?: string;
 }
 
-const ThemeProviderContext = createContext<{ theme: Theme; setTheme: (t: Theme) => void } | null>(null);
+const ThemeProviderContext = createContext<{ theme: Theme; setTheme: (t: Theme) => void } | null>(
+  null,
+);
 
 export function ThemeProvider({
   children,
@@ -41,11 +43,7 @@ export function ThemeProvider({
     },
   };
 
-  return (
-    <ThemeProviderContext.Provider value={value}>
-      {children}
-    </ThemeProviderContext.Provider>
-  );
+  return <ThemeProviderContext.Provider value={value}>{children}</ThemeProviderContext.Provider>;
 }
 
 export const useTheme = () => {

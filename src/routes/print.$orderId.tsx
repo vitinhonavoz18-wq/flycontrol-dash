@@ -3,8 +3,6 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeOrderType } from "@/utils/orderUtils";
 
-
-
 export const Route = createFileRoute("/print/$orderId")({ component: Print });
 
 function Print() {
@@ -14,11 +12,7 @@ function Print() {
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("id", orderId)
-        .maybeSingle();
+      const { data } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
       if (data) {
         setO(data);
         const { data: p } = await supabase
@@ -42,7 +36,6 @@ function Print() {
     const num = Number(value || 0);
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
-
 
   return (
     <div className="print-area">
@@ -81,23 +74,25 @@ function Print() {
           </div>
         )}
         <div className="mt-1 inline-block bg-black px-2 py-0.5 text-xs font-bold uppercase text-white">
-          Tipo: {
-            orderType === "delivery" ? "Entrega" : 
-            orderType === "pickup" ? "Retirada" : 
-            orderType === "table" ? "Mesa" : "Pedido"
-          }
+          Tipo:{" "}
+          {orderType === "delivery"
+            ? "Entrega"
+            : orderType === "pickup"
+              ? "Retirada"
+              : orderType === "table"
+                ? "Mesa"
+                : "Pedido"}
         </div>
         {orderType === "pickup" && o.ticket_number && (
-          <div className="mt-1 text-lg font-black uppercase">
-            FICHA: {o.ticket_number}
-          </div>
+          <div className="mt-1 text-lg font-black uppercase">FICHA: {o.ticket_number}</div>
         )}
         {orderType === "table" && (
           <div className="mt-1 text-lg font-black uppercase">
-            {o.table_number || o.tableNumber || o.mesa ? `MESA: ${o.table_number || o.tableNumber || o.mesa}` : "MESA NÃO IDENTIFICADA"}
+            {o.table_number || o.tableNumber || o.mesa
+              ? `MESA: ${o.table_number || o.tableNumber || o.mesa}`
+              : "MESA NÃO IDENTIFICADA"}
           </div>
         )}
-
       </div>
 
       <div className="my-3 border-t-2 border-dashed border-black"></div>
@@ -109,19 +104,25 @@ function Print() {
           const qty = it.qty ?? it.quantity ?? 1;
           const name = it.product_name ?? it.name ?? it.title ?? it.nome ?? "Item";
           const price = Number(it.unit_price ?? it.price ?? 0);
-          const subtotal = Number(it.total_price ?? it.total ?? it.subtotal ?? (price * qty));
-          
+          const subtotal = Number(it.total_price ?? it.total ?? it.subtotal ?? price * qty);
+
           // Sabores (para pizzas)
           const flavors = Array.isArray(it.flavors) ? it.flavors : [];
           const selectedFlavors = Array.isArray(it.selected_flavors) ? it.selected_flavors : [];
           const allFlavors = [...new Set([...flavors, ...selectedFlavors])];
 
           // Ingredientes/Adicionais
-          const ingredients = Array.isArray(it.ingredients) ? it.ingredients : 
-                             (typeof it.ingredients === 'string' ? [it.ingredients] : []);
-          const additions = Array.isArray(it.additions) ? it.additions : 
-                           Array.isArray(it.adicionais) ? it.adicionais : [];
-          
+          const ingredients = Array.isArray(it.ingredients)
+            ? it.ingredients
+            : typeof it.ingredients === "string"
+              ? [it.ingredients]
+              : [];
+          const additions = Array.isArray(it.additions)
+            ? it.additions
+            : Array.isArray(it.adicionais)
+              ? it.adicionais
+              : [];
+
           return (
             <div key={i} className="border-b border-gray-100 pb-2 last:border-0">
               <div className="flex items-start justify-between gap-2">
@@ -137,7 +138,9 @@ function Print() {
                 <div className="ml-4 mt-1">
                   <div className="text-xs font-bold uppercase">Sabores:</div>
                   {allFlavors.map((f: string, idx: number) => (
-                    <div key={idx} className="text-sm leading-tight">• {f}</div>
+                    <div key={idx} className="text-sm leading-tight">
+                      • {f}
+                    </div>
                   ))}
                 </div>
               )}
@@ -163,7 +166,9 @@ function Print() {
                 <div className="ml-4 mt-1">
                   <div className="text-xs font-bold uppercase">Adicionais:</div>
                   {additions.map((add: any, idx: number) => (
-                    <div key={idx} className="text-sm">+ {typeof add === 'string' ? add : (add.name || add.nome)}</div>
+                    <div key={idx} className="text-sm">
+                      + {typeof add === "string" ? add : add.name || add.nome}
+                    </div>
                   ))}
                 </div>
               )}
@@ -171,10 +176,11 @@ function Print() {
               {/* Observação do Item */}
               {(it.notes || it.observacao || it.item_notes) && (
                 <div className="ml-4 mt-1 rounded bg-gray-50 p-1 text-xs">
-                  <span className="font-bold">Obs Item:</span> {it.notes || it.observacao || it.item_notes}
+                  <span className="font-bold">Obs Item:</span>{" "}
+                  {it.notes || it.observacao || it.item_notes}
                 </div>
               )}
-              
+
               {qty > 1 && (
                 <div className="mt-1 text-right text-[10px] text-gray-500">
                   Valor unitário: {formatCurrency(price)}
@@ -191,7 +197,7 @@ function Print() {
       <div className="space-y-1">
         <div className="flex justify-between text-sm">
           <span>Subtotal</span>
-          <span>{formatCurrency(o.subtotal || (Number(o.total) - Number(o.delivery_fee)))}</span>
+          <span>{formatCurrency(o.subtotal || Number(o.total) - Number(o.delivery_fee))}</span>
         </div>
         <div className="flex justify-between text-sm">
           <span>Taxa de Entrega</span>

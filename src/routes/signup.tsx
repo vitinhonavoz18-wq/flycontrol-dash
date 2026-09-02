@@ -715,9 +715,7 @@ function SignupWizard() {
                     className="h-11"
                     value={owner.passwordConfirmation}
                     aria-invalid={!!errors.passwordConfirmation}
-                    onChange={(e) =>
-                      setOwner({ ...owner, passwordConfirmation: e.target.value })
-                    }
+                    onChange={(e) => setOwner({ ...owner, passwordConfirmation: e.target.value })}
                   />
                 </Field>
               </>

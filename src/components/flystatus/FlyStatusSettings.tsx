@@ -23,8 +23,14 @@ const FIELDS: Record<FlyStatusKind, { urlCol: keyof Pz; textCol: keyof Pz }> = {
   entregue: { urlCol: "status_art_entregue_url", textCol: "status_text_entregue" },
 };
 
-export function FlyStatusSettings({ pizzeria, onUpdated }: { pizzeria: Pz; onUpdated: (patch: Partial<Pz>) => void }) {
-  const isGlobalAdmin = pizzeria.slug === 'conectfly-pizza';
+export function FlyStatusSettings({
+  pizzeria,
+  onUpdated,
+}: {
+  pizzeria: Pz;
+  onUpdated: (patch: Partial<Pz>) => void;
+}) {
+  const isGlobalAdmin = pizzeria.slug === "conectfly-pizza";
 
   return (
     <div className="mt-6 border-t border-border pt-4">
@@ -42,10 +48,10 @@ export function FlyStatusSettings({ pizzeria, onUpdated }: { pizzeria: Pz; onUpd
         </div>
       </div>
       <p className="mb-4 text-[11px] text-muted-foreground">
-        {isGlobalAdmin 
+        {isGlobalAdmin
           ? "Você está editando as artes que serão herdadas por TODAS as outras pizzarias como padrão."
-          : "Personalize a arte e a mensagem enviada ao cliente. Se deixar vazio, usará o padrão ConnectFly."}
-        {" "}Use <code className="rounded bg-muted px-1">{"{NUMERO}"}</code> para o número do pedido.
+          : "Personalize a arte e a mensagem enviada ao cliente. Se deixar vazio, usará o padrão ConnectFly."}{" "}
+        Use <code className="rounded bg-muted px-1">{"{NUMERO}"}</code> para o número do pedido.
       </p>
       <div className="grid gap-4 md:grid-cols-3">
         {(Object.keys(FLYSTATUS_META) as FlyStatusKind[]).map((k) => (
@@ -56,14 +62,22 @@ export function FlyStatusSettings({ pizzeria, onUpdated }: { pizzeria: Pz; onUpd
   );
 }
 
-function StatusArtCard({ kind, pizzeria, onUpdated }: { kind: FlyStatusKind; pizzeria: Pz; onUpdated: (patch: Partial<Pz>) => void }) {
+function StatusArtCard({
+  kind,
+  pizzeria,
+  onUpdated,
+}: {
+  kind: FlyStatusKind;
+  pizzeria: Pz;
+  onUpdated: (patch: Partial<Pz>) => void;
+}) {
   const meta = FLYSTATUS_META[kind];
   const { urlCol, textCol } = FIELDS[kind];
-  
+
   // Logical fallback
   const { url: effectiveUrl, text: effectiveText } = pickArt(pizzeria, kind);
   const isUsingGlobal = !pizzeria[urlCol] && !pizzeria[textCol];
-  const isGlobalAdmin = pizzeria.slug === 'conectfly-pizza';
+  const isGlobalAdmin = pizzeria.slug === "conectfly-pizza";
 
   const url = (pizzeria[urlCol] as string | null) || "";
   const text = (pizzeria[textCol] as string | null) || "";
@@ -71,17 +85,28 @@ function StatusArtCard({ kind, pizzeria, onUpdated }: { kind: FlyStatusKind; piz
   const fileRef = useRef<HTMLInputElement>(null);
 
   async function handleFile(file: File) {
-    if (!file.type.startsWith("image/")) { toast.error("Selecione um arquivo de imagem"); return; }
-    if (file.size > 5 * 1024 * 1024) { toast.error("Imagem deve ter no máximo 5MB"); return; }
+    if (!file.type.startsWith("image/")) {
+      toast.error("Selecione um arquivo de imagem");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error("Imagem deve ter no máximo 5MB");
+      return;
+    }
     setUploading(true);
     try {
       const ext = file.name.split(".").pop() || "png";
       const path = `${pizzeria.id}/${kind}-${Date.now()}.${ext}`;
-      const { error: upErr } = await supabase.storage.from("status-arts").upload(path, file, { upsert: true, contentType: file.type });
+      const { error: upErr } = await supabase.storage
+        .from("status-arts")
+        .upload(path, file, { upsert: true, contentType: file.type });
       if (upErr) throw upErr;
       const { data: pub } = supabase.storage.from("status-arts").getPublicUrl(path);
       const publicUrl = pub.publicUrl;
-      const { error: dbErr } = await supabase.from("pizzerias").update({ [urlCol]: publicUrl } as any).eq("id", pizzeria.id);
+      const { error: dbErr } = await supabase
+        .from("pizzerias")
+        .update({ [urlCol]: publicUrl } as any)
+        .eq("id", pizzeria.id);
       if (dbErr) throw dbErr;
       onUpdated({ [urlCol]: publicUrl } as Partial<Pz>);
       toast.success("Arte atualizada");
@@ -94,22 +119,38 @@ function StatusArtCard({ kind, pizzeria, onUpdated }: { kind: FlyStatusKind; piz
   }
 
   async function removeArt() {
-    const { error } = await supabase.from("pizzerias").update({ [urlCol]: null } as any).eq("id", pizzeria.id);
-    if (error) { toast.error(error.message); return; }
+    const { error } = await supabase
+      .from("pizzerias")
+      .update({ [urlCol]: null } as any)
+      .eq("id", pizzeria.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     onUpdated({ [urlCol]: null } as Partial<Pz>);
     toast.success("Arte removida");
   }
 
   async function saveText(value: string) {
-    const { error } = await supabase.from("pizzerias").update({ [textCol]: value } as any).eq("id", pizzeria.id);
-    if (error) { toast.error(error.message); return; }
+    const { error } = await supabase
+      .from("pizzerias")
+      .update({ [textCol]: value } as any)
+      .eq("id", pizzeria.id);
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
     onUpdated({ [textCol]: value } as Partial<Pz>);
   }
 
   return (
-    <div className={`rounded-lg border p-3 flex flex-col gap-3 transition-all duration-300 ${
-      isUsingGlobal && !isGlobalAdmin ? 'border-primary/20 bg-primary/5' : 'border-border bg-background'
-    }`}>
+    <div
+      className={`rounded-lg border p-3 flex flex-col gap-3 transition-all duration-300 ${
+        isUsingGlobal && !isGlobalAdmin
+          ? "border-primary/20 bg-primary/5"
+          : "border-border bg-background"
+      }`}
+    >
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <span className="text-lg">{meta.emoji}</span>
@@ -133,12 +174,29 @@ function StatusArtCard({ kind, pizzeria, onUpdated }: { kind: FlyStatusKind; piz
       </div>
 
       <div className="flex gap-2">
-        <Button type="button" size="sm" variant="outline" className="flex-1" disabled={uploading} onClick={() => fileRef.current?.click()}>
-          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="flex-1"
+          disabled={uploading}
+          onClick={() => fileRef.current?.click()}
+        >
+          {uploading ? (
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+          ) : (
+            <Upload className="h-3.5 w-3.5" />
+          )}
           {url ? "Trocar" : "Enviar"}
         </Button>
         {url && (
-          <Button type="button" size="sm" variant="outline" className="text-destructive border-destructive/30 hover:bg-destructive/10" onClick={removeArt}>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="text-destructive border-destructive/30 hover:bg-destructive/10"
+            onClick={removeArt}
+          >
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         )}
@@ -147,17 +205,26 @@ function StatusArtCard({ kind, pizzeria, onUpdated }: { kind: FlyStatusKind; piz
           type="file"
           accept="image/*"
           className="hidden"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFile(f); }}
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            if (f) handleFile(f);
+          }}
         />
       </div>
 
       <textarea
         className={`min-h-[110px] w-full rounded-md border border-input px-2 py-1.5 text-xs leading-relaxed transition-all ${
-          isUsingGlobal && !isGlobalAdmin ? 'bg-primary/5' : 'bg-background'
+          isUsingGlobal && !isGlobalAdmin ? "bg-primary/5" : "bg-background"
         }`}
         defaultValue={text || (isGlobalAdmin ? "" : effectiveText)}
-        placeholder={isGlobalAdmin ? `Defina a mensagem padrão global para "${meta.title}"` : `Personalize a mensagem para "${meta.title}"`}
-        onBlur={(e) => { if (e.target.value !== text) saveText(e.target.value); }}
+        placeholder={
+          isGlobalAdmin
+            ? `Defina a mensagem padrão global para "${meta.title}"`
+            : `Personalize a mensagem para "${meta.title}"`
+        }
+        onBlur={(e) => {
+          if (e.target.value !== text) saveText(e.target.value);
+        }}
       />
     </div>
   );

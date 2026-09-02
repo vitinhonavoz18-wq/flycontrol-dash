@@ -62,7 +62,16 @@ export function InstallBanner() {
     window.addEventListener("resize", onResize);
 
     const { isStandalone, isMobile, isIOS } = detect();
-    console.log("[PWA] standalone:", isStandalone, "mobile:", isMobile, "ios:", isIOS, "prompt:", !!deferredPrompt);
+    console.log(
+      "[PWA] standalone:",
+      isStandalone,
+      "mobile:",
+      isMobile,
+      "ios:",
+      isIOS,
+      "prompt:",
+      !!deferredPrompt,
+    );
 
     return () => {
       window.removeEventListener("pwa-installable", onInstallable);
@@ -114,12 +123,18 @@ export function InstallBanner() {
       aria-label="Instalar FlyControl"
     >
       <div className="h-11 w-11 rounded-xl bg-primary/15 grid place-items-center shrink-0">
-        {showIOS ? <Share className="h-5 w-5 text-primary" /> : <Download className="h-5 w-5 text-primary" />}
+        {showIOS ? (
+          <Share className="h-5 w-5 text-primary" />
+        ) : (
+          <Download className="h-5 w-5 text-primary" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold leading-tight">Instalar FL Mobile App</div>
         <div className="text-xs text-muted-foreground leading-tight mt-0.5">
-          {showIOS ? "Toque em Compartilhar → Adicionar à Tela de Início" : "Acesso rápido direto da tela inicial"}
+          {showIOS
+            ? "Toque em Compartilhar → Adicionar à Tela de Início"
+            : "Acesso rápido direto da tela inicial"}
         </div>
       </div>
       {showAndroid && (

@@ -44,8 +44,12 @@ export function NotificationSettings() {
       <CardContent className="space-y-5">
         <div className="flex items-center justify-between">
           <div>
-            <Label htmlFor="notif-enabled" className="font-medium">Ativar sons de notificação</Label>
-            <p className="text-xs text-muted-foreground">Sons tocam mesmo com o painel em segundo plano.</p>
+            <Label htmlFor="notif-enabled" className="font-medium">
+              Ativar sons de notificação
+            </Label>
+            <p className="text-xs text-muted-foreground">
+              Sons tocam mesmo com o painel em segundo plano.
+            </p>
           </div>
           <Switch
             id="notif-enabled"
@@ -57,7 +61,9 @@ export function NotificationSettings() {
         <div>
           <div className="flex items-center justify-between mb-2">
             <Label className="font-medium">Volume</Label>
-            <span className="text-sm text-muted-foreground">{Math.round(settings.volume * 100)}%</span>
+            <span className="text-sm text-muted-foreground">
+              {Math.round(settings.volume * 100)}%
+            </span>
           </div>
           <Slider
             value={[Math.round(settings.volume * 100)]}
@@ -81,7 +87,8 @@ export function NotificationSettings() {
         </div>
 
         <p className="text-[11px] text-muted-foreground">
-          Se o navegador bloquear o áudio, um botão aparecerá no canto inferior direito para ativar os sons.
+          Se o navegador bloquear o áudio, um botão aparecerá no canto inferior direito para ativar
+          os sons.
         </p>
       </CardContent>
     </Card>

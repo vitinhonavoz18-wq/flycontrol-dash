@@ -1,17 +1,17 @@
 import { useAdminGlobalMetrics } from "@/hooks/admin/useAdminMetrics";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  BarChart, 
-  Bar, 
-  XAxis, 
-  YAxis, 
-  CartesianGrid, 
-  Tooltip, 
-  ResponsiveContainer, 
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
   Cell,
   PieChart,
-  Pie
+  Pie,
 } from "recharts";
 import { useAdminPizzerias } from "@/hooks/admin/useAdminPizzerias";
 
@@ -19,17 +19,29 @@ export const AnalyticsDashboard = () => {
   const { data: metrics, isLoading: loadingMetrics } = useAdminGlobalMetrics();
   const { data: pizzerias, isLoading: loadingPizzerias } = useAdminPizzerias();
 
-  if (loadingMetrics || loadingPizzerias) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
+  if (loadingMetrics || loadingPizzerias)
+    return (
+      <div className="p-8">
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
 
-  const chartData = pizzerias?.map(p => ({
-    name: p.pizzeria_name,
-    orders: p.orders_month || 0,
-    revenue: p.revenue_month || 0
-  })).sort((a, b) => b.orders - a.orders).slice(0, 5) || [];
+  const chartData =
+    pizzerias
+      ?.map((p) => ({
+        name: p.pizzeria_name,
+        orders: p.orders_month || 0,
+        revenue: p.revenue_month || 0,
+      }))
+      .sort((a, b) => b.orders - a.orders)
+      .slice(0, 5) || [];
 
   const statusData = [
-    { name: "Abertas", value: pizzerias?.filter(p => p.status === "active").length || 0 },
-    { name: "Fechadas/Inativas", value: pizzerias?.filter(p => p.status !== "active").length || 0 }
+    { name: "Abertas", value: pizzerias?.filter((p) => p.status === "active").length || 0 },
+    {
+      name: "Fechadas/Inativas",
+      value: pizzerias?.filter((p) => p.status !== "active").length || 0,
+    },
   ];
 
   const COLORS = ["#10b981", "#ef4444", "#f59e0b", "#3b82f6"];
@@ -37,7 +49,7 @@ export const AnalyticsDashboard = () => {
   return (
     <div className="p-8 pb-20">
       <h1 className="text-3xl font-bold mb-4">Insights Globais</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">
@@ -53,7 +65,7 @@ export const AnalyticsDashboard = () => {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold text-emerald-600">
-              {pizzerias?.filter(p => p.status === "active").length || 0}
+              {pizzerias?.filter((p) => p.status === "active").length || 0}
             </div>
           </CardContent>
         </Card>
@@ -70,7 +82,9 @@ export const AnalyticsDashboard = () => {
             <CardTitle className="text-sm font-medium">Faturamento Hoje</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ {Number(metrics?.total_revenue_day || 0).toFixed(2)}</div>
+            <div className="text-2xl font-bold">
+              R$ {Number(metrics?.total_revenue_day || 0).toFixed(2)}
+            </div>
           </CardContent>
         </Card>
       </div>
@@ -123,5 +137,3 @@ export const AnalyticsDashboard = () => {
     </div>
   );
 };
-
-

@@ -9,11 +9,7 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
 
 interface Pizzeria {
@@ -66,7 +62,7 @@ export function PizzeriaSelector({ pizzerias, activeId, onSelect }: PizzeriaSele
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4 text-primary",
-                      activeId === p.id ? "opacity-100" : "opacity-0"
+                      activeId === p.id ? "opacity-100" : "opacity-0",
                     )}
                   />
                   {p.name}

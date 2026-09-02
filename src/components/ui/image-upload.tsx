@@ -66,15 +66,17 @@ async function compressIfNeeded(file: File): Promise<Blob> {
   // engasgar depois da décima imagem.
   bitmap.close();
   return await new Promise<Blob>((resolve) => {
-    canvas.toBlob(
-      (blob) => resolve(blob ?? file),
-      "image/webp",
-      0.85
-    );
+    canvas.toBlob((blob) => resolve(blob ?? file), "image/webp", 0.85);
   });
 }
 
-export function ImageUpload({ value, onChange, folder = "misc", disabled, className }: ImageUploadProps) {
+export function ImageUpload({
+  value,
+  onChange,
+  folder = "misc",
+  disabled,
+  className,
+}: ImageUploadProps) {
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [dragOver, setDragOver] = useState(false);
@@ -117,7 +119,7 @@ export function ImageUpload({ value, onChange, folder = "misc", disabled, classN
         setTimeout(() => setProgress(0), 500);
       }
     },
-    [folder, onChange]
+    [folder, onChange],
   );
 
   const onDrop = (e: React.DragEvent) => {
@@ -139,8 +141,10 @@ export function ImageUpload({ value, onChange, folder = "misc", disabled, classN
         onClick={() => !disabled && !uploading && inputRef.current?.click()}
         className={cn(
           "relative flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed p-4 transition-colors",
-          dragOver ? "border-primary bg-primary/5" : "border-muted-foreground/30 hover:border-primary/50",
-          disabled && "opacity-50 cursor-not-allowed"
+          dragOver
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/30 hover:border-primary/50",
+          disabled && "opacity-50 cursor-not-allowed",
         )}
       >
         {value ? (

@@ -33,7 +33,9 @@ export function useClubCents(tenantId: string | null) {
     const [{ data: status }, { data: cycle }] = await Promise.all([
       supabase
         .from("club_customer_status")
-        .select("current_streak, legend, hall_of_fame, goal_reached, current_price, next_cycle_price, current_level(name, slug, icon, color)")
+        .select(
+          "current_streak, legend, hall_of_fame, goal_reached, current_price, next_cycle_price, current_level(name, slug, icon, color)",
+        )
         .eq("company_id", tenantId)
         .eq("club_id", DEFAULT_CLUB_ID)
         .maybeSingle(),
@@ -48,7 +50,9 @@ export function useClubCents(tenantId: string | null) {
 
     let challengeActive = false;
     if (cycle?.id) {
-      const { data: challenge } = await supabase.rpc("club_is_challenge_active", { p_cycle_id: cycle.id });
+      const { data: challenge } = await supabase.rpc("club_is_challenge_active", {
+        p_cycle_id: cycle.id,
+      });
       challengeActive = !!challenge;
     }
 

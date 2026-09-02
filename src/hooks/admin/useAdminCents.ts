@@ -10,10 +10,16 @@ export function useAdminCentsOverview() {
   const query = useQuery({
     queryKey: ["admin-cents-overview"],
     queryFn: async () => {
-      const [{ data: statuses, error: e1 }, { data: activeCycles, error: e2 }, { data: settings, error: e3 }] = await Promise.all([
+      const [
+        { data: statuses, error: e1 },
+        { data: activeCycles, error: e2 },
+        { data: settings, error: e3 },
+      ] = await Promise.all([
         supabase
           .from("club_customer_status")
-          .select("company_id, current_streak, goal_reached, legend, hall_of_fame, lifetime_orders, gold_cycles_total, current_level(name, slug, icon, color), pizzerias:company_id(name, slug, plan_type)")
+          .select(
+            "company_id, current_streak, goal_reached, legend, hall_of_fame, lifetime_orders, gold_cycles_total, current_level(name, slug, icon, color), pizzerias:company_id(name, slug, plan_type)",
+          )
           .eq("club_id", DEFAULT_CLUB_ID),
         supabase
           .from("club_cycles")
@@ -66,10 +72,10 @@ export function useAdminCentsOverview() {
     const channel = supabase
       .channel("admin-cents-changes")
       .on("postgres_changes", { event: "*", schema: "public", table: "club_customer_status" }, () =>
-        queryClient.invalidateQueries({ queryKey: ["admin-cents-overview"] })
+        queryClient.invalidateQueries({ queryKey: ["admin-cents-overview"] }),
       )
       .on("postgres_changes", { event: "*", schema: "public", table: "club_cycles" }, () =>
-        queryClient.invalidateQueries({ queryKey: ["admin-cents-overview"] })
+        queryClient.invalidateQueries({ queryKey: ["admin-cents-overview"] }),
       )
       .subscribe();
 

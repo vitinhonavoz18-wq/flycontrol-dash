@@ -43,13 +43,21 @@ function WaiterLoginPage() {
             <UtensilsCrossed className="h-7 w-7 text-primary" />
           </div>
           <CardTitle>Acesso do Garçom</CardTitle>
-          <p className="text-sm text-muted-foreground">Entre com seu usuário e senha cadastrados pelo gestor.</p>
+          <p className="text-sm text-muted-foreground">
+            Entre com seu usuário e senha cadastrados pelo gestor.
+          </p>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={onSubmit}>
             <div className="space-y-1.5">
               <Label htmlFor="u">Usuário</Label>
-              <Input id="u" value={username} onChange={(e) => setUsername(e.target.value)} autoFocus required />
+              <Input
+                id="u"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoFocus
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="p">Senha</Label>

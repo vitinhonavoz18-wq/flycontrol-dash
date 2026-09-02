@@ -236,7 +236,7 @@ export function PizzaSizeList({
       });
 
       if (!syncResult.success) {
-        let errorMsg = "Não foi possível atualizar o cardápio público.";
+        const errorMsg = "Não foi possível atualizar o cardápio público.";
         toast.error(errorMsg);
         return;
       }

@@ -1,6 +1,17 @@
 import { useState } from "react";
-import { useAdminCentsOverview, updateClubSettings, useClubCentsAuditLog } from "@/hooks/admin/useAdminCents";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import {
+  useAdminCentsOverview,
+  updateClubSettings,
+  useClubCentsAuditLog,
+} from "@/hooks/admin/useAdminCents";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -36,11 +47,14 @@ const FIELD_LABELS: Record<string, string> = {
 
 function describeAuditChange(entry: { table_name: string; old_value: any; new_value: any }) {
   const changed = Object.keys(entry.new_value ?? {}).filter(
-    (key) => key !== "updated_at" && entry.old_value?.[key] !== entry.new_value?.[key]
+    (key) => key !== "updated_at" && entry.old_value?.[key] !== entry.new_value?.[key],
   );
   if (changed.length === 0) return "Nenhum campo alterado";
   return changed
-    .map((key) => `${FIELD_LABELS[key] ?? key}: ${entry.old_value?.[key] ?? "—"} → ${entry.new_value?.[key] ?? "—"}`)
+    .map(
+      (key) =>
+        `${FIELD_LABELS[key] ?? key}: ${entry.old_value?.[key] ?? "—"} → ${entry.new_value?.[key] ?? "—"}`,
+    )
     .join(", ");
 }
 
@@ -51,23 +65,30 @@ export const ClubCentsDashboard = () => {
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState<Record<string, string> | null>(null);
 
-  const settings = form ?? (data?.settings
-    ? {
-        default_price_per_order: String(data.settings.default_price_per_order),
-        gold_price_per_order: String(data.settings.gold_price_per_order),
-        goal_orders: String(data.settings.goal_orders),
-        challenge_days: String(data.settings.challenge_days),
-        voucher_months: String(data.settings.voucher_months),
-        legend_streak_required: String(data.settings.legend_streak_required),
-      }
-    : null);
+  const settings =
+    form ??
+    (data?.settings
+      ? {
+          default_price_per_order: String(data.settings.default_price_per_order),
+          gold_price_per_order: String(data.settings.gold_price_per_order),
+          goal_orders: String(data.settings.goal_orders),
+          challenge_days: String(data.settings.challenge_days),
+          voucher_months: String(data.settings.voucher_months),
+          legend_streak_required: String(data.settings.legend_streak_required),
+        }
+      : null);
 
-  if (isLoading) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
+  if (isLoading)
+    return (
+      <div className="p-8">
+        <Skeleton className="h-64 w-full" />
+      </div>
+    );
   if (error) return <div className="p-8 text-destructive">Erro ao carregar Clube CENTS.</div>;
   if (!data) return null;
 
   const filteredRows = data.rows.filter((r) =>
-    r.companyName.toLowerCase().includes(search.toLowerCase())
+    r.companyName.toLowerCase().includes(search.toLowerCase()),
   );
 
   async function handleSave() {
@@ -102,36 +123,66 @@ export const ClubCentsDashboard = () => {
       </div>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg">Configurações do Clube</CardTitle></CardHeader>
+        <CardHeader>
+          <CardTitle className="text-lg">Configurações do Clube</CardTitle>
+        </CardHeader>
         <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-4">
           {settings && (
             <>
               <div>
                 <label className="text-xs text-muted-foreground">Preço padrão / pedido (R$)</label>
-                <Input value={settings.default_price_per_order} onChange={(e) => setForm({ ...settings, default_price_per_order: e.target.value })} />
+                <Input
+                  value={settings.default_price_per_order}
+                  onChange={(e) =>
+                    setForm({ ...settings, default_price_per_order: e.target.value })
+                  }
+                />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Preço Benefício Ouro / pedido (R$)</label>
-                <Input value={settings.gold_price_per_order} onChange={(e) => setForm({ ...settings, gold_price_per_order: e.target.value })} />
+                <label className="text-xs text-muted-foreground">
+                  Preço Benefício Ouro / pedido (R$)
+                </label>
+                <Input
+                  value={settings.gold_price_per_order}
+                  onChange={(e) => setForm({ ...settings, gold_price_per_order: e.target.value })}
+                />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Meta de pedidos por ciclo</label>
-                <Input value={settings.goal_orders} onChange={(e) => setForm({ ...settings, goal_orders: e.target.value })} />
+                <Input
+                  value={settings.goal_orders}
+                  onChange={(e) => setForm({ ...settings, goal_orders: e.target.value })}
+                />
               </div>
               <div>
                 <label className="text-xs text-muted-foreground">Dias do Desafio dos 7 Dias</label>
-                <Input value={settings.challenge_days} onChange={(e) => setForm({ ...settings, challenge_days: e.target.value })} />
+                <Input
+                  value={settings.challenge_days}
+                  onChange={(e) => setForm({ ...settings, challenge_days: e.target.value })}
+                />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Meses do Voucher de Fidelidade</label>
-                <Input value={settings.voucher_months} onChange={(e) => setForm({ ...settings, voucher_months: e.target.value })} />
+                <label className="text-xs text-muted-foreground">
+                  Meses do Voucher de Fidelidade
+                </label>
+                <Input
+                  value={settings.voucher_months}
+                  onChange={(e) => setForm({ ...settings, voucher_months: e.target.value })}
+                />
               </div>
               <div>
-                <label className="text-xs text-muted-foreground">Ciclos consecutivos p/ LENDA CENTS</label>
-                <Input value={settings.legend_streak_required} onChange={(e) => setForm({ ...settings, legend_streak_required: e.target.value })} />
+                <label className="text-xs text-muted-foreground">
+                  Ciclos consecutivos p/ LENDA CENTS
+                </label>
+                <Input
+                  value={settings.legend_streak_required}
+                  onChange={(e) => setForm({ ...settings, legend_streak_required: e.target.value })}
+                />
               </div>
               <div className="col-span-full">
-                <Button onClick={handleSave} disabled={saving}>{saving ? "Salvando..." : "Salvar configurações"}</Button>
+                <Button onClick={handleSave} disabled={saving}>
+                  {saving ? "Salvando..." : "Salvar configurações"}
+                </Button>
               </div>
             </>
           )}
@@ -140,13 +191,21 @@ export const ClubCentsDashboard = () => {
 
       {auditLog && auditLog.length > 0 && (
         <Card>
-          <CardHeader><CardTitle className="text-lg">Últimas alterações administrativas</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="text-lg">Últimas alterações administrativas</CardTitle>
+          </CardHeader>
           <CardContent className="space-y-2">
             {auditLog.map((entry) => (
-              <div key={entry.id} className="text-xs border-b border-border last:border-0 pb-2 last:pb-0">
+              <div
+                key={entry.id}
+                className="text-xs border-b border-border last:border-0 pb-2 last:pb-0"
+              >
                 <span className="text-muted-foreground">
                   {new Date(entry.created_at).toLocaleString("pt-BR")} —{" "}
-                  {entry.table_name === "club_settings" ? "Configurações do clube" : "Nível do clube"}:
+                  {entry.table_name === "club_settings"
+                    ? "Configurações do clube"
+                    : "Nível do clube"}
+                  :
                 </span>{" "}
                 {describeAuditChange(entry)}
               </div>
@@ -157,7 +216,12 @@ export const ClubCentsDashboard = () => {
 
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <h2 className="text-xl font-semibold">Empresas no Clube</h2>
-        <Input placeholder="Buscar por nome..." className="max-w-xs" value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Input
+          placeholder="Buscar por nome..."
+          className="max-w-xs"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
       <div className="bg-card border rounded-lg shadow-sm overflow-x-auto">
@@ -181,7 +245,10 @@ export const ClubCentsDashboard = () => {
                 </TableCell>
                 <TableCell>
                   {r.level && (
-                    <Badge variant="outline" style={{ borderColor: r.level.color, color: r.level.color }}>
+                    <Badge
+                      variant="outline"
+                      style={{ borderColor: r.level.color, color: r.level.color }}
+                    >
                       {r.level.icon} {r.level.name}
                     </Badge>
                   )}
@@ -193,8 +260,22 @@ export const ClubCentsDashboard = () => {
                 <TableCell>{r.lifetimeOrders}</TableCell>
                 <TableCell>
                   <div className="flex gap-1 flex-wrap">
-                    {r.legend && <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30" variant="outline">👑 LENDA</Badge>}
-                    {r.goalReached && <Badge className="bg-green-500/10 text-green-600 border-green-500/30" variant="outline">Ouro conquistado</Badge>}
+                    {r.legend && (
+                      <Badge
+                        className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30"
+                        variant="outline"
+                      >
+                        👑 LENDA
+                      </Badge>
+                    )}
+                    {r.goalReached && (
+                      <Badge
+                        className="bg-green-500/10 text-green-600 border-green-500/30"
+                        variant="outline"
+                      >
+                        Ouro conquistado
+                      </Badge>
+                    )}
                   </div>
                 </TableCell>
               </TableRow>

@@ -34,7 +34,7 @@ export async function assertOwnsTenantWithFeature(
   supabase: any,
   userId: string,
   tenantId: string,
-  feature: Feature
+  feature: Feature,
 ) {
   const { data, error } = await supabase
     .from("pizzerias")
@@ -49,7 +49,7 @@ export async function assertOwnsTenantWithFeature(
 
   if (!isAdmin && !planHasFeature(data.plan_type, feature)) {
     throw new Error(
-      `Esta funcionalidade (${FEATURE_LABELS[feature]}) está disponível apenas para empresas do Plano Premium.`
+      `Esta funcionalidade (${FEATURE_LABELS[feature]}) está disponível apenas para empresas do Plano Premium.`,
     );
   }
 }

@@ -43,7 +43,7 @@ export function saveSettings(s: NotificationSettings) {
 
 let _ctx: AudioContext | null = null;
 let _audioBlocked = false;
-let _queue: SoundEvent[] = [];
+const _queue: SoundEvent[] = [];
 let _playing = false;
 
 function getCtx(): AudioContext | null {
@@ -101,7 +101,7 @@ const PATTERNS: Record<SoundEvent, Tone[]> = {
   // Bill / payment request — cash register ding
   bill_request: [
     { freq: 1046, dur: 0.14, type: "triangle" },
-    { freq: 1568, dur: 0.20, type: "triangle", gap: 0.05 },
+    { freq: 1568, dur: 0.2, type: "triangle", gap: 0.05 },
     { freq: 1046, dur: 0.14, type: "triangle", gap: 0.05 },
   ],
   // Order ready — bright upward chime
@@ -112,19 +112,17 @@ const PATTERNS: Record<SoundEvent, Tone[]> = {
   ],
   // Customer calling waiter — attention pulse
   customer_call: [
-    { freq: 1200, dur: 0.10, type: "square" },
-    { freq: 900, dur: 0.10, type: "square", gap: 0.05 },
-    { freq: 1200, dur: 0.10, type: "square", gap: 0.05 },
+    { freq: 1200, dur: 0.1, type: "square" },
+    { freq: 900, dur: 0.1, type: "square", gap: 0.05 },
+    { freq: 1200, dur: 0.1, type: "square", gap: 0.05 },
     { freq: 900, dur: 0.15, type: "square", gap: 0.05 },
   ],
   // New item added to existing order — soft double tap
   new_item: [
-    { freq: 660, dur: 0.10, type: "sine" },
+    { freq: 660, dur: 0.1, type: "sine" },
     { freq: 880, dur: 0.14, type: "sine", gap: 0.03 },
   ],
 };
-
-
 
 async function playPattern(event: SoundEvent) {
   const settings = loadSettings();

@@ -1,6 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
 
-
 export type CloseTableInput = {
   sessionId: string;
   /** Optional — when provided, avoids an extra DB lookup */
@@ -33,14 +32,11 @@ export type CloseTableResult = {
  *  3. POST to SiteCreatorFly webhook (flycontrol-table-closed).
  *  4. Return a structured result.
  */
-export async function closeTableWorkflow(
-  input: CloseTableInput
-): Promise<CloseTableResult> {
+export async function closeTableWorkflow(input: CloseTableInput): Promise<CloseTableResult> {
   const closedAt = new Date().toISOString();
   const { data: u } = await supabase.auth.getUser();
   const operatorId = u?.user?.id || null;
-  const operatorName =
-    (u?.user?.user_metadata as any)?.full_name || u?.user?.email || "operador";
+  const operatorName = (u?.user?.user_metadata as any)?.full_name || u?.user?.email || "operador";
 
   const result: CloseTableResult = {
     success: false,
@@ -65,10 +61,7 @@ export async function closeTableWorkflow(
     if (sess) {
       result.tableNumber = result.tableNumber ?? (sess as any).table_number ?? null;
       result.restaurantId =
-        result.restaurantId ??
-        (sess as any).restaurant_id ??
-        (sess as any).tenant_id ??
-        null;
+        result.restaurantId ?? (sess as any).restaurant_id ?? (sess as any).tenant_id ?? null;
       diningSessionId = (sess as any).dining_session_id ?? null;
       customerToken = (sess as any).customer_token ?? null;
     }
@@ -87,7 +80,9 @@ export async function closeTableWorkflow(
     } as any)
     .eq("id", input.sessionId)
     .in("status", ["open", "requested_close", "waiting_operator", "closing"])
-    .select("id, table_number, restaurant_id, closed_at, webhook_sent_at, dining_session_id, customer_token")
+    .select(
+      "id, table_number, restaurant_id, closed_at, webhook_sent_at, dining_session_id, customer_token",
+    )
     .maybeSingle();
 
   if (closeErr) {
@@ -183,7 +178,6 @@ export async function closeTableWorkflow(
         .eq("id", input.sessionId);
     }
   }
-
 
   console.log("TABLE_CLOSED", {
     session_id: input.sessionId,

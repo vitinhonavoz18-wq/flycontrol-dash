@@ -70,7 +70,7 @@ export const notifyTableClosed = createServerFn({ method: "POST" })
       const errInfo = {
         ok: false,
         status: 0,
-        error: err?.name === "AbortError" ? "timeout" : (err?.message || String(err)),
+        error: err?.name === "AbortError" ? "timeout" : err?.message || String(err),
       };
       console.error("TABLE_CLOSED_WEBHOOK_FAILED", { ...ctx, ...errInfo });
       return errInfo;

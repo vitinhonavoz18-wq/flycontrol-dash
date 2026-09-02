@@ -97,7 +97,6 @@ const STATUSES = [
   },
 ];
 
-
 function playBeep() {
   try {
     const AC =
@@ -941,7 +940,6 @@ function OrderCard({
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
   const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
   const orderType = normalizeOrderType(o);
-
 
   return (
     <div
