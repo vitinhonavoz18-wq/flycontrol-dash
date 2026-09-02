@@ -99,6 +99,38 @@ function timeAgo(ts: number) {
   return `${h}h`;
 }
 
+/**
+ * As linhas que chegam pelo aviso ao vivo do banco.
+ *
+ * O aviso entrega a linha inteira da tabela; aqui ficam só os campos que este
+ * componente usa para decidir se toca o alerta e o que escrever nele.
+ */
+type ComandaEmTempoReal = {
+  id: string;
+  status?: string | null;
+  waiter_id?: string | null;
+  table_number?: string | number | null;
+  customer_name?: string | null;
+};
+
+type PedidoEmTempoReal = {
+  id: string;
+  status?: string | null;
+  items?: unknown;
+  customer_name?: string | null;
+};
+
+type PedidoDeFechamento = {
+  id: string;
+  session_id?: string | null;
+  status?: string | null;
+  table_id?: string | null;
+  table_number?: string | number | null;
+  customer_name?: string | null;
+  requested_at?: string | null;
+  notes?: string | null;
+};
+
 export function WaiterNotificationCenter({
   token,
   tenantId,
@@ -212,7 +244,7 @@ export function WaiterNotificationCenter({
         async (payload) => {
           if (cancelled) return;
           await loadContext();
-          const row: any = payload.new || payload.old;
+          const row = (payload.new || payload.old) as ComandaEmTempoReal | undefined;
           if (!row) return;
           // If a NEW session was just assigned to me, surface it as a call-to-action.
           if (
@@ -237,7 +269,7 @@ export function WaiterNotificationCenter({
         { event: "INSERT", schema: "public", table: "table_session_orders" },
         async (payload) => {
           if (cancelled) return;
-          const link: any = payload.new;
+          const link = payload.new as { table_session_id: string; order_id: string };
           const sess = sessionsRef.current.get(link.table_session_id);
           if (!sess) return; // Not my table
           orderToSessionRef.current.set(link.order_id, link.table_session_id);
@@ -270,7 +302,7 @@ export function WaiterNotificationCenter({
         { event: "UPDATE", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` },
         (payload) => {
           if (cancelled) return;
-          const o: any = payload.new;
+          const o = payload.new as PedidoEmTempoReal;
           const sessionId = orderToSessionRef.current.get(o.id);
           if (!sessionId) return;
           const sess = sessionsRef.current.get(sessionId);
@@ -316,7 +348,7 @@ export function WaiterNotificationCenter({
         { event: "INSERT", schema: "public", table: "table_close_requests" },
         async (payload) => {
           if (cancelled) return;
-          const row: any = payload.new;
+          const row = payload.new as PedidoDeFechamento;
           if (!row?.session_id || row.status !== "pending") return;
           // Confirm the session belongs to this waiter (uses live DB truth so
           // we don't miss a request against a session that just changed to

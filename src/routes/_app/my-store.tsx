@@ -47,6 +47,7 @@ import {
   visibilidadeDeCombosDe,
 } from "@/lib/site/menuBehavior";
 import { mensagemDoErro } from "@/lib/errors";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 /**
  * A loja como ESTA tela a manipula.
@@ -198,7 +199,7 @@ function StoreEditor({
   // de existir o número de mesa automático: os dados dele existem, só falta
   // essa etiqueta. Busca essa etiqueta agora, na hora do primeiro salvamento,
   // em vez de deixar o dono da loja precisar achar um botão em outra tela.
-  async function ensureSyncEndpoint(pz: any): Promise<string | undefined> {
+  async function ensureSyncEndpoint(pz: Loja): Promise<string | undefined> {
     if (pz.sync_endpoint) return pz.sync_endpoint;
 
     const {
@@ -225,7 +226,7 @@ function StoreEditor({
   // (ao sair do campo, ou na hora, pros interruptores) — não existe mais um
   // botão único de "Salvar" que junta tudo: cada mudança já vale sozinha, e
   // o aviso mostrado reflete o que realmente aconteceu com essa mudança.
-  async function handleUpdate(field: string, value: any) {
+  async function handleUpdate(field: string, value: unknown) {
     await handleUpdateMany({ [field]: value });
   }
 
@@ -244,7 +245,7 @@ function StoreEditor({
     setSaving(true);
     const { error } = await supabase
       .from("pizzerias")
-      .update(campos as any)
+      .update(campos as TablesUpdate<"pizzerias">)
       .eq("id", pizzeria.id);
 
     if (error) {
@@ -309,7 +310,7 @@ function StoreEditor({
   // `site_settings` é uma coluna única no banco (um "pacotinho" de várias
   // configurações juntas) — por isso, ao mudar uma só, primeiro juntamos ela
   // com o que já estava salvo nas outras, para não apagar as demais.
-  function handleSiteSettingUpdate(key: string, value: any) {
+  function handleSiteSettingUpdate(key: string, value: unknown) {
     // Valor nulo é o pedido de APAGAR a escolha ("voltar ao automático"), e
     // ele precisa VIAJAR até o site público. Se aqui a chave só sumisse do
     // pacote, o site continuaria com a configuração antiga: a sincronização

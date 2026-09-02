@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/select";
 import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
 import { mensagemDoErro } from "@/lib/errors";
+import type { MenuCategory, MenuProduct } from "@/types/menu";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 /**
  * Um produto do cardápio, com os campos que esta tela usa.
@@ -43,23 +45,10 @@ import { mensagemDoErro } from "@/lib/errors";
  * editor avisa na hora se o nome estiver errado — em vez de a tela mostrar
  * "undefined" para o cliente.
  */
-type ProdutoDoCardapio = {
-  id: string;
-  name: string;
-  description?: string | null;
-  price?: number | string | null;
-  category_id?: string | null;
-  product_type?: string | null;
-  image_url?: string | null;
-  external_id?: string | null;
-  active?: boolean | null;
-  available?: boolean | null;
-  menu_categories?: { name?: string | null } | null;
-};
 
 interface ProductListProps {
   pizzeriaId: string;
-  categories: any[];
+  categories: MenuCategory[];
   type: string;
   title: string;
   pizzeriaSlug?: string;
@@ -80,7 +69,7 @@ export function ProductList({
   onRefresh,
   vocabulario,
 }: ProductListProps) {
-  const [products, setProducts] = useState<ProdutoDoCardapio[]>([]);
+  const [products, setProducts] = useState<MenuProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -142,7 +131,7 @@ export function ProductList({
 
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const filter = (p: ProdutoDoCardapio) =>
+    const filter = (p: MenuProduct) =>
       !q || p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
 
     const groups = categories.map((cat) => ({
@@ -160,14 +149,14 @@ export function ProductList({
   // Auto-expand categories that contain search matches
   const forceOpen = search.trim().length > 0;
 
-  function openEdit(prod: any) {
+  function openEdit(prod: MenuProduct) {
     setEditingProduct(prod);
     setName(prod.name);
     setDescription(prod.description || "");
-    setPrice(prod.price.toString());
+    setPrice(String(prod.price ?? ""));
     setCategoryId(prod.category_id || "");
     setImageUrl(prod.image_url || "");
-    setProductType(prod.product_type);
+    setProductType(prod.product_type ?? type);
     setIsDialogOpen(true);
   }
 
@@ -289,16 +278,16 @@ export function ProductList({
     }
   }
 
-  async function toggleStatus(prod: any, field: "active" | "available") {
+  async function toggleStatus(prod: MenuProduct, field: "active" | "available") {
     const newValue = !prod[field];
 
     if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
       // Standardize to 'active' as requested, using 'is_active' for the external field reference if needed
       // but syncToExternal already maps body.active = data.value for status action
       const syncResult = await syncToExternal({
-        type: prod.product_type,
+        type: prod.product_type ?? type,
         action: "status",
-        externalId: prod.external_id,
+        externalId: prod.external_id ?? undefined,
         data: { value: newValue },
         pizzeriaSlug,
         pizzeriaApiKey,
@@ -326,7 +315,7 @@ export function ProductList({
       }
     }
 
-    const updateData: any = {};
+    const updateData: TablesUpdate<"menu_products"> = {};
     updateData[field] = newValue;
 
     const { error } = await supabase
@@ -343,14 +332,14 @@ export function ProductList({
     }
   }
 
-  async function handleDelete(prod: any) {
+  async function handleDelete(prod: MenuProduct) {
     if (!confirm("Tem certeza que deseja excluir este produto?")) return;
 
     if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
       const syncResult = await syncToExternal({
-        type: prod.product_type,
+        type: prod.product_type ?? type,
         action: "delete",
-        externalId: prod.external_id,
+        externalId: prod.external_id ?? undefined,
         pizzeriaSlug,
         pizzeriaApiKey,
         syncEndpoint,
@@ -406,7 +395,7 @@ export function ProductList({
 
   const isBeverage = type === "beverage";
 
-  const renderProductCard = (prod: ProdutoDoCardapio) => (
+  const renderProductCard = (prod: MenuProduct) => (
     <Card
       key={prod.id}
       className={`overflow-hidden transition-all hover:border-primary/30 ${!prod.active ? "opacity-60 bg-muted/30" : ""}`}

@@ -22,6 +22,7 @@ import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ScrollableTabs } from "@/components/layout/ScrollableTabs";
 import { DocsContent } from "@/components/docs/DocsContent";
 import { mensagemDoErro } from "@/lib/errors";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 const ABAS = [
   { value: "geral", label: "Geral" },
@@ -29,6 +30,24 @@ const ABAS = [
 ] as const;
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
+
+/** A loja como esta tela a lê e edita. */
+type LojaNasConfiguracoes = {
+  id: string;
+  name: string;
+  slug?: string | null;
+  api_key: string;
+  status?: string | null;
+  description?: string | null;
+  delivery_fee?: number | null;
+  service_fee_percent?: number | null;
+  opening_hours?: unknown;
+  sound_enabled?: boolean | null;
+  sync_endpoint?: string | null;
+};
+
+/** O que volta do "Enviar Pedido Teste". */
+type ResultadoDoTeste = { ok: boolean; status: number | string; data?: unknown; error?: unknown };
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -145,14 +164,14 @@ function PizzeriaSettingsPanel({
   origin,
   onUpdated,
 }: {
-  pizzeria: any;
+  pizzeria: LojaNasConfiguracoes;
   origin: string;
   onUpdated: (patch: Record<string, unknown>) => void;
 }) {
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<any>(null);
+  const [testResult, setTestResult] = useState<ResultadoDoTeste | null>(null);
 
-  async function update(patch: any) {
+  async function update(patch: TablesUpdate<"pizzerias">) {
     const { error } = await supabase.from("pizzerias").update(patch).eq("id", p.id);
     if (error) {
       toast.error(error.message);
@@ -229,14 +248,14 @@ function PizzeriaSettingsPanel({
           <span>Som ao receber pedido</span>
           <input
             type="checkbox"
-            defaultChecked={p.sound_enabled}
+            defaultChecked={p.sound_enabled ?? false}
             onChange={(e) => update({ sound_enabled: e.target.checked })}
           />
         </label>
         <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-background p-3 text-sm">
           <span>Status do estabelecimento</span>
           <select
-            defaultValue={p.status}
+            defaultValue={p.status ?? "active"}
             className="rounded bg-background px-2 py-1"
             onChange={(e) => update({ status: e.target.value })}
           >
@@ -414,14 +433,14 @@ function PizzeriaSettingsPanel({
         </div>
       </div>
 
-      <PizzeriaPromotion pizzeria={p} />
+      <PizzeriaPromotion pizzeria={{ ...p, slug: p.slug ?? "" }} />
     </div>
   );
 }
 
 function Settings() {
   const { user, isSuperAdmin } = useAuth();
-  const [pizzerias, setPizzerias] = useState<any[]>([]);
+  const [pizzerias, setPizzerias] = useState<LojaNasConfiguracoes[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
   const [aba, setAba] = useState<string>("geral");
