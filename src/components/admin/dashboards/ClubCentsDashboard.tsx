@@ -19,6 +19,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Trophy, Flame, Crown, Target } from "lucide-react";
+import { mensagemDoErro } from "@/lib/errors";
 
 function Kpi({ label, value, icon: Icon }: { label: string; value: string | number; icon: any }) {
   return (
@@ -104,8 +105,8 @@ export const ClubCentsDashboard = () => {
         legend_streak_required: Number(settings.legend_streak_required),
       });
       toast.success("Configurações do Clube CENTS salvas.");
-    } catch (e: any) {
-      toast.error("Erro ao salvar: " + e.message);
+    } catch (e) {
+      toast.error("Erro ao salvar: " + mensagemDoErro(e));
     } finally {
       setSaving(false);
     }

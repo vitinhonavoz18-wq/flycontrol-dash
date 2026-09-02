@@ -19,6 +19,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { mensagemDoErro } from "@/lib/errors";
 
 interface CategoryListProps {
   pizzeriaId: string;
@@ -144,8 +145,8 @@ export function CategoryList({
         setIsDialogOpen(false);
         onRefresh();
       }
-    } catch (e: any) {
-      toast.error("Erro inesperado: " + e.message);
+    } catch (e) {
+      toast.error("Erro inesperado: " + mensagemDoErro(e));
     } finally {
       setLoading(false);
     }

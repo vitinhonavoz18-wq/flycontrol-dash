@@ -26,6 +26,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Search, RotateCcw, Loader2 } from "lucide-react";
 import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/orderUtils";
 import { toast } from "sonner";
+import { mensagemDoErro } from "@/lib/errors";
 
 export const Route = createFileRoute("/_app/search-orders")({ component: SearchOrdersPage });
 
@@ -140,8 +141,8 @@ function SearchOrdersPage() {
         result = result.filter((o) => normalizeOrderType(o) === filters.type);
       }
       setRows(result);
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao buscar pedidos");
+    } catch (e) {
+      toast.error(mensagemDoErro(e, "Erro ao buscar pedidos"));
     } finally {
       setLoading(false);
     }

@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { mensagemDoErro } from "@/lib/errors";
 
 export type RestaurantTable = {
   id: string;
@@ -259,8 +260,8 @@ export function useTableSessions(tenantId: string | null) {
         toast.success("Mesa encerrada.");
       }
       await loadSessions();
-    } catch (e: any) {
-      toast.error("Erro ao fechar mesa: " + (e?.message || e));
+    } catch (e) {
+      toast.error("Erro ao fechar mesa: " + mensagemDoErro(e));
     }
   }
 

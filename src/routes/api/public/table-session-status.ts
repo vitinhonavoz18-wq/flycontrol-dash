@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { publicCors } from "@/lib/server/http";
+import { mensagemDoErro } from "@/lib/errors";
 
 const cors = (request?: Request) => publicCors(request, { methods: "GET, POST, OPTIONS" });
 
@@ -113,8 +114,8 @@ export const Route = createFileRoute("/api/public/table-session-status")({
             table_number: url.searchParams.get("table_number"),
           });
           return respond(headers, result);
-        } catch (err: any) {
-          console.error("❌ TABLE_SESSION_STATUS_ERROR:", err?.message);
+        } catch (err) {
+          console.error("❌ TABLE_SESSION_STATUS_ERROR:", mensagemDoErro(err));
           return new Response(JSON.stringify({ success: false, error: "server_error" }), {
             status: 500,
             headers,
@@ -133,8 +134,8 @@ export const Route = createFileRoute("/api/public/table-session-status")({
             table_number: body?.table_number ?? null,
           });
           return respond(headers, result);
-        } catch (err: any) {
-          console.error("❌ TABLE_SESSION_STATUS_ERROR:", err?.message);
+        } catch (err) {
+          console.error("❌ TABLE_SESSION_STATUS_ERROR:", mensagemDoErro(err));
           return new Response(JSON.stringify({ success: false, error: "server_error" }), {
             status: 500,
             headers,

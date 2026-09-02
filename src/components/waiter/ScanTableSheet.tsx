@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ScanLine, Keyboard, Camera, X } from "lucide-react";
 import { toast } from "sonner";
+import { mensagemDoErro } from "@/lib/errors";
 
 type Props = {
   open: boolean;
@@ -70,8 +71,8 @@ export function ScanTableSheet({ open, onOpenChange, onDetected }: Props) {
         rafRef.current = requestAnimationFrame(tick);
       };
       rafRef.current = requestAnimationFrame(tick);
-    } catch (e: any) {
-      toast.error(e?.message || "Não foi possível abrir a câmera");
+    } catch (e) {
+      toast.error(mensagemDoErro(e, "Não foi possível abrir a câmera"));
       setSupported(false);
     } finally {
       setStarting(false);

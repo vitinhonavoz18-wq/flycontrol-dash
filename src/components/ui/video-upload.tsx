@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { mensagemDoErro } from "@/lib/errors";
 
 const BUCKET = "menu-images";
 // Mesmo limite que o SiteCreatorFly já usa para o vídeo de capa — um vídeo
@@ -54,9 +55,9 @@ export function VideoUpload({
         if (signErr || !signed?.signedUrl) throw signErr ?? new Error("no signed url");
         onChange(signed.signedUrl);
         toast.success("Vídeo enviado.");
-      } catch (e: any) {
+      } catch (e) {
         console.error("[VideoUpload]", e);
-        toast.error("Falha ao enviar vídeo: " + (e?.message || "erro desconhecido"));
+        toast.error("Falha ao enviar vídeo: " + mensagemDoErro(e, "erro desconhecido"));
       } finally {
         setUploading(false);
       }

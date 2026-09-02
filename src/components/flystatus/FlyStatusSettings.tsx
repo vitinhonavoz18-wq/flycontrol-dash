@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { Upload, Trash2, Loader2, Image as ImageIcon, Sparkles, ShieldCheck } from "lucide-react";
 import { FLYSTATUS_META, type FlyStatusKind, pickArt } from "./FlyStatusModal";
+import { mensagemDoErro } from "@/lib/errors";
 
 type Pz = {
   id: string;
@@ -110,8 +111,8 @@ function StatusArtCard({
       if (dbErr) throw dbErr;
       onUpdated({ [urlCol]: publicUrl } as Partial<Pz>);
       toast.success("Arte atualizada");
-    } catch (e: any) {
-      toast.error("Falha ao enviar: " + (e?.message ?? e));
+    } catch (e) {
+      toast.error("Falha ao enviar: " + mensagemDoErro(e));
     } finally {
       setUploading(false);
       if (fileRef.current) fileRef.current.value = "";

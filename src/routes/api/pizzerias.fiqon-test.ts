@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { mensagemDoErro } from "@/lib/errors";
 
 export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
   server: {
@@ -86,15 +87,15 @@ export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
             }),
             { status: 200 },
           );
-        } catch (err: any) {
+        } catch (err) {
           await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
             restaurant_id: pz.id,
             fiqon_url: pz.fiqon_webhook_url,
             payload: {},
             success: false,
-            error_message: err.message,
+            error_message: mensagemDoErro(err),
           });
-          return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+          return new Response(JSON.stringify({ error: mensagemDoErro(err) }), { status: 500 });
         }
       },
     },

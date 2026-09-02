@@ -49,6 +49,7 @@ import { toast } from "sonner";
 
 // Helpers para processamento de pedidos (compatível com Dashboard.tsx)
 import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/orderUtils";
+import { mensagemDoErro } from "@/lib/errors";
 
 interface TablesManagementProps {
   tenantId: string;
@@ -305,8 +306,8 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
       });
 
       setSessionOrders(filteredOrders);
-    } catch (error: any) {
-      toast.error("Erro ao carregar pedidos: " + error.message);
+    } catch (error) {
+      toast.error("Erro ao carregar pedidos: " + mensagemDoErro(error));
     } finally {
       setLoadingOrders(false);
     }
@@ -461,7 +462,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
       } else {
         toast.error("Falha ao sincronizar: " + (data?.error || "erro desconhecido"));
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
       toast.dismiss(loadingToast);
       toast.error("Erro ao sincronizar pedidos.");

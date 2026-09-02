@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireBearerCaller } from "@/integrations/supabase/adminGuard.server";
 import { isUnsafeMenuSyncUrl } from "@/lib/server/urlSafety";
 import { adminCors } from "@/lib/server/http";
+import { mensagemDoErro } from "@/lib/errors";
 
 const cors = adminCors({
   headers: "authorization, x-client-info, apikey, content-type, x-api-key",
@@ -59,10 +60,10 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             status: response.status,
             headers: cors,
           });
-        } catch (error: any) {
+        } catch (error) {
           console.error(`❌ [Proxy Sync] Erro no fetch:`, error);
           return new Response(
-            JSON.stringify({ error: `Erro ao buscar cardápio: ${error.message}` }),
+            JSON.stringify({ error: `Erro ao buscar cardápio: ${mensagemDoErro(error)}` }),
             {
               status: 500,
               headers: cors,

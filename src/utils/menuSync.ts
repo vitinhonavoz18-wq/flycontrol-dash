@@ -1,4 +1,5 @@
 import { toast } from "sonner";
+import { mensagemDoErro } from "@/lib/errors";
 
 type MenuType =
   | "category"
@@ -328,12 +329,12 @@ export async function syncToExternal(
       return { success: false, error: "html_response" };
     }
     return { success: false, error: `api_error:HTTP ${response.status}` };
-  } catch (error: any) {
+  } catch (error) {
     console.error("[SyncExternal] Erro na chamada:", error);
     if (error instanceof TypeError && error.message.includes("fetch")) {
       return { success: false, error: "cors_error" };
     }
-    return { success: false, error: error.message || "network_error" };
+    return { success: false, error: mensagemDoErro(error, "network_error") };
   } finally {
     console.log(`--- [SyncExternal] Fim da Ação: ${action} ---`);
   }

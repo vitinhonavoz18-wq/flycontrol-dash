@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizePhone } from "@/lib/marketing/phone";
 import { publicCors } from "@/lib/server/http";
+import { mensagemDoErro } from "@/lib/errors";
 
 const getCorsHeaders = (request?: Request) =>
   publicCors(request, {
@@ -900,15 +901,15 @@ export const Route = createFileRoute("/api/orders")({
                 });
 
                 console.log(`✅ [FIQON] Resposta: ${response.status}`);
-              } catch (err: any) {
-                console.error("❌ [FIQON] Erro no envio:", err.message);
+              } catch (err) {
+                console.error("❌ [FIQON] Erro no envio:", mensagemDoErro(err));
                 await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
                   restaurant_id: pz.id,
                   order_id: order.id,
                   fiqon_url: pz.fiqon_webhook_url,
                   payload: {},
                   success: false,
-                  error_message: err.message,
+                  error_message: mensagemDoErro(err),
                 });
               }
             })();
@@ -929,14 +930,17 @@ export const Route = createFileRoute("/api/orders")({
             }),
             { status: 201, headers: cors },
           );
-        } catch (err: any) {
-          console.error("❌ [API/Orders] Erro não tratado:", err?.stack || err?.message || err);
+        } catch (err) {
+          console.error(
+            "❌ [API/Orders] Erro não tratado:",
+            err instanceof Error ? err.stack : mensagemDoErro(err),
+          );
           try {
             await supabaseAdmin.from("external_order_logs").insert({
               api_key_partial: "N/A",
               payload: typeof body !== "undefined" ? body : null,
               status_code: 500,
-              error_message: `Erro não tratado: ${err?.message || String(err)}`,
+              error_message: `Erro não tratado: ${mensagemDoErro(err)}`,
             });
           } catch (logErr) {
             console.error("❌ [API/Orders] Falha ao registrar log de erro não tratado:", logErr);

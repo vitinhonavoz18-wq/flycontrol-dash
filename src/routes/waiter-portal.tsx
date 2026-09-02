@@ -35,6 +35,7 @@ import {
   getWaiterDashboard,
   waiterRequestClose,
 } from "@/lib/waiterAuth.functions";
+import { mensagemDoErro } from "@/lib/errors";
 
 export const Route = createFileRoute("/waiter-portal")({ component: WaiterPortal });
 
@@ -258,8 +259,8 @@ function MyTablesTab({
       const rm = new Map<string, number>();
       (rq || []).forEach((r: any) => rm.set(r.session_id, (rm.get(r.session_id) || 0) + 1));
       setReqBySession(rm);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     } finally {
       setLoading(false);
     }
@@ -310,8 +311,8 @@ function MyTablesTab({
       toast.success(
         r.status === "already_pending" ? "Fechamento já solicitado" : "Fechamento solicitado",
       );
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     }
   }
 
@@ -572,8 +573,8 @@ function PendingOrdersTab({
     setLoading(true);
     try {
       setRows((await list({ data: { token } })) as any[]);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     } finally {
       setLoading(false);
     }
@@ -688,8 +689,8 @@ function HistoryTab({ token, tenantId }: { token: string; tenantId: string; wait
         ),
       );
       setKpi(d);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     } finally {
       setLoading(false);
     }

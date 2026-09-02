@@ -46,6 +46,7 @@ import {
   VISIBILIDADES_DE_COMBOS,
   visibilidadeDeCombosDe,
 } from "@/lib/site/menuBehavior";
+import { mensagemDoErro } from "@/lib/errors";
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
@@ -135,8 +136,8 @@ function StoreEditor({
 
       if (pError) throw pError;
       setPizzeria(pizzeriaData);
-    } catch (error: any) {
-      toast.error("Erro ao carregar dados: " + error.message);
+    } catch (error) {
+      toast.error("Erro ao carregar dados: " + mensagemDoErro(error));
     } finally {
       setLoading(false);
     }

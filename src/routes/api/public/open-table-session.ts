@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { publicCors } from "@/lib/server/http";
+import { codigoDoErroDoBanco, mensagemDoErro } from "@/lib/errors";
 
 const getCorsHeaders = (request?: Request) => publicCors(request);
 
@@ -239,8 +240,10 @@ export const Route = createFileRoute("/api/public/open-table-session")({
               }),
               { status: 201, headers: cors },
             );
-          } catch (insertError: any) {
-            if (insertError?.code === "23505") {
+          } catch (insertError) {
+            // 23505 é o código do banco para "esse registro já existe" — duas pessoas
+            // abriram a mesma mesa no mesmo instante.
+            if (codigoDoErroDoBanco(insertError) === "23505") {
               const { data: finalSession } = await supabaseAdmin
                 .from("table_sessions")
                 .select(
@@ -263,8 +266,8 @@ export const Route = createFileRoute("/api/public/open-table-session")({
             }
             throw insertError;
           }
-        } catch (error: any) {
-          console.error("❌ OPEN_TABLE_SESSION_UNHANDLED_ERROR:", error?.message);
+        } catch (error) {
+          console.error("❌ OPEN_TABLE_SESSION_UNHANDLED_ERROR:", mensagemDoErro(error));
           return new Response(
             JSON.stringify({
               success: false,

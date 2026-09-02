@@ -31,6 +31,7 @@ import {
   listTenantWaiters,
 } from "@/lib/commissions.functions";
 import { RequireFeature } from "@/components/plan/PremiumFeatureLock";
+import { mensagemDoErro } from "@/lib/errors";
 
 export const Route = createFileRoute("/_app/commissions")({ component: CommissionsPage });
 
@@ -91,8 +92,8 @@ function CommissionsPageInner() {
         ]);
         setPctState(p.percent);
         setWaiters(w as any);
-      } catch (e: any) {
-        toast.error(e.message);
+      } catch (e) {
+        toast.error(mensagemDoErro(e));
       }
     })();
   }, [tenantId, getPct, listWaiters]);
@@ -126,8 +127,8 @@ function CommissionsPageInner() {
         },
       });
       setReport(r);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     } finally {
       setLoading(false);
     }
@@ -143,8 +144,8 @@ function CommissionsPageInner() {
       await setPct({ data: { tenantId, percent: Number(pct) } });
       toast.success("Percentual atualizado");
       loadReport();
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     } finally {
       setSavingPct(false);
     }

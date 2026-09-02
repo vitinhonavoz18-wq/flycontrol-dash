@@ -10,6 +10,7 @@ import { Loader2, UtensilsCrossed } from "lucide-react";
 import { toast } from "sonner";
 import { waiterLogin } from "@/lib/waiterAuth.functions";
 import { setWaiterSession } from "@/lib/waiterSession";
+import { mensagemDoErro } from "@/lib/errors";
 
 export const Route = createFileRoute("/waiter-login")({ component: WaiterLoginPage });
 
@@ -28,8 +29,8 @@ function WaiterLoginPage() {
       setWaiterSession(res);
       toast.success(`Bem-vindo, ${res.waiter.fullName}!`);
       nav({ to: "/waiter-portal" });
-    } catch (e: any) {
-      toast.error(e.message || "Falha no login");
+    } catch (e) {
+      toast.error(mensagemDoErro(e, "Falha no login"));
     } finally {
       setLoading(false);
     }

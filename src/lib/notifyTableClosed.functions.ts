@@ -1,6 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { SIGNATURE_HEADER, signWebhookBody } from "@/lib/webhookSignature";
+import { mensagemDoErro } from "@/lib/errors";
 
 const WEBHOOK_URL = "https://conectfly.com.br/api/public/flycontrol-table-closed";
 
@@ -66,11 +67,11 @@ export const notifyTableClosed = createServerFn({ method: "POST" })
       if (res.ok) console.log("TABLE_CLOSED_WEBHOOK_SUCCESS", { ...ctx, ...result });
       else console.error("TABLE_CLOSED_WEBHOOK_FAILED", { ...ctx, ...result });
       return result;
-    } catch (err: any) {
+    } catch (err) {
       const errInfo = {
         ok: false,
         status: 0,
-        error: err?.name === "AbortError" ? "timeout" : err?.message || String(err),
+        error: err instanceof Error && err.name === "AbortError" ? "timeout" : mensagemDoErro(err),
       };
       console.error("TABLE_CLOSED_WEBHOOK_FAILED", { ...ctx, ...errInfo });
       return errInfo;

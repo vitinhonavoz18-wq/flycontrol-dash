@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { mensagemDoErro } from "@/lib/errors";
 
 const BUCKET = "menu-images";
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -111,9 +112,9 @@ export function ImageUpload({
         setProgress(100);
         onChange(signed.signedUrl);
         toast.success("Imagem enviada.");
-      } catch (e: any) {
+      } catch (e) {
         console.error("[ImageUpload]", e);
-        toast.error("Falha ao enviar imagem: " + (e?.message || "erro desconhecido"));
+        toast.error("Falha ao enviar imagem: " + mensagemDoErro(e, "erro desconhecido"));
       } finally {
         setUploading(false);
         setTimeout(() => setProgress(0), 500);

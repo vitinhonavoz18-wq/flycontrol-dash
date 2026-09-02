@@ -8,6 +8,7 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { RequireFeature } from "@/components/plan/PremiumFeatureLock";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
+import { mensagemDoErro } from "@/lib/errors";
 
 export const Route = createFileRoute("/_app/tables")({ component: TablesPage });
 
@@ -51,8 +52,8 @@ function TablesPageInner() {
           const pId = params.get("pizzeriaId");
           setActiveId(pId && list.some((p) => p.id === pId) ? pId : list[0].id);
         }
-      } catch (error: any) {
-        toast.error("Erro ao carregar dados da loja: " + error.message);
+      } catch (error) {
+        toast.error("Erro ao carregar dados da loja: " + mensagemDoErro(error));
       } finally {
         setLoading(false);
       }

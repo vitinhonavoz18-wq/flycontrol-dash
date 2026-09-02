@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { publicCors } from "@/lib/server/http";
+import { mensagemDoErro } from "@/lib/errors";
 
 const cors = (request?: Request) => publicCors(request);
 
@@ -202,8 +203,8 @@ export const Route = createFileRoute("/api/public/request-close-table")({
             }),
             { status: 201, headers },
           );
-        } catch (err: any) {
-          console.error("❌ REQUEST_CLOSE_TABLE_ERROR:", err?.message);
+        } catch (err) {
+          console.error("❌ REQUEST_CLOSE_TABLE_ERROR:", mensagemDoErro(err));
           return new Response(
             JSON.stringify({
               success: false,

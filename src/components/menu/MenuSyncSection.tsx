@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, RefreshCw, Save, CheckCircle2, AlertCircle, Link, Trash2 } from "lucide-react";
+import { mensagemDoErro } from "@/lib/errors";
 
 interface MenuSyncSectionProps {
   pizzeriaId: string;
@@ -207,9 +208,9 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
           );
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("MENU_SYNC_ERROR", error);
-      toast.error(`Erro de conexão: ${error.message}`, { id: toastId });
+      toast.error(`Erro de conexão: ${mensagemDoErro(error)}`, { id: toastId });
     } finally {
       setSyncing(false);
     }
@@ -368,9 +369,9 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       } else {
         throw new Error(syncResult.error || "Erro no processamento interno do FlyControl");
       }
-    } catch (error: any) {
-      console.error("MENU_SYNC_ERROR", error.message);
-      const errorMsg = error.message || "Erro desconhecido";
+    } catch (error) {
+      console.error("MENU_SYNC_ERROR", mensagemDoErro(error));
+      const errorMsg = mensagemDoErro(error, "Erro desconhecido");
       setSyncStatus({
         lastSync: new Date().toLocaleString("pt-BR"),
         status: "error",
@@ -404,9 +405,9 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         toast.error(`Falha no provisionamento: ${json?.error || resp.status}`, { id: toastId });
         await loadPizzeria();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("[Reprovision] error:", err);
-      toast.error(`Erro: ${err?.message || "desconhecido"}`, { id: toastId });
+      toast.error(`Erro: ${mensagemDoErro(err, "desconhecido")}`, { id: toastId });
     } finally {
       setReprovisioning(false);
     }

@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { adminCors } from "@/lib/server/http";
+import { mensagemDoErro } from "@/lib/errors";
 
 const cors = adminCors({ headers: "authorization, x-client-info, apikey, content-type" });
 
@@ -132,9 +133,9 @@ export const Route = createFileRoute("/api/sync-table-sessions")({
             }),
             { status: 200, headers: cors },
           );
-        } catch (err: any) {
-          console.error("SYNC_TABLE_SESSIONS_ERROR:", err.message);
-          return new Response(JSON.stringify({ success: false, error: err.message }), {
+        } catch (err) {
+          console.error("SYNC_TABLE_SESSIONS_ERROR:", mensagemDoErro(err));
+          return new Response(JSON.stringify({ success: false, error: mensagemDoErro(err) }), {
             status: 500,
             headers: cors,
           });

@@ -21,6 +21,7 @@ import { NotificationSettings } from "@/components/notifications/NotificationSet
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ScrollableTabs } from "@/components/layout/ScrollableTabs";
 import { DocsContent } from "@/components/docs/DocsContent";
+import { mensagemDoErro } from "@/lib/errors";
 
 const ABAS = [
   { value: "geral", label: "Geral" },
@@ -201,10 +202,10 @@ function PizzeriaSettingsPanel({
       } else {
         toast.error("Erro no teste: " + (data.error || "Erro desconhecido"));
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setTestResult({ status: "ERRO", ok: false, error: err.message });
-      toast.error("Falha na conexão: " + err.message);
+      setTestResult({ status: "ERRO", ok: false, error: mensagemDoErro(err) });
+      toast.error("Falha na conexão: " + mensagemDoErro(err));
     } finally {
       setTesting(false);
     }

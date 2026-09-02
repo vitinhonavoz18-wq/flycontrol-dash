@@ -24,6 +24,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
+import { mensagemDoErro } from "@/lib/errors";
 
 interface ExtraListProps {
   pizzeriaId: string;
@@ -172,8 +173,8 @@ export function ExtraList({
         if (onRefresh) onRefresh();
         else loadExtras();
       }
-    } catch (e: any) {
-      toast.error("Erro inesperado: " + e.message);
+    } catch (e) {
+      toast.error("Erro inesperado: " + mensagemDoErro(e));
     } finally {
       setSaving(false);
     }

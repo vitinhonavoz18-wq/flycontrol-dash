@@ -20,6 +20,7 @@ import { syncToExternal } from "@/utils/menuSync";
 import { ImageUpload } from "@/components/ui/image-upload";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from "@/components/ui/sheet";
 import { Checkbox } from "@/components/ui/checkbox";
+import { mensagemDoErro } from "@/lib/errors";
 
 interface ComboManagerProps {
   pizzeriaId: string;
@@ -234,8 +235,8 @@ export function ComboManager({
         setIsDialogOpen(false);
         loadCombos();
       }
-    } catch (e: any) {
-      toast.error("Erro inesperado: " + e.message);
+    } catch (e) {
+      toast.error("Erro inesperado: " + mensagemDoErro(e));
     } finally {
       setSaving(false);
     }

@@ -15,6 +15,7 @@ import {
   AlertDialogAction,
 } from "@/components/ui/alert-dialog";
 import { Loader2, PowerOff, Power, Trash2 } from "lucide-react";
+import { mensagemDoErro } from "@/lib/errors";
 
 interface StoreLifecycleActionsProps {
   pizzeria: {
@@ -71,9 +72,9 @@ export function StoreLifecycleActions({
           `Não foi possível concluir a operação. Nenhum dado foi alterado. (${json?.error || resp.status})`,
         );
       }
-    } catch (err: any) {
+    } catch (err) {
       toast.error(
-        `Não foi possível concluir a operação. Nenhum dado foi alterado. (${err?.message || "erro de rede"})`,
+        `Não foi possível concluir a operação. Nenhum dado foi alterado. (${mensagemDoErro(err, "erro de rede")})`,
       );
     } finally {
       setBusy(false);
@@ -103,9 +104,9 @@ export function StoreLifecycleActions({
           `Não foi possível concluir a operação. Nenhum dado foi alterado. (${json?.error || resp.status})`,
         );
       }
-    } catch (err: any) {
+    } catch (err) {
       toast.error(
-        `Não foi possível concluir a operação. Nenhum dado foi alterado. (${err?.message || "erro de rede"})`,
+        `Não foi possível concluir a operação. Nenhum dado foi alterado. (${mensagemDoErro(err, "erro de rede")})`,
       );
     } finally {
       setBusy(false);
