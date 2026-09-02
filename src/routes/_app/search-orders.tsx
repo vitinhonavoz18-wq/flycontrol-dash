@@ -27,6 +27,7 @@ import { Search, RotateCcw, Loader2 } from "lucide-react";
 import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/orderUtils";
 import { toast } from "sonner";
 import { mensagemDoErro } from "@/lib/errors";
+import type { OrderItem } from "@/types/order";
 
 export const Route = createFileRoute("/_app/search-orders")({ component: SearchOrdersPage });
 
@@ -99,7 +100,7 @@ function SearchOrdersPage() {
       let q = supabase.from("pizzerias").select("id");
       if (!isSuperAdmin) q = q.eq("owner_id", user.id);
       const { data } = await q;
-      setTenantIds((data || []).map((p: any) => p.id));
+      setTenantIds((data || []).map((p) => p.id));
     }
     loadTenants();
   }, [user, isSuperAdmin]);
@@ -408,7 +409,7 @@ function SearchOrdersPage() {
                     <div className="text-muted-foreground">Sem itens.</div>
                   ) : (
                     <ul className="space-y-2">
-                      {items.map((it: any, i: number) => (
+                      {items.map((it: OrderItem, i: number) => (
                         <li key={i} className="flex justify-between border-b pb-2 last:border-0">
                           <div>
                             <div className="font-medium">

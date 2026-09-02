@@ -40,6 +40,17 @@ const fmtBRL = (n: number) =>
 
 type Pz = { id: string; name: string };
 
+/**
+ * Data e hora do fechamento, prontas para a tela.
+ *
+ * A data pode vir vazia numa comanda que ainda não fechou. Antes, uma data
+ * vazia virava 31/12/1969 na tela — a data que o computador usa como "zero".
+ * Agora vira um traço, que é o que a pessoa entende como "ainda não".
+ */
+function fechamentoFormatado(quando: string | null): string {
+  return quando ? new Date(quando).toLocaleString("pt-BR") : "—";
+}
+
 function CommissionsPage() {
   return (
     <RequireFeature feature="commissions">
@@ -63,7 +74,10 @@ function CommissionsPageInner() {
   const [waiters, setWaiters] = useState<{ id: string; full_name: string }[]>([]);
   const [waiterId, setWaiterId] = useState<string>("__all__");
   const [period, setPeriod] = useState<"day" | "week" | "month">("day");
-  const [report, setReport] = useState<any>(null);
+  // O formato do relatório vem do próprio servidor: se a função de lá mudar
+  // um campo, o editor acusa aqui, em vez de a tela mostrar vazio.
+  type RelatorioDeComissao = Awaited<ReturnType<typeof getCommissionReport>>;
+  const [report, setReport] = useState<RelatorioDeComissao | null>(null);
   const [loading, setLoading] = useState(false);
 
   // Load stores
@@ -154,9 +168,9 @@ function CommissionsPageInner() {
   function exportCsv() {
     if (!report?.sessions?.length) return;
     const header = ["fechamento", "mesa", "garçom", "subtotal", "percentual", "comissão"];
-    const lines = report.sessions.map((s: any) =>
+    const lines = report.sessions.map((s) =>
       [
-        new Date(s.closedAt).toLocaleString("pt-BR"),
+        fechamentoFormatado(s.closedAt),
         s.tableNumber,
         s.waiterName || "—",
         s.subtotal.toFixed(2),
@@ -309,7 +323,7 @@ function CommissionsPageInner() {
                 Sem mesas fechadas no período.
               </div>
             ) : (
-              report.perWaiter.map((w: any) => (
+              report.perWaiter.map((w) => (
                 <div key={w.waiterId || "none"} className="space-y-1 p-4">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">{w.waiterName}</span>
@@ -349,7 +363,7 @@ function CommissionsPageInner() {
                   </TableCell>
                 </TableRow>
               ) : (
-                report.perWaiter.map((w: any) => (
+                report.perWaiter.map((w) => (
                   <TableRow key={w.waiterId || "none"}>
                     <TableCell className="font-medium">{w.waiterName}</TableCell>
                     <TableCell className="text-right">{w.tables}</TableCell>
@@ -376,7 +390,7 @@ function CommissionsPageInner() {
             {!report?.sessions?.length ? (
               <div className="py-8 text-center text-sm text-muted-foreground">—</div>
             ) : (
-              report.sessions.map((r: any) => (
+              report.sessions.map((r) => (
                 <div key={r.id} className="space-y-1 p-4">
                   <div className="flex items-center justify-between gap-2">
                     <span className="font-medium">Mesa {r.tableNumber}</span>
@@ -384,7 +398,7 @@ function CommissionsPageInner() {
                   </div>
                   <div className="flex justify-between text-xs text-muted-foreground">
                     <span>{r.waiterName || "—"}</span>
-                    <span>{new Date(r.closedAt).toLocaleString("pt-BR")}</span>
+                    <span>{fechamentoFormatado(r.closedAt)}</span>
                   </div>
                   <div className="text-xs text-muted-foreground">
                     Subtotal {fmtBRL(r.subtotal)} · {r.commissionPercent.toFixed(1)}%
@@ -413,11 +427,9 @@ function CommissionsPageInner() {
                   </TableCell>
                 </TableRow>
               ) : (
-                report.sessions.map((r: any) => (
+                report.sessions.map((r) => (
                   <TableRow key={r.id}>
-                    <TableCell className="text-xs">
-                      {new Date(r.closedAt).toLocaleString("pt-BR")}
-                    </TableCell>
+                    <TableCell className="text-xs">{fechamentoFormatado(r.closedAt)}</TableCell>
                     <TableCell>Mesa {r.tableNumber}</TableCell>
                     <TableCell>{r.waiterName || "—"}</TableCell>
                     <TableCell className="text-right">{fmtBRL(r.subtotal)}</TableCell>

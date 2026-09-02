@@ -365,7 +365,7 @@ export const listMyAssignedSessions = createServerFn({ method: "POST" })
     if (sessions.length === 0) return [];
 
     // Aggregate orders per session for live financial summary
-    const ids = sessions.map((s: any) => s.id);
+    const ids = sessions.map((s) => s.id);
     const { data: links } = await supabaseAdmin
       .from("table_session_orders")
       .select("table_session_id, orders(id, total, discount, customer_name, status)")
@@ -388,7 +388,7 @@ export const listMyAssignedSessions = createServerFn({ method: "POST" })
       if (o.customer_name) a.customers.add(String(o.customer_name).trim().toLowerCase());
     }
 
-    return sessions.map((s: any) => {
+    return sessions.map((s) => {
       const a = agg.get(s.id)!;
       return {
         ...s,
@@ -410,7 +410,7 @@ export const listMyPendingOrders = createServerFn({ method: "POST" })
       .eq("restaurant_id", auth.tenantId)
       .eq("waiter_id", auth.waiterId)
       .eq("status", "open");
-    const ids = (mySessions || []).map((s: any) => s.id);
+    const ids = (mySessions || []).map((s) => s.id);
     if (ids.length === 0) return [];
     const { data: links, error } = await supabaseAdmin
       .from("table_session_orders")
@@ -420,9 +420,9 @@ export const listMyPendingOrders = createServerFn({ method: "POST" })
       .in("table_session_id", ids);
     if (error) throw new Error(error.message);
     return (links || [])
-      .map((l: any) => ({ ...l.orders, session_id: l.table_session_id }))
+      .map((l) => ({ ...l.orders, session_id: l.table_session_id }))
       .filter(
-        (o: any) =>
+        (o) =>
           o &&
           ![
             "cancelado",
@@ -449,7 +449,7 @@ export const listMyAssignedCloseRequests = createServerFn({ method: "POST" })
       .select("id")
       .eq("restaurant_id", auth.tenantId)
       .eq("waiter_id", auth.waiterId);
-    const ids = (mySessions || []).map((s: any) => s.id);
+    const ids = (mySessions || []).map((s) => s.id);
     if (ids.length === 0) return [];
     const { data: rows, error } = await supabaseAdmin
       .from("table_close_requests")
@@ -485,7 +485,7 @@ export const getWaiterDashboard = createServerFn({ method: "POST" })
       .eq("restaurant_id", auth.tenantId)
       .eq("waiter_id", auth.waiterId)
       .eq("status", "open");
-    const openIds = (openSess || []).map((s: any) => s.id);
+    const openIds = (openSess || []).map((s) => s.id);
     const openTablesCount = openSess?.length || 0;
     const openTablesTotal = (openSess || []).reduce(
       (a: number, s: any) => a + Number(s.total_amount || 0),
@@ -517,7 +517,7 @@ export const getWaiterDashboard = createServerFn({ method: "POST" })
         .from("table_session_orders")
         .select("orders(status)")
         .in("table_session_id", openIds);
-      pendingOrders = (links || []).filter((l: any) => {
+      pendingOrders = (links || []).filter((l) => {
         const st = String(l.orders?.status || "").toLowerCase();
         return (
           st &&

@@ -14,7 +14,11 @@ if (typeof window !== "undefined") {
     deferredPrompt = e as BIPEvent;
     try {
       sessionStorage.setItem("pwa_install_available", "true");
-    } catch {}
+    } catch {
+      // Guardar isso é conveniência, não obrigação: numa janela anônima o
+      // navegador proíbe gravar, e o aviso de instalar simplesmente aparece
+      // de novo na próxima visita. Nada quebra por isso.
+    }
     window.dispatchEvent(new Event("pwa-installable"));
     console.log("[PWA] beforeinstallprompt captured");
   });
@@ -23,7 +27,11 @@ if (typeof window !== "undefined") {
     try {
       sessionStorage.removeItem("pwa_install_available");
       localStorage.setItem("pwa_installed", "1");
-    } catch {}
+    } catch {
+      // Guardar isso é conveniência, não obrigação: numa janela anônima o
+      // navegador proíbe gravar, e o aviso de instalar simplesmente aparece
+      // de novo na próxima visita. Nada quebra por isso.
+    }
     console.log("[PWA] appinstalled");
   });
 }
@@ -54,7 +62,11 @@ export function InstallBanner() {
     try {
       setDismissed(sessionStorage.getItem("pwa_install_dismissed") === "1");
       setHasPrompt(!!deferredPrompt || sessionStorage.getItem("pwa_install_available") === "true");
-    } catch {}
+    } catch {
+      // Guardar isso é conveniência, não obrigação: numa janela anônima o
+      // navegador proíbe gravar, e o aviso de instalar simplesmente aparece
+      // de novo na próxima visita. Nada quebra por isso.
+    }
 
     const onInstallable = () => setHasPrompt(true);
     const onResize = () => setEnv(detect());
@@ -91,7 +103,11 @@ export function InstallBanner() {
     setDismissed(true);
     try {
       sessionStorage.setItem("pwa_install_dismissed", "1");
-    } catch {}
+    } catch {
+      // Guardar isso é conveniência, não obrigação: numa janela anônima o
+      // navegador proíbe gravar, e o aviso de instalar simplesmente aparece
+      // de novo na próxima visita. Nada quebra por isso.
+    }
   };
 
   const install = async () => {
@@ -103,7 +119,11 @@ export function InstallBanner() {
         deferredPrompt = null;
         try {
           sessionStorage.removeItem("pwa_install_available");
-        } catch {}
+        } catch {
+          // Guardar isso é conveniência, não obrigação: numa janela anônima o
+          // navegador proíbe gravar, e o aviso de instalar simplesmente aparece
+          // de novo na próxima visita. Nada quebra por isso.
+        }
         setHasPrompt(false);
         setDismissed(true);
       }

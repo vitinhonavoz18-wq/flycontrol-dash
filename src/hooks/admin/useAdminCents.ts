@@ -38,9 +38,9 @@ export function useAdminCentsOverview() {
       // Só exibe empresas atualmente no plano CENTS. Trocar para Premium remove
       // a empresa desta lista sem apagar club_customer_status/club_history —
       // ela reaparece automaticamente se voltar para CENTS.
-      const centsStatuses = (statuses ?? []).filter((s: any) => s.pizzerias?.plan_type === "cents");
+      const centsStatuses = (statuses ?? []).filter((s) => s.pizzerias?.plan_type === "cents");
 
-      const rows = centsStatuses.map((s: any) => ({
+      const rows = centsStatuses.map((s) => ({
         companyId: s.company_id,
         companyName: s.pizzerias?.name ?? "—",
         companySlug: s.pizzerias?.slug ?? "",

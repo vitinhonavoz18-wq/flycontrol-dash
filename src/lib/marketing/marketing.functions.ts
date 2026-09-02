@@ -1,7 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/authMiddleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { mkt, mktRpc } from "./db";
+import { mkt, mktRpc, type ConsultaMarketing } from "./db";
 import { assertOwnsTenant } from "@/lib/server/planGuard";
 import { aplicarFiltro, construirFiltro, descreverSegmento, type FiltroSegmento } from "./segments";
 import {
@@ -41,6 +41,32 @@ const TAMANHO_PAGINA_MAX = 100;
 // ---------------------------------------------------------------------------
 // CLIENTES
 // ---------------------------------------------------------------------------
+
+/**
+ * As linhas do módulo de marketing chegam sem tipo do banco (ver `db.ts`).
+ * Estes tipos dizem o que cada consulta realmente devolve — é o que evita
+ * ler um campo que não existe e só descobrir na tela do cliente.
+ */
+type LinhaDeCliente = {
+  id: string;
+  name: string | null;
+  phone_e164: string;
+  is_mobile: boolean;
+  orders_count: number;
+  total_spent_cents: number;
+  ticket_medio_cents: number;
+  last_order_at: string | null;
+  marketing_opt_in: boolean;
+  tags: string[] | null;
+  status: string;
+};
+
+type LinhaDeCampanha = {
+  status: string;
+  sent_count: number | null;
+  delivered_count: number | null;
+  failed_count: number | null;
+};
 
 export type ClienteMarketing = {
   id: string;
@@ -111,7 +137,7 @@ export const listarClientes = createServerFn({ method: "POST" })
     const { data: linhas, error, count } = await q;
     if (error) throw new Error(error.message);
 
-    const clientes: ClienteMarketing[] = (linhas ?? []).map((c: any) => ({
+    const clientes: ClienteMarketing[] = (linhas ?? []).map((c: LinhaDeCliente) => ({
       ...c,
       tags: c.tags ?? [],
       ticket_medio_cents: c.orders_count > 0 ? Math.round(c.total_spent_cents / c.orders_count) : 0,
@@ -328,7 +354,7 @@ export const dispararCampanha = createServerFn({ method: "POST" })
       if (error) throw new Error(error.message);
       if (!bloco || bloco.length === 0) break;
 
-      const linhas = bloco.map((c: any) => ({
+      const linhas = bloco.map((c: LinhaDeCliente) => ({
         campaign_id: data.campaignId,
         tenant_id: tenantId,
         customer_id: c.id,
@@ -561,7 +587,7 @@ export const resumoMarketing = createServerFn({ method: "POST" })
     const { tenantId } = await assertOwnsTenant(context.supabase, context.userId, data.tenantId);
 
     // Contagens em vez de listas: a tela precisa de números, não de dados.
-    const contar = async (montar: (q: any) => any) => {
+    const contar = async (montar: (q: ConsultaMarketing) => ConsultaMarketing) => {
       let q = mkt("marketing_customers")
         .select("id", { count: "exact", head: true })
         .eq("tenant_id", tenantId);
@@ -579,7 +605,7 @@ export const resumoMarketing = createServerFn({ method: "POST" })
       .select("status, sent_count, delivered_count, failed_count")
       .eq("tenant_id", tenantId);
 
-    const feitas = (campanhas ?? []).filter((c: any) =>
+    const feitas = (campanhas ?? []).filter((c: LinhaDeCampanha) =>
       ["completed", "processing", "queued", "paused"].includes(c.status),
     );
     const enviadas = feitas.reduce((s: number, c: any) => s + (c.sent_count ?? 0), 0);

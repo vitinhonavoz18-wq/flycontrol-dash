@@ -60,7 +60,7 @@ export const getCommissionReport = createServerFn({ method: "POST" })
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
-    const sessions = (rows || []).map((r: any) => ({
+    const sessions = (rows || []).map((r) => ({
       id: r.id,
       tableNumber: r.table_number,
       openedAt: r.opened_at,

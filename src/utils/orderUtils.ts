@@ -1,6 +1,6 @@
 import { OrderItem } from "@/types/order";
 
-export const formatItemName = (it: any) => {
+export const formatItemName = (it: OrderItem) => {
   if (it.product_name) return it.product_name;
   if (it.name) return it.name;
   if (it.title) return it.title;
@@ -11,11 +11,44 @@ export const formatItemName = (it: any) => {
   return it.nome || "Item";
 };
 
-export const getItemPrice = (it: any) => {
-  return it.total_price ?? it.price ?? it.unit_price ?? it.total ?? 0;
+/**
+ * Preço do item, sempre como número.
+ *
+ * O preço chega ora como número (12.5), ora como texto ("12.50" ou "12,50"),
+ * dependendo de qual versão do cardápio digital gravou o pedido. Antes, o
+ * texto com vírgula ia direto para o formatador de moeda e a tela mostrava
+ * "R$ NaN" — o preço sumia da conta na frente do cliente. Aqui a vírgula vira
+ * ponto e o que não for número vira zero.
+ */
+export const getItemPrice = (it: OrderItem): number => {
+  const bruto = it.total_price ?? it.price ?? it.unit_price ?? it.total ?? 0;
+  const numero = typeof bruto === "string" ? Number(bruto.replace(",", ".")) : Number(bruto);
+  return Number.isFinite(numero) ? numero : 0;
 };
 
-export function normalizeOrderType(o: any) {
+/**
+ * De onde veio o pedido: mesa, retirada no balcão ou entrega.
+ *
+ * Aceita o pedido em qualquer formato porque cada versão do cardápio digital
+ * nomeou esses campos de um jeito. Só precisa dos campos abaixo — por isso o
+ * tipo lista o que ele lê, em vez de exigir o pedido inteiro.
+ */
+type PedidoParaClassificar = {
+  order_type?: unknown;
+  service_mode?: unknown;
+  fulfillment_type?: unknown;
+  delivery_type?: unknown;
+  customer_address?: unknown;
+  address?: unknown;
+  delivery_address?: unknown;
+  location?: unknown;
+  table_number?: unknown;
+  tableNumber?: unknown;
+  mesa?: unknown;
+  ticket_number?: unknown;
+};
+
+export function normalizeOrderType(o: PedidoParaClassificar) {
   const type = String(o.order_type || "").toLowerCase();
   const serviceMode = String(o.service_mode || "").toLowerCase();
   const fulfillmentType = String(o.fulfillment_type || "").toLowerCase();

@@ -50,6 +50,7 @@ import { toast } from "sonner";
 // Helpers para processamento de pedidos (compatível com Dashboard.tsx)
 import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/orderUtils";
 import { mensagemDoErro } from "@/lib/errors";
+import type { OrderItem } from "@/types/order";
 
 interface TablesManagementProps {
   tenantId: string;
@@ -294,7 +295,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
 
       if (linkedError) throw linkedError;
 
-      const linkedOrders = (linkedData || []).map((d: any) => d.orders).filter(Boolean);
+      const linkedOrders = (linkedData || []).map((d) => d.orders).filter(Boolean);
 
       // Filtrar pedidos fantasmas e atualizar estado local
       const filteredOrders = linkedOrders.filter((o) => {
@@ -344,7 +345,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
               orderItems.length > 0
                 ? orderItems
                     .map(
-                      (item: any) => `
+                      (item: OrderItem) => `
               <div class="item">
                 <span class="qty">${item.qty ?? item.quantity ?? 1}x</span>
                 <span class="name">${formatItemName(item)}</span>
@@ -850,10 +851,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                           .from("table_session_orders")
                           .select("orders (*)")
                           .eq("table_session_id", session.id);
-                        handlePrintComanda(
-                          session,
-                          (ordersData || []).map((d: any) => d.orders) || [],
-                        );
+                        handlePrintComanda(session, (ordersData || []).map((d) => d.orders) || []);
                       }}
                     >
                       <Printer className="h-4 w-4" /> Imprimir Prévia
@@ -980,7 +978,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                           </div>
                           <div className="space-y-2">
                             {orderItems.length > 0 ? (
-                              orderItems.map((item: any, i: number) => (
+                              orderItems.map((item: OrderItem, i: number) => (
                                 <div
                                   key={i}
                                   className="space-y-1 border-b border-dashed border-border/50 pb-1 last:border-0 last:pb-0"

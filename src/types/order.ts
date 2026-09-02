@@ -10,12 +10,13 @@ export type OrderItem = {
   crust?: string;
   borda?: string;
   ingredients?: string | string[];
-  additions?: any[];
-  adicionais?: any[];
+  additions?: unknown[];
+  adicionais?: unknown[];
   price?: number | string;
   total_price?: number | string;
   unit_price?: number | string;
   total?: number | string;
+  subtotal?: number | string;
   qty?: number;
   quantity?: number;
   notes?: string;

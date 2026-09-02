@@ -36,6 +36,7 @@ import {
   waiterRequestClose,
 } from "@/lib/waiterAuth.functions";
 import { mensagemDoErro } from "@/lib/errors";
+import type { OrderItem } from "@/types/order";
 
 export const Route = createFileRoute("/waiter-portal")({ component: WaiterPortal });
 
@@ -251,13 +252,13 @@ function MyTablesTab({
       ]);
       setRows(ss || []);
       const pm = new Map<string, number>();
-      (po || []).forEach((o: any) => {
+      (po || []).forEach((o) => {
         const items = Array.isArray(o.items) ? o.items.length : 0;
         pm.set(o.session_id, (pm.get(o.session_id) || 0) + items);
       });
       setPendingBySession(pm);
       const rm = new Map<string, number>();
-      (rq || []).forEach((r: any) => rm.set(r.session_id, (rm.get(r.session_id) || 0) + 1));
+      (rq || []).forEach((r) => rm.set(r.session_id, (rm.get(r.session_id) || 0) + 1));
       setReqBySession(rm);
     } catch (e) {
       toast.error(mensagemDoErro(e));
@@ -621,7 +622,7 @@ function PendingOrdersTab({
         />
       ) : (
         <div className="space-y-2">
-          {rows.map((o: any) => (
+          {rows.map((o) => (
             <div key={o.id} className="rounded-xl border bg-card p-3 animate-fade-in">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -647,7 +648,7 @@ function PendingOrdersTab({
               </div>
               {Array.isArray(o.items) && o.items.length > 0 && (
                 <ul className="mt-2 text-xs text-muted-foreground space-y-0.5">
-                  {o.items.slice(0, 5).map((it: any, i: number) => (
+                  {o.items.slice(0, 5).map((it: OrderItem, i: number) => (
                     <li key={i} className="flex items-center gap-2">
                       <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                       {it.qty ?? it.quantity ?? 1}× {it.name || it.product_name || "Item"}
@@ -685,7 +686,7 @@ function HistoryTab({ token, tenantId }: { token: string; tenantId: string; wait
       startOfDay.setHours(0, 0, 0, 0);
       setClosed(
         (sess || []).filter(
-          (s: any) => s.status === "closed" && s.closed_at && new Date(s.closed_at) >= startOfDay,
+          (s) => s.status === "closed" && s.closed_at && new Date(s.closed_at) >= startOfDay,
         ),
       );
       setKpi(d);
@@ -755,7 +756,7 @@ function HistoryTab({ token, tenantId }: { token: string; tenantId: string; wait
             />
           ) : (
             <ul className="divide-y">
-              {closed.map((s: any) => (
+              {closed.map((s) => (
                 <li key={s.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="font-semibold text-sm truncate">

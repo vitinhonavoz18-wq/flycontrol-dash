@@ -147,7 +147,7 @@ function PizzeriaSettingsPanel({
 }: {
   pizzeria: any;
   origin: string;
-  onUpdated: (patch: any) => void;
+  onUpdated: (patch: Record<string, unknown>) => void;
 }) {
   const [testing, setTesting] = useState(false);
   const [testResult, setTestResult] = useState<any>(null);

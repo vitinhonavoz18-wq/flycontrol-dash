@@ -32,8 +32,19 @@ export type TabelaMarketing =
   | "marketing_events"
   | "marketing_usage";
 
+/**
+ * Consulta em construção nas tabelas de marketing.
+ *
+ * As tabelas do marketing não estão no arquivo de tipos gerado pelo Supabase,
+ * então a consulta não tem como ser tipada aqui. Este apelido existe para que
+ * quem passa uma consulta adiante diga isso no nome, em vez de escrever "tanto
+ * faz o que é" espalhado pelo código.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type ConsultaMarketing = any;
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
-export function mkt(tabela: TabelaMarketing): any {
+export function mkt(tabela: TabelaMarketing): ConsultaMarketing {
   return (supabaseAdmin as any).from(tabela);
 }
 

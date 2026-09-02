@@ -248,7 +248,10 @@ export const ClubCentsDashboard = () => {
                   {r.level && (
                     <Badge
                       variant="outline"
-                      style={{ borderColor: r.level.color, color: r.level.color }}
+                      style={{
+                        borderColor: r.level.color ?? undefined,
+                        color: r.level.color ?? undefined,
+                      }}
                     >
                       {r.level.icon} {r.level.name}
                     </Badge>

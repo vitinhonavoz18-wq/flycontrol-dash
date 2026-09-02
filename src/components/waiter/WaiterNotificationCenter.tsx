@@ -134,7 +134,7 @@ export function WaiterNotificationCenter({
       .eq("waiter_id", waiterId)
       .eq("status", "open");
     const map = new Map<string, AssignedSession>();
-    (sess || []).forEach((s: any) =>
+    (sess || []).forEach((s) =>
       map.set(s.id, {
         id: s.id,
         table_number: String(s.table_number || ""),
@@ -149,7 +149,7 @@ export function WaiterNotificationCenter({
         .select("order_id, table_session_id")
         .in("table_session_id", Array.from(map.keys()));
       const om = new Map<string, string>();
-      (links || []).forEach((l: any) => om.set(l.order_id, l.table_session_id));
+      (links || []).forEach((l) => om.set(l.order_id, l.table_session_id));
       orderToSessionRef.current = om;
 
       if (om.size > 0) {
@@ -159,7 +159,7 @@ export function WaiterNotificationCenter({
           .in("id", Array.from(om.keys()));
         const sm = new Map<string, string>();
         const im = new Map<string, number>();
-        (orders || []).forEach((o: any) => {
+        (orders || []).forEach((o) => {
           sm.set(o.id, String(o.status || ""));
           im.set(o.id, Array.isArray(o.items) ? o.items.length : 0);
         });
@@ -180,7 +180,11 @@ export function WaiterNotificationCenter({
       setUnread((u) => u + 1);
       try {
         playSound(SOUND_FOR[n.type]);
-      } catch {}
+      } catch {
+        // O navegador só deixa tocar som depois que a pessoa clica em algo na
+        // página. Antes disso ele recusa — e um aviso que não apita ainda é um
+        // aviso: o texto aparece na mesma.
+      }
       toast(LABELS[n.type], {
         description: `Mesa ${n.tableNumber}${n.customerName ? ` · ${n.customerName}` : ""}`,
         action: onOpenTable ? { label: "Abrir", onClick: onOpenTable } : undefined,
@@ -335,7 +339,11 @@ export function WaiterNotificationCenter({
           }
           try {
             playSound("close_request");
-          } catch {}
+          } catch {
+            // O navegador só deixa tocar som depois que a pessoa clica em algo na
+            // página. Antes disso ele recusa — e um aviso que não apita ainda é um
+            // aviso: o texto aparece na mesma.
+          }
           setCloseAlert({
             requestId: row.id,
             sessionId: row.session_id,

@@ -51,7 +51,7 @@ export function NotificationsProvider() {
         }, delay);
         return;
       }
-      const ids = (data || []).map((p: any) => p.id);
+      const ids = (data || []).map((p) => p.id);
       setPizzeriaIds(ids);
     }
     void load();

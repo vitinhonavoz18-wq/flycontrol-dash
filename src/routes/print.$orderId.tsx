@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeOrderType } from "@/utils/orderUtils";
+import type { OrderItem } from "@/types/order";
 
 export const Route = createFileRoute("/print/$orderId")({ component: Print });
 
@@ -32,7 +33,7 @@ function Print() {
   const items = Array.isArray(o.items) ? o.items : [];
   const orderType = normalizeOrderType(o);
 
-  const formatCurrency = (value: any) => {
+  const formatCurrency = (value: number | string | null | undefined) => {
     const num = Number(value || 0);
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
@@ -100,7 +101,7 @@ function Print() {
       {/* ITENS DO PEDIDO */}
       <div className="mb-2 font-bold uppercase">Itens do Pedido:</div>
       <div className="space-y-4">
-        {items.map((it: any, i: number) => {
+        {items.map((it: OrderItem, i: number) => {
           const qty = it.qty ?? it.quantity ?? 1;
           const name = it.product_name ?? it.name ?? it.title ?? it.nome ?? "Item";
           const price = Number(it.unit_price ?? it.price ?? 0);
@@ -165,7 +166,7 @@ function Print() {
               {additions.length > 0 && (
                 <div className="ml-4 mt-1">
                   <div className="text-xs font-bold uppercase">Adicionais:</div>
-                  {additions.map((add: any, idx: number) => (
+                  {(additions as (OrderItem | string)[]).map((add, idx: number) => (
                     <div key={idx} className="text-sm">
                       + {typeof add === "string" ? add : add.name || add.nome}
                     </div>

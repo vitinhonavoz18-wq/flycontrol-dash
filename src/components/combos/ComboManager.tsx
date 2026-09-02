@@ -39,6 +39,13 @@ const DAYS = [
   { id: "dom", label: "Dom" },
 ];
 
+/** Um item que compõe o combo, como vem da tabela `combo_items`. */
+type ItemDoCombo = {
+  product_name?: string | null;
+  quantity?: number | null;
+  product_type?: string | null;
+};
+
 export function ComboManager({
   pizzeriaId,
   pizzeriaSlug,
@@ -423,7 +430,7 @@ export function ComboManager({
               <div className="space-y-2 pt-2 border-t border-border">
                 <p className="text-xs font-bold uppercase text-muted-foreground">Itens inclusos:</p>
                 <ul className="text-xs space-y-1">
-                  {combo.combo_items?.map((it: any, idx: number) => (
+                  {combo.combo_items?.map((it: ItemDoCombo, idx: number) => (
                     <li key={idx} className="flex justify-between text-foreground/80">
                       <span>
                         {it.quantity}x {it.product_name}

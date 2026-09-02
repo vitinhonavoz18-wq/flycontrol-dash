@@ -260,7 +260,7 @@ export const Route = createFileRoute("/api/orders")({
           const customer = body.customer || body || {};
           const items = orderData.items || body.items || [];
 
-          const parseMoney = (val: any) => {
+          const parseMoney = (val: unknown) => {
             if (typeof val === "number") return val;
             if (typeof val === "string") {
               const num = parseFloat(val.replace(/[^\d.,]/g, "").replace(",", "."));
@@ -800,7 +800,7 @@ export const Route = createFileRoute("/api/orders")({
           // Tenta salvar itens na tabela relacionada (não bloqueante)
           if (Array.isArray(items) && items.length > 0) {
             try {
-              const orderItemsToInsert = items.map((it: any) => ({
+              const orderItemsToInsert = items.map((it) => ({
                 order_id: order.id,
                 pizzeria_id: pz.id,
                 product_name: it.product_name || it.name || "Item",

@@ -40,6 +40,15 @@ function fmtTime(iso: string) {
   return new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
 }
 
+/** Um item do pedido, como foi gravado. Todos os campos podem faltar. */
+type ItemGravado = {
+  name?: string;
+  product_name?: string;
+  title?: string;
+  qty?: number | string;
+  quantity?: number | string;
+} | null;
+
 export function WaiterCloseRequestPopup({
   alert,
   onDismiss,
@@ -61,7 +70,7 @@ export function WaiterCloseRequestPopup({
         .from("table_session_orders")
         .select("order_id")
         .eq("table_session_id", alert.sessionId);
-      const orderIds = (links || []).map((l: any) => l.order_id);
+      const orderIds = (links || []).map((l) => l.order_id);
       const ordersOut: Details["orders"] = [];
       let itemCount = 0;
       if (orderIds.length > 0) {
@@ -69,11 +78,14 @@ export function WaiterCloseRequestPopup({
           .from("orders")
           .select("id, order_number, items, total")
           .in("id", orderIds);
-        (orders || []).forEach((o: any) => {
-          const items = Array.isArray(o.items) ? o.items : [];
-          const mapped = items.map((it: any) => ({
-            name: it.name || it.product_name || it.title || "Item",
-            qty: Number(it.qty ?? it.quantity ?? 1),
+        (orders || []).forEach((o) => {
+          // `items` é gravado como texto livre no banco: cada versão do
+          // cardápio digital nomeou o campo de um jeito. Lemos os três nomes
+          // conhecidos e caímos em "Item" quando nenhum aparece.
+          const items: ItemGravado[] = Array.isArray(o.items) ? (o.items as ItemGravado[]) : [];
+          const mapped = items.map((it) => ({
+            name: it?.name || it?.product_name || it?.title || "Item",
+            qty: Number(it?.qty ?? it?.quantity ?? 1),
           }));
           itemCount += mapped.reduce((s: number, x: { qty: number }) => s + x.qty, 0);
           ordersOut.push({

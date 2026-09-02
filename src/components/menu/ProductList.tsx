@@ -36,6 +36,27 @@ import {
 import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
 import { mensagemDoErro } from "@/lib/errors";
 
+/**
+ * Um produto do cardápio, com os campos que esta tela usa.
+ *
+ * Só o que a tela lê: quem precisar de mais campo acrescenta aqui, e o
+ * editor avisa na hora se o nome estiver errado — em vez de a tela mostrar
+ * "undefined" para o cliente.
+ */
+type ProdutoDoCardapio = {
+  id: string;
+  name: string;
+  description?: string | null;
+  price?: number | string | null;
+  category_id?: string | null;
+  product_type?: string | null;
+  image_url?: string | null;
+  external_id?: string | null;
+  active?: boolean | null;
+  available?: boolean | null;
+  menu_categories?: { name?: string | null } | null;
+};
+
 interface ProductListProps {
   pizzeriaId: string;
   categories: any[];
@@ -59,7 +80,7 @@ export function ProductList({
   onRefresh,
   vocabulario,
 }: ProductListProps) {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<ProdutoDoCardapio[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
@@ -121,7 +142,7 @@ export function ProductList({
 
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const filter = (p: any) =>
+    const filter = (p: ProdutoDoCardapio) =>
       !q || p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
 
     const groups = categories.map((cat) => ({
@@ -385,7 +406,7 @@ export function ProductList({
 
   const isBeverage = type === "beverage";
 
-  const renderProductCard = (prod: any) => (
+  const renderProductCard = (prod: ProdutoDoCardapio) => (
     <Card
       key={prod.id}
       className={`overflow-hidden transition-all hover:border-primary/30 ${!prod.active ? "opacity-60 bg-muted/30" : ""}`}
@@ -407,7 +428,9 @@ export function ProductList({
               {prod.menu_categories?.name || "Sem categoria"}
             </p>
           </div>
-          <p className="font-bold text-primary">R$ {prod.price.toFixed(2)}</p>
+          {/* O preço pode chegar vazio ou como texto; sem esta conversão a
+              lista inteira do cardápio quebrava ao tentar formatar. */}
+          <p className="font-bold text-primary">R$ {Number(prod.price ?? 0).toFixed(2)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[10px] font-medium">
@@ -415,7 +438,7 @@ export function ProductList({
               {prod.available ? "Disponível" : "Indisponível"}
             </span>
             <Switch
-              checked={prod.available}
+              checked={prod.available ?? false}
               onCheckedChange={() => toggleStatus(prod, "available")}
               className="h-4 w-7 data-[state=checked]:bg-success"
             />
@@ -423,7 +446,7 @@ export function ProductList({
           <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[10px] font-medium ml-auto">
             <span>Ativo</span>
             <Switch
-              checked={prod.active}
+              checked={prod.active ?? false}
               onCheckedChange={() => toggleStatus(prod, "active")}
               className="h-4 w-7"
             />

@@ -346,8 +346,14 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
           menu: {
             ...menuRoot,
             extras: [
-              ...(menuRoot.borders || []).map((b: any) => ({ ...b, extra_type: "borda" })),
-              ...(menuRoot.additionals || []).map((a: any) => ({ ...a, extra_type: "adicional" })),
+              ...(menuRoot.borders || []).map((b: Record<string, unknown>) => ({
+                ...b,
+                extra_type: "borda",
+              })),
+              ...(menuRoot.additionals || []).map((a: Record<string, unknown>) => ({
+                ...a,
+                extra_type: "adicional",
+              })),
             ],
           },
         }),

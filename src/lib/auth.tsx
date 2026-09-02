@@ -3,7 +3,9 @@ import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 import { isFounderEmail } from "@/lib/platformAdmin";
 
-type Role = "super_admin" | "owner";
+// Os tres papeis que a tabela `user_roles` aceita. "customer" existe no
+// banco e chegava aqui sem estar previsto — o tipo agora diz a verdade.
+type Role = "super_admin" | "owner" | "customer";
 
 interface AuthCtx {
   user: User | null;
@@ -65,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadRoles(uid: string) {
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
-    setRoles((data ?? []).map((r: any) => r.role));
+    setRoles((data ?? []).map((r) => r.role));
   }
 
   const signIn: AuthCtx["signIn"] = async (email, password) => {
