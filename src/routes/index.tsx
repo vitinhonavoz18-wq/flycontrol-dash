@@ -1,5 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AmbientParticles } from "@/components/landing/AmbientParticles";
+import { BotaoWhatsApp } from "@/components/landing/BotaoWhatsApp";
 import { DashboardShowcase } from "@/components/landing/DashboardShowcase";
 import { FloatingNotification } from "@/components/landing/FloatingNotification";
 import { Navbar } from "@/components/landing/Navbar";
@@ -198,6 +199,11 @@ function Landing() {
       </main>
 
       <SiteFooter />
+
+      {/* Fica por cima de tudo e acompanha a rolagem, então vive fora do
+          <main>: ele não é uma parte do texto da página, é o atendente
+          parado no canto do salão. */}
+      <BotaoWhatsApp />
     </div>
   );
 }

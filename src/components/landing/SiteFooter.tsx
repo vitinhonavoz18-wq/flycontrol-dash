@@ -1,5 +1,12 @@
 import { Link } from "@tanstack/react-router";
 import logo from "@/assets/flycontrol-logo-hero.png";
+import { IconeInstagram, IconeWhatsApp } from "./iconesSociais";
+import {
+  INSTAGRAM_LINK,
+  INSTAGRAM_VISIVEL,
+  WHATSAPP_LINK,
+  WHATSAPP_VISIVEL,
+} from "@/lib/landing/contato";
 
 /**
  * O rodapé: logo, meia dúzia de links e a linha do ano.
@@ -35,7 +42,10 @@ export function SiteFooter() {
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-x-12 gap-y-8 sm:grid-cols-3">
+        {/* Com o Contato virando a quarta coluna, três vagas deixavam a
+            última sobrando sozinha numa segunda fileira. Quatro vagas na
+            tela grande, duas no celular. */}
+        <div className="grid grid-cols-2 gap-x-12 gap-y-8 md:grid-cols-4">
           {COLUNAS.map((coluna) => (
             <nav key={coluna.titulo} aria-label={coluna.titulo}>
               <p className="fly-label" style={{ color: "var(--fly-text-muted)" }}>
@@ -83,6 +93,48 @@ export function SiteFooter() {
                 >
                   Criar conta
                 </Link>
+              </li>
+            </ul>
+          </nav>
+
+          {/* O contato mostra o número e o perfil por extenso, e não só um
+              ícone. Quem está decidindo assinar quer VER que existe gente do
+              outro lado — é a diferença entre a placa "fale conosco" e o
+              telefone escrito na porta da loja. */}
+          <nav aria-label="Contato">
+            <p className="fly-label" style={{ color: "var(--fly-text-muted)" }}>
+              Contato
+            </p>
+            <ul className="mt-4 space-y-3">
+              <li>
+                <a
+                  href={WHATSAPP_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-[15px] transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  style={{
+                    color: "var(--fly-text-secondary)",
+                    outlineColor: "var(--fly-primary)",
+                  }}
+                >
+                  <IconeWhatsApp />
+                  {WHATSAPP_VISIVEL}
+                </a>
+              </li>
+              <li>
+                <a
+                  href={INSTAGRAM_LINK}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 text-[15px] transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  style={{
+                    color: "var(--fly-text-secondary)",
+                    outlineColor: "var(--fly-primary)",
+                  }}
+                >
+                  <IconeInstagram />
+                  {INSTAGRAM_VISIVEL}
+                </a>
               </li>
             </ul>
           </nav>
