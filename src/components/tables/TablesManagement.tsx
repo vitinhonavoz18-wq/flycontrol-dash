@@ -57,6 +57,17 @@ interface TablesManagementProps {
   restaurantSlug: string;
 }
 
+/** Um pedido dentro da comanda, para a impressão. */
+type PedidoDaComanda = {
+  id: string;
+  order_number?: number | null;
+  total?: number | null;
+  customer_name?: string | null;
+  items?: unknown;
+  created_at?: string | null;
+  notes?: string | null;
+};
+
 export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementProps) {
   const {
     tables,
@@ -264,7 +275,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     printWindow.document.close();
   }
 
-  const normalizeTableValue = (val: any): string => {
+  const normalizeTableValue = (val: unknown): string => {
     if (val === undefined || val === null) return "";
     const str = String(val).trim().toLowerCase();
     // Remove prefix "mesa" se existir
@@ -314,12 +325,12 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     }
   }
 
-  function handlePrintComanda(session: TableSession, orders: any[]) {
+  function handlePrintComanda(session: TableSession, orders: (PedidoDaComanda | null)[]) {
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
     // Recalcular totais reais dos pedidos válidos
-    const validOrders = orders.filter((o) => {
+    const validOrders = orders.filter((o): o is PedidoDaComanda => {
       if (!o) return false;
       const isGhost =
         (Number(o.total) === 0 || o.total === null) &&
@@ -338,7 +349,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
         const orderItems = Array.isArray(order.items) ? order.items : [];
         return `
         <div class="order-block">
-          <div class="order-header">Pedido #${order.order_number || order.id.substring(0, 8)} - ${new Date(order.created_at).toLocaleTimeString()}</div>
+          <div class="order-header">Pedido #${order.order_number || order.id.substring(0, 8)} - ${order.created_at ? new Date(order.created_at).toLocaleTimeString() : ""}</div>
           <div class="customer">${order.customer_name || "Cliente"}</div>
           <div class="items">
             ${
@@ -358,7 +369,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                 : `
               <div class="item">
                 <span class="name">Itens não detalhados (Pedido #${order.order_number})</span>
-                <span class="price">${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(order.total)}</span>
+                <span class="price">${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(order.total ?? 0))}</span>
               </div>
             `
             }

@@ -43,6 +43,7 @@ import { TrialBanner } from "@/components/billing/TrialBanner";
 import { ClubCentsCard } from "@/components/club/ClubCentsCard";
 import { HallOfFameStrip } from "@/components/club/HallOfFameStrip";
 import { OrdersKanban } from "@/components/orders/OrdersKanban";
+import type { TablesInsert } from "@/integrations/supabase/types";
 import { TERMINAL_STATUSES, isKanbanStatus } from "@/components/orders/orderStatusConfig";
 import { claimOrderAlert } from "@/lib/orderAlertClaim";
 
@@ -288,7 +289,7 @@ function Dashboard() {
     if (type !== "table") return;
 
     // Check if table_id is provided, otherwise try to find it by table_number
-    let tableId = (order as any).table_id;
+    let tableId = (order as Order & { table_id?: string | null }).table_id;
     if (!tableId && order.table_number) {
       const { data: tableData } = await supabase
         .from("restaurant_tables")
@@ -320,12 +321,11 @@ function Dashboard() {
         .from("table_sessions")
         .insert({
           restaurant_id: order.tenant_id,
-          tenant_id: order.tenant_id,
           table_id: tableId,
           table_number: order.table_number || "?",
           status: "open",
           total_amount: order.total,
-        } as any)
+        } satisfies TablesInsert<"table_sessions">)
         .select()
         .single();
 
@@ -336,7 +336,7 @@ function Dashboard() {
         .from("table_sessions")
         .update({
           total_amount: Number(sessionData.total_amount || 0) + Number(order.total || 0),
-        } as any)
+        })
         .eq("id", sessionId);
     }
 

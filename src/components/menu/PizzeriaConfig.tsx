@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Globe, Key } from "lucide-react";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 interface PizzeriaConfigProps {
   pizzeriaId: string;
@@ -40,11 +41,11 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
     setLoading(false);
   }
 
-  async function handleUpdate(field: string, value: any) {
+  async function handleUpdate(field: string, value: unknown) {
     setSaving(true);
     const { error } = await supabase
       .from("pizzerias")
-      .update({ [field]: value } as any)
+      .update({ [field]: value } as TablesUpdate<"pizzerias">)
       .eq("id", pizzeriaId);
 
     if (error) {

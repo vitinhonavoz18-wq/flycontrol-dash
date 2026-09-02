@@ -65,6 +65,8 @@ type PedidoPendente = {
   table_number?: string | number | null;
   customer_name?: string | null;
   total?: number | null;
+  /** A comanda a que o pedido pertence. */
+  session_id?: string;
 };
 
 export const Route = createFileRoute("/waiter-portal")({ component: WaiterPortal });
@@ -275,14 +277,15 @@ function MyTablesTab({
     setLoading(true);
     try {
       const [ss, po, rq] = await Promise.all([
-        listSess({ data: { token } }) as Promise<any[]>,
-        listPending({ data: { token } }) as Promise<any[]>,
-        listReq({ data: { token } }) as Promise<any[]>,
+        listSess({ data: { token } }) as Promise<ComandaDoGarcom[]>,
+        listPending({ data: { token } }) as Promise<PedidoPendente[]>,
+        listReq({ data: { token } }) as Promise<{ session_id: string }[]>,
       ]);
       setRows(ss || []);
       const pm = new Map<string, number>();
       (po || []).forEach((o) => {
         const items = Array.isArray(o.items) ? o.items.length : 0;
+        if (!o.session_id) return;
         pm.set(o.session_id, (pm.get(o.session_id) || 0) + items);
       });
       setPendingBySession(pm);
@@ -709,7 +712,7 @@ function HistoryTab({ token, tenantId }: { token: string; tenantId: string; wait
     setLoading(true);
     try {
       const [sess, d] = await Promise.all([
-        listSess({ data: { token, includeClosed: true } }) as Promise<any[]>,
+        listSess({ data: { token, includeClosed: true } }) as Promise<ComandaDoGarcom[]>,
         dash({ data: { token } }),
       ]);
       const startOfDay = new Date();

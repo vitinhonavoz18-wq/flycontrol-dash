@@ -6,6 +6,7 @@ import { toast } from "sonner";
 import { Upload, Trash2, Loader2, Image as ImageIcon, Sparkles, ShieldCheck } from "lucide-react";
 import { FLYSTATUS_META, type FlyStatusKind, pickArt } from "./FlyStatusModal";
 import { mensagemDoErro } from "@/lib/errors";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 type Pz = {
   id: string;
@@ -106,7 +107,7 @@ function StatusArtCard({
       const publicUrl = pub.publicUrl;
       const { error: dbErr } = await supabase
         .from("pizzerias")
-        .update({ [urlCol]: publicUrl } as any)
+        .update({ [urlCol]: publicUrl } as TablesUpdate<"pizzerias">)
         .eq("id", pizzeria.id);
       if (dbErr) throw dbErr;
       onUpdated({ [urlCol]: publicUrl } as Partial<Pz>);
@@ -122,7 +123,7 @@ function StatusArtCard({
   async function removeArt() {
     const { error } = await supabase
       .from("pizzerias")
-      .update({ [urlCol]: null } as any)
+      .update({ [urlCol]: null } as TablesUpdate<"pizzerias">)
       .eq("id", pizzeria.id);
     if (error) {
       toast.error(error.message);
@@ -135,7 +136,7 @@ function StatusArtCard({
   async function saveText(value: string) {
     const { error } = await supabase
       .from("pizzerias")
-      .update({ [textCol]: value } as any)
+      .update({ [textCol]: value } as TablesUpdate<"pizzerias">)
       .eq("id", pizzeria.id);
     if (error) {
       toast.error(error.message);

@@ -21,7 +21,15 @@ import { toast } from "sonner";
 import { Trophy, Flame, Crown, Target } from "lucide-react";
 import { mensagemDoErro } from "@/lib/errors";
 
-function Kpi({ label, value, icon: Icon }: { label: string; value: string | number; icon: any }) {
+function Kpi({
+  label,
+  value,
+  icon: Icon,
+}: {
+  label: string;
+  value: string | number;
+  icon: React.ComponentType<{ className?: string }>;
+}) {
   return (
     <Card>
       <CardContent className="p-4 flex items-center gap-3">
@@ -46,16 +54,34 @@ const FIELD_LABELS: Record<string, string> = {
   min_orders: "Pedidos mínimos",
 };
 
-function describeAuditChange(entry: { table_name: string; old_value: any; new_value: any }) {
-  const changed = Object.keys(entry.new_value ?? {}).filter(
-    (key) => key !== "updated_at" && entry.old_value?.[key] !== entry.new_value?.[key],
+/**
+ * Os valores antes e depois de uma alteração registrada.
+ *
+ * O banco guarda isso como texto livre (Json), então pode vir qualquer coisa.
+ * Aqui só interessa quando é um objeto de campos — o resto é ignorado.
+ */
+type ValoresDaAuditoria = unknown;
+
+/** Lê os campos de um valor da auditoria; devolve vazio quando não é objeto. */
+function camposDe(valor: ValoresDaAuditoria): Record<string, unknown> {
+  return valor && typeof valor === "object" && !Array.isArray(valor)
+    ? (valor as Record<string, unknown>)
+    : {};
+}
+
+function describeAuditChange(entry: {
+  table_name: string;
+  old_value: ValoresDaAuditoria;
+  new_value: ValoresDaAuditoria;
+}) {
+  const antes = camposDe(entry.old_value);
+  const depois = camposDe(entry.new_value);
+  const changed = Object.keys(depois).filter(
+    (key) => key !== "updated_at" && antes[key] !== depois[key],
   );
   if (changed.length === 0) return "Nenhum campo alterado";
   return changed
-    .map(
-      (key) =>
-        `${FIELD_LABELS[key] ?? key}: ${entry.old_value?.[key] ?? "—"} → ${entry.new_value?.[key] ?? "—"}`,
-    )
+    .map((key) => `${FIELD_LABELS[key] ?? key}: ${antes[key] ?? "—"} → ${depois[key] ?? "—"}`)
     .join(", ");
 }
 
