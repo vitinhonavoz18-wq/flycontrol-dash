@@ -1,3 +1,15 @@
+-- Reforça o cadeado de cada tabela: o dono só enxerga a própria loja.
+--
+-- O QUE FAZ: liga a trava de segurança por linha (RLS) nas tabelas do
+-- cardápio, dos pedidos e das mesas, e escreve as regras de quem pode ler e
+-- escrever cada uma.
+--
+-- QUANDO USAR: uma vez, se as regras de acesso tiverem sido perdidas ou se o
+-- banco for novo. Não faz parte da publicação automática.
+--
+-- SEGURO RODAR DE NOVO: sim. Cada regra é apagada e recriada, então o
+-- resultado é sempre o mesmo estado final.
+
 -- Adicionando políticas de segurança robustas para donos de restaurantes
 -- O Dono só pode ver e editar seus próprios dados
 

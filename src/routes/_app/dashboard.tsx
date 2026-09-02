@@ -124,9 +124,8 @@ function playBeep() {
 }
 
 function Dashboard() {
-  const { user, isSuperAdmin, loading } = useAuth();
-  const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
-  const hasGlobalAccess = isSuperAdmin || isHardcodedAdmin;
+  const { user, isSuperAdmin, isFounder, isPlatformAdmin, loading } = useAuth();
+  const hasGlobalAccess = isPlatformAdmin;
   const [mounted, setMounted] = useState(false);
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -873,7 +872,7 @@ function Dashboard() {
           setOrders={setOrders}
           tenantId={activeId}
           recentNewIds={recentNewOrderIds}
-          canDelete={isHardcodedAdmin}
+          canDelete={isFounder}
           onDelete={deleteOrder}
           onStatusApplied={openStatusArtModal}
         />
@@ -887,7 +886,7 @@ function Dashboard() {
               onDelete={deleteOrder}
               onSee={markAsSeen}
               isRecentNew={recentNewOrderIds.includes(o.id)}
-              canDelete={isHardcodedAdmin}
+              canDelete={isFounder}
             />
           ))}
 

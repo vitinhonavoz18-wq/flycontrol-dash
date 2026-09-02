@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { isFounderEmail } from "@/lib/platformAdmin";
 
 type Role = "super_admin" | "owner";
 
@@ -10,6 +11,10 @@ interface AuthCtx {
   loading: boolean;
   roles: Role[];
   isSuperAdmin: boolean;
+  /** A conta do fundador — a única que pode apagar loja de vez. */
+  isFounder: boolean;
+  /** Fundador ou `super_admin`: quem enxerga o Painel Admin. */
+  isPlatformAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
@@ -116,6 +121,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         roles,
         isSuperAdmin: roles.includes("super_admin"),
+        isFounder: isFounderEmail(user?.email),
+        isPlatformAdmin: roles.includes("super_admin") || isFounderEmail(user?.email),
         signIn,
         signUp,
         signInWithGoogle,

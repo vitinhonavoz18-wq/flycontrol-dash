@@ -5,12 +5,11 @@ import { useAuth } from "@/lib/auth";
 export const Route = createFileRoute("/_app/admin")({ component: AdminLayout });
 
 function AdminLayout() {
-  const { user, isSuperAdmin, loading } = useAuth();
+  const { user, isPlatformAdmin, loading } = useAuth();
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
 
-  const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
-  const hasAdminAccess = isSuperAdmin || isHardcodedAdmin;
+  const hasAdminAccess = isPlatformAdmin;
 
   useEffect(() => {
     if (!loading && !hasAdminAccess) {

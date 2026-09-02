@@ -1,3 +1,15 @@
+-- Conserta sessões de mesa de pedidos antigos.
+--
+-- O QUE FAZ: procura pedido de mesa que ficou sem sessão aberta (a "comanda"
+-- da mesa) e cria a comanda que faltava, já com o pedido dentro.
+--
+-- QUANDO USAR: uma vez, num banco antigo em que pedidos de mesa foram
+-- gravados antes de a comanda existir. Não faz parte da publicação
+-- automática.
+--
+-- SEGURO RODAR DE NOVO: sim. Ele só age em pedido que ainda não tem comanda;
+-- rodar duas vezes não cria comanda repetida.
+
 
 -- 1. Buscar pedidos de mesa que ainda não estão vinculados a sessões abertas
 DO $$
