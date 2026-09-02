@@ -37,10 +37,24 @@ export function OrdersKanbanColumn({
   return (
     <section
       aria-label={`${config.label}: ${orders.length} ${orders.length === 1 ? "pedido" : "pedidos"}`}
-      // A partir de 640px de largura as três colunas ficam lado a lado — é a
-      // largura de um celular deitado. Em retrato nenhum telefone chega a
-      // 640px, então a regra não altera o modo vertical.
-      className="flex w-[85vw] shrink-0 flex-col sm:w-[20rem] min-[640px]:w-auto min-[640px]:flex-1"
+      // NO CELULAR (abaixo de 640px): uma coluna por vez, ocupando 85% da
+      // tela, e o dedo desliza para a próxima. A sobra de 15% é de propósito
+      // — é a beirada da coluna seguinte aparecendo, que é o que avisa a
+      // pessoa de que tem mais coisa para o lado.
+      //
+      // DA TELA DE 640px PARA CIMA: as três colunas dividem o espaço em
+      // partes iguais e crescem junto com o monitor.
+      //
+      // A LARGURA MÍNIMA É A PEÇA QUE FALTAVA. Por padrão, uma coluna dessas
+      // se recusa a ficar menor que o texto mais comprido lá de dentro — o
+      // nome do cliente, o endereço. As três somadas passavam da largura da
+      // tela e a terceira ficava pendurada para fora. É a mesa de jantar que
+      // não entra na sala porque ninguém tira a toalha pendurada.
+      //
+      // Fixando o piso em 13rem (208px), o texto passa a aceitar ser cortado
+      // com "..." e as três colunas cabem. Abaixo desse piso o card fica
+      // ilegível, então aí o quadro desliza para o lado em vez de espremer.
+      className="flex w-[85vw] shrink-0 snap-start flex-col sm:w-auto sm:min-w-[13rem] sm:flex-1 sm:shrink"
     >
       <header className="mb-2 overflow-hidden rounded-t-xl border border-b-0 border-border bg-card">
         <div className={`h-1 w-full ${config.accentBar}`} aria-hidden="true" />

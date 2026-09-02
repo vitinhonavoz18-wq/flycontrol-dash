@@ -210,9 +210,24 @@ export function OrdersKanban({
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
-        {/* Desktop: três colunas lado a lado. Telas estreitas: rolagem
-            horizontal, mantendo as colunas visíveis para o arraste. */}
-        <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-2 md:overflow-x-visible">
+        {/* O trilho das colunas.
+
+            A rolagem para o lado vale em QUALQUER largura, e isso é a
+            correção. Antes, do tamanho de tablet para cima ela era desligada
+            (`md:overflow-x-visible`): quando as três colunas não cabiam — o
+            caso de todo notebook de 1280px com o menu lateral aberto — elas
+            não deslizavam, simplesmente vazavam para fora da página. É a
+            gaveta que não fecha porque tem coisa demais dentro, e alguém
+            resolveu tirar o trilho em vez de tirar a coisa.
+
+            Agora o trilho existe sempre. Quando as colunas cabem (o caso
+            normal, do notebook para cima), ele fica parado e invisível.
+            Quando não cabem, desliza.
+
+            No celular, cada coluna encaixa sozinha na tela ao deslizar
+            (`snap`), em vez de parar no meio de duas. Da tela de 640px para
+            cima o encaixe some, porque aí as três já estão visíveis juntas. */}
+        <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 sm:snap-none">
           {ORDER_COLUMNS.map((config) => (
             <OrdersKanbanColumn
               key={config.id}

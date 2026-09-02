@@ -82,8 +82,15 @@ describe("colunas do Kanban em paisagem", () => {
   it("coloca as três colunas lado a lado a partir da largura de um celular deitado", () => {
     const container = renderColumn();
     const section = container.querySelector("section")!;
-    // 640px é a menor largura de celular em paisagem (640x360).
-    expect(section.className).toContain("min-[640px]:flex-1");
+    // 640px é a menor largura de celular em paisagem (640x360). No Tailwind
+    // esse ponto se chama `sm`, e é o mesmo número que o antigo
+    // `min-[640px]` escrito à mão — a regra não mudou de lugar, só passou a
+    // ser escrita com o nome que o resto do projeto usa.
+    expect(section.className).toContain("sm:flex-1");
+    // A partir daí a coluna também precisa PODER encolher. Sem isso ela
+    // fica presa no tamanho do texto de dentro e as três não cabem juntas.
+    expect(section.className).toContain("sm:shrink");
+    expect(section.className).toMatch(/sm:min-w-\[\d+rem\]/);
   });
 
   it("mantém a rolagem horizontal em retrato, onde as colunas não cabem", () => {
