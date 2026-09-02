@@ -316,7 +316,13 @@ function Dashboard() {
     let sessionId = sessionData?.id;
 
     if (!sessionId) {
-      // Create new session
+      // Cria a comanda da mesa.
+      //
+      // Aqui ia junto um campo `tenant_id` que NÃO existe nesta tabela — o
+      // banco recusava a gravação inteira por causa dele, e o erro era
+      // engolido logo abaixo. Na prática, este caminho nunca abria comanda
+      // nenhuma: é como preencher a ficha de reserva com um campo que o
+      // caderno não tem e a recepção devolver a ficha sem avisar.
       const { data: newSession, error: sessionError } = await supabase
         .from("table_sessions")
         .insert({
