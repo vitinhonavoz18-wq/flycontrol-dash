@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
 import { mensagemDoErro } from "@/lib/errors";
+import type { PizzaSize } from "@/types/menu";
 
 interface PizzaSizeListProps {
   pizzeriaId: string;
@@ -79,11 +80,11 @@ export function PizzaSizeList({
     setIsDialogOpen(true);
   }
 
-  function openEdit(size: any) {
+  function openEdit(size: PizzaSize) {
     setEditingSize(size);
     setName(size.name);
-    setPrice(size.price.toString());
-    setMaxFlavors(size.max_flavors.toString());
+    setPrice(String(size.price ?? ""));
+    setMaxFlavors(String(size.max_flavors ?? 1));
     setSlices((size.slices || 8).toString());
     setSortOrder((size.sort_order || 0).toString());
     setIsDialogOpen(true);
@@ -179,7 +180,7 @@ export function PizzaSizeList({
     }
   }
 
-  async function toggleActive(size: any) {
+  async function toggleActive(size: PizzaSize) {
     const newValue = !size.active;
 
     if (pizzeriaSlug && pizzeriaApiKey && size.external_id) {
@@ -218,7 +219,7 @@ export function PizzaSizeList({
     }
   }
 
-  async function handleDelete(size: any) {
+  async function handleDelete(size: PizzaSize) {
     if (
       !confirm(
         "Tem certeza que deseja excluir este tamanho? Isso pode afetar os cálculos de preço no site.",

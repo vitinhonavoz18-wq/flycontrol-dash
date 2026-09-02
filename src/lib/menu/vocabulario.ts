@@ -173,7 +173,7 @@ export const VOCABULARIOS: Readonly<Record<LayoutId, VocabularioDoCardapio>> = {
 };
 
 /** O que a loja tem gravado e que interessa para escolher as palavras. */
-type LojaParaVocabulario =
+export type LojaParaVocabulario =
   | {
       business_type?: unknown;
       site_settings?: { menu_layout?: unknown } | null;

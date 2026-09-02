@@ -15,6 +15,7 @@ import { MenuTemplatePicker } from "./MenuTemplatePicker";
 import { MenuImportDialog } from "./MenuImportDialog";
 import { vocabularioDaLoja } from "@/lib/menu/vocabulario";
 import { useAuth } from "@/lib/auth";
+import type { MenuCategory } from "@/types/menu";
 
 interface MenuManagerProps {
   pizzeriaId: string;
@@ -41,6 +42,16 @@ function abasDoCardapio(v: ReturnType<typeof vocabularioDaLoja>): readonly Scrol
   ];
 }
 
+/** Os dados da loja de que esta tela precisa para sincronizar o cardápio. */
+type LojaDoCardapio = {
+  slug?: string | null;
+  api_key?: string | null;
+  sync_endpoint?: string | null;
+  /** Definem as palavras da tela: "pizza" numa pizzaria, "produto" numa mercearia. */
+  business_type?: unknown;
+  site_settings?: { menu_layout?: unknown } | null;
+};
+
 export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   // O bloco de sincronização é ferramenta de manutenção, não de lojista.
   //
@@ -54,10 +65,10 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   // loja que perdeu a conexão.
   const { isSuperAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState("categories");
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<MenuCategory[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
-  const [pizzeria, setPizzeria] = useState<any>(null);
+  const [pizzeria, setPizzeria] = useState<LojaDoCardapio | null>(null);
   // As listas de cada aba carregam os próprios dados ao montar. Depois de uma
   // importação em massa, trocar esta chave é o que faz todas recarregarem —
   // sem isso o cardápio novo só apareceria ao sair e voltar da tela.
@@ -81,7 +92,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       .select("id, name, slug, api_key, sync_endpoint, business_type, site_settings")
       .eq("id", pizzeriaId)
       .single();
-    if (data) setPizzeria(data);
+    // `site_settings` é um pacotinho livre no banco; aqui só interessa a
+    // chave que escolhe o layout do cardápio.
+    if (data) setPizzeria(data as LojaDoCardapio);
   }
 
   async function loadCategories() {
@@ -131,9 +144,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       <div className="flex justify-end">
         <MenuImportDialog
           pizzeriaId={pizzeriaId}
-          pizzeriaSlug={pizzeria?.slug}
-          pizzeriaApiKey={pizzeria?.api_key}
-          syncEndpoint={pizzeria?.sync_endpoint}
+          pizzeriaSlug={pizzeria?.slug ?? undefined}
+          pizzeriaApiKey={pizzeria?.api_key ?? undefined}
+          syncEndpoint={pizzeria?.sync_endpoint ?? undefined}
           existingCategoryCount={categories.length}
           onImported={() => {
             loadCategories();
@@ -152,9 +165,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               pizzeriaId={pizzeriaId}
               categories={categories}
               onRefresh={handleLocalRefresh}
-              pizzeriaSlug={pizzeria?.slug}
-              pizzeriaApiKey={pizzeria?.api_key}
-              syncEndpoint={pizzeria?.sync_endpoint}
+              pizzeriaSlug={pizzeria?.slug ?? undefined}
+              pizzeriaApiKey={pizzeria?.api_key ?? undefined}
+              syncEndpoint={pizzeria?.sync_endpoint ?? undefined}
             />
           </TabsContent>
 
@@ -166,9 +179,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               categories={categories.filter((c) => c.active)}
               type="standard"
               title={vocabulario.tituloProdutos}
-              pizzeriaSlug={pizzeria?.slug}
-              pizzeriaApiKey={pizzeria?.api_key}
-              syncEndpoint={pizzeria?.sync_endpoint}
+              pizzeriaSlug={pizzeria?.slug ?? undefined}
+              pizzeriaApiKey={pizzeria?.api_key ?? undefined}
+              syncEndpoint={pizzeria?.sync_endpoint ?? undefined}
               onRefresh={handleLocalRefresh}
             />
           </TabsContent>
@@ -177,9 +190,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
             <PizzaSizeList
               vocabulario={vocabulario}
               pizzeriaId={pizzeriaId}
-              pizzeriaSlug={pizzeria?.slug}
-              pizzeriaApiKey={pizzeria?.api_key}
-              syncEndpoint={pizzeria?.sync_endpoint}
+              pizzeriaSlug={pizzeria?.slug ?? undefined}
+              pizzeriaApiKey={pizzeria?.api_key ?? undefined}
+              syncEndpoint={pizzeria?.sync_endpoint ?? undefined}
               onRefresh={handleLocalRefresh}
             />
           </TabsContent>
@@ -192,9 +205,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               categories={categories.filter((c) => c.active)}
               type="beverage"
               title="Bebidas"
-              pizzeriaSlug={pizzeria?.slug}
-              pizzeriaApiKey={pizzeria?.api_key}
-              syncEndpoint={pizzeria?.sync_endpoint}
+              pizzeriaSlug={pizzeria?.slug ?? undefined}
+              pizzeriaApiKey={pizzeria?.api_key ?? undefined}
+              syncEndpoint={pizzeria?.sync_endpoint ?? undefined}
               onRefresh={handleLocalRefresh}
             />
           </TabsContent>
@@ -204,9 +217,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               vocabulario={vocabulario}
               key={`extras-${refreshKey}`}
               pizzeriaId={pizzeriaId}
-              pizzeriaSlug={pizzeria?.slug}
-              pizzeriaApiKey={pizzeria?.api_key}
-              syncEndpoint={pizzeria?.sync_endpoint}
+              pizzeriaSlug={pizzeria?.slug ?? undefined}
+              pizzeriaApiKey={pizzeria?.api_key ?? undefined}
+              syncEndpoint={pizzeria?.sync_endpoint ?? undefined}
               onRefresh={handleLocalRefresh}
             />
           </TabsContent>
