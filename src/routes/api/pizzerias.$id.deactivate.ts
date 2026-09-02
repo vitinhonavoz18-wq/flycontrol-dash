@@ -1,13 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { requireGlobalAdmin } from "@/integrations/supabase/adminGuard.server";
 import { deactivatePizzeria } from "@/lib/server/pizzeriaLifecycle.server";
+import { adminCors } from "@/lib/server/http";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, content-type",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json",
-};
+const cors = adminCors();
 
 export const Route = createFileRoute("/api/pizzerias/$id/deactivate")({
   server: {

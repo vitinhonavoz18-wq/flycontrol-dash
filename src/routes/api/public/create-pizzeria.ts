@@ -1,11 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { adminCors } from "@/lib/server/http";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "content-type, x-api-key, authorization",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Content-Type": "application/json",
-};
+const cors = adminCors({ headers: "content-type, x-api-key, authorization" });
 
 // Endpoint antigo: criava uma empresa sem pedir nenhuma senha ou identificação
 // — qualquer pessoa que descobrisse este endereço conseguia criar uma empresa

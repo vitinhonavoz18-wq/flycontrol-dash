@@ -1,15 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { publicCors } from "@/lib/server/http";
 
-const cors = (request?: Request) => ({
-  "Access-Control-Allow-Origin": request?.headers.get("origin") || "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-api-key, accept",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Max-Age": "86400",
-  "Access-Control-Allow-Credentials": "true",
-  "Content-Type": "application/json",
-});
+const cors = (request?: Request) => publicCors(request, { methods: "GET, POST, OPTIONS" });
 
 const SELECT =
   "id, dining_session_id, customer_token, status, closed_at, restaurant_id, table_number, table_name, opened_at, subtotal_amount, service_fee_amount, total_amount";

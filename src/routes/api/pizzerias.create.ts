@@ -2,14 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { provisionRestaurantInSF } from "@/integrations/sitecreatorfly/provision.server";
 import { requireGlobalAdmin } from "@/integrations/supabase/adminGuard.server";
+import { adminCors } from "@/lib/server/http";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Max-Age": "86400",
-  "Content-Type": "application/json",
-};
+const cors = adminCors({
+  headers: "authorization, x-client-info, apikey, content-type, x-api-key",
+});
 
 function genKey() {
   const bytes = new Uint8Array(32);

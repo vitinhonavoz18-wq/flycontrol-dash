@@ -25,14 +25,11 @@ import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server"
 import { validateGatewayConfirmation, validateIntentForReturn } from "@/lib/billing/checkout";
 import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
 import { pizzeriaAccessStatusFor } from "@/lib/billing/collections";
+import { jsonResponse } from "@/lib/server/http";
 
 const INVOICE_PREFIX = "invoice:";
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+const json = (body: unknown, status = 200) => jsonResponse(body, { status });
 
 /** Lê o primeiro campo presente, texto ou número, como string. */
 function firstAsString(obj: Record<string, unknown> | null, ...keys: string[]): string | undefined {

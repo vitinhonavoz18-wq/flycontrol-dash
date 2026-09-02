@@ -1,18 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { publicCors } from "@/lib/server/http";
 
-const getCorsHeaders = (request?: Request) => {
-  const origin = request?.headers.get("origin") || "*";
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers":
-      "authorization, x-client-info, apikey, content-type, x-api-key, accept",
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Max-Age": "86400",
-    "Access-Control-Allow-Credentials": "true",
-    "Content-Type": "application/json",
-  };
-};
+const getCorsHeaders = (request?: Request) => publicCors(request);
 
 /**
  * Contract:

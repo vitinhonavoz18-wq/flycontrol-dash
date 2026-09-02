@@ -18,15 +18,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { ensureRestaurantProvisioned } from "@/lib/provisioning/ensureProvisioned.server";
 import { PROVISION_FAILED, PROVISION_PENDING } from "@/lib/provisioning/provisioning";
+import { jsonResponse } from "@/lib/server/http";
 
 /** Teto por execução: uma rodada travada não pode estourar o tempo do Worker. */
 const MAX_POR_EXECUCAO = 25;
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+const json = (body: unknown, status = 200) => jsonResponse(body, { status });
 
 /** Comparação em tempo constante: `===` vaza o tamanho do prefixo correto. */
 function timingSafeEqual(a: string, b: string): boolean {

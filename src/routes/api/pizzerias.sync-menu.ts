@@ -2,14 +2,11 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireBearerCaller } from "@/integrations/supabase/adminGuard.server";
 import { isUnsafeMenuSyncUrl } from "@/lib/server/urlSafety";
+import { adminCors } from "@/lib/server/http";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Max-Age": "86400",
-  "Content-Type": "application/json",
-};
+const cors = adminCors({
+  headers: "authorization, x-client-info, apikey, content-type, x-api-key",
+});
 
 export const Route = createFileRoute("/api/pizzerias/sync-menu")({
   server: {

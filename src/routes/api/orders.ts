@@ -1,20 +1,14 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizePhone } from "@/lib/marketing/phone";
+import { publicCors } from "@/lib/server/http";
 
-// Função auxiliar para gerar headers CORS robustos
-const getCorsHeaders = (request?: Request) => {
-  const origin = request?.headers.get("origin") || "*";
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers":
+const getCorsHeaders = (request?: Request) =>
+  publicCors(request, {
+    methods: "GET, POST, OPTIONS",
+    headers:
       "authorization, x-client-info, apikey, content-type, x-api-key, accept, x-idempotency-key",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Max-Age": "86400",
-    "Access-Control-Allow-Credentials": "true",
-    "Content-Type": "application/json",
-  };
-};
+  });
 
 export const Route = createFileRoute("/api/orders")({
   server: {
@@ -585,7 +579,8 @@ export const Route = createFileRoute("/api/orders")({
           // 50% para um zero digitado a mais não zerar a venda.
           const percentConfigurado = (() => {
             const bruto = (pz as any)?.site_settings?.marketing_opt_in_discount_percent;
-            const n = typeof bruto === "number" ? bruto : Number(String(bruto ?? "").replace(",", "."));
+            const n =
+              typeof bruto === "number" ? bruto : Number(String(bruto ?? "").replace(",", "."));
             if (!Number.isFinite(n) || n <= 0) return 0;
             return Math.min(Math.round(n * 2) / 2, 50);
           })();
@@ -598,9 +593,7 @@ export const Route = createFileRoute("/api/orders")({
               ? Math.floor(subtotalValor * percentConfigurado) / 100
               : 0;
 
-          const descontoQueVeio = parseMoney(
-            orderData.discount || body.discount || 0,
-          );
+          const descontoQueVeio = parseMoney(orderData.discount || body.discount || 0);
           if (Math.abs(descontoQueVeio - descontoConferido) > 0.01) {
             console.warn(
               `ORDER_DISCOUNT_MISMATCH: site enviou ${descontoQueVeio}, conferido ${descontoConferido} (percentual da loja: ${percentConfigurado}%)`,
