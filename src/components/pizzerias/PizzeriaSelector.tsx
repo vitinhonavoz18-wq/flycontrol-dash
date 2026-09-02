@@ -12,13 +12,18 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
 
-interface Pizzeria {
+/** O mínimo que o seletor precisa saber de uma loja: como chamá-la. */
+export type LojaDoSeletor = {
   id: string;
   name: string;
-}
+  /** Campos que as telas que usam o seletor também precisam ter em mãos. */
+  slug?: string | null;
+  api_key?: string | null;
+  sync_endpoint?: string | null;
+};
 
 interface PizzeriaSelectorProps {
-  pizzerias: Pizzeria[];
+  pizzerias: LojaDoSeletor[];
   activeId: string | null;
   onSelect: (id: string) => void;
 }

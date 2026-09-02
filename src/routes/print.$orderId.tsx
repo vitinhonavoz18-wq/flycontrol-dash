@@ -6,10 +6,34 @@ import type { OrderItem } from "@/types/order";
 
 export const Route = createFileRoute("/print/$orderId")({ component: Print });
 
+/** O pedido, com os campos que o cupom imprime. */
+type PedidoParaImprimir = {
+  order_number?: number | null;
+  created_at?: string | null;
+  customer_name?: string | null;
+  customer_phone?: string | null;
+  customer_address?: string | null;
+  neighborhood?: string | null;
+  notes?: string | null;
+  payment_method?: string | null;
+  change_for?: number | string | null;
+  delivery_fee?: number | string | null;
+  subtotal?: number | string | null;
+  total?: number | string | null;
+  items?: unknown;
+  table_number?: string | number | null;
+  tableNumber?: string | number | null;
+  mesa?: string | number | null;
+  ticket_number?: string | number | null;
+};
+
+/** O cabeçalho do cupom: quem está imprimindo. */
+type LojaNoCupom = { name?: string | null; phone?: string | null; address?: string | null };
+
 function Print() {
   const { orderId } = Route.useParams();
-  const [o, setO] = useState<any>(null);
-  const [pz, setPz] = useState<any>(null);
+  const [o, setO] = useState<PedidoParaImprimir | null>(null);
+  const [pz, setPz] = useState<LojaNoCupom | null>(null);
 
   useEffect(() => {
     (async () => {
@@ -47,7 +71,9 @@ function Print() {
         {pz?.address && <div className="text-xs">{pz.address}</div>}
         <div className="my-2 border-t-2 border-dashed border-black"></div>
         <div className="text-lg font-bold">PEDIDO #{o.order_number}</div>
-        <div className="text-sm">{new Date(o.created_at).toLocaleString("pt-BR")}</div>
+        <div className="text-sm">
+          {o.created_at ? new Date(o.created_at).toLocaleString("pt-BR") : ""}
+        </div>
       </div>
 
       <div className="my-2 border-t border-dashed border-black"></div>

@@ -46,11 +46,19 @@ export function ScanTableSheet({ open, onOpenChange, onDetected }: Props) {
   const start = useCallback(async () => {
     setStarting(true);
     try {
-      const AnyWin = window as any;
+      // `BarcodeDetector` é o leitor de código de barras embutido no
+      // navegador. Ainda não faz parte da lista oficial de recursos, então
+      // precisa ser procurado à mão — e pode simplesmente não existir, que é
+      // o caso do iPhone.
+      const AnyWin = window as unknown as {
+        BarcodeDetector?: new (opcoes: { formats: string[] }) => {
+          detect: (fonte: CanvasImageSource) => Promise<{ rawValue?: string }[]>;
+        };
+      };
       const hasDetector = typeof AnyWin.BarcodeDetector === "function";
       setSupported(hasDetector);
       if (!hasDetector) return;
-      const detector = new AnyWin.BarcodeDetector({ formats: ["qr_code", "code_128", "ean_13"] });
+      const detector = new AnyWin.BarcodeDetector!({ formats: ["qr_code", "code_128", "ean_13"] });
       const stream = await navigator.mediaDevices.getUserMedia({
         video: { facingMode: { ideal: "environment" } },
         audio: false,

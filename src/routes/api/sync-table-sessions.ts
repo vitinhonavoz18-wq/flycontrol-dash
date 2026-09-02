@@ -5,7 +5,7 @@ import { mensagemDoErro } from "@/lib/errors";
 
 const cors = adminCors({ headers: "authorization, x-client-info, apikey, content-type" });
 
-function normalizeTable(v: any) {
+function normalizeTable(v: unknown) {
   if (!v) return "";
   let s = String(v)
     .trim()

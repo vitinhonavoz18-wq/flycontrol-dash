@@ -32,13 +32,24 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CreatePizzeriaDialog } from "./CreatePizzeriaDialog";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 const DEFAULT_CLUB_ID = "00000000-0000-0000-0000-0000000000c1";
 const PREMIUM_PRICE = 375;
 
+/** A loja aberta na janela de edição de plano. */
+type LojaEmEdicao = {
+  id?: string;
+  name?: string | null;
+  plan_type?: string | null;
+  subscription_status?: string | null;
+  subscription_price?: number | null;
+  internal_notes?: string | null;
+};
+
 export const SubscriptionsDashboard = () => {
   const queryClient = useQueryClient();
-  const [editingPizzeria, setEditingPizzeria] = useState<any>(null);
+  const [editingPizzeria, setEditingPizzeria] = useState<LojaEmEdicao | null>(null);
   const [savingPlan, setSavingPlan] = useState(false);
 
   const { data: pizzerias, isLoading } = useQuery({
@@ -85,12 +96,14 @@ export const SubscriptionsDashboard = () => {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingPizzeria) return;
+    // Sem loja aberta (ou sem identificador dela) não há o que salvar.
+    if (!editingPizzeria?.id) return;
+    const lojaId = editingPizzeria.id;
     setSavingPlan(true);
 
     const newPlanType = editingPizzeria.plan_type === "cents" ? "cents" : "premium";
     const billing_model = newPlanType === "cents" ? "per_order" : "fixed";
-    const update: any = {
+    const update: TablesUpdate<"pizzerias"> = {
       plan_type: newPlanType,
       billing_model,
       subscription_status: editingPizzeria.subscription_status,
@@ -98,7 +111,7 @@ export const SubscriptionsDashboard = () => {
     };
     if (newPlanType === "premium") update.subscription_price = PREMIUM_PRICE;
 
-    const { error } = await supabase.from("pizzerias").update(update).eq("id", editingPizzeria.id);
+    const { error } = await supabase.from("pizzerias").update(update).eq("id", lojaId);
 
     if (error) {
       toast.error("Erro ao salvar: " + error.message);
@@ -108,7 +121,7 @@ export const SubscriptionsDashboard = () => {
 
     if (newPlanType === "cents") {
       const { error: enrollErr } = await supabase.rpc("enroll_company_in_cents", {
-        p_company_id: editingPizzeria.id,
+        p_company_id: lojaId,
       });
       if (enrollErr) {
         toast.error("Plano salvo, mas falhou ao matricular no Clube CENTS: " + enrollErr.message);

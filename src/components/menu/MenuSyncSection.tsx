@@ -39,13 +39,25 @@ type CardapioRecebido = {
   normalized_products?: { category_name?: string | null }[];
 };
 
+/** A loja, com o que a tela de sincronização precisa mostrar. */
+type LojaDaSincronizacao = {
+  slug?: string | null;
+  api_key?: string | null;
+  public_url?: string | null;
+  sf_restaurant_id?: string | null;
+  provision_status?: string | null;
+  provision_error?: string | null;
+  provisioned_at?: string | null;
+  sync_endpoint?: string | null;
+};
+
 export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionProps) {
   const [syncEndpoint, setSyncEndpoint] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [reprovisioning, setReprovisioning] = useState(false);
-  const [pizzeria, setPizzeria] = useState<any>(null);
+  const [pizzeria, setPizzeria] = useState<LojaDaSincronizacao | null>(null);
   const [syncStatus, setSyncStatus] = useState<{
     lastSync?: string;
     status?: "success" | "error";
@@ -358,7 +370,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": pizzeria.api_key,
+          "x-api-key": pizzeria.api_key ?? "",
         },
         body: JSON.stringify({
           pizzeria_id: pizzeriaId,

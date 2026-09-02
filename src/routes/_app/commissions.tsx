@@ -105,7 +105,7 @@ function CommissionsPageInner() {
           listWaiters({ data: { tenantId } }),
         ]);
         setPctState(p.percent);
-        setWaiters(w as any);
+        setWaiters(w as { id: string; full_name: string }[]);
       } catch (e) {
         toast.error(mensagemDoErro(e));
       }

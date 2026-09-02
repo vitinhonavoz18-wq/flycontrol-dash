@@ -57,7 +57,7 @@ export function useClubCents(tenantId: string | null) {
     }
 
     setData({
-      level: (status?.current_level as any) ?? null,
+      level: (status?.current_level as ClubCentsData["level"]) ?? null,
       streak: status?.current_streak ?? 0,
       legend: status?.legend ?? false,
       hallOfFame: status?.hall_of_fame ?? false,

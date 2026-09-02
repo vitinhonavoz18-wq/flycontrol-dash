@@ -66,6 +66,7 @@ type PedidoDaComanda = {
   items?: unknown;
   created_at?: string | null;
   notes?: string | null;
+  customer_phone?: string | null;
 };
 
 export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementProps) {
@@ -88,7 +89,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     assignWaiter,
   } = useTableSessions(tenantId);
   const [selectedSession, setSelectedSession] = useState<TableSession | null>(null);
-  const [sessionOrders, setSessionOrders] = useState<any[]>([]);
+  const [sessionOrders, setSessionOrders] = useState<PedidoDaComanda[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [showPrintModal, setShowPrintModal] = useState(false);
   const [waiters, setWaiters] = useState<Array<{ id: string; full_name: string }>>([]);
@@ -975,7 +976,9 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                               </span>
                               <div className="text-xs text-muted-foreground flex items-center gap-1">
                                 <Clock className="h-3 w-3" />{" "}
-                                {new Date(order.created_at).toLocaleString()}
+                                {order.created_at
+                                  ? new Date(order.created_at).toLocaleString()
+                                  : "—"}
                               </div>
                             </div>
                             <div className="flex flex-col items-end gap-1">
@@ -1019,7 +1022,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                                   {new Intl.NumberFormat("pt-BR", {
                                     style: "currency",
                                     currency: "BRL",
-                                  }).format(order.total)}
+                                  }).format(Number(order.total ?? 0))}
                                 </span>
                               </div>
                             )}
@@ -1034,7 +1037,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
                             {new Intl.NumberFormat("pt-BR", {
                               style: "currency",
                               currency: "BRL",
-                            }).format(order.total)}
+                            }).format(Number(order.total ?? 0))}
                           </div>
                         </div>
                       );

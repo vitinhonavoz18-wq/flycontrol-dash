@@ -31,7 +31,7 @@ export const Route = createFileRoute("/api/pizzerias/$id/delete")({
           throw guardResponse;
         }
 
-        let body: any = {};
+        let body: { confirmName?: string } = {};
         try {
           body = await request.json();
         } catch {

@@ -51,7 +51,9 @@ function getCtx(): AudioContext | null {
   if (_ctx) return _ctx;
   try {
     const Ctor: typeof AudioContext =
-      (window as any).AudioContext || (window as any).webkitAudioContext;
+      // `webkitAudioContext` é o nome antigo, ainda usado por Safari velho.
+      window.AudioContext ||
+      (window as Window & { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
     if (!Ctor) return null;
     _ctx = new Ctor();
     return _ctx;

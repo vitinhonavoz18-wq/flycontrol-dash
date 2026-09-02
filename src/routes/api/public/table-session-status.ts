@@ -85,7 +85,10 @@ async function resolveStatus(params: {
   return { found: true as const, session: data };
 }
 
-function respond(headers: Record<string, string>, result: any) {
+/** O que a busca da comanda devolve: achou (com a comanda) ou não achou. */
+type ResultadoDaBusca = { found: true; session: unknown } | { found: false; error?: string };
+
+function respond(headers: Record<string, string>, result: ResultadoDaBusca) {
   if (!result.found) {
     return new Response(JSON.stringify({ success: false, error: result.error || "not_found" }), {
       status: 404,

@@ -39,7 +39,7 @@ type OrderRow = {
   customer_phone: string | null;
   customer_address: string | null;
   neighborhood: string | null;
-  items: any;
+  items: unknown;
   total: number | null;
   delivery_fee: number | null;
   payment_method: string | null;

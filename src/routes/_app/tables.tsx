@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { RequireFeature } from "@/components/plan/PremiumFeatureLock";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { mensagemDoErro } from "@/lib/errors";
+import type { LojaDoSeletor } from "@/components/pizzerias/PizzeriaSelector";
 
 export const Route = createFileRoute("/_app/tables")({ component: TablesPage });
 
@@ -23,7 +24,7 @@ function TablesPage() {
 function TablesPageInner() {
   const { user, isSuperAdmin, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(true);
-  const [pizzerias, setPizzerias] = useState<any[]>([]);
+  const [pizzerias, setPizzerias] = useState<LojaDoSeletor[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
 
   useEffect(() => {
@@ -107,7 +108,7 @@ function TablesPageInner() {
         <TablesManagement
           key={activePizzeria.id}
           tenantId={activePizzeria.id}
-          restaurantSlug={activePizzeria.slug}
+          restaurantSlug={activePizzeria.slug ?? ""}
         />
       )}
     </div>

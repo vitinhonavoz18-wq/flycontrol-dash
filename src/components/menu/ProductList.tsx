@@ -72,7 +72,7 @@ export function ProductList({
   const [products, setProducts] = useState<MenuProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<MenuProduct | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Form states
@@ -213,7 +213,7 @@ export function ProductList({
           type: productType,
           action: editingProduct ? "update" : "create",
           id: editingProduct?.id,
-          externalId: editingProduct?.external_id,
+          externalId: editingProduct?.external_id ?? undefined,
           data: { ...payload, external_category_id: normalizedExternalCategoryId },
           pizzeriaSlug,
           pizzeriaApiKey,

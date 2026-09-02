@@ -17,7 +17,10 @@ interface PizzeriaConfigProps {
 // espera encontrá-los. Esta tela guarda só o que é específico da conexão
 // técnica de sincronização do cardápio, que não tem por que aparecer lá.
 export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
-  const [pizzeria, setPizzeria] = useState<any>(null);
+  const [pizzeria, setPizzeria] = useState<{
+    slug?: string | null;
+    api_key?: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 

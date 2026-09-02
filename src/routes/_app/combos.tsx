@@ -6,12 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { ComboManager } from "@/components/combos/ComboManager";
+import type { LojaDoSeletor } from "@/components/pizzerias/PizzeriaSelector";
 
 export const Route = createFileRoute("/_app/combos")({ component: CombosPage });
 
 function CombosPage() {
   const { user, isSuperAdmin } = useAuth();
-  const [pizzerias, setPizzerias] = useState<any[]>([]);
+  const [pizzerias, setPizzerias] = useState<LojaDoSeletor[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -90,9 +91,9 @@ function CombosPage() {
       {activeId && (
         <ComboManager
           pizzeriaId={activeId}
-          pizzeriaSlug={pizzerias.find((p) => p.id === activeId)?.slug}
-          pizzeriaApiKey={pizzerias.find((p) => p.id === activeId)?.api_key}
-          syncEndpoint={pizzerias.find((p) => p.id === activeId)?.sync_endpoint}
+          pizzeriaSlug={pizzerias.find((p) => p.id === activeId)?.slug ?? undefined}
+          pizzeriaApiKey={pizzerias.find((p) => p.id === activeId)?.api_key ?? undefined}
+          syncEndpoint={pizzerias.find((p) => p.id === activeId)?.sync_endpoint ?? undefined}
         />
       )}
     </div>

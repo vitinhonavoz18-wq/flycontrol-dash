@@ -37,10 +37,10 @@ export function PizzaSizeList({
   onRefresh,
   vocabulario,
 }: PizzaSizeListProps) {
-  const [sizes, setSizes] = useState<any[]>([]);
+  const [sizes, setSizes] = useState<PizzaSize[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingSize, setEditingSize] = useState<any>(null);
+  const [editingSize, setEditingSize] = useState<PizzaSize | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Form states
@@ -116,7 +116,7 @@ export function PizzaSizeList({
           type: "pizza_size",
           action: editingSize ? "update" : "create",
           id: editingSize?.id,
-          externalId: editingSize?.external_id,
+          externalId: editingSize?.external_id ?? undefined,
           data: payload,
           pizzeriaSlug,
           pizzeriaApiKey,
@@ -290,7 +290,9 @@ export function PizzaSizeList({
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-xl text-primary">R$ {size.price.toFixed(2)}</p>
+                  <p className="font-bold text-xl text-primary">
+                    R$ {Number(size.price ?? 0).toFixed(2)}
+                  </p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                     Preço Base
                   </p>
@@ -301,7 +303,7 @@ export function PizzaSizeList({
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium">{size.active ? "Ativo" : "Inativo"}</span>
                   <Switch
-                    checked={size.active}
+                    checked={size.active ?? false}
                     onCheckedChange={() => toggleActive(size)}
                     className="h-4 w-7"
                   />

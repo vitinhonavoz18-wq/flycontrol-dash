@@ -33,7 +33,7 @@ type WaiterNotif = {
   tableNumber: string;
   customerName?: string | null;
   at: number;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
 };
 
 type AssignedSession = {
