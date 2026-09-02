@@ -1,6 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/authMiddleware";
-import { assertOwnsTenantWithFeature } from "@/lib/server/planGuard";
+import { assertOwnsTenantWithFeature, type ClienteDoUsuario } from "@/lib/server/planGuard";
+import { codigoDoErroDoBanco } from "@/lib/errors";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 // ============================================================
 // Password hashing (PBKDF2 via WebCrypto — Cloudflare Worker safe)
@@ -127,10 +129,20 @@ async function verifyWaiterToken(
   return ok ? { waiterId, tenantId } : null;
 }
 
+/** Um pedido preso a uma comanda, como a consulta de agregação o devolve. */
+type VinculoDePedido = {
+  table_session_id: string;
+  orders: {
+    status?: string | null;
+    discount?: number | null;
+    customer_name?: string | null;
+  } | null;
+};
+
 // ============================================================
 // Tenant ownership helper (used by admin-only fns)
 // ============================================================
-async function assertOwnsTenant(supabase: any, userId: string, tenantId: string) {
+async function assertOwnsTenant(supabase: ClienteDoUsuario, userId: string, tenantId: string) {
   await assertOwnsTenantWithFeature(supabase, userId, tenantId, "waiters");
 }
 
@@ -184,7 +196,7 @@ export const createWaiter = createServerFn({ method: "POST" })
       .select("id, full_name, phone, username, is_active, last_login_at, created_at")
       .single();
     if (error) {
-      if ((error as any).code === "23505")
+      if (codigoDoErroDoBanco(error) === "23505")
         throw new Error("Já existe um garçom com este usuário nesta loja");
       throw new Error(error.message);
     }
@@ -213,7 +225,7 @@ export const updateWaiter = createServerFn({ method: "POST" })
     if (!existing) throw new Error("Garçom não encontrado");
     await assertOwnsTenant(context.supabase, context.userId, existing.tenant_id);
 
-    const patch: any = {};
+    const patch: TablesUpdate<"waiters"> = {};
     if (data.fullName !== undefined) patch.full_name = data.fullName.trim();
     if (data.phone !== undefined) patch.phone = data.phone.trim() || null;
     if (data.isActive !== undefined) patch.is_active = data.isActive;
@@ -309,7 +321,7 @@ export const waiterRequestClose = createServerFn({ method: "POST" })
     if (sess.status === "open") {
       await supabaseAdmin
         .from("table_sessions")
-        .update({ status: "requested_close" } as any)
+        .update({ status: "requested_close" })
         .eq("id", sess.id)
         .eq("status", "open");
     }
@@ -331,11 +343,11 @@ export const waiterRequestClose = createServerFn({ method: "POST" })
         table_id: sess.table_id,
         table_number: sess.table_number,
         session_id: sess.id,
-        dining_session_id: (sess as any).dining_session_id,
-        customer_token: (sess as any).customer_token,
+        dining_session_id: sess.dining_session_id,
+        customer_token: sess.customer_token,
         customer_name: sess.customer_name,
         status: "pending",
-      } as any)
+      })
       .select("id")
       .single();
     if (error) throw new Error(error.message);
@@ -377,11 +389,12 @@ export const listMyAssignedSessions = createServerFn({ method: "POST" })
     >();
     for (const id of ids) agg.set(id, { orders_count: 0, customers: new Set(), discount_total: 0 });
     for (const l of links || []) {
-      const o: any = (l as any).orders;
+      const vinculo = l as VinculoDePedido;
+      const o = vinculo.orders;
       if (!o) continue;
       const st = String(o.status || "").toLowerCase();
       if (["cancelado", "cancelled", "canceled", "deleted"].includes(st)) continue;
-      const a = agg.get((l as any).table_session_id);
+      const a = agg.get(vinculo.table_session_id);
       if (!a) continue;
       a.orders_count += 1;
       a.discount_total += Number(o.discount || 0);
@@ -434,9 +447,7 @@ export const listMyPendingOrders = createServerFn({ method: "POST" })
             "delivered",
           ].includes(String(o.status || "").toLowerCase()),
       )
-      .sort(
-        (a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
   });
 
 // Close requests restricted to sessions assigned to this waiter
@@ -488,7 +499,7 @@ export const getWaiterDashboard = createServerFn({ method: "POST" })
     const openIds = (openSess || []).map((s) => s.id);
     const openTablesCount = openSess?.length || 0;
     const openTablesTotal = (openSess || []).reduce(
-      (a: number, s: any) => a + Number(s.total_amount || 0),
+      (a: number, s) => a + Number(s.total_amount || 0),
       0,
     );
 
@@ -501,11 +512,11 @@ export const getWaiterDashboard = createServerFn({ method: "POST" })
       .eq("status", "closed")
       .gte("closed_at", startUtcIso);
     const todaySales = (todayClosed || []).reduce(
-      (a: number, s: any) => a + Number(s.subtotal_amount || 0),
+      (a: number, s) => a + Number(s.subtotal_amount || 0),
       0,
     );
     const todayCommission = (todayClosed || []).reduce(
-      (a: number, s: any) => a + Number(s.service_fee_amount || 0),
+      (a: number, s) => a + Number(s.service_fee_amount || 0),
       0,
     );
     const todayClosedCount = todayClosed?.length || 0;

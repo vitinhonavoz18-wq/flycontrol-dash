@@ -7,6 +7,19 @@ const cors = (request?: Request) => publicCors(request);
 
 const DEAD_STATUSES = new Set(["closed", "archived"]);
 
+/** A comanda, com os campos que este endereço consulta. */
+type ComandaConsultada = {
+  id: string;
+  status: string;
+  closed_at: string | null;
+  restaurant_id: string;
+  table_id: string | null;
+  table_number: string | null;
+  customer_name: string | null;
+  dining_session_id: string;
+  customer_token: string;
+};
+
 export const Route = createFileRoute("/api/public/request-close-table")({
   server: {
     handlers: {
@@ -26,17 +39,7 @@ export const Route = createFileRoute("/api/public/request-close-table")({
           } = body || {};
 
           // Preferred: resolve session by dining_session_id / customer_token
-          let session: {
-            id: string;
-            status: string;
-            closed_at: string | null;
-            restaurant_id: string;
-            table_id: string | null;
-            table_number: string | null;
-            customer_name: string | null;
-            dining_session_id: string;
-            customer_token: string;
-          } | null = null;
+          let session: ComandaConsultada | null = null;
 
           const selectCols =
             "id, status, closed_at, restaurant_id, table_id, table_number, customer_name, dining_session_id, customer_token";
@@ -47,14 +50,14 @@ export const Route = createFileRoute("/api/public/request-close-table")({
               .select(selectCols)
               .eq("dining_session_id", dining_session_id)
               .maybeSingle();
-            session = (data as any) ?? null;
+            session = (data as ComandaConsultada | null) ?? null;
           } else if (customer_token) {
             const { data } = await supabaseAdmin
               .from("table_sessions")
               .select(selectCols)
               .eq("customer_token", customer_token)
               .maybeSingle();
-            session = (data as any) ?? null;
+            session = (data as ComandaConsultada | null) ?? null;
           } else {
             // Authoritative contract — no legacy lookup by session_id / slug+table_number.
             return new Response(
@@ -110,7 +113,7 @@ export const Route = createFileRoute("/api/public/request-close-table")({
               .eq("restaurant_id", session.restaurant_id)
               .eq("public_token", table_token)
               .maybeSingle();
-            tableId = (t as any)?.id ?? null;
+            tableId = t?.id ?? null;
           }
           if (!tableId && session.table_number) {
             const { data: t2 } = await supabaseAdmin
@@ -119,7 +122,7 @@ export const Route = createFileRoute("/api/public/request-close-table")({
               .eq("restaurant_id", session.restaurant_id)
               .eq("table_number", session.table_number)
               .maybeSingle();
-            tableId = (t2 as any)?.id ?? null;
+            tableId = t2?.id ?? null;
           }
 
           // Dedupe pending request
@@ -137,7 +140,7 @@ export const Route = createFileRoute("/api/public/request-close-table")({
             if (session.status === "open") {
               await supabaseAdmin
                 .from("table_sessions")
-                .update({ status: "requested_close" } as any)
+                .update({ status: "requested_close" })
                 .eq("id", session.id)
                 .eq("status", "open");
             }
@@ -145,11 +148,26 @@ export const Route = createFileRoute("/api/public/request-close-table")({
               JSON.stringify({
                 success: true,
                 status: "already_pending",
-                request_id: (existing as any).id,
+                request_id: existing.id,
                 session_status: session.status === "open" ? "requested_close" : session.status,
                 dining_session_id: session.dining_session_id,
               }),
               { status: 200, headers },
+            );
+          }
+
+          // O pedido de fechamento não existe sem o número da mesa: é ele que
+          // o painel usa para saber qual mesa chamar. Sem isso, o banco recusa
+          // a gravação e o cliente recebia um erro sem explicação — agora
+          // recebe o motivo.
+          if (!session.table_number) {
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "missing_table_number",
+                message: "Esta comanda está sem número de mesa. Chame o garçom.",
+              }),
+              { status: 409, headers },
             );
           }
 
@@ -164,7 +182,7 @@ export const Route = createFileRoute("/api/public/request-close-table")({
               customer_token: session.customer_token,
               customer_name: customer_name || session.customer_name || null,
               status: "pending",
-            } as any)
+            })
             .select("id, requested_at")
             .single();
 
@@ -173,17 +191,17 @@ export const Route = createFileRoute("/api/public/request-close-table")({
           // Transition session to REQUESTED_CLOSE (only if still ACTIVE/open).
           const { data: transitioned } = await supabaseAdmin
             .from("table_sessions")
-            .update({ status: "requested_close" } as any)
+            .update({ status: "requested_close" })
             .eq("id", session.id)
             .eq("status", "open")
             .select("status")
             .maybeSingle();
 
-          const finalStatus = (transitioned as any)?.status ?? session.status;
+          const finalStatus = transitioned?.status ?? session.status;
 
           console.log(
             "CLOSE_REQUEST_CREATED:",
-            (inserted as any).id,
+            inserted.id,
             "session:",
             session.id,
             "dining:",
@@ -196,8 +214,8 @@ export const Route = createFileRoute("/api/public/request-close-table")({
             JSON.stringify({
               success: true,
               status: "created",
-              request_id: (inserted as any).id,
-              requested_at: (inserted as any).requested_at,
+              request_id: inserted.id,
+              requested_at: inserted.requested_at,
               session_status: finalStatus,
               dining_session_id: session.dining_session_id,
             }),

@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { publicCors } from "@/lib/server/http";
 import { codigoDoErroDoBanco, mensagemDoErro } from "@/lib/errors";
+import type { TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
 
 const getCorsHeaders = (request?: Request) => publicCors(request);
 
@@ -128,39 +129,36 @@ export const Route = createFileRoute("/api/public/open-table-session")({
 
           if (existingSession) {
             // Adopt SCF-provided IDs onto the reused session (authoritative contract).
-            const updates: any = {};
-            if (!(existingSession as any).table_id && table?.id) updates.table_id = table.id;
+            const updates: TablesUpdate<"table_sessions"> = {};
+            if (!existingSession.table_id && table?.id) updates.table_id = table.id;
             if (
               incomingDiningSessionId &&
-              (existingSession as any).dining_session_id !== incomingDiningSessionId
+              existingSession.dining_session_id !== incomingDiningSessionId
             ) {
               updates.dining_session_id = incomingDiningSessionId;
             }
-            if (
-              incomingCustomerToken &&
-              (existingSession as any).customer_token !== incomingCustomerToken
-            ) {
+            if (incomingCustomerToken && existingSession.customer_token !== incomingCustomerToken) {
               updates.customer_token = incomingCustomerToken;
             }
             if (Object.keys(updates).length > 0) {
               const { data: upd, error: uErr } = await supabaseAdmin
                 .from("table_sessions")
-                .update(updates as any)
-                .eq("id", (existingSession as any).id)
+                .update(updates)
+                .eq("id", existingSession.id)
                 .select(
                   "id, table_id, dining_session_id, customer_token, table_number, table_name, status, subtotal_amount, total_amount, opened_at",
                 )
                 .single();
-              if (!uErr && upd) Object.assign(existingSession as any, upd);
+              if (!uErr && upd) Object.assign(existingSession, upd);
               else if (uErr) console.error("OPEN_TABLE_SESSION_ADOPT_ERROR:", uErr.message);
             }
             console.log(
               "OPEN_TABLE_SESSION_FOUND_EXISTING:",
               existingSession.id,
               "dining:",
-              (existingSession as any).dining_session_id,
+              existingSession.dining_session_id,
               "table_id:",
-              (existingSession as any).table_id,
+              existingSession.table_id,
             );
             return new Response(
               JSON.stringify({
@@ -173,7 +171,7 @@ export const Route = createFileRoute("/api/public/open-table-session")({
           }
 
           try {
-            const insertPayload: any = {
+            const insertPayload: TablesInsert<"table_sessions"> = {
               restaurant_id: pz.id,
               table_id: table.id,
               table_number: String(table_number),
@@ -181,7 +179,7 @@ export const Route = createFileRoute("/api/public/open-table-session")({
               status: "open",
               subtotal_amount: 0,
               service_fee_enabled: false,
-              service_fee_percent: Number((pz as any).service_fee_percent ?? 10),
+              service_fee_percent: Number(pz.service_fee_percent ?? 10),
               service_fee_amount: 0,
               total_amount: 0,
               customer_name: customer_name || null,
@@ -227,9 +225,9 @@ export const Route = createFileRoute("/api/public/open-table-session")({
               "session:",
               newSession.id,
               "dining:",
-              (newSession as any).dining_session_id,
+              newSession.dining_session_id,
               "token:",
-              (newSession as any).customer_token?.slice(0, 6) + "…",
+              newSession.customer_token?.slice(0, 6) + "…",
             );
 
             return new Response(

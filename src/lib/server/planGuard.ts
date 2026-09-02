@@ -1,4 +1,14 @@
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { planHasFeature, FEATURE_LABELS, type Feature } from "@/lib/planPermissions";
+import type { Database } from "@/integrations/supabase/types";
+
+/**
+ * O cliente do banco vindo do login de quem chamou.
+ *
+ * É o crachá da pessoa, não o do sistema: toda consulta feita por ele já
+ * obedece às regras de "cada um enxerga o que é seu" do banco.
+ */
+export type ClienteDoUsuario = SupabaseClient<Database>;
 
 /**
  * Confere só o dono, sem exigir plano.
@@ -9,7 +19,11 @@ import { planHasFeature, FEATURE_LABELS, type Feature } from "@/lib/planPermissi
  * como uma verdade. É o porteiro conferindo o nome na lista em vez de
  * aceitar quem diz "pode deixar, eu sou convidado".
  */
-export async function assertOwnsTenant(supabase: any, userId: string, tenantId: string) {
+export async function assertOwnsTenant(
+  supabase: ClienteDoUsuario,
+  userId: string,
+  tenantId: string,
+) {
   if (!tenantId || typeof tenantId !== "string") throw new Error("Loja não informada");
 
   const { data, error } = await supabase
@@ -31,7 +45,7 @@ export async function assertOwnsTenant(supabase: any, userId: string, tenantId: 
 // Reaproveita a mesma tabela de permissões usada no client (planPermissions.ts)
 // para que a regra nunca divirja entre UI e API.
 export async function assertOwnsTenantWithFeature(
-  supabase: any,
+  supabase: ClienteDoUsuario,
   userId: string,
   tenantId: string,
   feature: Feature,

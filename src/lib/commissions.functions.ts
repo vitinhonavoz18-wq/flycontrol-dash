@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/authMiddleware";
-import { assertOwnsTenantWithFeature } from "@/lib/server/planGuard";
+import { assertOwnsTenantWithFeature, type ClienteDoUsuario } from "@/lib/server/planGuard";
 
-async function assertOwns(supabase: any, userId: string, tenantId: string) {
+async function assertOwns(supabase: ClienteDoUsuario, userId: string, tenantId: string) {
   await assertOwnsTenantWithFeature(supabase, userId, tenantId, "commissions");
 }
 

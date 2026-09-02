@@ -32,11 +32,21 @@ export type CloseTableResult = {
  *  3. POST to SiteCreatorFly webhook (flycontrol-table-closed).
  *  4. Return a structured result.
  */
+/** A comanda, com os campos que este fechamento lê. */
+type ComandaParaFechar = {
+  table_number?: string | null;
+  restaurant_id?: string | null;
+  tenant_id?: string | null;
+  dining_session_id?: string | null;
+  customer_token?: string | null;
+};
+
 export async function closeTableWorkflow(input: CloseTableInput): Promise<CloseTableResult> {
   const closedAt = new Date().toISOString();
   const { data: u } = await supabase.auth.getUser();
   const operatorId = u?.user?.id || null;
-  const operatorName = (u?.user?.user_metadata as any)?.full_name || u?.user?.email || "operador";
+  const dadosDoOperador = (u?.user?.user_metadata ?? {}) as { full_name?: string };
+  const operatorName = dadosDoOperador.full_name || u?.user?.email || "operador";
 
   const result: CloseTableResult = {
     success: false,
@@ -59,11 +69,12 @@ export async function closeTableWorkflow(input: CloseTableInput): Promise<CloseT
       .eq("id", input.sessionId)
       .maybeSingle();
     if (sess) {
-      result.tableNumber = result.tableNumber ?? (sess as any).table_number ?? null;
+      const comanda = sess as ComandaParaFechar;
+      result.tableNumber = result.tableNumber ?? comanda.table_number ?? null;
       result.restaurantId =
-        result.restaurantId ?? (sess as any).restaurant_id ?? (sess as any).tenant_id ?? null;
-      diningSessionId = (sess as any).dining_session_id ?? null;
-      customerToken = (sess as any).customer_token ?? null;
+        result.restaurantId ?? comanda.restaurant_id ?? comanda.tenant_id ?? null;
+      diningSessionId = comanda.dining_session_id ?? null;
+      customerToken = comanda.customer_token ?? null;
     }
   }
 
@@ -77,7 +88,7 @@ export async function closeTableWorkflow(input: CloseTableInput): Promise<CloseT
       closed_at: closedAt,
       closed_by: operatorId,
       closure_reason: "operator_close",
-    } as any)
+    })
     .eq("id", input.sessionId)
     .in("status", ["open", "requested_close", "waiting_operator", "closing"])
     .select(
@@ -96,11 +107,12 @@ export async function closeTableWorkflow(input: CloseTableInput): Promise<CloseT
     return result;
   }
 
+  const comandaFechada = closedRow as ComandaParaFechar;
   result.sessionClosed = true;
-  result.tableNumber = result.tableNumber ?? (closedRow as any).table_number ?? null;
-  result.restaurantId = result.restaurantId ?? (closedRow as any).restaurant_id ?? null;
-  diningSessionId = diningSessionId ?? (closedRow as any).dining_session_id ?? null;
-  customerToken = customerToken ?? (closedRow as any).customer_token ?? null;
+  result.tableNumber = result.tableNumber ?? comandaFechada.table_number ?? null;
+  result.restaurantId = result.restaurantId ?? comandaFechada.restaurant_id ?? null;
+  diningSessionId = diningSessionId ?? comandaFechada.dining_session_id ?? null;
+  customerToken = customerToken ?? comandaFechada.customer_token ?? null;
 
   // STEP 2 — Find + update related close request
   let requestId = input.requestId ?? null;
@@ -113,7 +125,7 @@ export async function closeTableWorkflow(input: CloseTableInput): Promise<CloseT
       .order("requested_at", { ascending: false })
       .limit(1)
       .maybeSingle();
-    requestId = (req as any)?.id ?? null;
+    requestId = (req as { id?: string } | null)?.id ?? null;
   }
 
   if (requestId) {
@@ -138,7 +150,7 @@ export async function closeTableWorkflow(input: CloseTableInput): Promise<CloseT
   // and skips the network call. Guarantees exactly-once delivery per session.
   const { data: claimed } = await supabase
     .from("table_sessions")
-    .update({ webhook_sent_at: closedAt } as any)
+    .update({ webhook_sent_at: closedAt })
     .eq("id", input.sessionId)
     .is("webhook_sent_at", null)
     .select("id")
@@ -167,14 +179,14 @@ export async function closeTableWorkflow(input: CloseTableInput): Promise<CloseT
       if (!result.webhookOk) {
         await supabase
           .from("table_sessions")
-          .update({ webhook_sent_at: null } as any)
+          .update({ webhook_sent_at: null })
           .eq("id", input.sessionId);
       }
     } catch (whErr) {
       console.warn("[closeTableWorkflow] webhook call failed (continuing):", whErr);
       await supabase
         .from("table_sessions")
-        .update({ webhook_sent_at: null } as any)
+        .update({ webhook_sent_at: null })
         .eq("id", input.sessionId);
     }
   }
