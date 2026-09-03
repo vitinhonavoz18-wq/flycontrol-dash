@@ -1,83 +1,200 @@
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useServerFn } from "@tanstack/react-start";
+import { Crown, Sparkles, TrendingUp, Zap } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { useClubCents } from "@/hooks/useClubCents";
+import { CentsTrilha } from "@/components/cents/CentsTrilha";
+import { supabase } from "@/integrations/supabase/client";
+import { progressoDoCents, type ProgressoNaTela } from "@/lib/billing/cents.functions";
+import { formatCents } from "@/lib/billing/money";
 
-function daysLeft(endsAt: string) {
-  const ms = new Date(endsAt).getTime() - Date.now();
-  return Math.max(0, Math.ceil(ms / (1000 * 60 * 60 * 24)));
+/**
+ * A faixa do CENTS na tela de Pedidos.
+ *
+ * O QUE ESTAVA ERRADO ANTES
+ *
+ * Esta faixa mostrava o modelo ANTIGO: uma meta única de 500 pedidos para
+ * "desbloquear o Benefício Ouro" de R$ 0,40. Só que o preço deixou de
+ * funcionar assim — hoje ele cai em degraus, e cada degrau vale dali para
+ * frente.
+ *
+ * Pior: os números vinham de outro caderno (a tabela do clube), enquanto a
+ * cobrança de verdade era calculada em outro lugar. Duas contas para a mesma
+ * pergunta é o caderno de reservas do salão discordando do caderno do
+ * telefone: um dia eles divergem, e o cliente descobre pela fatura.
+ *
+ * O QUE MUDOU
+ *
+ * Agora esta faixa pergunta exatamente para quem fecha a fatura — a mesma
+ * função de servidor que a tela "Plano e cobrança" usa. Um caderno só.
+ *
+ * POR QUE A CONTA NÃO É FEITA AQUI
+ *
+ * O número que aparece na tela é o mesmo que vira fatura. Se o navegador
+ * fizesse a conta, bastaria alguém mexer no que ele mostra para a tela contar
+ * uma história e a cobrança contar outra.
+ *
+ * TEMPO REAL
+ *
+ * Quando entra um pedido — ou quando um pedido muda de status, porque é isso
+ * que faz ele entrar ou sair da conta — a faixa pergunta de novo e se
+ * atualiza sozinha. O dono não precisa recarregar a página para ver o
+ * contador andar.
+ */
+
+function diasRestantes(fim: string | null): number | null {
+  if (!fim) return null;
+  const ms = new Date(fim).getTime() - Date.now();
+  if (!Number.isFinite(ms)) return null;
+  return Math.max(0, Math.ceil(ms / 86_400_000));
 }
 
 export function ClubCentsCard({ tenantId }: { tenantId: string | null }) {
-  const { data, loading } = useClubCents(tenantId);
+  const buscar = useServerFn(progressoDoCents);
+  const [dados, setDados] = useState<ProgressoNaTela | null>(null);
+  const [pulso, setPulso] = useState(0);
+  const [chegouAgora, setChegouAgora] = useState(false);
+  const pedidosAnteriores = useRef<number | null>(null);
 
-  if (loading || !data || !data.cycle) return null;
+  const carregar = useCallback(async () => {
+    try {
+      const r = await buscar({});
+      // Resposta sem os números é resposta que não serve. Melhor sumir com a
+      // faixa do que escrever "0 pedidos" para quem vendeu o dia inteiro.
+      if (!r || typeof r.pedidos !== "number") {
+        setDados(null);
+        return;
+      }
+      setDados(r);
+    } catch {
+      setDados(null);
+    }
+  }, [buscar]);
 
-  const { cycle, level, streak, legend, goalReached, nextCyclePrice } = data;
-  const pct = cycle.goal > 0 ? Math.min(100, Math.round((cycle.orders / cycle.goal) * 100)) : 0;
-  const remaining = Math.max(0, cycle.goal - cycle.orders);
+  useEffect(() => {
+    void carregar();
+  }, [carregar]);
 
-  // Estados da barra: cinza (início) -> azul (intermediário) -> laranja (perto) -> verde (conquistado)
-  const barColor = goalReached
-    ? "bg-green-500"
-    : remaining <= 100
-    ? "bg-orange-500"
-    : pct >= 40
-    ? "bg-blue-500"
-    : "bg-muted-foreground/40";
+  // Escuta os pedidos desta loja. O filtro por loja não é enfeite: sem ele, o
+  // painel de uma empresa reagiria ao pedido de outra.
+  useEffect(() => {
+    if (!tenantId) return;
+    const canal = supabase
+      .channel(`cents-faixa-pedidos-${tenantId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` },
+        () => {
+          // Quem decide se este pedido conta é o servidor. A tela só pergunta
+          // de novo e mostra a resposta.
+          void carregar();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(canal);
+    };
+  }, [tenantId, carregar]);
+
+  // O "+1" que pisca quando o contador anda. Some sozinho — é confete, não
+  // informação: quem perder o piscar continua vendo o número certo.
+  useEffect(() => {
+    const agora = dados?.pedidos ?? null;
+    const antes = pedidosAnteriores.current;
+    pedidosAnteriores.current = agora;
+    if (antes === null || agora === null || agora <= antes) return;
+    setPulso((p) => p + 1);
+    setChegouAgora(true);
+    const t = setTimeout(() => setChegouAgora(false), 2600);
+    return () => clearTimeout(t);
+  }, [dados?.pedidos]);
+
+  // Loja fora do CENTS, ou ainda num ciclo da regra antiga: esta faixa não é
+  // dela. Sumir é melhor do que mostrar uma trilha de degraus para quem é
+  // cobrado por preço único — seria prometer um desconto que não vale.
+  if (!dados || !dados.comFaixas) return null;
+
+  const dias = diasRestantes(dados.cicloFim);
 
   return (
-    <Card className="mb-6 border-primary/20 bg-gradient-to-br from-card to-primary/5 overflow-hidden">
+    <Card className="mb-6 overflow-hidden border-primary/20 bg-gradient-to-br from-card to-primary/5">
       <CardContent className="p-5">
-        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <div className="flex items-center gap-2">
-            <span className="text-lg font-bold">🏆 Clube CENTS</span>
-            {level && (
-              <Badge variant="outline" style={{ borderColor: level.color ?? undefined, color: level.color ?? undefined }}>
-                {level.icon} {level.name}
-              </Badge>
-            )}
-            {legend && (
-              <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30" variant="outline">
-                👑 LENDA CENTS
-              </Badge>
-            )}
+        <div className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
+          <div className="min-w-0">
+            <p className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-primary">
+              <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Clube CENTS
+            </p>
+            <div className="mt-1 flex items-end gap-2">
+              <span className="relative text-3xl font-black leading-none tabular-nums">
+                {dados.pedidos.toLocaleString("pt-BR")}
+                {chegouAgora && (
+                  <span
+                    role="status"
+                    className="absolute -right-2 -top-4 rounded-full bg-primary px-2 py-0.5 text-[11px] font-black text-primary-foreground motion-safe:animate-in motion-safe:fade-in motion-safe:slide-in-from-bottom-2"
+                  >
+                    +1
+                  </span>
+                )}
+              </span>
+              <span className="pb-0.5 text-sm text-muted-foreground">pedidos neste ciclo</span>
+            </div>
           </div>
-          {streak > 0 && (
-            <span className="text-sm text-muted-foreground">
-              {"🔥".repeat(Math.min(streak, 5))} {streak} {streak === 1 ? "ciclo consecutivo" : "ciclos consecutivos"}
-            </span>
-          )}
+
+          <div className="rounded-xl border-2 border-primary/30 bg-primary/5 px-3.5 py-1.5">
+            <p className="flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+              {dados.noMaximo ? (
+                <Crown className="h-3 w-3 text-primary" aria-hidden="true" />
+              ) : (
+                <Zap className="h-3 w-3 text-primary" aria-hidden="true" />
+              )}
+              {dados.noMaximo ? "CENTS MAX" : dados.rotuloDoNivel}
+            </p>
+            <p className="text-xl font-black leading-tight text-primary">
+              {formatCents(dados.precoDoProximoPedidoCents)}
+            </p>
+            <p className="text-[10px] text-muted-foreground">por novo pedido</p>
+          </div>
         </div>
 
-        <div className="flex-1 h-2.5 rounded-full bg-muted overflow-hidden mb-2">
-          <div
-            className={`h-full rounded-full transition-all ${barColor}`}
-            style={{ width: `${pct}%` }}
+        {/* A mesma trilha da tela de cobrança. Um desenho só para os dois
+            lugares: se um dia o preço mudar, não existe uma segunda barra
+            para alguém esquecer de atualizar. */}
+        <div className="-mx-6 -mb-3">
+          <CentsTrilha
+            posicao={dados.posicaoNaTrilha}
+            marcos={dados.marcos}
+            noMaximo={dados.noMaximo}
+            pulso={pulso}
           />
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-          <span className="text-muted-foreground">
-            {cycle.orders} / {cycle.goal} pedidos ({pct}%)
-          </span>
-          <span className="text-muted-foreground">{daysLeft(cycle.endsAt)} dias restantes no ciclo</span>
-        </div>
-
-        <p className="mt-2 text-sm font-medium">
-          {goalReached ? (
-            <>Benefício Ouro garantido para o próximo ciclo{nextCyclePrice != null ? ` (R$ ${nextCyclePrice.toFixed(2)} por pedido)` : ""}.</>
+          {dados.proxima ? (
+            <p>
+              <TrendingUp
+                className="mr-1.5 inline h-4 w-4 align-[-3px] text-primary"
+                aria-hidden="true"
+              />
+              Faltam <strong>{dados.proxima.faltam.toLocaleString("pt-BR")}</strong>{" "}
+              {dados.proxima.faltam === 1 ? "pedido" : "pedidos"} para o próximo pedido custar{" "}
+              <strong>{formatCents(dados.proxima.precoCents)}</strong>.
+            </p>
           ) : (
-            <>
-              Faltam apenas <strong>{remaining}</strong> pedidos para conquistar o 🥇 Benefício Ouro do Clube CENTS.
-            </>
+            <p>
+              <Crown
+                className="mr-1.5 inline h-4 w-4 align-[-3px] text-primary"
+                aria-hidden="true"
+              />
+              Você está no melhor preço do CENTS:{" "}
+              <strong>{formatCents(dados.precoDoProximoPedidoCents)}</strong> por pedido.
+            </p>
           )}
-        </p>
-
-        {data.challengeActive && (
-          <div className="mt-3 rounded-lg border border-orange-500/30 bg-orange-500/10 px-3 py-2 text-sm font-medium text-orange-600">
-            🚀 Desafio dos 7 Dias — você está muito perto. Vamos conquistar o Benefício Ouro!
-          </div>
-        )}
+          {dias !== null && (
+            <span className="text-muted-foreground">
+              {dias} {dias === 1 ? "dia restante" : "dias restantes"} no ciclo
+            </span>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
