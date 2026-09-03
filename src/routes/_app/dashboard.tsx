@@ -682,14 +682,7 @@ function Dashboard() {
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-4">
             <h2 className="text-xl font-semibold">Nova Pizzaria</h2>
-            <NewPizzeriaCard onCreate={createPizzeria} mode="new" />
-          </div>
-          <div className="space-y-4">
-            <h2 className="text-xl font-semibold">Conectar Pizzaria Existente</h2>
-            <p className="text-sm text-muted-foreground">
-              Vincule uma pizzaria que já possui uma API Key no seu site.
-            </p>
-            <NewPizzeriaCard onCreate={createPizzeria} mode="connect" />
+            <NewPizzeriaCard onCreate={createPizzeria} />
           </div>
         </div>
       </div>
@@ -768,14 +761,10 @@ function Dashboard() {
       <HallOfFameStrip />
 
       {showNew && (
-        <div className="mb-8 grid gap-6 md:grid-cols-2">
+        <div className="mb-8 grid gap-6">
           <div className="space-y-4">
             <h2 className="text-lg font-medium">Nova Pizzaria</h2>
-            <NewPizzeriaCard onCreate={createPizzeria} mode="new" />
-          </div>
-          <div className="space-y-4">
-            <h2 className="text-lg font-medium">Conectar Existente</h2>
-            <NewPizzeriaCard onCreate={createPizzeria} mode="connect" />
+            <NewPizzeriaCard onCreate={createPizzeria} />
           </div>
         </div>
       )}
@@ -1103,15 +1092,21 @@ function OrderCard({
   );
 }
 
-function NewPizzeriaCard({
-  onCreate,
-  mode = "new",
-}: {
-  onCreate: (f: PizzeriaForm) => void;
-  mode?: "new" | "connect";
-}) {
-  const [f, setF] = useState({ name: "", slug: "", phone: "", address: "", api_key: "" });
-  const isConnect = mode === "connect";
+/**
+ * O formulário de cadastrar uma loja nova.
+ *
+ * O MODO "CONECTAR EXISTENTE" SAIU DAQUI
+ *
+ * Havia um segundo modo, que pedia para a pessoa colar uma chave de API para
+ * vincular uma loja já criada do outro lado. Era ferramenta de instalação
+ * exposta na tela de quem só quer abrir a própria pizzaria — e ninguém que
+ * usa o FlyControl precisa saber o que é uma chave de API.
+ *
+ * A ligação entre painel e cardápio é feita sozinha no cadastro. Não existe
+ * caso em que o lojista precise digitar essa chave à mão.
+ */
+function NewPizzeriaCard({ onCreate }: { onCreate: (f: PizzeriaForm) => void }) {
+  const [f, setF] = useState({ name: "", slug: "", phone: "", address: "" });
 
   return (
     <form
@@ -1132,39 +1127,25 @@ function NewPizzeriaCard({
       <input
         className="rounded-md border border-input bg-background px-3 py-2 text-sm"
         placeholder="Slug (ex: minha-pizza)"
-        required={!isConnect}
+        required
         value={f.slug}
         onChange={(e) => setF({ ...f, slug: e.target.value })}
       />
 
-      {isConnect ? (
-        <input
-          className="rounded-md border border-input bg-primary/20 border-primary/50 bg-background px-3 py-2 text-sm font-mono"
-          placeholder="Cole aqui a API Key Externa"
-          required
-          value={f.api_key || ""}
-          onChange={(e) => setF({ ...f, api_key: e.target.value })}
-        />
-      ) : (
-        <>
-          <input
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            placeholder="Telefone"
-            value={f.phone}
-            onChange={(e) => setF({ ...f, phone: e.target.value })}
-          />
-          <input
-            className="rounded-md border border-input bg-background px-3 py-2 text-sm"
-            placeholder="Endereço"
-            value={f.address}
-            onChange={(e) => setF({ ...f, address: e.target.value })}
-          />
-        </>
-      )}
+      <input
+        className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+        placeholder="Telefone"
+        value={f.phone}
+        onChange={(e) => setF({ ...f, phone: e.target.value })}
+      />
+      <input
+        className="rounded-md border border-input bg-background px-3 py-2 text-sm"
+        placeholder="Endereço"
+        value={f.address}
+        onChange={(e) => setF({ ...f, address: e.target.value })}
+      />
 
-      <Button type="submit" variant={isConnect ? "secondary" : "default"}>
-        {isConnect ? "Conectar Pizzaria" : "Criar nova pizzaria"}
-      </Button>
+      <Button type="submit">Criar nova pizzaria</Button>
     </form>
   );
 }
