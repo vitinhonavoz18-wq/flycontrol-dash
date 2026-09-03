@@ -25,8 +25,6 @@ import {
   MapPin,
   Clock,
   Plus,
-  Copy,
-  Check,
   Trash2,
   Volume2,
   VolumeX,
@@ -137,7 +135,6 @@ function Dashboard() {
     return saved !== null ? saved === "true" : true;
   });
   const [showNew, setShowNew] = useState(false);
-  const [copied, setCopied] = useState(false);
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [recentNewOrderIds, setRecentNewOrderIds] = useState<string[]>([]);
   const [knownOrderIds, setKnownOrderIds] = useState<Set<string>>(new Set());
@@ -783,39 +780,25 @@ function Dashboard() {
         </div>
       )}
 
+      {/* A chave de acesso e o endereço técnico saíram daqui.
+
+          Eles ficavam escritos na tela de Pedidos, que é a tela que o dono da
+          loja deixa aberta o dia inteiro no balcão — e a chave é a senha que
+          permite lançar pedido na loja. É a cópia da chave do caixa pendurada
+          na porta da cozinha: enquanto só passa gente de casa, ninguém repara;
+          bastou um cliente olhar por cima do ombro para o problema existir.
+
+          Nada deixou de funcionar: a chave continua existindo e o cardápio
+          continua conversando com o painel do mesmo jeito. Ela só não fica
+          mais escrita na parede. */}
       {active && isSuperAdmin && (
         <div className="mb-6 rounded-xl border border-border bg-card p-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <div className="text-xs text-muted-foreground">API Key (use no SiteCreatorFly)</div>
-              <code className="mt-1 inline-block rounded bg-muted px-2 py-1 text-xs">
-                {active.api_key}
-              </code>
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                navigator.clipboard.writeText(active.api_key);
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
-              }}
-            >
-              {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />} Copiar
-            </Button>
-          </div>
-          <div className="mt-2 text-xs text-muted-foreground">
-            Endpoint:{" "}
-            <code>{typeof window !== "undefined" ? window.location.origin : ""}/api/orders</code>
-          </div>
-          <div className="mt-4 border-t border-border pt-4">
-            <Button variant="destructive" size="sm" className="gap-2" onClick={clearAllOrders}>
-              <Trash2 className="h-4 w-4" /> Limpar Todos os Pedidos
-            </Button>
-            <p className="mt-1 text-[10px] text-muted-foreground">
-              Apenas administradores podem zerar a gestão desta pizzaria.
-            </p>
-          </div>
+          <Button variant="destructive" size="sm" className="gap-2" onClick={clearAllOrders}>
+            <Trash2 className="h-4 w-4" /> Limpar Todos os Pedidos
+          </Button>
+          <p className="mt-1 text-[10px] text-muted-foreground">
+            Apenas administradores podem zerar a gestão desta pizzaria.
+          </p>
         </div>
       )}
 
