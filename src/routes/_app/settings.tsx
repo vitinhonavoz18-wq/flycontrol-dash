@@ -334,39 +334,21 @@ function PizzeriaSettingsPanel({
         </div>
       </div>
 
-      <div className="mt-6 border-t border-border pt-4">
-        <div className="mb-2 flex items-center justify-between">
-          <span className="text-sm font-medium">API Key Principal</span>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-6 text-[10px] px-2"
-            onClick={async () => {
-              const apiKey =
-                "fc_" +
-                Array.from(crypto.getRandomValues(new Uint8Array(32)))
-                  .map((b) => b.toString(16).padStart(2, "0"))
-                  .join("");
-              await update({ api_key: apiKey });
-            }}
-          >
-            Redefinir
-          </Button>
-        </div>
-        <div className="flex items-center gap-2">
-          <Input value={p.api_key} readOnly className="h-9 bg-muted text-xs" />
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              navigator.clipboard.writeText(p.api_key);
-              toast.success("Chave copiada");
-            }}
-          >
-            <Copy className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </div>
+      {/* O bloco "API Key Principal" saiu daqui.
+
+          Ele mostrava a chave da loja em texto puro, com um botão de copiar,
+          para QUALQUER dono de loja — na tela de Configurações, que fica
+          aberta no balcão. Essa chave é a senha que permite lançar pedido na
+          loja.
+
+          O botão "Redefinir" que vinha junto era pior ainda: ele trocava a
+          chave só deste lado. Do outro lado, o cardápio continuava
+          apresentando a chave velha — e parava de entrar pedido, sem nenhum
+          aviso. É trocar a fechadura da porta e não avisar quem tem a chave.
+
+          Trocar a chave continua sendo possível e continua sendo uma boa
+          ideia; só precisa ser feito nos dois sistemas ao mesmo tempo, e isso
+          ainda não existe como botão. */}
 
       <div className="mt-6 border-t border-border pt-4">
         <div className="mb-3 flex items-center justify-between">
@@ -474,7 +456,13 @@ function Settings() {
         <AddPizzeriaDialog onSuccess={loadPizzerias} />
       </div>
 
-      {/* Painel de integração com o site público */}
+      {/* Painel de manutenção da integração. Só para administradores da
+          plataforma.
+
+          Ele lista endereços técnicos e ensina a colar chave de API — é o
+          manual do eletricista, não a placa da recepção. Deixá-lo à vista do
+          lojista convida a mexer em fiação que já vem ligada de fábrica. */}
+      {isSuperAdmin && (
       <div className="mb-8 rounded-xl border border-primary/30 bg-card p-5">
         <div className="mb-4 flex items-center gap-2">
           <Plug className="h-5 w-5 text-primary" />
@@ -507,6 +495,7 @@ function Settings() {
           </div>
         </div>
       </div>
+      )}
       <div className="mb-8">
         <NotificationSettings />
       </div>

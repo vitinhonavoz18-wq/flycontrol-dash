@@ -4,7 +4,7 @@ import { toast } from "sonner";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Loader2, Globe, Key } from "lucide-react";
+import { Loader2, Globe } from "lucide-react";
 
 interface PizzeriaConfigProps {
   pizzeriaId: string;
@@ -89,29 +89,15 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
         </CardContent>
       </Card>
 
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="text-sm font-bold flex items-center gap-2">
-            <Key className="h-4 w-4 text-primary" /> Acesso à API
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="api_key">Chave de API (x-api-key)</Label>
-            <Input
-              id="api_key"
-              type="password"
-              placeholder="Sua chave de API"
-              defaultValue={pizzeria?.api_key || ""}
-              onBlur={(e) => handleUpdate("api_key", e.target.value)}
-              disabled={saving}
-            />
-            <p className="text-[10px] text-muted-foreground">
-              Necessária para validar a sincronização segura dos dados.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
+      {/* O cartão "Acesso à API" saiu daqui.
+
+          Era uma caixa editável já preenchida com a chave da loja. Mesmo
+          aparecendo como bolinhas na tela, o valor viajava até o navegador —
+          e, pior, dava para digitar por cima. Uma letra trocada sem querer e
+          a loja parava de receber pedido, sem nenhum aviso.
+
+          A chave é criada e mantida sozinha no cadastro da loja. Ninguém
+          precisa digitá-la à mão. */}
     </div>
   );
 }
