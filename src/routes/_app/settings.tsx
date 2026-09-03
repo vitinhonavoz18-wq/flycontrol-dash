@@ -18,8 +18,36 @@ import { Badge } from "@/components/ui/badge";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { NotificationSettings } from "@/components/notifications/NotificationSettings";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ScrollableTabs } from "@/components/layout/ScrollableTabs";
+import { DocsContent } from "@/components/docs/DocsContent";
+import { mensagemDoErro } from "@/lib/errors";
+import type { TablesUpdate } from "@/integrations/supabase/types";
+
+const ABAS = [
+  { value: "geral", label: "Geral" },
+  { value: "documentacao", label: "Documentação" },
+] as const;
 
 export const Route = createFileRoute("/_app/settings")({ component: Settings });
+
+/** A loja como esta tela a lê e edita. */
+type LojaNasConfiguracoes = {
+  id: string;
+  name: string;
+  slug?: string | null;
+  api_key: string;
+  status?: string | null;
+  description?: string | null;
+  delivery_fee?: number | null;
+  service_fee_percent?: number | null;
+  opening_hours?: unknown;
+  sound_enabled?: boolean | null;
+  sync_endpoint?: string | null;
+};
+
+/** O que volta do "Enviar Pedido Teste". */
+type ResultadoDoTeste = { ok: boolean; status: number | string; data?: unknown; error?: unknown };
 
 function CopyField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false);
@@ -136,14 +164,14 @@ function PizzeriaSettingsPanel({
   origin,
   onUpdated,
 }: {
-  pizzeria: any;
+  pizzeria: LojaNasConfiguracoes;
   origin: string;
-  onUpdated: (patch: any) => void;
+  onUpdated: (patch: Record<string, unknown>) => void;
 }) {
   const [testing, setTesting] = useState(false);
-  const [testResult, setTestResult] = useState<any>(null);
+  const [testResult, setTestResult] = useState<ResultadoDoTeste | null>(null);
 
-  async function update(patch: any) {
+  async function update(patch: TablesUpdate<"pizzerias">) {
     const { error } = await supabase.from("pizzerias").update(patch).eq("id", p.id);
     if (error) {
       toast.error(error.message);
@@ -193,10 +221,10 @@ function PizzeriaSettingsPanel({
       } else {
         toast.error("Erro no teste: " + (data.error || "Erro desconhecido"));
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error(err);
-      setTestResult({ status: "ERRO", ok: false, error: err.message });
-      toast.error("Falha na conexão: " + err.message);
+      setTestResult({ status: "ERRO", ok: false, error: mensagemDoErro(err) });
+      toast.error("Falha na conexão: " + mensagemDoErro(err));
     } finally {
       setTesting(false);
     }
@@ -220,14 +248,14 @@ function PizzeriaSettingsPanel({
           <span>Som ao receber pedido</span>
           <input
             type="checkbox"
-            defaultChecked={p.sound_enabled}
+            defaultChecked={p.sound_enabled ?? false}
             onChange={(e) => update({ sound_enabled: e.target.checked })}
           />
         </label>
         <label className="flex items-center justify-between gap-3 rounded-md border border-border bg-background p-3 text-sm">
           <span>Status do estabelecimento</span>
           <select
-            defaultValue={p.status}
+            defaultValue={p.status ?? "active"}
             className="rounded bg-background px-2 py-1"
             onChange={(e) => update({ status: e.target.value })}
           >
@@ -405,16 +433,17 @@ function PizzeriaSettingsPanel({
         </div>
       </div>
 
-      <PizzeriaPromotion pizzeria={p} />
+      <PizzeriaPromotion pizzeria={{ ...p, slug: p.slug ?? "" }} />
     </div>
   );
 }
 
 function Settings() {
   const { user, isSuperAdmin } = useAuth();
-  const [pizzerias, setPizzerias] = useState<any[]>([]);
+  const [pizzerias, setPizzerias] = useState<LojaNasConfiguracoes[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [origin, setOrigin] = useState("");
+  const [aba, setAba] = useState<string>("geral");
 
   const loadPizzerias = async () => {
     let query = supabase
@@ -474,68 +503,81 @@ function Settings() {
         <AddPizzeriaDialog onSuccess={loadPizzerias} />
       </div>
 
-      {/* Painel de integração com o site público */}
-      <div className="mb-8 rounded-xl border border-primary/30 bg-card p-5">
-        <div className="mb-4 flex items-center gap-2">
-          <Plug className="h-5 w-5 text-primary" />
-          <h2 className="text-lg font-semibold">Integração com o Site Público</h2>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Utilize os campos abaixo para configurar a integração no painel do seu site público:
-            </p>
-            <CopyField label="URL base do FLYCONTROL" value={baseUrl} />
-            <CopyField label="Endpoint de Criação Automática" value={createEndpoint} />
-            <CopyField label="Endpoint de Envio de Pedidos" value={ordersEndpoint} />
-          </div>
-          <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
-            <div className="mb-1 font-medium text-foreground">
-              Como conectar uma pizzaria existente
+      <Tabs value={aba} onValueChange={setAba} className="w-full">
+        <ScrollableTabs items={ABAS} value={aba} className="mb-6" />
+
+        <TabsContent value="geral" className="mt-0">
+          {/* Painel de integração com o site público */}
+          <div className="mb-8 rounded-xl border border-primary/30 bg-card p-5">
+            <div className="mb-4 flex items-center gap-2">
+              <Plug className="h-5 w-5 text-primary" />
+              <h2 className="text-lg font-semibold">Integração com o Site Público</h2>
             </div>
-            1. No seu site público, copie a <strong>API Key</strong> da pizzaria.
-            <br />
-            2. Aqui no FlyControl, clique no botão <strong>
-              "Adicionar Pizzaria Existente"
-            </strong>{" "}
-            acima.
-            <br />
-            3. Cole a API Key e dê um nome para identificá-la.
-            <br />
-            4. No seu site público, certifique-se de que a <strong>URL base</strong> aponta para o
-            endereço acima.
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Utilize os campos abaixo para configurar a integração no painel do seu site
+                  público:
+                </p>
+                <CopyField label="URL base do FLYCONTROL" value={baseUrl} />
+                <CopyField label="Endpoint de Criação Automática" value={createEndpoint} />
+                <CopyField label="Endpoint de Envio de Pedidos" value={ordersEndpoint} />
+              </div>
+              <div className="rounded-md border border-border bg-background p-3 text-xs text-muted-foreground">
+                <div className="mb-1 font-medium text-foreground">
+                  Como conectar uma pizzaria existente
+                </div>
+                1. No seu site público, copie a <strong>API Key</strong> da pizzaria.
+                <br />
+                2. Aqui no FlyControl, clique no botão{" "}
+                <strong>"Adicionar Pizzaria Existente"</strong> acima.
+                <br />
+                3. Cole a API Key e dê um nome para identificá-la.
+                <br />
+                4. No seu site público, certifique-se de que a <strong>URL base</strong> aponta para
+                o endereço acima.
+              </div>
+            </div>
           </div>
-        </div>
-      </div>
-      <div className="mb-8">
-        <NotificationSettings />
-      </div>
-
-      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <h2 className="text-xl font-semibold">Suas pizzarias</h2>
-        {pizzerias.length > 0 && (
-          <div className="w-full sm:w-auto">
-            <PizzeriaSelector pizzerias={pizzerias} activeId={activeId} onSelect={handleSelect} />
+          <div className="mb-8">
+            <NotificationSettings />
           </div>
-        )}
-      </div>
 
-      {!pizzerias.length && (
-        <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>
-      )}
+          <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <h2 className="text-xl font-semibold">Suas pizzarias</h2>
+            {pizzerias.length > 0 && (
+              <div className="w-full sm:w-auto">
+                <PizzeriaSelector
+                  pizzerias={pizzerias}
+                  activeId={activeId}
+                  onSelect={handleSelect}
+                />
+              </div>
+            )}
+          </div>
 
-      {activePizzeria && (
-        <PizzeriaSettingsPanel
-          key={activePizzeria.id}
-          pizzeria={activePizzeria}
-          origin={origin}
-          onUpdated={(patch) =>
-            setPizzerias((prev) =>
-              prev.map((x) => (x.id === activePizzeria.id ? { ...x, ...patch } : x)),
-            )
-          }
-        />
-      )}
+          {!pizzerias.length && (
+            <div className="text-sm text-muted-foreground">Nenhuma pizzaria cadastrada.</div>
+          )}
+
+          {activePizzeria && (
+            <PizzeriaSettingsPanel
+              key={activePizzeria.id}
+              pizzeria={activePizzeria}
+              origin={origin}
+              onUpdated={(patch) =>
+                setPizzerias((prev) =>
+                  prev.map((x) => (x.id === activePizzeria.id ? { ...x, ...patch } : x)),
+                )
+              }
+            />
+          )}
+        </TabsContent>
+
+        <TabsContent value="documentacao" className="mt-0">
+          <DocsContent />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

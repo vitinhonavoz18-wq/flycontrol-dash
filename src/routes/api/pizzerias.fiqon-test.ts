@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { mensagemDoErro } from "@/lib/errors";
 
 export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
   server: {
@@ -8,7 +9,7 @@ export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
         // Obter auth/token para validar que é o dono (simplificado aqui para usar api_key ou validar via profile se possível)
         // Como é um endpoint de servidor, podemos pedir a API Key ou validar a sessão se o tanstack router permitir.
         // No entanto, para simplicidade e segurança, vamos esperar o payload com a API Key da pizzaria.
-        
+
         const body = await request.json();
         const { pizzeria_id, api_key } = body;
 
@@ -28,7 +29,9 @@ export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
         }
 
         if (!pz.fiqon_webhook_url) {
-          return new Response(JSON.stringify({ error: "Webhook URL not configured" }), { status: 400 });
+          return new Response(JSON.stringify({ error: "Webhook URL not configured" }), {
+            status: 400,
+          });
         }
 
         const payload = {
@@ -36,7 +39,7 @@ export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
           source: "flycontrol_manual_test",
           restaurant: {
             slug: pz.slug,
-            name: pz.name
+            name: pz.name,
           },
           order: {
             id: "TEST-" + Math.random().toString(36).substring(7).toUpperCase(),
@@ -50,15 +53,15 @@ export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
             payment_method: "Cartão",
             notes: "Pedido de teste manual via painel FlyControl",
             status: "novo",
-            created_at: new Date().toISOString()
-          }
+            created_at: new Date().toISOString(),
+          },
         };
 
         try {
           const response = await fetch(pz.fiqon_webhook_url, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
+            body: JSON.stringify(payload),
           });
 
           const respText = await response.text();
@@ -71,25 +74,30 @@ export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
             status_http: response.status,
             response_body: respText,
             success: isSuccess,
-            error_message: isSuccess ? null : `Status ${response.status}: ${respText.substring(0, 100)}`
+            error_message: isSuccess
+              ? null
+              : `Status ${response.status}: ${respText.substring(0, 100)}`,
           });
 
-          return new Response(JSON.stringify({ 
-            success: isSuccess, 
-            status: response.status,
-            response: respText 
-          }), { status: 200 });
-        } catch (err: any) {
+          return new Response(
+            JSON.stringify({
+              success: isSuccess,
+              status: response.status,
+              response: respText,
+            }),
+            { status: 200 },
+          );
+        } catch (err) {
           await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
             restaurant_id: pz.id,
             fiqon_url: pz.fiqon_webhook_url,
             payload: {},
             success: false,
-            error_message: err.message
+            error_message: mensagemDoErro(err),
           });
-          return new Response(JSON.stringify({ error: err.message }), { status: 500 });
+          return new Response(JSON.stringify({ error: mensagemDoErro(err) }), { status: 500 });
         }
-      }
-    }
-  }
+      },
+    },
+  },
 });

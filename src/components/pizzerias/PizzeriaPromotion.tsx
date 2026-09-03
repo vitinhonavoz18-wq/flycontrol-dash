@@ -101,16 +101,8 @@ export function PizzeriaPromotion({ pizzeria }: PizzeriaPromotionProps) {
       <div className="flex flex-col items-center gap-8 md:flex-row md:items-start md:justify-around">
         {/* QR Code Preview */}
         <div className="flex flex-col items-center gap-4">
-          <div 
-            ref={qrRef}
-            className="rounded-xl border border-border bg-white p-4 shadow-sm"
-          >
-            <QRCodeSVG 
-              value={publicUrl} 
-              size={180} 
-              level="H"
-              includeMargin={false}
-            />
+          <div ref={qrRef} className="rounded-xl border border-border bg-white p-4 shadow-sm">
+            <QRCodeSVG value={publicUrl} size={180} level="H" includeMargin={false} />
           </div>
           <span className="text-[10px] font-mono text-muted-foreground uppercase tracking-widest">
             Scan para Pedir
@@ -122,11 +114,7 @@ export function PizzeriaPromotion({ pizzeria }: PizzeriaPromotionProps) {
           <div className="space-y-2">
             <label className="text-xs font-medium text-muted-foreground">Link Público</label>
             <div className="flex items-center gap-2">
-              <Input 
-                readOnly 
-                value={publicUrl} 
-                className="bg-muted text-xs"
-              />
+              <Input readOnly value={publicUrl} className="bg-muted text-xs" />
               <Button size="icon" variant="outline" onClick={copyToClipboard} title="Copiar Link">
                 <Copy className="h-4 w-4" />
               </Button>
@@ -138,18 +126,13 @@ export function PizzeriaPromotion({ pizzeria }: PizzeriaPromotionProps) {
               <ExternalLink className="h-4 w-4" />
               Abrir Cardápio
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={downloadPng} 
-              disabled={loading}
-              className="gap-2"
-            >
+            <Button variant="outline" onClick={downloadPng} disabled={loading} className="gap-2">
               <Download className="h-4 w-4" />
               Baixar PNG
             </Button>
-            <Button 
-              variant="outline" 
-              onClick={downloadPdf} 
+            <Button
+              variant="outline"
+              onClick={downloadPdf}
               disabled={loading}
               className="gap-2 sm:col-span-2"
             >

@@ -25,7 +25,7 @@ import {
   MessageSquare,
 } from "lucide-react";
 import { toast } from "sonner";
-import { getWaiterSession, clearWaiterSession } from "@/lib/waiterSession";
+import { getWaiterSession, clearWaiterSession, type WaiterSession } from "@/lib/waiterSession";
 import { WaiterNotificationCenter } from "@/components/waiter/WaiterNotificationCenter";
 import { ScanTableSheet } from "@/components/waiter/ScanTableSheet";
 import {
@@ -35,6 +35,39 @@ import {
   getWaiterDashboard,
   waiterRequestClose,
 } from "@/lib/waiterAuth.functions";
+import { mensagemDoErro } from "@/lib/errors";
+import type { OrderItem } from "@/types/order";
+
+/** Uma comanda na lista do garçom. */
+type ComandaDoGarcom = {
+  id: string;
+  table_number: string | number | null;
+  table_name?: string | null;
+  status: string;
+  customer_name?: string | null;
+  opened_at: string;
+  service_fee_enabled?: boolean | null;
+  service_fee_percent?: number | null;
+  total_amount?: number | null;
+  subtotal_amount?: number | null;
+  service_fee_amount?: number | null;
+  orders_count?: number | null;
+  closed_at?: string | null;
+};
+
+/** Um pedido ainda não entregue, na aba "Pedidos". */
+type PedidoPendente = {
+  id: string;
+  order_number?: number | null;
+  status?: string | null;
+  created_at: string;
+  items?: unknown;
+  table_number?: string | number | null;
+  customer_name?: string | null;
+  total?: number | null;
+  /** A comanda a que o pedido pertence. */
+  session_id?: string;
+};
 
 export const Route = createFileRoute("/waiter-portal")({ component: WaiterPortal });
 
@@ -61,8 +94,8 @@ function WaiterPortal() {
 
   // Notification taps jump to Tables tab and highlight the target session
   useEffect(() => {
-    function onOpenSession(e: any) {
-      const tn = e?.detail?.tableNumber;
+    function onOpenSession(e: Event) {
+      const tn = (e as CustomEvent<{ tableNumber?: string | number }>).detail?.tableNumber;
       if (tn) {
         setHighlightTable(String(tn));
         setTab("tables");
@@ -234,7 +267,7 @@ function MyTablesTab({
   const listPending = useServerFn(listMyPendingOrders);
   const listReq = useServerFn(listMyAssignedCloseRequests);
   const reqClose = useServerFn(waiterRequestClose);
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<ComandaDoGarcom[]>([]);
   const [pendingBySession, setPendingBySession] = useState<Map<string, number>>(new Map());
   const [reqBySession, setReqBySession] = useState<Map<string, number>>(new Map());
   const [loading, setLoading] = useState(false);
@@ -244,22 +277,23 @@ function MyTablesTab({
     setLoading(true);
     try {
       const [ss, po, rq] = await Promise.all([
-        listSess({ data: { token } }) as Promise<any[]>,
-        listPending({ data: { token } }) as Promise<any[]>,
-        listReq({ data: { token } }) as Promise<any[]>,
+        listSess({ data: { token } }) as Promise<ComandaDoGarcom[]>,
+        listPending({ data: { token } }) as Promise<PedidoPendente[]>,
+        listReq({ data: { token } }) as Promise<{ session_id: string }[]>,
       ]);
       setRows(ss || []);
       const pm = new Map<string, number>();
-      (po || []).forEach((o: any) => {
+      (po || []).forEach((o) => {
         const items = Array.isArray(o.items) ? o.items.length : 0;
+        if (!o.session_id) return;
         pm.set(o.session_id, (pm.get(o.session_id) || 0) + items);
       });
       setPendingBySession(pm);
       const rm = new Map<string, number>();
-      (rq || []).forEach((r: any) => rm.set(r.session_id, (rm.get(r.session_id) || 0) + 1));
+      (rq || []).forEach((r) => rm.set(r.session_id, (rm.get(r.session_id) || 0) + 1));
       setReqBySession(rm);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     } finally {
       setLoading(false);
     }
@@ -310,8 +344,8 @@ function MyTablesTab({
       toast.success(
         r.status === "already_pending" ? "Fechamento já solicitado" : "Fechamento solicitado",
       );
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     }
   }
 
@@ -371,7 +405,7 @@ function TableCard({
   onClose,
   onDismissHighlight,
 }: {
-  r: any;
+  r: ComandaDoGarcom;
   now: number;
   pendingItems: number;
   customerRequests: number;
@@ -447,7 +481,7 @@ function TableCard({
         <Indicator
           icon={<ClipboardList className="h-4 w-4" />}
           label="Pedidos"
-          value={r.orders_count}
+          value={r.orders_count ?? 0}
         />
         <Indicator
           icon={<Receipt className="h-4 w-4" />}
@@ -565,15 +599,15 @@ function PendingOrdersTab({
   waiterId: string;
 }) {
   const list = useServerFn(listMyPendingOrders);
-  const [rows, setRows] = useState<any[]>([]);
+  const [rows, setRows] = useState<PedidoPendente[]>([]);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows((await list({ data: { token } })) as any[]);
-    } catch (e: any) {
-      toast.error(e.message);
+      setRows((await list({ data: { token } })) as PedidoPendente[]);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     } finally {
       setLoading(false);
     }
@@ -620,7 +654,7 @@ function PendingOrdersTab({
         />
       ) : (
         <div className="space-y-2">
-          {rows.map((o: any) => (
+          {rows.map((o) => (
             <div key={o.id} className="rounded-xl border bg-card p-3 animate-fade-in">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
@@ -646,7 +680,7 @@ function PendingOrdersTab({
               </div>
               {Array.isArray(o.items) && o.items.length > 0 && (
                 <ul className="mt-2 text-xs text-muted-foreground space-y-0.5">
-                  {o.items.slice(0, 5).map((it: any, i: number) => (
+                  {o.items.slice(0, 5).map((it: OrderItem, i: number) => (
                     <li key={i} className="flex items-center gap-2">
                       <span className="h-1.5 w-1.5 rounded-full bg-primary" />
                       {it.qty ?? it.quantity ?? 1}× {it.name || it.product_name || "Item"}
@@ -669,27 +703,28 @@ function PendingOrdersTab({
 function HistoryTab({ token, tenantId }: { token: string; tenantId: string; waiterId: string }) {
   const listSess = useServerFn(listMyAssignedSessions);
   const dash = useServerFn(getWaiterDashboard);
-  const [closed, setClosed] = useState<any[]>([]);
-  const [kpi, setKpi] = useState<any>(null);
+  const [closed, setClosed] = useState<ComandaDoGarcom[]>([]);
+  type PainelDoGarcom = Awaited<ReturnType<typeof getWaiterDashboard>>;
+  const [kpi, setKpi] = useState<PainelDoGarcom | null>(null);
   const [loading, setLoading] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const [sess, d] = await Promise.all([
-        listSess({ data: { token, includeClosed: true } }) as Promise<any[]>,
+        listSess({ data: { token, includeClosed: true } }) as Promise<ComandaDoGarcom[]>,
         dash({ data: { token } }),
       ]);
       const startOfDay = new Date();
       startOfDay.setHours(0, 0, 0, 0);
       setClosed(
         (sess || []).filter(
-          (s: any) => s.status === "closed" && s.closed_at && new Date(s.closed_at) >= startOfDay,
+          (s) => s.status === "closed" && s.closed_at && new Date(s.closed_at) >= startOfDay,
         ),
       );
       setKpi(d);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     } finally {
       setLoading(false);
     }
@@ -754,7 +789,7 @@ function HistoryTab({ token, tenantId }: { token: string; tenantId: string; wait
             />
           ) : (
             <ul className="divide-y">
-              {closed.map((s: any) => (
+              {closed.map((s) => (
                 <li key={s.id} className="py-2.5 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="font-semibold text-sm truncate">
@@ -801,7 +836,7 @@ function MiniKpi({ icon, label, value }: { icon: React.ReactNode; label: string;
 // ============================================================
 // PROFILE
 // ============================================================
-function ProfileTab({ sess, onLogout }: { sess: any; onLogout: () => void }) {
+function ProfileTab({ sess, onLogout }: { sess: WaiterSession; onLogout: () => void }) {
   return (
     <div className="space-y-3">
       <SectionHeader title="Meu Perfil" />

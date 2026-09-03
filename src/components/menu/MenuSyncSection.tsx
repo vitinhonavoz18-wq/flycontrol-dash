@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Loader2, RefreshCw, Save, CheckCircle2, AlertCircle, Link, Trash2 } from "lucide-react";
+import { mensagemDoErro } from "@/lib/errors";
 
 interface MenuSyncSectionProps {
   pizzeriaId: string;
@@ -20,13 +21,43 @@ async function authHeader(): Promise<Record<string, string>> {
   return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
 }
 
+/**
+ * O cardápio como o site público devolve.
+ *
+ * Cada versão do cardápio digital agrupa as coisas de um jeito — umas mandam
+ * "products", outras "normalized_products", umas separam bebida em "drinks",
+ * outras em "beverages". Todos os campos são opcionais por isso.
+ */
+type CardapioRecebido = {
+  categories?: unknown[];
+  products?: unknown[];
+  beverages?: unknown[];
+  drinks?: unknown[];
+  combos?: unknown[];
+  borders?: Record<string, unknown>[];
+  additionals?: Record<string, unknown>[];
+  normalized_products?: { category_name?: string | null }[];
+};
+
+/** A loja, com o que a tela de sincronização precisa mostrar. */
+type LojaDaSincronizacao = {
+  slug?: string | null;
+  api_key?: string | null;
+  public_url?: string | null;
+  sf_restaurant_id?: string | null;
+  provision_status?: string | null;
+  provision_error?: string | null;
+  provisioned_at?: string | null;
+  sync_endpoint?: string | null;
+};
+
 export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionProps) {
   const [syncEndpoint, setSyncEndpoint] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [reprovisioning, setReprovisioning] = useState(false);
-  const [pizzeria, setPizzeria] = useState<any>(null);
+  const [pizzeria, setPizzeria] = useState<LojaDaSincronizacao | null>(null);
   const [syncStatus, setSyncStatus] = useState<{
     lastSync?: string;
     status?: "success" | "error";
@@ -164,7 +195,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       }
 
       if (response.ok && jsonResponse?.success) {
-        const menuRoot: any =
+        const menuRoot: CardapioRecebido =
           jsonResponse.menu && typeof jsonResponse.menu === "object"
             ? { ...jsonResponse, ...jsonResponse.menu }
             : jsonResponse;
@@ -172,7 +203,8 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         const categoriesCount =
           (menuRoot.categories?.length || 0) +
           (menuRoot.normalized_products?.reduce(
-            (acc: any, p: any) => (p.category_name ? acc.add(p.category_name) : acc),
+            (acc: Set<string>, p: { category_name?: string | null }) =>
+              p.category_name ? acc.add(p.category_name) : acc,
             new Set(),
           ).size || 0);
 
@@ -207,9 +239,9 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
           );
         }
       }
-    } catch (error: any) {
+    } catch (error) {
       console.error("MENU_SYNC_ERROR", error);
-      toast.error(`Erro de conexão: ${error.message}`, { id: toastId });
+      toast.error(`Erro de conexão: ${mensagemDoErro(error)}`, { id: toastId });
     } finally {
       setSyncing(false);
     }
@@ -304,7 +336,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
 
       // SiteCreatorFly returns { success, restaurant, menu: { categories, products, ... } }.
       // Unwrap the "menu" envelope when present so we look at the right level.
-      const menuRoot: any =
+      const menuRoot: CardapioRecebido =
         externalMenu.menu && typeof externalMenu.menu === "object"
           ? { ...externalMenu, ...externalMenu.menu }
           : externalMenu;
@@ -312,7 +344,8 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       const categoriesCount =
         (menuRoot.categories?.length || 0) +
         (menuRoot.normalized_products?.reduce(
-          (acc: any, p: any) => (p.category_name ? acc.add(p.category_name) : acc),
+          (acc: Set<string>, p: { category_name?: string | null }) =>
+            p.category_name ? acc.add(p.category_name) : acc,
           new Set(),
         ).size || 0);
 
@@ -337,7 +370,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "x-api-key": pizzeria.api_key,
+          "x-api-key": pizzeria.api_key ?? "",
         },
         body: JSON.stringify({
           pizzeria_id: pizzeriaId,
@@ -345,8 +378,14 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
           menu: {
             ...menuRoot,
             extras: [
-              ...(menuRoot.borders || []).map((b: any) => ({ ...b, extra_type: "borda" })),
-              ...(menuRoot.additionals || []).map((a: any) => ({ ...a, extra_type: "adicional" })),
+              ...(menuRoot.borders || []).map((b: Record<string, unknown>) => ({
+                ...b,
+                extra_type: "borda",
+              })),
+              ...(menuRoot.additionals || []).map((a: Record<string, unknown>) => ({
+                ...a,
+                extra_type: "adicional",
+              })),
             ],
           },
         }),
@@ -368,9 +407,9 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       } else {
         throw new Error(syncResult.error || "Erro no processamento interno do FlyControl");
       }
-    } catch (error: any) {
-      console.error("MENU_SYNC_ERROR", error.message);
-      const errorMsg = error.message || "Erro desconhecido";
+    } catch (error) {
+      console.error("MENU_SYNC_ERROR", mensagemDoErro(error));
+      const errorMsg = mensagemDoErro(error, "Erro desconhecido");
       setSyncStatus({
         lastSync: new Date().toLocaleString("pt-BR"),
         status: "error",
@@ -404,9 +443,9 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         toast.error(`Falha no provisionamento: ${json?.error || resp.status}`, { id: toastId });
         await loadPizzeria();
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("[Reprovision] error:", err);
-      toast.error(`Erro: ${err?.message || "desconhecido"}`, { id: toastId });
+      toast.error(`Erro: ${mensagemDoErro(err, "desconhecido")}`, { id: toastId });
     } finally {
       setReprovisioning(false);
     }

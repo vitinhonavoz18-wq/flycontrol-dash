@@ -10,6 +10,7 @@ import { Loader2, UtensilsCrossed } from "lucide-react";
 import { toast } from "sonner";
 import { waiterLogin } from "@/lib/waiterAuth.functions";
 import { setWaiterSession } from "@/lib/waiterSession";
+import { mensagemDoErro } from "@/lib/errors";
 
 export const Route = createFileRoute("/waiter-login")({ component: WaiterLoginPage });
 
@@ -28,8 +29,8 @@ function WaiterLoginPage() {
       setWaiterSession(res);
       toast.success(`Bem-vindo, ${res.waiter.fullName}!`);
       nav({ to: "/waiter-portal" });
-    } catch (e: any) {
-      toast.error(e.message || "Falha no login");
+    } catch (e) {
+      toast.error(mensagemDoErro(e, "Falha no login"));
     } finally {
       setLoading(false);
     }
@@ -43,13 +44,21 @@ function WaiterLoginPage() {
             <UtensilsCrossed className="h-7 w-7 text-primary" />
           </div>
           <CardTitle>Acesso do Garçom</CardTitle>
-          <p className="text-sm text-muted-foreground">Entre com seu usuário e senha cadastrados pelo gestor.</p>
+          <p className="text-sm text-muted-foreground">
+            Entre com seu usuário e senha cadastrados pelo gestor.
+          </p>
         </CardHeader>
         <CardContent>
           <form className="space-y-4" onSubmit={onSubmit}>
             <div className="space-y-1.5">
               <Label htmlFor="u">Usuário</Label>
-              <Input id="u" value={username} onChange={(e) => setUsername(e.target.value)} autoFocus required />
+              <Input
+                id="u"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                autoFocus
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="p">Senha</Label>

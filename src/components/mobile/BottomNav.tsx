@@ -1,105 +1,34 @@
 import { Link, useRouterState } from "@tanstack/react-router";
 import { useState } from "react";
-import {
-  LayoutDashboard,
-  ShoppingBag,
-  Menu as MenuIcon,
-  LayoutGrid,
-  MoreHorizontal,
-  Package,
-  BarChart3,
-  Settings,
-  Search,
-  Store,
-  PieChart,
-  UtensilsCrossed,
-  Wallet,
-  BookOpen,
-  LogOut,
-  Users,
-  CreditCard,
-  X,
-} from "lucide-react";
+import { MoreHorizontal, Search, LogOut, X } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
-
-type Item = {
-  to: string;
-  label: string;
-  icon: React.ComponentType<{ className?: string }>;
-  match?: (p: string) => boolean;
-};
-
-const PRIMARY: Item[] = [
-  { to: "/dashboard", label: "Início", icon: LayoutDashboard },
-  { to: "/search-orders", label: "Pedidos", icon: ShoppingBag },
-  { to: "/menu", label: "Cardápio", icon: MenuIcon },
-  { to: "/tables", label: "Mesas", icon: LayoutGrid },
-];
-
-const MORE_OWNER: Item[] = [
-  { to: "/my-store", label: "Minha Loja", icon: Store },
-  { to: "/combos", label: "Combos / Produtos", icon: Package },
-  { to: "/finance", label: "Relatórios", icon: BarChart3 },
-  { to: "/commissions", label: "Comissões", icon: Wallet },
-  { to: "/waiters", label: "Garçons", icon: UtensilsCrossed },
-  { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
-  { to: "/settings", label: "Configurações", icon: Settings },
-  { to: "/docs", label: "Documentação", icon: BookOpen },
-];
-
-const MORE_ADMIN: Item[] = [
-  {
-    to: "/admin/pizzerias",
-    label: "FlyPizzarias",
-    icon: Store,
-    match: (p) => p.startsWith("/admin/pizzerias"),
-  },
-  {
-    to: "/admin/analytics",
-    label: "Insights Globais",
-    icon: PieChart,
-    match: (p) => p.startsWith("/admin/analytics"),
-  },
-  {
-    to: "/admin/finance",
-    label: "Financeiro Global",
-    icon: BarChart3,
-    match: (p) => p.startsWith("/admin/finance"),
-  },
-  {
-    to: "/admin/users",
-    label: "Usuários",
-    icon: Users,
-    match: (p) => p.startsWith("/admin/users"),
-  },
-  {
-    to: "/admin/subscriptions",
-    label: "Planos",
-    icon: CreditCard,
-    match: (p) => p.startsWith("/admin/subscriptions"),
-  },
-];
+import {
+  ADMIN_MOBILE_ITEMS,
+  MOBILE_MORE_ITEMS,
+  MOBILE_PRIMARY_ITEMS,
+  isNavItemActive,
+  visibleOwnerItems,
+  type NavItem,
+} from "@/lib/navigation";
 
 export function BottomNav() {
   const path = useRouterState({ select: (s) => s.location.pathname });
-  const { user, isSuperAdmin, signOut } = useAuth();
+  const { user, isPlatformAdmin, signOut } = useAuth();
   const nav = useNavigate();
   const [openMore, setOpenMore] = useState(false);
-  const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
-  const showAdmin = isSuperAdmin || isHardcodedAdmin;
+  const showAdmin = isPlatformAdmin;
 
   // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
   // não assinam a própria plataforma, então o item some para eles.
-  const ownerItems = MORE_OWNER.filter((it) => !(it.to === "/billing" && showAdmin));
+  // Também somem daqui as áreas ainda em obra — ver src/lib/featureFlags.ts.
+  const ownerItems = visibleOwnerItems(MOBILE_MORE_ITEMS, { isPlatformAdmin });
 
-  const isActive = (it: Item) => (it.match ? it.match(path) : path === it.to);
+  const isActive = (it: NavItem) => isNavItemActive(it, path);
   const moreIsActive =
-    !PRIMARY.some(isActive) &&
-    [...ownerItems, ...(showAdmin ? MORE_ADMIN : [])].some((i) =>
-      i.match ? i.match(path) : path === i.to,
-    );
+    !MOBILE_PRIMARY_ITEMS.some(isActive) &&
+    [...ownerItems, ...(showAdmin ? ADMIN_MOBILE_ITEMS : [])].some(isActive);
 
   return (
     <>
@@ -114,7 +43,7 @@ export function BottomNav() {
         aria-label="Navegação principal"
       >
         <ul className="grid grid-cols-5">
-          {PRIMARY.map((it) => {
+          {MOBILE_PRIMARY_ITEMS.map((it) => {
             const active = isActive(it);
             return (
               <li key={it.to}>
@@ -179,7 +108,7 @@ export function BottomNav() {
             {showAdmin && (
               <>
                 <SectionLabel className="mt-4">Painel Admin</SectionLabel>
-                <Grid items={MORE_ADMIN} path={path} onPick={() => setOpenMore(false)} />
+                <Grid items={ADMIN_MOBILE_ITEMS} path={path} onPick={() => setOpenMore(false)} />
               </>
             )}
 
@@ -225,11 +154,19 @@ function SectionLabel({
   );
 }
 
-function Grid({ items, path, onPick }: { items: Item[]; path: string; onPick: () => void }) {
+function Grid({
+  items,
+  path,
+  onPick,
+}: {
+  items: readonly NavItem[];
+  path: string;
+  onPick: () => void;
+}) {
   return (
     <div className="grid grid-cols-2 gap-2">
       {items.map((it) => {
-        const active = it.match ? it.match(path) : path === it.to;
+        const active = isNavItemActive(it, path);
         return (
           <Link
             key={it.to}

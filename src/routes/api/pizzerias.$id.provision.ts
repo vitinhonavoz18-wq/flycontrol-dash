@@ -2,14 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { provisionRestaurantInSF } from "@/integrations/sitecreatorfly/provision.server";
 import { requireBearerCaller } from "@/integrations/supabase/adminGuard.server";
+import { adminCors } from "@/lib/server/http";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Max-Age": "86400",
-  "Content-Type": "application/json",
-};
+const cors = adminCors({
+  headers: "authorization, x-client-info, apikey, content-type, x-api-key",
+});
 
 export const Route = createFileRoute("/api/pizzerias/$id/provision")({
   server: {
@@ -53,7 +51,7 @@ export const Route = createFileRoute("/api/pizzerias/$id/provision")({
           });
         }
 
-        if ((pz as any).owner_id !== caller.userId) {
+        if (pz.owner_id !== caller.userId) {
           const { data: isAdmin } = await caller.supabase.rpc("is_admin");
           if (!isAdmin) {
             return new Response(JSON.stringify({ error: "forbidden" }), {
@@ -66,18 +64,18 @@ export const Route = createFileRoute("/api/pizzerias/$id/provision")({
         // Mark as pending, clear last error.
         await supabaseAdmin
           .from("pizzerias")
-          .update({ provision_status: "provision_pending", provision_error: null } as any)
+          .update({ provision_status: "provision_pending", provision_error: null })
           .eq("id", id);
 
         // Try to enrich with owner_name from profiles (optional).
         let owner_name = "";
-        if ((pz as any).owner_id) {
+        if (pz.owner_id) {
           const { data: prof } = await supabaseAdmin
             .from("profiles")
             .select("full_name")
-            .eq("id", (pz as any).owner_id)
+            .eq("id", pz.owner_id)
             .maybeSingle();
-          owner_name = String((prof as any)?.full_name ?? "");
+          owner_name = String(prof?.full_name ?? "");
         }
 
         // Idempotent: SF endpoint should upsert by flycontrol_id.
@@ -92,7 +90,7 @@ export const Route = createFileRoute("/api/pizzerias/$id/provision")({
         });
 
         if (provision.ok) {
-          const update: any = {
+          const update: TablesUpdate<"pizzerias"> = {
             provision_status: "provisioned",
             provision_error: null,
             provisioned_at: new Date().toISOString(),
@@ -114,7 +112,7 @@ export const Route = createFileRoute("/api/pizzerias/$id/provision")({
               success: true,
               provision_status: "provisioned",
               already_existed: !!provision.already_existed,
-              sf_restaurant_id: provision.sf_restaurant_id ?? (pz as any).sf_restaurant_id ?? null,
+              sf_restaurant_id: provision.sf_restaurant_id ?? pz.sf_restaurant_id ?? null,
               menu_sync_token: provision.menu_sync_token ?? null,
               public_url: provision.public_url ?? null,
               sync_endpoint: provision.sync_endpoint ?? null,
@@ -126,7 +124,7 @@ export const Route = createFileRoute("/api/pizzerias/$id/provision")({
         console.error("[Reprovision] FAILED", id, provision.error);
         await supabaseAdmin
           .from("pizzerias")
-          .update({ provision_status: "failed", provision_error: provision.error } as any)
+          .update({ provision_status: "failed", provision_error: provision.error })
           .eq("id", id);
 
         return new Response(

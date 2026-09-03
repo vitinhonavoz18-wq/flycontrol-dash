@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { mensagemDoErro } from "@/lib/errors";
 
 export type RestaurantTable = {
   id: string;
@@ -39,7 +40,12 @@ export function useTables(tenantId: string | null) {
   const [tables, setTables] = useState<RestaurantTable[]>([]);
   const [loading, setLoading] = useState(false);
 
-  function mapRow(r: any): RestaurantTable {
+  /** A mesa como a consulta a devolve: com o garçom padrão pendurado junto. */
+  type LinhaDeMesa = Omit<RestaurantTable, "default_waiter_name"> & {
+    default_waiter?: { full_name?: string | null } | null;
+  };
+
+  function mapRow(r: LinhaDeMesa): RestaurantTable {
     return { ...r, default_waiter_name: r.default_waiter?.full_name ?? null };
   }
 
@@ -76,11 +82,11 @@ export function useTables(tenantId: string | null) {
           .order("table_number");
 
         if (!newError && newData) {
-          setTables((newData as any[]).map(mapRow));
+          setTables((newData as LinhaDeMesa[]).map(mapRow));
         }
       }
     } else {
-      setTables((data as any[]).map(mapRow));
+      setTables((data as LinhaDeMesa[]).map(mapRow));
     }
     setLoading(false);
   }
@@ -119,7 +125,10 @@ export function useTables(tenantId: string | null) {
   }
 
   async function updateTable(id: string, updates: Partial<RestaurantTable>) {
-    const { default_waiter_name: _drop, ...clean } = updates as any;
+    // `default_waiter_name` é montado na leitura (vem do cadastro do garçom),
+    // não é coluna da mesa — mandá-lo de volta faria o banco recusar a
+    // gravação inteira.
+    const { default_waiter_name: _drop, ...clean } = updates;
     const { error } = await supabase.from("restaurant_tables").update(clean).eq("id", id);
 
     if (error) {
@@ -214,7 +223,7 @@ export function useTableSessions(tenantId: string | null) {
     if (error) {
       toast.error("Erro ao carregar sessões: " + error.message);
     } else {
-      const mappedData = (data as any[]).map((s) => ({
+      const mappedData = (data ?? []).map((s) => ({
         id: s.id,
         tenant_id: s.restaurant_id,
         table_id: s.table_id,
@@ -259,8 +268,8 @@ export function useTableSessions(tenantId: string | null) {
         toast.success("Mesa encerrada.");
       }
       await loadSessions();
-    } catch (e: any) {
-      toast.error("Erro ao fechar mesa: " + (e?.message || e));
+    } catch (e) {
+      toast.error("Erro ao fechar mesa: " + mensagemDoErro(e));
     }
   }
 

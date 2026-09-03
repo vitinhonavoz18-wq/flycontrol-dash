@@ -20,10 +20,10 @@ export function ClubCentsCard({ tenantId }: { tenantId: string | null }) {
   const barColor = goalReached
     ? "bg-green-500"
     : remaining <= 100
-    ? "bg-orange-500"
-    : pct >= 40
-    ? "bg-blue-500"
-    : "bg-muted-foreground/40";
+      ? "bg-orange-500"
+      : pct >= 40
+        ? "bg-blue-500"
+        : "bg-muted-foreground/40";
 
   return (
     <Card className="mb-6 border-primary/20 bg-gradient-to-br from-card to-primary/5 overflow-hidden">
@@ -32,19 +32,26 @@ export function ClubCentsCard({ tenantId }: { tenantId: string | null }) {
           <div className="flex items-center gap-2">
             <span className="text-lg font-bold">🏆 Clube CENTS</span>
             {level && (
-              <Badge variant="outline" style={{ borderColor: level.color ?? undefined, color: level.color ?? undefined }}>
+              <Badge
+                variant="outline"
+                style={{ borderColor: level.color ?? undefined, color: level.color ?? undefined }}
+              >
                 {level.icon} {level.name}
               </Badge>
             )}
             {legend && (
-              <Badge className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30" variant="outline">
+              <Badge
+                className="bg-yellow-500/10 text-yellow-600 border-yellow-500/30"
+                variant="outline"
+              >
                 👑 LENDA CENTS
               </Badge>
             )}
           </div>
           {streak > 0 && (
             <span className="text-sm text-muted-foreground">
-              {"🔥".repeat(Math.min(streak, 5))} {streak} {streak === 1 ? "ciclo consecutivo" : "ciclos consecutivos"}
+              {"🔥".repeat(Math.min(streak, 5))} {streak}{" "}
+              {streak === 1 ? "ciclo consecutivo" : "ciclos consecutivos"}
             </span>
           )}
         </div>
@@ -60,15 +67,21 @@ export function ClubCentsCard({ tenantId }: { tenantId: string | null }) {
           <span className="text-muted-foreground">
             {cycle.orders} / {cycle.goal} pedidos ({pct}%)
           </span>
-          <span className="text-muted-foreground">{daysLeft(cycle.endsAt)} dias restantes no ciclo</span>
+          <span className="text-muted-foreground">
+            {daysLeft(cycle.endsAt)} dias restantes no ciclo
+          </span>
         </div>
 
         <p className="mt-2 text-sm font-medium">
           {goalReached ? (
-            <>Benefício Ouro garantido para o próximo ciclo{nextCyclePrice != null ? ` (R$ ${nextCyclePrice.toFixed(2)} por pedido)` : ""}.</>
+            <>
+              Benefício Ouro garantido para o próximo ciclo
+              {nextCyclePrice != null ? ` (R$ ${nextCyclePrice.toFixed(2)} por pedido)` : ""}.
+            </>
           ) : (
             <>
-              Faltam apenas <strong>{remaining}</strong> pedidos para conquistar o 🥇 Benefício Ouro do Clube CENTS.
+              Faltam apenas <strong>{remaining}</strong> pedidos para conquistar o 🥇 Benefício Ouro
+              do Clube CENTS.
             </>
           )}
         </p>

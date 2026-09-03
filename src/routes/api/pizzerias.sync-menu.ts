@@ -2,14 +2,12 @@ import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireBearerCaller } from "@/integrations/supabase/adminGuard.server";
 import { isUnsafeMenuSyncUrl } from "@/lib/server/urlSafety";
+import { adminCors } from "@/lib/server/http";
+import { mensagemDoErro } from "@/lib/errors";
 
-const cors = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-api-key",
-  "Access-Control-Allow-Methods": "POST, OPTIONS",
-  "Access-Control-Max-Age": "86400",
-  "Content-Type": "application/json",
-};
+const cors = adminCors({
+  headers: "authorization, x-client-info, apikey, content-type, x-api-key",
+});
 
 export const Route = createFileRoute("/api/pizzerias/sync-menu")({
   server: {
@@ -62,10 +60,10 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             status: response.status,
             headers: cors,
           });
-        } catch (error: any) {
+        } catch (error) {
           console.error(`❌ [Proxy Sync] Erro no fetch:`, error);
           return new Response(
-            JSON.stringify({ error: `Erro ao buscar cardápio: ${error.message}` }),
+            JSON.stringify({ error: `Erro ao buscar cardápio: ${mensagemDoErro(error)}` }),
             {
               status: 500,
               headers: cors,
@@ -75,6 +73,10 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
       },
 
       POST: async ({ request }) => {
+        // O cardápio inteiro chega de fora, em formato que varia por versão
+        // do site público. Cada pedaço é conferido abaixo antes de virar
+        // linha no banco.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let body: any;
         try {
           body = await request.json();
@@ -150,12 +152,12 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
 
         // Self-healing helper: never overwrite a valid existing external_id.
         // Returns a payload copy safe to pass to update().
-        const preserveExternalId = <T extends { external_id?: any }>(
+        const preserveExternalId = <T extends { external_id?: string | null }>(
           payload: T,
           existing: { external_id: string | null } | null | undefined,
           incoming: string | undefined,
         ): T => {
-          const clone: any = { ...payload };
+          const clone: T & { external_id?: string | null } = { ...payload };
           if (existing?.external_id) {
             // Existing row already has a valid external_id — keep it untouched.
             delete clone.external_id;
@@ -184,7 +186,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
               .eq("pizzeria_id", pizzeriaId)
               .eq("external_id", externalId)
               .maybeSingle();
-            existing = data as any;
+            existing = data;
           }
           if (!existing) {
             const { data } = await supabaseAdmin
@@ -193,7 +195,7 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
               .eq("pizzeria_id", pizzeriaId)
               .eq("name", catName)
               .maybeSingle();
-            existing = data as any;
+            existing = data;
           }
 
           if (existing) {

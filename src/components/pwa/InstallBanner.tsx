@@ -14,7 +14,11 @@ if (typeof window !== "undefined") {
     deferredPrompt = e as BIPEvent;
     try {
       sessionStorage.setItem("pwa_install_available", "true");
-    } catch {}
+    } catch {
+      // Guardar isso é conveniência, não obrigação: numa janela anônima o
+      // navegador proíbe gravar, e o aviso de instalar simplesmente aparece
+      // de novo na próxima visita. Nada quebra por isso.
+    }
     window.dispatchEvent(new Event("pwa-installable"));
     console.log("[PWA] beforeinstallprompt captured");
   });
@@ -23,7 +27,11 @@ if (typeof window !== "undefined") {
     try {
       sessionStorage.removeItem("pwa_install_available");
       localStorage.setItem("pwa_installed", "1");
-    } catch {}
+    } catch {
+      // Guardar isso é conveniência, não obrigação: numa janela anônima o
+      // navegador proíbe gravar, e o aviso de instalar simplesmente aparece
+      // de novo na próxima visita. Nada quebra por isso.
+    }
     console.log("[PWA] appinstalled");
   });
 }
@@ -54,7 +62,11 @@ export function InstallBanner() {
     try {
       setDismissed(sessionStorage.getItem("pwa_install_dismissed") === "1");
       setHasPrompt(!!deferredPrompt || sessionStorage.getItem("pwa_install_available") === "true");
-    } catch {}
+    } catch {
+      // Guardar isso é conveniência, não obrigação: numa janela anônima o
+      // navegador proíbe gravar, e o aviso de instalar simplesmente aparece
+      // de novo na próxima visita. Nada quebra por isso.
+    }
 
     const onInstallable = () => setHasPrompt(true);
     const onResize = () => setEnv(detect());
@@ -62,7 +74,16 @@ export function InstallBanner() {
     window.addEventListener("resize", onResize);
 
     const { isStandalone, isMobile, isIOS } = detect();
-    console.log("[PWA] standalone:", isStandalone, "mobile:", isMobile, "ios:", isIOS, "prompt:", !!deferredPrompt);
+    console.log(
+      "[PWA] standalone:",
+      isStandalone,
+      "mobile:",
+      isMobile,
+      "ios:",
+      isIOS,
+      "prompt:",
+      !!deferredPrompt,
+    );
 
     return () => {
       window.removeEventListener("pwa-installable", onInstallable);
@@ -82,7 +103,11 @@ export function InstallBanner() {
     setDismissed(true);
     try {
       sessionStorage.setItem("pwa_install_dismissed", "1");
-    } catch {}
+    } catch {
+      // Guardar isso é conveniência, não obrigação: numa janela anônima o
+      // navegador proíbe gravar, e o aviso de instalar simplesmente aparece
+      // de novo na próxima visita. Nada quebra por isso.
+    }
   };
 
   const install = async () => {
@@ -94,7 +119,11 @@ export function InstallBanner() {
         deferredPrompt = null;
         try {
           sessionStorage.removeItem("pwa_install_available");
-        } catch {}
+        } catch {
+          // Guardar isso é conveniência, não obrigação: numa janela anônima o
+          // navegador proíbe gravar, e o aviso de instalar simplesmente aparece
+          // de novo na próxima visita. Nada quebra por isso.
+        }
         setHasPrompt(false);
         setDismissed(true);
       }
@@ -114,12 +143,18 @@ export function InstallBanner() {
       aria-label="Instalar FlyControl"
     >
       <div className="h-11 w-11 rounded-xl bg-primary/15 grid place-items-center shrink-0">
-        {showIOS ? <Share className="h-5 w-5 text-primary" /> : <Download className="h-5 w-5 text-primary" />}
+        {showIOS ? (
+          <Share className="h-5 w-5 text-primary" />
+        ) : (
+          <Download className="h-5 w-5 text-primary" />
+        )}
       </div>
       <div className="flex-1 min-w-0">
         <div className="text-sm font-semibold leading-tight">Instalar FL Mobile App</div>
         <div className="text-xs text-muted-foreground leading-tight mt-0.5">
-          {showIOS ? "Toque em Compartilhar → Adicionar à Tela de Início" : "Acesso rápido direto da tela inicial"}
+          {showIOS
+            ? "Toque em Compartilhar → Adicionar à Tela de Início"
+            : "Acesso rápido direto da tela inicial"}
         </div>
       </div>
       {showAndroid && (

@@ -1,8 +1,11 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import type { Session, User } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
+import { isFounderEmail } from "@/lib/platformAdmin";
 
-type Role = "super_admin" | "owner";
+// Os tres papeis que a tabela `user_roles` aceita. "customer" existe no
+// banco e chegava aqui sem estar previsto — o tipo agora diz a verdade.
+type Role = "super_admin" | "owner" | "customer";
 
 interface AuthCtx {
   user: User | null;
@@ -10,6 +13,10 @@ interface AuthCtx {
   loading: boolean;
   roles: Role[];
   isSuperAdmin: boolean;
+  /** A conta do fundador — a única que pode apagar loja de vez. */
+  isFounder: boolean;
+  /** Fundador ou `super_admin`: quem enxerga o Painel Admin. */
+  isPlatformAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error?: string }>;
   signInWithGoogle: () => Promise<{ error?: string }>;
@@ -60,7 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   async function loadRoles(uid: string) {
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
-    setRoles((data ?? []).map((r: any) => r.role));
+    setRoles((data ?? []).map((r) => r.role));
   }
 
   const signIn: AuthCtx["signIn"] = async (email, password) => {
@@ -116,6 +123,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         roles,
         isSuperAdmin: roles.includes("super_admin"),
+        isFounder: isFounderEmail(user?.email),
+        isPlatformAdmin: roles.includes("super_admin") || isFounderEmail(user?.email),
         signIn,
         signUp,
         signInWithGoogle,

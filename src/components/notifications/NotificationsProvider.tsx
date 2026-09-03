@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
-import { playSound, unlockAudio, isAudioBlocked } from "@/lib/notification-sounds";
+import { playSound, unlockAudio, isAudioBlocked } from "@/lib/notificationSounds";
 import { claimOrderAlert } from "@/lib/orderAlertClaim";
 import { Button } from "@/components/ui/button";
 import { Volume2 } from "lucide-react";
@@ -15,6 +15,16 @@ import { Volume2 } from "lucide-react";
  * passive notification. The admin has no popup — the operator continues to
  * finalize tables from the Tables management screen as before.
  */
+/** Um pedido recém-chegado, como o aviso ao vivo do banco o entrega. */
+type PedidoRecemChegado = {
+  id?: string;
+  tenant_id?: string;
+  table_number?: string | number | null;
+  order_type?: string | null;
+  service_mode?: string | null;
+  customer_name?: string | null;
+};
+
 export function NotificationsProvider() {
   const { user, isSuperAdmin } = useAuth();
   const [pizzeriaIds, setPizzeriaIds] = useState<string[] | "__all__" | null>(null);
@@ -51,7 +61,7 @@ export function NotificationsProvider() {
         }, delay);
         return;
       }
-      const ids = (data || []).map((p: any) => p.id);
+      const ids = (data || []).map((p) => p.id);
       setPizzeriaIds(ids);
     }
     void load();
@@ -67,9 +77,9 @@ export function NotificationsProvider() {
     const channel = supabase
       .channel("orders-notify-global")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "orders" }, (payload) => {
-        const row: any = payload.new;
+        const row = payload.new as PedidoRecemChegado | null;
         if (!row?.id || seenOrderIds.current.has(row.id)) return;
-        if (pizzeriaIds !== "__all__" && !pizzeriaIds.includes(row.tenant_id)) {
+        if (pizzeriaIds !== "__all__" && !pizzeriaIds.includes(row.tenant_id ?? "")) {
           return;
         }
         seenOrderIds.current.add(row.id);

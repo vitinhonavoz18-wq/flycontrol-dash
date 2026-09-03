@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus } from "lucide-react";
 import { toast } from "sonner";
+import { mensagemDoErro } from "@/lib/errors";
 
 type PlanType = "premium" | "cents";
 
@@ -53,8 +54,8 @@ export function CreatePizzeriaDialog({ onSuccess }: { onSuccess: () => void }) {
         setPlanType("premium");
         onSuccess();
       }
-    } catch (err: any) {
-      toast.error("Erro ao criar empresa: " + err.message);
+    } catch (err) {
+      toast.error("Erro ao criar empresa: " + mensagemDoErro(err));
     } finally {
       setLoading(false);
     }

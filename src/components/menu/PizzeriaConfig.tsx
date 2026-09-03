@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, Globe, Key } from "lucide-react";
+import type { TablesUpdate } from "@/integrations/supabase/types";
 
 interface PizzeriaConfigProps {
   pizzeriaId: string;
@@ -16,7 +17,10 @@ interface PizzeriaConfigProps {
 // espera encontrá-los. Esta tela guarda só o que é específico da conexão
 // técnica de sincronização do cardápio, que não tem por que aparecer lá.
 export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
-  const [pizzeria, setPizzeria] = useState<any>(null);
+  const [pizzeria, setPizzeria] = useState<{
+    slug?: string | null;
+    api_key?: string | null;
+  } | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -40,11 +44,11 @@ export function PizzeriaConfig({ pizzeriaId }: PizzeriaConfigProps) {
     setLoading(false);
   }
 
-  async function handleUpdate(field: string, value: any) {
+  async function handleUpdate(field: string, value: unknown) {
     setSaving(true);
     const { error } = await supabase
       .from("pizzerias")
-      .update({ [field]: value } as any)
+      .update({ [field]: value } as TablesUpdate<"pizzerias">)
       .eq("id", pizzeriaId);
 
     if (error) {

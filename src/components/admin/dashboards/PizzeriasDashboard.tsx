@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { useAdminPizzerias } from "@/hooks/admin/use-admin-pizzerias";
+import { useAdminPizzerias } from "@/hooks/admin/useAdminPizzerias";
 import {
   Table,
   TableBody,

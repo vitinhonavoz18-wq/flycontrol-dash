@@ -11,7 +11,7 @@
  */
 
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { requireSupabaseAuth } from "@/integrations/supabase/authMiddleware";
 import { initialUnitPriceCents } from "./billingEngine";
 import { pizzeriaAccessStatusFor } from "./collections";
 import { COMPANY_BILLING_MODEL, isPublicPlanCode, type PlanCode } from "./plans";
@@ -245,7 +245,7 @@ export const changeSubscriptionPlan = createServerFn({ method: "POST" })
 
     // `pizzerias.plan_type` continua sendo o que os entitlements consultam.
     // Mantê-lo em sincronia é o que faz o bloqueio de Mesas/Garçons/Comissões
-    // valer imediatamente, na interface e no plan-guard do servidor.
+    // valer imediatamente, na interface e no planGuard do servidor.
     //
     // `billing_model` vai junto por obrigação do banco: a constraint exige o
     // par correto, e atualizar só o plan_type faz a troca para o CENTS ser

@@ -4,7 +4,7 @@
  */
 
 import type { Order, OrderItem } from "@/types/order";
-import { normalizeOrderType } from "@/utils/order-utils";
+import { normalizeOrderType } from "@/utils/orderUtils";
 
 export function formatBRL(value: number | string | null | undefined): string {
   const n = Number(value ?? 0);

@@ -24,6 +24,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
+import { mensagemDoErro } from "@/lib/errors";
+import type { MenuExtra } from "@/types/menu";
 
 interface ExtraListProps {
   pizzeriaId: string;
@@ -42,10 +44,10 @@ export function ExtraList({
   onRefresh,
   vocabulario,
 }: ExtraListProps) {
-  const [extras, setExtras] = useState<any[]>([]);
+  const [extras, setExtras] = useState<MenuExtra[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingExtra, setEditingExtra] = useState<any>(null);
+  const [editingExtra, setEditingExtra] = useState<MenuExtra | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Form states
@@ -82,11 +84,11 @@ export function ExtraList({
     setIsDialogOpen(true);
   }
 
-  function openEdit(ext: any) {
+  function openEdit(ext: MenuExtra) {
     setEditingExtra(ext);
     setName(ext.name);
-    setPrice(ext.price.toString());
-    setExtraType(ext.extra_type);
+    setPrice(String(ext.price ?? ""));
+    setExtraType(ext.extra_type ?? "adicional");
     setIsDialogOpen(true);
   }
 
@@ -114,7 +116,7 @@ export function ExtraList({
           type: "extra",
           action: editingExtra ? "update" : "create",
           id: editingExtra?.id,
-          externalId: editingExtra?.external_id,
+          externalId: editingExtra?.external_id ?? undefined,
           data: payload,
           pizzeriaSlug,
           pizzeriaApiKey,
@@ -172,14 +174,14 @@ export function ExtraList({
         if (onRefresh) onRefresh();
         else loadExtras();
       }
-    } catch (e: any) {
-      toast.error("Erro inesperado: " + e.message);
+    } catch (e) {
+      toast.error("Erro inesperado: " + mensagemDoErro(e));
     } finally {
       setSaving(false);
     }
   }
 
-  async function toggleActive(ext: any) {
+  async function toggleActive(ext: MenuExtra) {
     const newValue = !ext.active;
 
     if (pizzeriaSlug && pizzeriaApiKey && ext.external_id) {
@@ -228,7 +230,7 @@ export function ExtraList({
     }
   }
 
-  async function handleDelete(ext: any) {
+  async function handleDelete(ext: MenuExtra) {
     if (!confirm("Tem certeza que deseja excluir este complemento?")) return;
 
     if (pizzeriaSlug && pizzeriaApiKey && ext.external_id) {
@@ -384,7 +386,17 @@ export function ExtraList({
   );
 }
 
-function ExtraItem({ ext, onEdit, onToggle, onDelete }: any) {
+function ExtraItem({
+  ext,
+  onEdit,
+  onToggle,
+  onDelete,
+}: {
+  ext: MenuExtra;
+  onEdit: (ext: MenuExtra) => void;
+  onToggle: (ext: MenuExtra) => void;
+  onDelete: (ext: MenuExtra) => void;
+}) {
   return (
     <Card
       className={`transition-all hover:border-primary/30 ${!ext.active ? "opacity-60 bg-muted/30" : ""}`}
@@ -392,10 +404,14 @@ function ExtraItem({ ext, onEdit, onToggle, onDelete }: any) {
       <CardContent className="p-3 flex items-center justify-between">
         <div>
           <h5 className="font-semibold text-sm">{ext.name}</h5>
-          <p className="text-xs text-primary font-bold">+ R$ {ext.price.toFixed(2)}</p>
+          <p className="text-xs text-primary font-bold">+ R$ {Number(ext.price ?? 0).toFixed(2)}</p>
         </div>
         <div className="flex items-center gap-2">
-          <Switch checked={ext.active} onCheckedChange={() => onToggle(ext)} className="h-4 w-7" />
+          <Switch
+            checked={ext.active ?? false}
+            onCheckedChange={() => onToggle(ext)}
+            className="h-4 w-7"
+          />
           <Button variant="ghost" size="icon" className="h-11 w-11" onClick={() => onEdit(ext)}>
             <Pencil className="h-4 w-4" />
           </Button>

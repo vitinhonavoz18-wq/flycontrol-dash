@@ -117,7 +117,9 @@ describe("envio", () => {
 
     await userEvent.click(screen.getByRole("button", { name: /enviar ao cliente/i }));
 
-    expect(await screen.findByText(/Não foi possível enviar a atualização ao cliente/i)).toBeTruthy();
+    expect(
+      await screen.findByText(/Não foi possível enviar a atualização ao cliente/i),
+    ).toBeTruthy();
     expect(screen.getByText("O WhatsApp recusou.")).toBeTruthy();
     expect(screen.getByRole("button", { name: /tentar de novo/i })).toBeTruthy();
     // Nada de fechar sozinho: quem tentou precisa LER o motivo.

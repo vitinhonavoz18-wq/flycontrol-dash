@@ -17,6 +17,8 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
+import { mensagemDoErro } from "@/lib/errors";
+import type { PizzaSize } from "@/types/menu";
 
 interface PizzaSizeListProps {
   pizzeriaId: string;
@@ -35,10 +37,10 @@ export function PizzaSizeList({
   onRefresh,
   vocabulario,
 }: PizzaSizeListProps) {
-  const [sizes, setSizes] = useState<any[]>([]);
+  const [sizes, setSizes] = useState<PizzaSize[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingSize, setEditingSize] = useState<any>(null);
+  const [editingSize, setEditingSize] = useState<PizzaSize | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Form states
@@ -78,11 +80,11 @@ export function PizzaSizeList({
     setIsDialogOpen(true);
   }
 
-  function openEdit(size: any) {
+  function openEdit(size: PizzaSize) {
     setEditingSize(size);
     setName(size.name);
-    setPrice(size.price.toString());
-    setMaxFlavors(size.max_flavors.toString());
+    setPrice(String(size.price ?? ""));
+    setMaxFlavors(String(size.max_flavors ?? 1));
     setSlices((size.slices || 8).toString());
     setSortOrder((size.sort_order || 0).toString());
     setIsDialogOpen(true);
@@ -114,7 +116,7 @@ export function PizzaSizeList({
           type: "pizza_size",
           action: editingSize ? "update" : "create",
           id: editingSize?.id,
-          externalId: editingSize?.external_id,
+          externalId: editingSize?.external_id ?? undefined,
           data: payload,
           pizzeriaSlug,
           pizzeriaApiKey,
@@ -171,14 +173,14 @@ export function PizzaSizeList({
         if (onRefresh) onRefresh();
         else loadSizes();
       }
-    } catch (e: any) {
-      toast.error("Erro inesperado: " + e.message);
+    } catch (e) {
+      toast.error("Erro inesperado: " + mensagemDoErro(e));
     } finally {
       setSaving(false);
     }
   }
 
-  async function toggleActive(size: any) {
+  async function toggleActive(size: PizzaSize) {
     const newValue = !size.active;
 
     if (pizzeriaSlug && pizzeriaApiKey && size.external_id) {
@@ -217,7 +219,7 @@ export function PizzaSizeList({
     }
   }
 
-  async function handleDelete(size: any) {
+  async function handleDelete(size: PizzaSize) {
     if (
       !confirm(
         "Tem certeza que deseja excluir este tamanho? Isso pode afetar os cálculos de preço no site.",
@@ -236,7 +238,7 @@ export function PizzaSizeList({
       });
 
       if (!syncResult.success) {
-        let errorMsg = "Não foi possível atualizar o cardápio público.";
+        const errorMsg = "Não foi possível atualizar o cardápio público.";
         toast.error(errorMsg);
         return;
       }
@@ -288,7 +290,9 @@ export function PizzaSizeList({
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-bold text-xl text-primary">R$ {size.price.toFixed(2)}</p>
+                  <p className="font-bold text-xl text-primary">
+                    R$ {Number(size.price ?? 0).toFixed(2)}
+                  </p>
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-semibold">
                     Preço Base
                   </p>
@@ -299,7 +303,7 @@ export function PizzaSizeList({
                 <div className="flex items-center gap-2">
                   <span className="text-xs font-medium">{size.active ? "Ativo" : "Inativo"}</span>
                   <Switch
-                    checked={size.active}
+                    checked={size.active ?? false}
                     onCheckedChange={() => toggleActive(size)}
                     className="h-4 w-7"
                   />

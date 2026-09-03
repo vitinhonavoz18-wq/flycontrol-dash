@@ -1,15 +1,9 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { publicCors } from "@/lib/server/http";
+import { mensagemDoErro } from "@/lib/errors";
 
-const cors = (request?: Request) => ({
-  "Access-Control-Allow-Origin": request?.headers.get("origin") || "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type, x-api-key, accept",
-  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Max-Age": "86400",
-  "Access-Control-Allow-Credentials": "true",
-  "Content-Type": "application/json",
-});
+const cors = (request?: Request) => publicCors(request, { methods: "GET, POST, OPTIONS" });
 
 const SELECT =
   "id, dining_session_id, customer_token, status, closed_at, restaurant_id, table_number, table_name, opened_at, subtotal_amount, service_fee_amount, total_amount";
@@ -91,7 +85,10 @@ async function resolveStatus(params: {
   return { found: true as const, session: data };
 }
 
-function respond(headers: Record<string, string>, result: any) {
+/** O que a busca da comanda devolve: achou (com a comanda) ou não achou. */
+type ResultadoDaBusca = { found: true; session: unknown } | { found: false; error?: string };
+
+function respond(headers: Record<string, string>, result: ResultadoDaBusca) {
   if (!result.found) {
     return new Response(JSON.stringify({ success: false, error: result.error || "not_found" }), {
       status: 404,
@@ -120,8 +117,8 @@ export const Route = createFileRoute("/api/public/table-session-status")({
             table_number: url.searchParams.get("table_number"),
           });
           return respond(headers, result);
-        } catch (err: any) {
-          console.error("❌ TABLE_SESSION_STATUS_ERROR:", err?.message);
+        } catch (err) {
+          console.error("❌ TABLE_SESSION_STATUS_ERROR:", mensagemDoErro(err));
           return new Response(JSON.stringify({ success: false, error: "server_error" }), {
             status: 500,
             headers,
@@ -140,8 +137,8 @@ export const Route = createFileRoute("/api/public/table-session-status")({
             table_number: body?.table_number ?? null,
           });
           return respond(headers, result);
-        } catch (err: any) {
-          console.error("❌ TABLE_SESSION_STATUS_ERROR:", err?.message);
+        } catch (err) {
+          console.error("❌ TABLE_SESSION_STATUS_ERROR:", mensagemDoErro(err));
           return new Response(JSON.stringify({ success: false, error: "server_error" }), {
             status: 500,
             headers,

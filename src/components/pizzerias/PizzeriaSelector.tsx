@@ -9,20 +9,21 @@ import {
   CommandItem,
   CommandList,
 } from "@/components/ui/command";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useState } from "react";
 
-interface Pizzeria {
+/** O mínimo que o seletor precisa saber de uma loja: como chamá-la. */
+export type LojaDoSeletor = {
   id: string;
   name: string;
-}
+  /** Campos que as telas que usam o seletor também precisam ter em mãos. */
+  slug?: string | null;
+  api_key?: string | null;
+  sync_endpoint?: string | null;
+};
 
 interface PizzeriaSelectorProps {
-  pizzerias: Pizzeria[];
+  pizzerias: LojaDoSeletor[];
   activeId: string | null;
   onSelect: (id: string) => void;
 }
@@ -66,7 +67,7 @@ export function PizzeriaSelector({ pizzerias, activeId, onSelect }: PizzeriaSele
                   <Check
                     className={cn(
                       "mr-2 h-4 w-4 text-primary",
-                      activeId === p.id ? "opacity-100" : "opacity-0"
+                      activeId === p.id ? "opacity-100" : "opacity-0",
                     )}
                   />
                   {p.name}

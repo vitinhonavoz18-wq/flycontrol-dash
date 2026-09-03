@@ -11,6 +11,7 @@
 // também excluem "inactive"), mas continua visível para o admin.
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { deprovisionRestaurantInSF } from "@/integrations/sitecreatorfly/provision.server";
+import type { Json } from "@/integrations/supabase/types";
 
 const STORAGE_BUCKET = "menu-images";
 
@@ -34,8 +35,8 @@ async function logAdminAction(params: {
     target_store_id: params.targetStoreId,
     target_user_id: params.targetUserId,
     status: params.status,
-    details: params.details ?? null,
-  } as any);
+    details: (params.details ?? null) as Json,
+  });
   if (error) console.error("[PizzeriaLifecycle] falha ao gravar log de auditoria:", error);
 }
 
@@ -62,8 +63,8 @@ async function collectStoragePaths(
     supabaseAdmin.from("menu_products").select("image_url").eq("pizzeria_id", pizzeriaId),
     supabaseAdmin.from("combos").select("image_url").eq("pizzeria_id", pizzeriaId),
   ]);
-  for (const p of products ?? []) urls.push((p as any).image_url);
-  for (const c of combosRows ?? []) urls.push((c as any).image_url);
+  for (const p of products ?? []) urls.push(p.image_url);
+  for (const c of combosRows ?? []) urls.push(c.image_url);
 
   const paths = new Set<string>();
   for (const url of urls) {
@@ -92,7 +93,7 @@ export async function deactivatePizzeria(
 
   const { error: updErr } = await supabaseAdmin
     .from("pizzerias")
-    .update({ status: "inactive" } as any)
+    .update({ status: "inactive" })
     .eq("id", pizzeriaId);
 
   if (updErr) {
@@ -137,7 +138,7 @@ export async function reactivatePizzeria(
 
   const { error: updErr } = await supabaseAdmin
     .from("pizzerias")
-    .update({ status: "active" } as any)
+    .update({ status: "active" })
     .eq("id", pizzeriaId);
 
   if (updErr) {

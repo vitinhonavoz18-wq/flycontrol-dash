@@ -4,6 +4,7 @@ import { closeBillingCycle } from "@/lib/billing/closeCycle.server";
 import { createRecurringCharge } from "@/lib/billing/infinitypay/recurringCharge.server";
 import { reconcileOverdueInvoices } from "@/lib/billing/collections.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
+import { jsonResponse } from "@/lib/server/http";
 
 /**
  * Fechamento dos ciclos vencidos.
@@ -28,11 +29,7 @@ import { asBillingDb } from "@/lib/billing/supabaseBridge";
 /** Segredo do agendador. Sem ele configurado, o endpoint fica desligado. */
 const SECRET_HEADER = "x-billing-cron-secret";
 
-const json = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
+const json = (body: unknown, status = 200) => jsonResponse(body, { status });
 
 /**
  * Comparação em tempo constante.

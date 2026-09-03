@@ -1,6 +1,6 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { normalizeOrderType } from "@/utils/order-utils";
+import { normalizeOrderType } from "@/utils/orderUtils";
 import { useAuth } from "@/lib/auth";
 
 import { supabase } from "@/integrations/supabase/client";

@@ -6,12 +6,13 @@ import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { MenuManager } from "@/components/menu/MenuManager";
+import type { LojaDoSeletor } from "@/components/pizzerias/PizzeriaSelector";
 
 export const Route = createFileRoute("/_app/menu")({ component: MenuPage });
 
 function MenuPage() {
   const { user, isSuperAdmin } = useAuth();
-  const [pizzerias, setPizzerias] = useState<any[]>([]);
+  const [pizzerias, setPizzerias] = useState<LojaDoSeletor[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 

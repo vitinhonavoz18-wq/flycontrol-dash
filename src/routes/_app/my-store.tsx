@@ -46,6 +46,50 @@ import {
   VISIBILIDADES_DE_COMBOS,
   visibilidadeDeCombosDe,
 } from "@/lib/site/menuBehavior";
+import { mensagemDoErro } from "@/lib/errors";
+import type { TablesUpdate } from "@/integrations/supabase/types";
+
+/**
+ * A loja como ESTA tela a manipula.
+ *
+ * É a lista dos campos que a tela lê e grava — nada além. Escrever o nome de
+ * um campo errado passa a ser erro na hora de editar, em vez de virar um
+ * espaço em branco na tela do dono.
+ *
+ * `site_settings` é o pacotinho de ajustes extras que viaja inteiro para o
+ * site público; por isso é um objeto solto, e não uma lista fixa de campos.
+ */
+type Loja = {
+  id: string;
+  name?: string | null;
+  slug?: string | null;
+  api_key?: string | null;
+  description?: string | null;
+  tagline?: string | null;
+  short_message?: string | null;
+  business_type?: string | null;
+  phone?: string | null;
+  whatsapp_display?: string | null;
+  instagram_url?: string | null;
+  address?: string | null;
+  neighborhood?: string | null;
+  city?: string | null;
+  logo_url?: string | null;
+  hero_image_url?: string | null;
+  hero_video_url?: string | null;
+  hero_media_type?: string | null;
+  opening_hours?: unknown;
+  payment_methods?: string[] | null;
+  delivery_enabled?: boolean | null;
+  pickup_enabled?: boolean | null;
+  table_enabled?: boolean | null;
+  is_open?: boolean | null;
+  delivery_fee?: number | null;
+  average_delivery_time?: string | null;
+  sync_endpoint?: string | null;
+  site_settings?: Record<string, unknown> | null;
+  [outroCampo: string]: unknown;
+};
 
 export const Route = createFileRoute("/_app/my-store")({ component: MyStore });
 
@@ -122,7 +166,9 @@ function StoreEditor({
 }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [pizzeria, setPizzeria] = useState<any>(null);
+  // A loja tem dezenas de campos e cada tela usa um punhado deles. `Loja` é o
+  // formato que ESTA tela lê e grava — ver o tipo logo acima do componente.
+  const [pizzeria, setPizzeria] = useState<Loja | null>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -134,9 +180,9 @@ function StoreEditor({
         .maybeSingle();
 
       if (pError) throw pError;
-      setPizzeria(pizzeriaData);
-    } catch (error: any) {
-      toast.error("Erro ao carregar dados: " + error.message);
+      setPizzeria(pizzeriaData as Loja | null);
+    } catch (error) {
+      toast.error("Erro ao carregar dados: " + mensagemDoErro(error));
     } finally {
       setLoading(false);
     }
@@ -153,7 +199,7 @@ function StoreEditor({
   // de existir o número de mesa automático: os dados dele existem, só falta
   // essa etiqueta. Busca essa etiqueta agora, na hora do primeiro salvamento,
   // em vez de deixar o dono da loja precisar achar um botão em outra tela.
-  async function ensureSyncEndpoint(pz: any): Promise<string | undefined> {
+  async function ensureSyncEndpoint(pz: Loja): Promise<string | undefined> {
     if (pz.sync_endpoint) return pz.sync_endpoint;
 
     const {
@@ -180,7 +226,7 @@ function StoreEditor({
   // (ao sair do campo, ou na hora, pros interruptores) — não existe mais um
   // botão único de "Salvar" que junta tudo: cada mudança já vale sozinha, e
   // o aviso mostrado reflete o que realmente aconteceu com essa mudança.
-  async function handleUpdate(field: string, value: any) {
+  async function handleUpdate(field: string, value: unknown) {
     await handleUpdateMany({ [field]: value });
   }
 
@@ -199,7 +245,7 @@ function StoreEditor({
     setSaving(true);
     const { error } = await supabase
       .from("pizzerias")
-      .update(campos as any)
+      .update(campos as TablesUpdate<"pizzerias">)
       .eq("id", pizzeria.id);
 
     if (error) {
@@ -208,7 +254,7 @@ function StoreEditor({
       return false;
     }
 
-    setPizzeria((prev: any) => ({ ...prev, ...campos }));
+    setPizzeria((prev) => (prev ? { ...prev, ...campos } : prev));
 
     const paraSincronizar = Object.fromEntries(
       Object.entries(campos).filter(([campo]) => RESTAURANT_SYNC_FIELDS.has(campo)),
@@ -225,7 +271,7 @@ function StoreEditor({
       if (!syncEndpoint) {
         syncEndpoint = await ensureSyncEndpoint(pizzeria);
         if (syncEndpoint) {
-          setPizzeria((prev: any) => ({ ...prev, sync_endpoint: syncEndpoint }));
+          setPizzeria((prev) => (prev ? { ...prev, sync_endpoint: syncEndpoint } : prev));
         }
       }
 
@@ -264,7 +310,7 @@ function StoreEditor({
   // `site_settings` é uma coluna única no banco (um "pacotinho" de várias
   // configurações juntas) — por isso, ao mudar uma só, primeiro juntamos ela
   // com o que já estava salvo nas outras, para não apagar as demais.
-  function handleSiteSettingUpdate(key: string, value: any) {
+  function handleSiteSettingUpdate(key: string, value: unknown) {
     // Valor nulo é o pedido de APAGAR a escolha ("voltar ao automático"), e
     // ele precisa VIAJAR até o site público. Se aqui a chave só sumisse do
     // pacote, o site continuaria com a configuração antiga: a sincronização
@@ -349,7 +395,7 @@ function StoreEditor({
           </div>
           <div className="flex items-center gap-3 bg-background/50 p-2 rounded-lg border">
             <Switch
-              checked={pizzeria.is_open}
+              checked={pizzeria.is_open ?? false}
               onCheckedChange={(checked) => handleUpdate("is_open", checked)}
               disabled={saving}
             />
@@ -497,7 +543,9 @@ function StoreEditor({
             </CardContent>
           </Card>
 
-          <PizzeriaPromotion pizzeria={pizzeria} />
+          <PizzeriaPromotion
+            pizzeria={{ ...pizzeria, name: pizzeria.name ?? "", slug: pizzeria.slug ?? "" }}
+          />
         </TabsContent>
 
         <TabsContent value="service" className="space-y-6">
@@ -634,8 +682,10 @@ function StoreEditor({
           <Card>
             <CardContent className="pt-6">
               <FlyStatusSettings
-                pizzeria={pizzeria}
-                onUpdated={(patch) => setPizzeria((prev: any) => ({ ...prev, ...patch }))}
+                pizzeria={
+                  pizzeria as unknown as Parameters<typeof FlyStatusSettings>[0]["pizzeria"]
+                }
+                onUpdated={(patch) => setPizzeria((prev) => (prev ? { ...prev, ...patch } : prev))}
               />
             </CardContent>
           </Card>
@@ -693,7 +743,7 @@ function StoreEditor({
                           onCheckedChange={(checked) => {
                             const newMethods = checked
                               ? [...methods, method]
-                              : methods.filter((m: any) => m !== method);
+                              : methods.filter((m: string) => m !== method);
                             handleUpdate("payment_methods", newMethods);
                           }}
                           disabled={saving}
@@ -714,7 +764,7 @@ function StoreEditor({
 
         <TabsContent value="texts" className="space-y-6">
           <MenuTextsEditor
-            siteSettings={pizzeria.site_settings}
+            siteSettings={pizzeria.site_settings ?? null}
             salvando={saving}
             // Os textos entram no mesmo pacotinho das outras configurações da
             // loja, e por isso viajam para o site público pelo caminho que já
@@ -805,7 +855,7 @@ function StoreEditor({
                 <Input
                   id="hero-button-text"
                   placeholder="Ex: Explorar Cardápio"
-                  defaultValue={pizzeria.site_settings?.hero_button_text || ""}
+                  defaultValue={String(pizzeria.site_settings?.hero_button_text ?? "")}
                   onBlur={(e) => handleSiteSettingUpdate("hero_button_text", e.target.value)}
                 />
               </div>
@@ -901,13 +951,13 @@ function StoreEditor({
           {/* A capa fixa acima continua sendo a CAPA PADRÃO: é ela que aparece
               quando não há programação valendo. A automação entra abaixo. */}
           <HeroScheduleEditor
-            siteSettings={pizzeria.site_settings}
+            siteSettings={pizzeria.site_settings ?? null}
             capaFixa={{
               tipo: pizzeria.hero_media_type === "video" ? "video" : "imagem",
               url:
                 pizzeria.hero_media_type === "video"
-                  ? pizzeria.hero_video_url
-                  : pizzeria.hero_image_url,
+                  ? (pizzeria.hero_video_url ?? null)
+                  : (pizzeria.hero_image_url ?? null),
             }}
             salvando={saving}
             aoSalvar={(programacao) =>

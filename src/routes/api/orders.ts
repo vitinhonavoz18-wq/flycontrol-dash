@@ -1,19 +1,31 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizePhone } from "@/lib/marketing/phone";
+import { publicCors } from "@/lib/server/http";
+import { mensagemDoErro } from "@/lib/errors";
+import type { Json, TablesInsert, TablesUpdate } from "@/integrations/supabase/types";
+import { mkt } from "@/lib/marketing/db";
 
-// Função auxiliar para gerar headers CORS robustos
-const getCorsHeaders = (request?: Request) => {
-  const origin = request?.headers.get("origin") || "*";
-  return {
-    "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Headers":
+const getCorsHeaders = (request?: Request) =>
+  publicCors(request, {
+    methods: "GET, POST, OPTIONS",
+    headers:
       "authorization, x-client-info, apikey, content-type, x-api-key, accept, x-idempotency-key",
-    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Max-Age": "86400",
-    "Access-Control-Allow-Credentials": "true",
-    "Content-Type": "application/json",
-  };
+  });
+
+/** Uma mesa do salão, com os campos que este endereço lê. */
+type MesaDoSalao = { id: string; table_name: string | null; table_number: string };
+
+/** A comanda de mesa, com os campos que este endereço lê. */
+type SessaoDeMesa = {
+  id: string;
+  status: string;
+  restaurant_id: string;
+  dining_session_id: string | null;
+  customer_token: string | null;
+  table_id: string | null;
+  table_number: string;
+  table_name: string | null;
 };
 
 export const Route = createFileRoute("/api/orders")({
@@ -91,7 +103,9 @@ export const Route = createFileRoute("/api/orders")({
             .select("service_fee_percent")
             .eq("id", restaurantId)
             .maybeSingle();
-          const defaultPct = Number((pzCfg as any)?.service_fee_percent ?? 10);
+          const defaultPct = Number(
+            (pzCfg as { service_fee_percent?: number } | null)?.service_fee_percent ?? 10,
+          );
           const { data: newSession, error: iError } = await supabaseAdmin
             .from("table_sessions")
             .insert({
@@ -119,6 +133,12 @@ export const Route = createFileRoute("/api/orders")({
 
           return newSession;
         };
+        // O corpo do pedido vem de fora, e cada versão do cardápio digital
+        // manda um formato ligeiramente diferente. Aqui ele é lido solto de
+        // propósito: a conferência de cada campo acontece logo abaixo, uma a
+        // uma, antes de qualquer coisa ir para o banco. É a mercadoria que
+        // chega na doca — só entra no estoque depois de conferida item a item.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         let body: any;
         try {
           console.log("ORDER_RECEIVE_STARTED");
@@ -265,7 +285,7 @@ export const Route = createFileRoute("/api/orders")({
           const customer = body.customer || body || {};
           const items = orderData.items || body.items || [];
 
-          const parseMoney = (val: any) => {
+          const parseMoney = (val: unknown) => {
             if (typeof val === "number") return val;
             if (typeof val === "string") {
               const num = parseFloat(val.replace(/[^\d.,]/g, "").replace(",", "."));
@@ -373,7 +393,10 @@ export const Route = createFileRoute("/api/orders")({
                 );
 
               if (sess) {
-                if ((sess as any).restaurant_id !== pz.id) {
+                // Uma leitura só, com nome e formato — em vez de repetir
+                // "seja lá o que isso for" a cada campo.
+                const sessao = sess as SessaoDeMesa;
+                if (sessao.restaurant_id !== pz.id) {
                   return new Response(
                     JSON.stringify({
                       success: false,
@@ -383,31 +406,31 @@ export const Route = createFileRoute("/api/orders")({
                     { status: 400, headers: cors },
                   );
                 }
-                if (["closed", "archived"].includes((sess as any).status)) {
+                if (["closed", "archived"].includes(sessao.status)) {
                   return new Response(
                     JSON.stringify({
                       success: false,
                       error: "session_closed",
                       message:
                         "Esta mesa foi encerrada. Refaça o scan do QR Code para abrir uma nova comanda.",
-                      dining_session_id: (sess as any).dining_session_id,
+                      dining_session_id: sessao.dining_session_id,
                     }),
                     { status: 409, headers: cors },
                   );
                 }
 
                 resolvedSessionRow = {
-                  id: (sess as any).id,
-                  status: (sess as any).status,
-                  table_number: (sess as any).table_number,
-                  table_name: (sess as any).table_name,
-                  table_id: (sess as any).table_id,
+                  id: sessao.id,
+                  status: sessao.status,
+                  table_number: sessao.table_number,
+                  table_name: sessao.table_name,
+                  table_id: sessao.table_id,
                 };
-                validatedDiningSessionId = (sess as any).dining_session_id;
-                validatedCustomerToken = (sess as any).customer_token;
-                validatedTableId = (sess as any).table_id ?? validatedTableId;
-                validatedTableNumber = (sess as any).table_number || validatedTableNumber;
-                validatedTableName = (sess as any).table_name || validatedTableName;
+                validatedDiningSessionId = sessao.dining_session_id;
+                validatedCustomerToken = sessao.customer_token;
+                validatedTableId = sessao.table_id ?? validatedTableId;
+                validatedTableNumber = sessao.table_number || validatedTableNumber;
+                validatedTableName = sessao.table_name || validatedTableName;
               } else {
                 // AUTHORITATIVE ADOPTION: dining_session_id was minted by SiteCreatorFly
                 // and does not yet exist locally. Persist it verbatim instead of rejecting.
@@ -417,11 +440,7 @@ export const Route = createFileRoute("/api/orders")({
                 });
 
                 // Resolve real restaurant_tables UUID from table_number (+ token if present).
-                let tableRow: {
-                  id: string;
-                  table_name: string | null;
-                  table_number: string;
-                } | null = null;
+                let tableRow: MesaDoSalao | null = null;
                 if (rawTableNumber) {
                   const tq = supabaseAdmin
                     .from("restaurant_tables")
@@ -432,7 +451,7 @@ export const Route = createFileRoute("/api/orders")({
                   const { data: t } = rawTableToken
                     ? await tq.eq("public_token", rawTableToken).maybeSingle()
                     : await tq.maybeSingle();
-                  tableRow = (t as any) ?? null;
+                  tableRow = (t as MesaDoSalao) ?? null;
                 }
                 if (!tableRow) {
                   return new Response(
@@ -457,25 +476,23 @@ export const Route = createFileRoute("/api/orders")({
                   .in("status", ["open", "requested_close", "waiting_operator", "closing"])
                   .maybeSingle();
 
-                let sessionRow: any = null;
+                let sessionRow: SessaoDeMesa | null = null;
                 if (openOnTable) {
-                  const updates: any = { table_id: tableRow.id };
+                  const comandaAberta = openOnTable as SessaoDeMesa;
+                  const updates: TablesUpdate<"table_sessions"> = { table_id: tableRow.id };
                   if (
                     rawDiningSessionId &&
-                    (openOnTable as any).dining_session_id !== rawDiningSessionId
+                    comandaAberta.dining_session_id !== rawDiningSessionId
                   ) {
                     updates.dining_session_id = rawDiningSessionId;
                   }
-                  if (
-                    rawCustomerToken &&
-                    (openOnTable as any).customer_token !== rawCustomerToken
-                  ) {
+                  if (rawCustomerToken && comandaAberta.customer_token !== rawCustomerToken) {
                     updates.customer_token = rawCustomerToken;
                   }
                   const { data: upd, error: uErr } = await supabaseAdmin
                     .from("table_sessions")
-                    .update(updates as any)
-                    .eq("id", (openOnTable as any).id)
+                    .update(updates)
+                    .eq("id", comandaAberta.id)
                     .select(
                       "id, status, dining_session_id, customer_token, table_id, table_number, table_name",
                     )
@@ -494,15 +511,17 @@ export const Route = createFileRoute("/api/orders")({
                       { status: 409, headers: cors },
                     );
                   }
-                  sessionRow = upd;
+                  sessionRow = upd as SessaoDeMesa;
                 } else {
                   const { data: pzCfg } = await supabaseAdmin
                     .from("pizzerias")
                     .select("service_fee_percent")
                     .eq("id", pz.id)
                     .maybeSingle();
-                  const defaultPct = Number((pzCfg as any)?.service_fee_percent ?? 10);
-                  const insertPayload: any = {
+                  const defaultPct = Number(
+                    (pzCfg as { service_fee_percent?: number } | null)?.service_fee_percent ?? 10,
+                  );
+                  const insertPayload: TablesInsert<"table_sessions"> = {
                     restaurant_id: pz.id,
                     table_id: tableRow.id,
                     table_number: tableRow.table_number,
@@ -538,7 +557,22 @@ export const Route = createFileRoute("/api/orders")({
                       { status: 500, headers: cors },
                     );
                   }
-                  sessionRow = ins;
+                  sessionRow = ins as SessaoDeMesa;
+                }
+
+                // Chegar aqui sem comanda é impossível: os dois caminhos acima
+                // ou criam uma, ou já responderam com erro. O `if` existe para
+                // o editor ter certeza disso — e para o dia em que alguém
+                // acrescentar um terceiro caminho e esquecer de tratá-lo.
+                if (!sessionRow) {
+                  return new Response(
+                    JSON.stringify({
+                      success: false,
+                      error: "session_create_failed",
+                      message: "Não foi possível abrir a comanda desta mesa.",
+                    }),
+                    { status: 500, headers: cors },
+                  );
                 }
 
                 resolvedSessionRow = {
@@ -584,8 +618,10 @@ export const Route = createFileRoute("/api/orders")({
           // que aceita, só sobre os produtos (nunca sobre a entrega), teto de
           // 50% para um zero digitado a mais não zerar a venda.
           const percentConfigurado = (() => {
-            const bruto = (pz as any)?.site_settings?.marketing_opt_in_discount_percent;
-            const n = typeof bruto === "number" ? bruto : Number(String(bruto ?? "").replace(",", "."));
+            const configuracoes = (pz.site_settings ?? {}) as Record<string, unknown>;
+            const bruto = configuracoes.marketing_opt_in_discount_percent;
+            const n =
+              typeof bruto === "number" ? bruto : Number(String(bruto ?? "").replace(",", "."));
             if (!Number.isFinite(n) || n <= 0) return 0;
             return Math.min(Math.round(n * 2) / 2, 50);
           })();
@@ -598,9 +634,7 @@ export const Route = createFileRoute("/api/orders")({
               ? Math.floor(subtotalValor * percentConfigurado) / 100
               : 0;
 
-          const descontoQueVeio = parseMoney(
-            orderData.discount || body.discount || 0,
-          );
+          const descontoQueVeio = parseMoney(orderData.discount || body.discount || 0);
           if (Math.abs(descontoQueVeio - descontoConferido) > 0.01) {
             console.warn(
               `ORDER_DISCOUNT_MISMATCH: site enviou ${descontoQueVeio}, conferido ${descontoConferido} (percentual da loja: ${percentConfigurado}%)`,
@@ -617,7 +651,7 @@ export const Route = createFileRoute("/api/orders")({
               ? Math.max(0, subtotalValor - descontoConferido + entregaValor)
               : totalValue;
 
-          const orderToInsert: any = {
+          const orderToInsert: TablesInsert<"orders"> = {
             tenant_id: pz.id,
             discount: descontoConferido > 0 ? descontoConferido : null,
             external_order_id: String(
@@ -657,7 +691,8 @@ export const Route = createFileRoute("/api/orders")({
           console.log("ORDER_SAVE_STARTED");
           console.log("ORDER_INSERT_PAYLOAD:", JSON.stringify(orderToInsert));
 
-          const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
+          const { data: order, error: orderError } = await supabaseAdmin
+            .from("orders")
             .insert(orderToInsert)
             .select("id, order_number")
             .single();
@@ -713,7 +748,7 @@ export const Route = createFileRoute("/api/orders")({
               console.log("TABLE_ORDER_SESSION_ID_FOUND:", session.id);
 
               // Atualizar nome do cliente e table_name na sessão se necessário
-              const updateData: any = {};
+              const updateData: TablesUpdate<"table_sessions"> = {};
               if (customerName && customerName !== "Cliente Site" && !session.customer_name) {
                 updateData.customer_name = customerName;
               }
@@ -806,7 +841,7 @@ export const Route = createFileRoute("/api/orders")({
           // Tenta salvar itens na tabela relacionada (não bloqueante)
           if (Array.isArray(items) && items.length > 0) {
             try {
-              const orderItemsToInsert = items.map((it: any) => ({
+              const orderItemsToInsert = items.map((it) => ({
                 order_id: order.id,
                 pizzeria_id: pz.id,
                 product_name: it.product_name || it.name || "Item",
@@ -814,7 +849,7 @@ export const Route = createFileRoute("/api/orders")({
                 unit_price: parseMoney(it.unit_price || it.price || 0),
                 total_price: Number(it.quantity || 1) * parseMoney(it.unit_price || it.price || 0),
               }));
-              await (supabaseAdmin.from("order_items") as any).insert(orderItemsToInsert);
+              await supabaseAdmin.from("order_items").insert(orderItemsToInsert);
             } catch (err) {
               console.warn("⚠️ [API/Orders] Erro não-crítico ao salvar itens:", err);
             }
@@ -838,8 +873,7 @@ export const Route = createFileRoute("/api/orders")({
             try {
               const tel = normalizePhone(orderToInsert.customer_phone);
               if (tel) {
-                await (supabaseAdmin as any)
-                  .from("marketing_customers")
+                await mkt("marketing_customers")
                   .update({
                     marketing_opt_in: true,
                     marketing_opt_in_at: new Date().toISOString(),
@@ -907,15 +941,15 @@ export const Route = createFileRoute("/api/orders")({
                 });
 
                 console.log(`✅ [FIQON] Resposta: ${response.status}`);
-              } catch (err: any) {
-                console.error("❌ [FIQON] Erro no envio:", err.message);
+              } catch (err) {
+                console.error("❌ [FIQON] Erro no envio:", mensagemDoErro(err));
                 await supabaseAdmin.from("flycontrol_fiqon_logs").insert({
                   restaurant_id: pz.id,
                   order_id: order.id,
                   fiqon_url: pz.fiqon_webhook_url,
                   payload: {},
                   success: false,
-                  error_message: err.message,
+                  error_message: mensagemDoErro(err),
                 });
               }
             })();
@@ -936,14 +970,17 @@ export const Route = createFileRoute("/api/orders")({
             }),
             { status: 201, headers: cors },
           );
-        } catch (err: any) {
-          console.error("❌ [API/Orders] Erro não tratado:", err?.stack || err?.message || err);
+        } catch (err) {
+          console.error(
+            "❌ [API/Orders] Erro não tratado:",
+            err instanceof Error ? err.stack : mensagemDoErro(err),
+          );
           try {
             await supabaseAdmin.from("external_order_logs").insert({
               api_key_partial: "N/A",
               payload: typeof body !== "undefined" ? body : null,
               status_code: 500,
-              error_message: `Erro não tratado: ${err?.message || String(err)}`,
+              error_message: `Erro não tratado: ${mensagemDoErro(err)}`,
             });
           } catch (logErr) {
             console.error("❌ [API/Orders] Falha ao registrar log de erro não tratado:", logErr);
@@ -964,7 +1001,7 @@ export const Route = createFileRoute("/api/orders")({
 
 async function logExternalOrder(
   apiKey: string,
-  payload: any,
+  payload: unknown,
   statusCode: number,
   errorMessage?: string,
 ) {
@@ -972,7 +1009,7 @@ async function logExternalOrder(
     const partialKey = apiKey ? `${apiKey.substring(0, 4)}***${apiKey.slice(-4)}` : "N/A";
     await supabaseAdmin.from("external_order_logs").insert({
       api_key_partial: partialKey,
-      payload: payload,
+      payload: payload as Json,
       status_code: statusCode,
       error_message: errorMessage,
     });

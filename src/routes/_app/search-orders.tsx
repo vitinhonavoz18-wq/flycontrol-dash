@@ -24,8 +24,10 @@ import {
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Search, RotateCcw, Loader2 } from "lucide-react";
-import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-utils";
+import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/orderUtils";
 import { toast } from "sonner";
+import { mensagemDoErro } from "@/lib/errors";
+import type { OrderItem } from "@/types/order";
 
 export const Route = createFileRoute("/_app/search-orders")({ component: SearchOrdersPage });
 
@@ -37,7 +39,7 @@ type OrderRow = {
   customer_phone: string | null;
   customer_address: string | null;
   neighborhood: string | null;
-  items: any;
+  items: unknown;
   total: number | null;
   delivery_fee: number | null;
   payment_method: string | null;
@@ -98,7 +100,7 @@ function SearchOrdersPage() {
       let q = supabase.from("pizzerias").select("id");
       if (!isSuperAdmin) q = q.eq("owner_id", user.id);
       const { data } = await q;
-      setTenantIds((data || []).map((p: any) => p.id));
+      setTenantIds((data || []).map((p) => p.id));
     }
     loadTenants();
   }, [user, isSuperAdmin]);
@@ -140,8 +142,8 @@ function SearchOrdersPage() {
         result = result.filter((o) => normalizeOrderType(o) === filters.type);
       }
       setRows(result);
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao buscar pedidos");
+    } catch (e) {
+      toast.error(mensagemDoErro(e, "Erro ao buscar pedidos"));
     } finally {
       setLoading(false);
     }
@@ -407,7 +409,7 @@ function SearchOrdersPage() {
                     <div className="text-muted-foreground">Sem itens.</div>
                   ) : (
                     <ul className="space-y-2">
-                      {items.map((it: any, i: number) => (
+                      {items.map((it: OrderItem, i: number) => (
                         <li key={i} className="flex justify-between border-b pb-2 last:border-0">
                           <div>
                             <div className="font-medium">

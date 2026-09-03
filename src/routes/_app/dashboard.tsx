@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
-import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-utils";
+import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/orderUtils";
 import { Order, OrderItem } from "@/types/order";
 
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ import { TrialBanner } from "@/components/billing/TrialBanner";
 import { ClubCentsCard } from "@/components/club/ClubCentsCard";
 import { HallOfFameStrip } from "@/components/club/HallOfFameStrip";
 import { OrdersKanban } from "@/components/orders/OrdersKanban";
+import type { TablesInsert } from "@/integrations/supabase/types";
 import { TERMINAL_STATUSES, isKanbanStatus } from "@/components/orders/orderStatusConfig";
 import { claimOrderAlert } from "@/lib/orderAlertClaim";
 
@@ -95,8 +96,6 @@ const STATUSES = [
   },
 ];
 
-// normalizeOrderType agora é importado de @/utils/order-utils
-
 function playBeep() {
   try {
     const AC =
@@ -122,9 +121,8 @@ function playBeep() {
 }
 
 function Dashboard() {
-  const { user, isSuperAdmin, loading } = useAuth();
-  const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
-  const hasGlobalAccess = isSuperAdmin || isHardcodedAdmin;
+  const { user, isSuperAdmin, isFounder, isPlatformAdmin, loading } = useAuth();
+  const hasGlobalAccess = isPlatformAdmin;
   const [mounted, setMounted] = useState(false);
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -288,7 +286,7 @@ function Dashboard() {
     if (type !== "table") return;
 
     // Check if table_id is provided, otherwise try to find it by table_number
-    let tableId = (order as any).table_id;
+    let tableId = (order as Order & { table_id?: string | null }).table_id;
     if (!tableId && order.table_number) {
       const { data: tableData } = await supabase
         .from("restaurant_tables")
@@ -315,17 +313,22 @@ function Dashboard() {
     let sessionId = sessionData?.id;
 
     if (!sessionId) {
-      // Create new session
+      // Cria a comanda da mesa.
+      //
+      // Aqui ia junto um campo `tenant_id` que NÃO existe nesta tabela — o
+      // banco recusava a gravação inteira por causa dele, e o erro era
+      // engolido logo abaixo. Na prática, este caminho nunca abria comanda
+      // nenhuma: é como preencher a ficha de reserva com um campo que o
+      // caderno não tem e a recepção devolver a ficha sem avisar.
       const { data: newSession, error: sessionError } = await supabase
         .from("table_sessions")
         .insert({
           restaurant_id: order.tenant_id,
-          tenant_id: order.tenant_id,
           table_id: tableId,
           table_number: order.table_number || "?",
           status: "open",
           total_amount: order.total,
-        } as any)
+        } satisfies TablesInsert<"table_sessions">)
         .select()
         .single();
 
@@ -336,7 +339,7 @@ function Dashboard() {
         .from("table_sessions")
         .update({
           total_amount: Number(sessionData.total_amount || 0) + Number(order.total || 0),
-        } as any)
+        })
         .eq("id", sessionId);
     }
 
@@ -856,7 +859,7 @@ function Dashboard() {
           setOrders={setOrders}
           tenantId={activeId}
           recentNewIds={recentNewOrderIds}
-          canDelete={isHardcodedAdmin}
+          canDelete={isFounder}
           onDelete={deleteOrder}
           onStatusApplied={openStatusArtModal}
         />
@@ -870,7 +873,7 @@ function Dashboard() {
               onDelete={deleteOrder}
               onSee={markAsSeen}
               isRecentNew={recentNewOrderIds.includes(o.id)}
-              canDelete={isHardcodedAdmin}
+              canDelete={isFounder}
             />
           ))}
 
@@ -926,8 +929,6 @@ function OrderCard({
   const status = STATUSES.find((s) => s.value === o.status) ?? STATUSES[0];
   const items: OrderItem[] = Array.isArray(o.items) ? o.items : [];
   const orderType = normalizeOrderType(o);
-
-  // formatItemName e getItemPrice agora são importados de @/utils/order-utils
 
   return (
     <div

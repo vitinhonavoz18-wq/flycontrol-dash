@@ -34,10 +34,21 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
+import { mensagemDoErro } from "@/lib/errors";
+import type { MenuCategory, MenuProduct } from "@/types/menu";
+import type { TablesUpdate } from "@/integrations/supabase/types";
+
+/**
+ * Um produto do cardápio, com os campos que esta tela usa.
+ *
+ * Só o que a tela lê: quem precisar de mais campo acrescenta aqui, e o
+ * editor avisa na hora se o nome estiver errado — em vez de a tela mostrar
+ * "undefined" para o cliente.
+ */
 
 interface ProductListProps {
   pizzeriaId: string;
-  categories: any[];
+  categories: MenuCategory[];
   type: string;
   title: string;
   pizzeriaSlug?: string;
@@ -58,10 +69,10 @@ export function ProductList({
   onRefresh,
   vocabulario,
 }: ProductListProps) {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<MenuProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingProduct, setEditingProduct] = useState<any>(null);
+  const [editingProduct, setEditingProduct] = useState<MenuProduct | null>(null);
   const [saving, setSaving] = useState(false);
 
   // Form states
@@ -120,7 +131,7 @@ export function ProductList({
 
   const grouped = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const filter = (p: any) =>
+    const filter = (p: MenuProduct) =>
       !q || p.name?.toLowerCase().includes(q) || p.description?.toLowerCase().includes(q);
 
     const groups = categories.map((cat) => ({
@@ -138,14 +149,14 @@ export function ProductList({
   // Auto-expand categories that contain search matches
   const forceOpen = search.trim().length > 0;
 
-  function openEdit(prod: any) {
+  function openEdit(prod: MenuProduct) {
     setEditingProduct(prod);
     setName(prod.name);
     setDescription(prod.description || "");
-    setPrice(prod.price.toString());
+    setPrice(String(prod.price ?? ""));
     setCategoryId(prod.category_id || "");
     setImageUrl(prod.image_url || "");
-    setProductType(prod.product_type);
+    setProductType(prod.product_type ?? type);
     setIsDialogOpen(true);
   }
 
@@ -202,7 +213,7 @@ export function ProductList({
           type: productType,
           action: editingProduct ? "update" : "create",
           id: editingProduct?.id,
-          externalId: editingProduct?.external_id,
+          externalId: editingProduct?.external_id ?? undefined,
           data: { ...payload, external_category_id: normalizedExternalCategoryId },
           pizzeriaSlug,
           pizzeriaApiKey,
@@ -260,23 +271,23 @@ export function ProductList({
         if (onRefresh) onRefresh();
         else loadProducts();
       }
-    } catch (e: any) {
-      toast.error("Erro inesperado: " + e.message);
+    } catch (e) {
+      toast.error("Erro inesperado: " + mensagemDoErro(e));
     } finally {
       setSaving(false);
     }
   }
 
-  async function toggleStatus(prod: any, field: "active" | "available") {
+  async function toggleStatus(prod: MenuProduct, field: "active" | "available") {
     const newValue = !prod[field];
 
     if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
       // Standardize to 'active' as requested, using 'is_active' for the external field reference if needed
       // but syncToExternal already maps body.active = data.value for status action
       const syncResult = await syncToExternal({
-        type: prod.product_type,
+        type: prod.product_type ?? type,
         action: "status",
-        externalId: prod.external_id,
+        externalId: prod.external_id ?? undefined,
         data: { value: newValue },
         pizzeriaSlug,
         pizzeriaApiKey,
@@ -304,7 +315,7 @@ export function ProductList({
       }
     }
 
-    const updateData: any = {};
+    const updateData: TablesUpdate<"menu_products"> = {};
     updateData[field] = newValue;
 
     const { error } = await supabase
@@ -321,14 +332,14 @@ export function ProductList({
     }
   }
 
-  async function handleDelete(prod: any) {
+  async function handleDelete(prod: MenuProduct) {
     if (!confirm("Tem certeza que deseja excluir este produto?")) return;
 
     if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
       const syncResult = await syncToExternal({
-        type: prod.product_type,
+        type: prod.product_type ?? type,
         action: "delete",
-        externalId: prod.external_id,
+        externalId: prod.external_id ?? undefined,
         pizzeriaSlug,
         pizzeriaApiKey,
         syncEndpoint,
@@ -384,7 +395,7 @@ export function ProductList({
 
   const isBeverage = type === "beverage";
 
-  const renderProductCard = (prod: any) => (
+  const renderProductCard = (prod: MenuProduct) => (
     <Card
       key={prod.id}
       className={`overflow-hidden transition-all hover:border-primary/30 ${!prod.active ? "opacity-60 bg-muted/30" : ""}`}
@@ -406,7 +417,9 @@ export function ProductList({
               {prod.menu_categories?.name || "Sem categoria"}
             </p>
           </div>
-          <p className="font-bold text-primary">R$ {prod.price.toFixed(2)}</p>
+          {/* O preço pode chegar vazio ou como texto; sem esta conversão a
+              lista inteira do cardápio quebrava ao tentar formatar. */}
+          <p className="font-bold text-primary">R$ {Number(prod.price ?? 0).toFixed(2)}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[10px] font-medium">
@@ -414,7 +427,7 @@ export function ProductList({
               {prod.available ? "Disponível" : "Indisponível"}
             </span>
             <Switch
-              checked={prod.available}
+              checked={prod.available ?? false}
               onCheckedChange={() => toggleStatus(prod, "available")}
               className="h-4 w-7 data-[state=checked]:bg-success"
             />
@@ -422,7 +435,7 @@ export function ProductList({
           <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[10px] font-medium ml-auto">
             <span>Ativo</span>
             <Switch
-              checked={prod.active}
+              checked={prod.active ?? false}
               onCheckedChange={() => toggleStatus(prod, "active")}
               className="h-4 w-7"
             />

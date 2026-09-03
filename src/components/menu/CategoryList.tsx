@@ -19,10 +19,12 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { mensagemDoErro } from "@/lib/errors";
+import type { MenuCategory } from "@/types/menu";
 
 interface CategoryListProps {
   pizzeriaId: string;
-  categories: any[];
+  categories: MenuCategory[];
   onRefresh: () => void;
   pizzeriaSlug?: string;
   pizzeriaApiKey?: string;
@@ -40,7 +42,7 @@ export function CategoryList({
   vocabulario,
 }: CategoryListProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<any>(null);
+  const [editingCategory, setEditingCategory] = useState<MenuCategory | null>(null);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [imageUrl, setImageUrl] = useState<string | null>(null);
@@ -54,7 +56,7 @@ export function CategoryList({
     setIsDialogOpen(true);
   }
 
-  function openEdit(cat: any) {
+  function openEdit(cat: MenuCategory) {
     setEditingCategory(cat);
     setName(cat.name);
     setDescription(cat.description || "");
@@ -87,7 +89,7 @@ export function CategoryList({
           type: "category",
           action: editingCategory ? "update" : "create",
           id: editingCategory?.id,
-          externalId: editingCategory?.external_id,
+          externalId: editingCategory?.external_id ?? undefined,
           data: payload,
           pizzeriaSlug,
           pizzeriaApiKey,
@@ -144,14 +146,14 @@ export function CategoryList({
         setIsDialogOpen(false);
         onRefresh();
       }
-    } catch (e: any) {
-      toast.error("Erro inesperado: " + e.message);
+    } catch (e) {
+      toast.error("Erro inesperado: " + mensagemDoErro(e));
     } finally {
       setLoading(false);
     }
   }
 
-  async function toggleActive(cat: any) {
+  async function toggleActive(cat: MenuCategory) {
     if (pizzeriaSlug && pizzeriaApiKey && cat.external_id) {
       const syncResult = await syncToExternal({
         type: "category",
@@ -197,7 +199,7 @@ export function CategoryList({
     }
   }
 
-  async function handleDelete(cat: any) {
+  async function handleDelete(cat: MenuCategory) {
     if (
       !confirm(
         "Tem certeza que deseja excluir esta categoria? Isso pode afetar os produtos vinculados.",
@@ -296,7 +298,7 @@ export function CategoryList({
                     {cat.active ? "Ativa" : "Inativa"}
                   </span>
                   <Switch
-                    checked={cat.active}
+                    checked={cat.active ?? false}
                     onCheckedChange={() => toggleActive(cat)}
                     aria-label={`${cat.active ? "Desativar" : "Ativar"} a categoria ${cat.name}`}
                   />

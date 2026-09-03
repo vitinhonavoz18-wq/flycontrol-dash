@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, ScanLine, Keyboard, Camera, X } from "lucide-react";
 import { toast } from "sonner";
+import { mensagemDoErro } from "@/lib/errors";
 
 type Props = {
   open: boolean;
@@ -33,22 +34,34 @@ export function ScanTableSheet({ open, onOpenChange, onDetected }: Props) {
     if (videoRef.current) videoRef.current.srcObject = null;
   }, []);
 
-  const handleHit = useCallback((raw: string) => {
-    stop();
-    onOpenChange(false);
-    onDetected(raw);
-  }, [stop, onOpenChange, onDetected]);
+  const handleHit = useCallback(
+    (raw: string) => {
+      stop();
+      onOpenChange(false);
+      onDetected(raw);
+    },
+    [stop, onOpenChange, onDetected],
+  );
 
   const start = useCallback(async () => {
     setStarting(true);
     try {
-      const AnyWin = window as any;
+      // `BarcodeDetector` é o leitor de código de barras embutido no
+      // navegador. Ainda não faz parte da lista oficial de recursos, então
+      // precisa ser procurado à mão — e pode simplesmente não existir, que é
+      // o caso do iPhone.
+      const AnyWin = window as unknown as {
+        BarcodeDetector?: new (opcoes: { formats: string[] }) => {
+          detect: (fonte: CanvasImageSource) => Promise<{ rawValue?: string }[]>;
+        };
+      };
       const hasDetector = typeof AnyWin.BarcodeDetector === "function";
       setSupported(hasDetector);
       if (!hasDetector) return;
-      const detector = new AnyWin.BarcodeDetector({ formats: ["qr_code", "code_128", "ean_13"] });
+      const detector = new AnyWin.BarcodeDetector!({ formats: ["qr_code", "code_128", "ean_13"] });
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } }, audio: false,
+        video: { facingMode: { ideal: "environment" } },
+        audio: false,
       });
       streamRef.current = stream;
       const v = videoRef.current;
@@ -60,12 +73,14 @@ export function ScanTableSheet({ open, onOpenChange, onDetected }: Props) {
         try {
           const results = await detector.detect(v);
           if (results && results[0]?.rawValue) return handleHit(String(results[0].rawValue));
-        } catch { /* transient */ }
+        } catch {
+          /* transient */
+        }
         rafRef.current = requestAnimationFrame(tick);
       };
       rafRef.current = requestAnimationFrame(tick);
-    } catch (e: any) {
-      toast.error(e?.message || "Não foi possível abrir a câmera");
+    } catch (e) {
+      toast.error(mensagemDoErro(e, "Não foi possível abrir a câmera"));
       setSupported(false);
     } finally {
       setStarting(false);
@@ -73,7 +88,8 @@ export function ScanTableSheet({ open, onOpenChange, onDetected }: Props) {
   }, [handleHit]);
 
   useEffect(() => {
-    if (open) void start(); else stop();
+    if (open) void start();
+    else stop();
     return stop;
   }, [open, start, stop]);
 
@@ -84,7 +100,12 @@ export function ScanTableSheet({ open, onOpenChange, onDetected }: Props) {
           <SheetTitle className="flex items-center gap-2">
             <ScanLine className="h-5 w-5 text-primary" /> Escanear Mesa
           </SheetTitle>
-          <Button size="icon" variant="ghost" onClick={() => onOpenChange(false)} aria-label="Fechar">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => onOpenChange(false)}
+            aria-label="Fechar"
+          >
             <X className="h-5 w-5" />
           </Button>
         </SheetHeader>
@@ -123,9 +144,15 @@ export function ScanTableSheet({ open, onOpenChange, onDetected }: Props) {
               placeholder="Ex.: 12"
               inputMode="text"
               className="h-12 text-base"
-              onKeyDown={(e) => { if (e.key === "Enter" && manual.trim()) handleHit(manual.trim()); }}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && manual.trim()) handleHit(manual.trim());
+              }}
             />
-            <Button className="h-12 px-6" disabled={!manual.trim()} onClick={() => handleHit(manual.trim())}>
+            <Button
+              className="h-12 px-6"
+              disabled={!manual.trim()}
+              onClick={() => handleHit(manual.trim())}
+            >
               Ir
             </Button>
           </div>

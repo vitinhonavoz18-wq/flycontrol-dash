@@ -34,7 +34,8 @@ import {
 import { Loader2, Plus, KeyRound, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { listWaiters, createWaiter, updateWaiter, deleteWaiter } from "@/lib/waiterAuth.functions";
-import { RequireFeature } from "@/components/PremiumFeatureLock";
+import { RequireFeature } from "@/components/plan/PremiumFeatureLock";
+import { mensagemDoErro } from "@/lib/errors";
 
 export const Route = createFileRoute("/_app/waiters")({ component: WaitersPage });
 
@@ -91,8 +92,8 @@ function WaitersPageInner() {
     try {
       const rows = await list({ data: { tenantId } });
       setWaiters(rows as Waiter[]);
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     } finally {
       setLoading(false);
     }
@@ -105,8 +106,8 @@ function WaitersPageInner() {
     try {
       await update({ data: { waiterId: w.id, isActive: val } });
       setWaiters((prev) => prev.map((x) => (x.id === w.id ? { ...x, is_active: val } : x)));
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     }
   }
 
@@ -116,8 +117,8 @@ function WaitersPageInner() {
       await remove({ data: { waiterId: w.id } });
       setWaiters((prev) => prev.filter((x) => x.id !== w.id));
       toast.success("Garçom excluído");
-    } catch (e: any) {
-      toast.error(e.message);
+    } catch (e) {
+      toast.error(mensagemDoErro(e));
     }
   }
 
@@ -363,8 +364,8 @@ function CreateWaiterDialog({
       onCreated(w as Waiter);
       toast.success(`Garçom ${fullName} cadastrado`);
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(mensagemDoErro(err));
     } finally {
       setSaving(false);
     }
@@ -448,8 +449,8 @@ function ResetPasswordDialog({
       await updateFn({ data: { waiterId: waiter.id, newPassword: pwd } });
       toast.success("Senha redefinida");
       onOpenChange(false);
-    } catch (err: any) {
-      toast.error(err.message);
+    } catch (err) {
+      toast.error(mensagemDoErro(err));
     } finally {
       setSaving(false);
     }

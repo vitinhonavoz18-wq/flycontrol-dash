@@ -3,9 +3,18 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Bell, ClipboardList, DollarSign, HandPlatter, PackageCheck, PlusCircle, Utensils, Trash2 } from "lucide-react";
+import {
+  Bell,
+  ClipboardList,
+  DollarSign,
+  HandPlatter,
+  PackageCheck,
+  PlusCircle,
+  Utensils,
+  Trash2,
+} from "lucide-react";
 import { toast } from "sonner";
-import { playSound, unlockAudio, type SoundEvent } from "@/lib/notification-sounds";
+import { playSound, unlockAudio, type SoundEvent } from "@/lib/notificationSounds";
 import { WaiterCloseRequestPopup, type WaiterCloseAlert } from "./WaiterCloseRequestPopup";
 
 type NotifType =
@@ -24,7 +33,7 @@ type WaiterNotif = {
   tableNumber: string;
   customerName?: string | null;
   at: number;
-  meta?: Record<string, any>;
+  meta?: Record<string, unknown>;
 };
 
 type AssignedSession = {
@@ -64,12 +73,21 @@ const ICON_FOR: Record<NotifType, React.ComponentType<{ className?: string }>> =
 };
 
 const READY_STATUSES = new Set([
-  "pronto", "ready", "pronto para entrega", "pronto_para_entrega", "ready_to_deliver",
+  "pronto",
+  "ready",
+  "pronto para entrega",
+  "pronto_para_entrega",
+  "ready_to_deliver",
 ]);
 
 const DONE_STATUSES = new Set([
-  "cancelado", "cancelled", "canceled",
-  "entregue", "delivered", "finalizado", "completed",
+  "cancelado",
+  "cancelled",
+  "canceled",
+  "entregue",
+  "delivered",
+  "finalizado",
+  "completed",
 ]);
 
 function timeAgo(ts: number) {
@@ -80,6 +98,38 @@ function timeAgo(ts: number) {
   const h = Math.floor(m / 60);
   return `${h}h`;
 }
+
+/**
+ * As linhas que chegam pelo aviso ao vivo do banco.
+ *
+ * O aviso entrega a linha inteira da tabela; aqui ficam só os campos que este
+ * componente usa para decidir se toca o alerta e o que escrever nele.
+ */
+type ComandaEmTempoReal = {
+  id: string;
+  status?: string | null;
+  waiter_id?: string | null;
+  table_number?: string | number | null;
+  customer_name?: string | null;
+};
+
+type PedidoEmTempoReal = {
+  id: string;
+  status?: string | null;
+  items?: unknown;
+  customer_name?: string | null;
+};
+
+type PedidoDeFechamento = {
+  id: string;
+  session_id?: string | null;
+  status?: string | null;
+  table_id?: string | null;
+  table_number?: string | number | null;
+  customer_name?: string | null;
+  requested_at?: string | null;
+  notes?: string | null;
+};
 
 export function WaiterNotificationCenter({
   token,
@@ -116,9 +166,13 @@ export function WaiterNotificationCenter({
       .eq("waiter_id", waiterId)
       .eq("status", "open");
     const map = new Map<string, AssignedSession>();
-    (sess || []).forEach((s: any) => map.set(s.id, {
-      id: s.id, table_number: String(s.table_number || ""), customer_name: s.customer_name || null,
-    }));
+    (sess || []).forEach((s) =>
+      map.set(s.id, {
+        id: s.id,
+        table_number: String(s.table_number || ""),
+        customer_name: s.customer_name || null,
+      }),
+    );
     sessionsRef.current = map;
 
     if (map.size > 0) {
@@ -127,7 +181,7 @@ export function WaiterNotificationCenter({
         .select("order_id, table_session_id")
         .in("table_session_id", Array.from(map.keys()));
       const om = new Map<string, string>();
-      (links || []).forEach((l: any) => om.set(l.order_id, l.table_session_id));
+      (links || []).forEach((l) => om.set(l.order_id, l.table_session_id));
       orderToSessionRef.current = om;
 
       if (om.size > 0) {
@@ -137,7 +191,7 @@ export function WaiterNotificationCenter({
           .in("id", Array.from(om.keys()));
         const sm = new Map<string, string>();
         const im = new Map<string, number>();
-        (orders || []).forEach((o: any) => {
+        (orders || []).forEach((o) => {
           sm.set(o.id, String(o.status || ""));
           im.set(o.id, Array.isArray(o.items) ? o.items.length : 0);
         });
@@ -148,39 +202,57 @@ export function WaiterNotificationCenter({
   }, [tenantId, waiterId]);
 
   // ---- Add a notification ----
-  const push = useCallback((n: Omit<WaiterNotif, "id" | "at">) => {
-    const id = `${n.type}:${n.sessionId}:${n.meta?.order_id ?? ""}:${Date.now()}:${Math.random().toString(36).slice(2, 6)}`;
-    if (seenIds.current.has(id)) return;
-    seenIds.current.add(id);
-    const notif: WaiterNotif = { ...n, id, at: Date.now() };
-    setItems(prev => [notif, ...prev].slice(0, 100));
-    setUnread(u => u + 1);
-    try { playSound(SOUND_FOR[n.type]); } catch {}
-    toast(LABELS[n.type], {
-      description: `Mesa ${n.tableNumber}${n.customerName ? ` · ${n.customerName}` : ""}`,
-      action: onOpenTable ? { label: "Abrir", onClick: onOpenTable } : undefined,
-    });
-  }, [onOpenTable]);
+  const push = useCallback(
+    (n: Omit<WaiterNotif, "id" | "at">) => {
+      const id = `${n.type}:${n.sessionId}:${n.meta?.order_id ?? ""}:${Date.now()}:${Math.random().toString(36).slice(2, 6)}`;
+      if (seenIds.current.has(id)) return;
+      seenIds.current.add(id);
+      const notif: WaiterNotif = { ...n, id, at: Date.now() };
+      setItems((prev) => [notif, ...prev].slice(0, 100));
+      setUnread((u) => u + 1);
+      try {
+        playSound(SOUND_FOR[n.type]);
+      } catch {
+        // O navegador só deixa tocar som depois que a pessoa clica em algo na
+        // página. Antes disso ele recusa — e um aviso que não apita ainda é um
+        // aviso: o texto aparece na mesma.
+      }
+      toast(LABELS[n.type], {
+        description: `Mesa ${n.tableNumber}${n.customerName ? ` · ${n.customerName}` : ""}`,
+        action: onOpenTable ? { label: "Abrir", onClick: onOpenTable } : undefined,
+      });
+    },
+    [onOpenTable],
+  );
 
   // ---- Realtime wiring ----
   useEffect(() => {
     let cancelled = false;
     void loadContext();
 
-    const ch = supabase.channel(`waiter-notif-${waiterId}`)
+    const ch = supabase
+      .channel(`waiter-notif-${waiterId}`)
       // Session assignment changes — refresh context so we track the right sessions
-      .on("postgres_changes",
-        { event: "*", schema: "public", table: "table_sessions", filter: `restaurant_id=eq.${tenantId}` },
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "table_sessions",
+          filter: `restaurant_id=eq.${tenantId}`,
+        },
         async (payload) => {
           if (cancelled) return;
           await loadContext();
-          const row: any = payload.new || payload.old;
+          const row = (payload.new || payload.old) as ComandaEmTempoReal | undefined;
           if (!row) return;
           // If a NEW session was just assigned to me, surface it as a call-to-action.
-          if (payload.eventType === "UPDATE" &&
-              payload.new?.waiter_id === waiterId &&
-              payload.old?.waiter_id !== waiterId &&
-              payload.new?.status === "open") {
+          if (
+            payload.eventType === "UPDATE" &&
+            payload.new?.waiter_id === waiterId &&
+            payload.old?.waiter_id !== waiterId &&
+            payload.new?.status === "open"
+          ) {
             push({
               type: "customer_request",
               sessionId: payload.new.id,
@@ -189,23 +261,30 @@ export function WaiterNotificationCenter({
               meta: { reason: "assigned_to_me" },
             });
           }
-        })
+        },
+      )
       // Order link inserts — a new order attached to some session
-      .on("postgres_changes",
+      .on(
+        "postgres_changes",
         { event: "INSERT", schema: "public", table: "table_session_orders" },
         async (payload) => {
           if (cancelled) return;
-          const link: any = payload.new;
+          const link = payload.new as { table_session_id: string; order_id: string };
           const sess = sessionsRef.current.get(link.table_session_id);
           if (!sess) return; // Not my table
           orderToSessionRef.current.set(link.order_id, link.table_session_id);
           // Fetch the order details
           const { data: order } = await supabase
-            .from("orders").select("id, status, items, customer_name, created_at")
-            .eq("id", link.order_id).maybeSingle();
+            .from("orders")
+            .select("id, status, items, customer_name, created_at")
+            .eq("id", link.order_id)
+            .maybeSingle();
           if (!order) return;
           orderStatusRef.current.set(order.id, String(order.status || ""));
-          orderItemCountRef.current.set(order.id, Array.isArray(order.items) ? order.items.length : 0);
+          orderItemCountRef.current.set(
+            order.id,
+            Array.isArray(order.items) ? order.items.length : 0,
+          );
           // Only surface orders created after the app opened (avoid history noise)
           if (new Date(order.created_at).getTime() < appStartedAt.current - 5000) return;
           push({
@@ -215,13 +294,15 @@ export function WaiterNotificationCenter({
             customerName: order.customer_name || sess.customer_name,
             meta: { order_id: order.id },
           });
-        })
+        },
+      )
       // Order updates — status change (ready) or items grew (new item added)
-      .on("postgres_changes",
+      .on(
+        "postgres_changes",
         { event: "UPDATE", schema: "public", table: "orders", filter: `tenant_id=eq.${tenantId}` },
         (payload) => {
           if (cancelled) return;
-          const o: any = payload.new;
+          const o = payload.new as PedidoEmTempoReal;
           const sessionId = orderToSessionRef.current.get(o.id);
           if (!sessionId) return;
           const sess = sessionsRef.current.get(sessionId);
@@ -231,12 +312,15 @@ export function WaiterNotificationCenter({
           const nextStatus = String(o.status || "");
           orderStatusRef.current.set(o.id, nextStatus);
 
-          if (READY_STATUSES.has(nextStatus.toLowerCase()) &&
-              !READY_STATUSES.has(prevStatus.toLowerCase()) &&
-              !DONE_STATUSES.has(prevStatus.toLowerCase())) {
+          if (
+            READY_STATUSES.has(nextStatus.toLowerCase()) &&
+            !READY_STATUSES.has(prevStatus.toLowerCase()) &&
+            !DONE_STATUSES.has(prevStatus.toLowerCase())
+          ) {
             push({
               type: "order_ready",
-              sessionId, tableNumber: sess.table_number,
+              sessionId,
+              tableNumber: sess.table_number,
               customerName: o.customer_name || sess.customer_name,
               meta: { order_id: o.id },
             });
@@ -248,20 +332,23 @@ export function WaiterNotificationCenter({
           if (nextCount > prevCount && prevCount > 0) {
             push({
               type: "new_item",
-              sessionId, tableNumber: sess.table_number,
+              sessionId,
+              tableNumber: sess.table_number,
               customerName: o.customer_name || sess.customer_name,
               meta: { order_id: o.id, added: nextCount - prevCount },
             });
           }
-        })
+        },
+      )
       // Customer close-request → PASSIVE waiter popup. The waiter only sees an
       // informational alert; no status is changed, no workflow triggered. The
       // administrator continues to be the one who actually closes the table.
-      .on("postgres_changes",
+      .on(
+        "postgres_changes",
         { event: "INSERT", schema: "public", table: "table_close_requests" },
         async (payload) => {
           if (cancelled) return;
-          const row: any = payload.new;
+          const row = payload.new as PedidoDeFechamento;
           if (!row?.session_id || row.status !== "pending") return;
           // Confirm the session belongs to this waiter (uses live DB truth so
           // we don't miss a request against a session that just changed to
@@ -282,7 +369,13 @@ export function WaiterNotificationCenter({
               .maybeSingle();
             tableName = t?.table_name ?? null;
           }
-          try { playSound("close_request"); } catch {}
+          try {
+            playSound("close_request");
+          } catch {
+            // O navegador só deixa tocar som depois que a pessoa clica em algo na
+            // página. Antes disso ele recusa — e um aviso que não apita ainda é um
+            // aviso: o texto aparece na mesma.
+          }
           setCloseAlert({
             requestId: row.id,
             sessionId: row.session_id,
@@ -293,10 +386,14 @@ export function WaiterNotificationCenter({
             waiterName: waiterName || "",
             notes: row.notes ?? null,
           });
-        })
+        },
+      )
       .subscribe();
 
-    return () => { cancelled = true; supabase.removeChannel(ch); };
+    return () => {
+      cancelled = true;
+      supabase.removeChannel(ch);
+    };
   }, [tenantId, waiterId, waiterName, loadContext, push]);
 
   const grouped = useMemo(() => items, [items]);
@@ -308,89 +405,104 @@ export function WaiterNotificationCenter({
     void unlockAudio();
   }
 
-  function clearAll() { setItems([]); seenIds.current.clear(); }
+  function clearAll() {
+    setItems([]);
+    seenIds.current.clear();
+  }
 
   function handleTap(n: WaiterNotif) {
     setOpen(false);
     onOpenTable?.();
     // Bubble a custom event so tabs/lists can highlight the target session.
-    window.dispatchEvent(new CustomEvent("waiter-open-session", {
-      detail: { sessionId: n.sessionId, tableNumber: n.tableNumber },
-    }));
+    window.dispatchEvent(
+      new CustomEvent("waiter-open-session", {
+        detail: { sessionId: n.sessionId, tableNumber: n.tableNumber },
+      }),
+    );
   }
 
   return (
     <>
-    {closeAlert && (
-      <WaiterCloseRequestPopup alert={closeAlert} onDismiss={() => setCloseAlert(null)} />
-    )}
-    <Sheet open={open} onOpenChange={(v) => { setOpen(v); if (v) setUnread(0); }}>
-      <SheetTrigger asChild>
-        <Button variant="ghost" size="sm" className="relative" onClick={openAndClear}>
-          <Bell className="h-5 w-5" />
-          {unread > 0 && (
-            <Badge className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full text-[10px]"
-                   variant="destructive">
-              {unread > 99 ? "99+" : unread}
-            </Badge>
-          )}
-        </Button>
-      </SheetTrigger>
-      <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
-        <SheetHeader className="p-4 border-b">
-          <SheetTitle className="flex items-center justify-between">
-            <span>Notificações</span>
-            {grouped.length > 0 && (
-              <Button size="sm" variant="ghost" onClick={clearAll}>
-                <Trash2 className="h-4 w-4 mr-1" /> Limpar
-              </Button>
+      {closeAlert && (
+        <WaiterCloseRequestPopup alert={closeAlert} onDismiss={() => setCloseAlert(null)} />
+      )}
+      <Sheet
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (v) setUnread(0);
+        }}
+      >
+        <SheetTrigger asChild>
+          <Button variant="ghost" size="sm" className="relative" onClick={openAndClear}>
+            <Bell className="h-5 w-5" />
+            {unread > 0 && (
+              <Badge
+                className="absolute -top-1 -right-1 h-5 min-w-[20px] px-1 rounded-full text-[10px]"
+                variant="destructive"
+              >
+                {unread > 99 ? "99+" : unread}
+              </Badge>
             )}
-          </SheetTitle>
-        </SheetHeader>
-        <div className="flex-1 overflow-auto">
-          {grouped.length === 0 ? (
-            <div className="p-8 text-center text-sm text-muted-foreground">
-              Nenhuma notificação por enquanto.
-              <div className="text-xs mt-2">Você será avisado assim que algo acontecer em uma mesa sua.</div>
-            </div>
-          ) : (
-            <ul className="divide-y">
-              {grouped.map((n) => {
-                const Icon = ICON_FOR[n.type];
-                return (
-                  <li key={n.id}>
-                    <button
-                      onClick={() => handleTap(n)}
-                      className="w-full text-left px-4 py-3 hover:bg-accent/50 transition flex gap-3 items-start"
-                    >
-                      <div className="h-9 w-9 shrink-0 rounded-full bg-primary/10 grid place-items-center">
-                        <Icon className="h-4 w-4 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold text-sm">{LABELS[n.type]}</span>
-                          <span className="text-[10px] text-muted-foreground shrink-0">
-                            há {timeAgo(n.at)}
-                          </span>
+          </Button>
+        </SheetTrigger>
+        <SheetContent side="right" className="w-full sm:max-w-md p-0 flex flex-col">
+          <SheetHeader className="p-4 border-b">
+            <SheetTitle className="flex items-center justify-between">
+              <span>Notificações</span>
+              {grouped.length > 0 && (
+                <Button size="sm" variant="ghost" onClick={clearAll}>
+                  <Trash2 className="h-4 w-4 mr-1" /> Limpar
+                </Button>
+              )}
+            </SheetTitle>
+          </SheetHeader>
+          <div className="flex-1 overflow-auto">
+            {grouped.length === 0 ? (
+              <div className="p-8 text-center text-sm text-muted-foreground">
+                Nenhuma notificação por enquanto.
+                <div className="text-xs mt-2">
+                  Você será avisado assim que algo acontecer em uma mesa sua.
+                </div>
+              </div>
+            ) : (
+              <ul className="divide-y">
+                {grouped.map((n) => {
+                  const Icon = ICON_FOR[n.type];
+                  return (
+                    <li key={n.id}>
+                      <button
+                        onClick={() => handleTap(n)}
+                        className="w-full text-left px-4 py-3 hover:bg-accent/50 transition flex gap-3 items-start"
+                      >
+                        <div className="h-9 w-9 shrink-0 rounded-full bg-primary/10 grid place-items-center">
+                          <Icon className="h-4 w-4 text-primary" />
                         </div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          <b className="text-foreground">Mesa {n.tableNumber}</b>
-                          {n.customerName ? <> · {n.customerName}</> : null}
-                          <> · {new Date(n.at).toLocaleTimeString("pt-BR")}</>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="font-semibold text-sm">{LABELS[n.type]}</span>
+                            <span className="text-[10px] text-muted-foreground shrink-0">
+                              há {timeAgo(n.at)}
+                            </span>
+                          </div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            <b className="text-foreground">Mesa {n.tableNumber}</b>
+                            {n.customerName ? <> · {n.customerName}</> : null}
+                            <> · {new Date(n.at).toLocaleTimeString("pt-BR")}</>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-        </div>
-        <div className="p-3 border-t text-[11px] text-muted-foreground text-center">
-          Notificações em tempo real das suas mesas
-        </div>
-      </SheetContent>
-    </Sheet>
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <div className="p-3 border-t text-[11px] text-muted-foreground text-center">
+            Notificações em tempo real das suas mesas
+          </div>
+        </SheetContent>
+      </Sheet>
     </>
   );
 }

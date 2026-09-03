@@ -1,38 +1,18 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
-import { useTheme } from "@/components/theme-provider";
+import { useTheme } from "@/components/theme/ThemeProvider";
 import { Button } from "@/components/ui/button";
-import {
-  Smartphone,
-  LayoutDashboard,
-  Store,
-  BarChart3,
-  Users,
-  LogOut,
-  Settings,
-  BookOpen,
-  Menu,
-  X,
-  PieChart,
-  Sun,
-  Moon,
-  CreditCard,
-  LayoutGrid,
-  Search,
-  UtensilsCrossed,
-  Wallet,
-  Trophy,
-  Megaphone,
-} from "lucide-react";
+import { LogOut, Settings, Menu, X, Sun, Moon } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/mobile/BottomNav";
-import { PlanProvider, usePlan } from "@/lib/plan-context";
+import { PlanProvider, usePlan } from "@/lib/planContext";
 import type { Feature } from "@/lib/planPermissions";
+import { ADMIN_SIDEBAR_ITEMS, SIDEBAR_ITEMS, visibleOwnerItems } from "@/lib/navigation";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
@@ -45,7 +25,7 @@ function AppLayout() {
 }
 
 function AppLayoutInner() {
-  const { user, loading, isSuperAdmin, signOut } = useAuth();
+  const { user, loading, isSuperAdmin, isPlatformAdmin, signOut } = useAuth();
   const { hasFeature } = usePlan();
   const { theme, setTheme } = useTheme();
   const nav = useNavigate();
@@ -109,12 +89,11 @@ function AppLayoutInner() {
     );
   }
 
-  // Block access if inactive and not super admin
-  const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
+  // Bloqueia quem está inativo — exceto quem administra a plataforma.
   const isSuspended =
     pizzeriaStatus &&
     (pizzeriaStatus.subscription_status === "suspended" || !pizzeriaStatus.is_active);
-  const isBlocked = isSuspended && !isSuperAdmin && !isHardcodedAdmin;
+  const isBlocked = isSuspended && !isPlatformAdmin;
   const isPublicRoute = ["/docs", "/settings"].includes(path); // Settings is restricted but we might want them to see it? User said block main functions.
 
   // We block if inactive, not super admin, and trying to access anything other than docs or if explicitly blocked
@@ -159,40 +138,9 @@ function AppLayoutInner() {
     );
   }
 
-  type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; feature?: Feature };
-  const allItems: NavItem[] = [
-    { to: "/dashboard", label: "Pedidos", icon: LayoutDashboard },
-    { to: "/tables", label: "Mesas", icon: LayoutGrid, feature: "tables" },
-    { to: "/search-orders", label: "Buscar Pedidos", icon: Search },
-    { to: "/my-store", label: "Minha Loja", icon: Store },
-    { to: "/menu", label: "Cardápio", icon: Menu },
-    { to: "/flydelivery", label: "FlyDelivery", icon: Smartphone },
-    { to: "/combos", label: "Combos", icon: PieChart },
-    { to: "/marketing", label: "Marketing", icon: Megaphone },
-    { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },
-    { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
-    { to: "/settings", label: "Configurações", icon: Settings },
-    { to: "/waiters", label: "Garçons", icon: UtensilsCrossed, feature: "waiters" },
-    { to: "/commissions", label: "Comissões", icon: Wallet, feature: "commissions" },
-    { to: "/docs", label: "Documentação", icon: BookOpen },
-  ];
-  // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
-  // não assinam a própria plataforma, então o item some para eles. Quem
-  // administra assinaturas de todo mundo usa "Clientes e Planos", no Painel
-  // Admin.
-  const showAdmin = isSuperAdmin || isHardcodedAdmin;
-  const items = allItems.filter(
-    (it) => (!it.feature || hasFeature(it.feature)) && !(it.to === "/billing" && showAdmin),
-  );
-
-  const adminItems = [
-    { to: "/admin/pizzerias", label: "FlyPizzarias", icon: Store },
-    { to: "/admin/analytics", label: "Insights Globais", icon: PieChart },
-    { to: "/admin/finance", label: "Financeiro Global", icon: BarChart3 },
-    { to: "/admin/users", label: "Usuários", icon: Users },
-    { to: "/admin/subscriptions", label: "Clientes e Planos", icon: CreditCard },
-    { to: "/admin/cents", label: "Clube CENTS", icon: Trophy },
-  ];
+  const showAdmin = isPlatformAdmin;
+  const items = visibleOwnerItems(SIDEBAR_ITEMS, { isPlatformAdmin, hasFeature });
+  const adminItems = ADMIN_SIDEBAR_ITEMS;
 
   const NavItems = ({ className = "" }: { className?: string }) => (
     <nav className={`flex-1 space-y-1 p-3 landscape-compact:p-1.5 ${className}`}>

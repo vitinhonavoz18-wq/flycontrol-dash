@@ -1,8 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
-import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { assertOwnsTenantWithFeature } from "@/lib/server/plan-guard";
+import { requireSupabaseAuth } from "@/integrations/supabase/authMiddleware";
+import { assertOwnsTenantWithFeature, type ClienteDoUsuario } from "@/lib/server/planGuard";
 
-async function assertOwns(supabase: any, userId: string, tenantId: string) {
+async function assertOwns(supabase: ClienteDoUsuario, userId: string, tenantId: string) {
   await assertOwnsTenantWithFeature(supabase, userId, tenantId, "commissions");
 }
 
@@ -13,7 +13,10 @@ export const getCommissionPercent = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertOwns(context.supabase, context.userId, data.tenantId);
     const { data: row, error } = await context.supabase
-      .from("pizzerias").select("waiter_commission_percent").eq("id", data.tenantId).single();
+      .from("pizzerias")
+      .select("waiter_commission_percent")
+      .eq("id", data.tenantId)
+      .single();
     if (error) throw new Error(error.message);
     return { percent: Number(row?.waiter_commission_percent ?? 10) };
   });
@@ -43,7 +46,9 @@ export const getCommissionReport = createServerFn({ method: "POST" })
 
     let q = context.supabase
       .from("table_sessions")
-      .select("id, table_number, opened_at, closed_at, status, subtotal_amount, waiter_commission_percent, waiter_commission_amount, waiter_id, waiters(full_name)")
+      .select(
+        "id, table_number, opened_at, closed_at, status, subtotal_amount, waiter_commission_percent, waiter_commission_amount, waiter_id, waiters(full_name)",
+      )
       .eq("restaurant_id", data.tenantId)
       .eq("status", "closed")
       .gte("closed_at", data.fromIso)
@@ -55,7 +60,7 @@ export const getCommissionReport = createServerFn({ method: "POST" })
     const { data: rows, error } = await q;
     if (error) throw new Error(error.message);
 
-    const sessions = (rows || []).map((r: any) => ({
+    const sessions = (rows || []).map((r) => ({
       id: r.id,
       tableNumber: r.table_number,
       openedAt: r.opened_at,
@@ -68,24 +73,36 @@ export const getCommissionReport = createServerFn({ method: "POST" })
     }));
 
     // Per-waiter breakdown
-    const byWaiter = new Map<string, {
-      waiterId: string | null; waiterName: string;
-      tables: number; totalSales: number; commission: number;
-    }>();
+    const byWaiter = new Map<
+      string,
+      {
+        waiterId: string | null;
+        waiterName: string;
+        tables: number;
+        totalSales: number;
+        commission: number;
+      }
+    >();
     for (const s of sessions) {
       const key = s.waiterId || "__none__";
       const cur = byWaiter.get(key) || {
-        waiterId: s.waiterId, waiterName: s.waiterName || "Sem garçom",
-        tables: 0, totalSales: 0, commission: 0,
+        waiterId: s.waiterId,
+        waiterName: s.waiterName || "Sem garçom",
+        tables: 0,
+        totalSales: 0,
+        commission: 0,
       };
       cur.tables += 1;
       cur.totalSales += s.subtotal;
       cur.commission += s.commissionAmount;
       byWaiter.set(key, cur);
     }
-    const perWaiter = [...byWaiter.values()].map((w) => ({
-      ...w, avgTicket: w.tables ? w.totalSales / w.tables : 0,
-    })).sort((a, b) => b.commission - a.commission);
+    const perWaiter = [...byWaiter.values()]
+      .map((w) => ({
+        ...w,
+        avgTicket: w.tables ? w.totalSales / w.tables : 0,
+      }))
+      .sort((a, b) => b.commission - a.commission);
 
     const totalSales = sessions.reduce((a, s) => a + s.subtotal, 0);
     const totalCommission = sessions.reduce((a, s) => a + s.commissionAmount, 0);
@@ -110,7 +127,10 @@ export const listTenantWaiters = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     await assertOwns(context.supabase, context.userId, data.tenantId);
     const { data: rows, error } = await context.supabase
-      .from("waiters").select("id, full_name").eq("tenant_id", data.tenantId).order("full_name");
+      .from("waiters")
+      .select("id, full_name")
+      .eq("tenant_id", data.tenantId)
+      .order("full_name");
     if (error) throw new Error(error.message);
     return rows || [];
   });
