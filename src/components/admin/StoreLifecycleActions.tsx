@@ -48,6 +48,10 @@ export function StoreLifecycleActions({
   const [confirmOpen, setConfirmOpen] = useState<"deactivate" | "reactivate" | null>(null);
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  // Apagar o login do dono é opção separada e desmarcada por padrão:
+  // conta apagada não volta, e o caso comum é excluir a loja de um cliente
+  // que continua existindo como pessoa.
+  const [apagarConta, setApagarConta] = useState(false);
   const [busy, setBusy] = useState(false);
 
   async function runAction(action: "deactivate" | "reactivate") {
@@ -87,7 +91,7 @@ export function StoreLifecycleActions({
       const resp = await fetch(`/api/pizzerias/${pizzeria.id}/delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json", ...(await authHeader()) },
-        body: JSON.stringify({ confirmName: deleteConfirmText }),
+        body: JSON.stringify({ confirmName: deleteConfirmText, alsoDeleteOwner: apagarConta }),
       });
       const json = await resp.json().catch(() => ({}));
       if (resp.ok && json?.success) {
@@ -95,6 +99,7 @@ export function StoreLifecycleActions({
         if (json.warning) toast.warning(json.warning);
         setDeleteOpen(false);
         setDeleteConfirmText("");
+        setApagarConta(false);
         onChanged?.();
       } else if (json?.error === "name_mismatch") {
         toast.error("O nome digitado não confere com o nome da loja.");
@@ -265,6 +270,29 @@ export function StoreLifecycleActions({
                     autoFocus
                   />
                 </div>
+
+                {/* Para as lojas de teste: sem isto, o login do dono continua
+                    na lista de usuários, misturado com cliente de verdade, e
+                    o e-mail segue ocupado. É tirar a loja da rua e deixar a
+                    placa com o nome pendurada no poste. */}
+                <label className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/5 p-3">
+                  <input
+                    type="checkbox"
+                    className="mt-0.5 h-4 w-4 shrink-0 accent-current"
+                    checked={apagarConta}
+                    onChange={(e) => setApagarConta(e.target.checked)}
+                  />
+                  <span className="text-xs leading-snug">
+                    <span className="font-semibold text-foreground">
+                      Apagar também a conta de acesso do dono
+                    </span>
+                    <br />
+                    Libera o e-mail para um novo cadastro e tira a conta da lista de usuários. A
+                    conta é preservada automaticamente se ela for dona de outra loja, se for
+                    administrador da plataforma, ou se for a sua própria — nesses casos você recebe
+                    um aviso.
+                  </span>
+                </label>
               </div>
             </AlertDialogDescription>
           </AlertDialogHeader>

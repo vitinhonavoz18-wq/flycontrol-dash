@@ -173,10 +173,82 @@ export async function reactivatePizzeria(
   return { success: true };
 }
 
+/**
+ * Apaga também a conta de acesso do dono, quando é seguro.
+ *
+ * POR QUE ISSO EXISTE
+ *
+ * Excluir a loja apaga a loja inteira, mas deixa o LOGIN do dono de pé. Para
+ * uma loja de teste isso é justamente o que atrapalha: a conta continua
+ * aparecendo na lista de usuários, misturada com cliente de verdade, e o
+ * e-mail continua "ocupado" — não dá para cadastrar de novo com ele.
+ *
+ * É tirar a loja da rua e deixar a placa com o nome pendurada no poste.
+ *
+ * AS TRÊS TRAVAS
+ *
+ * Apagar conta é irreversível e não tem lixeira. Então a conta só vai embora
+ * se as três coisas forem verdade:
+ *
+ *   1. Ela não é dona de NENHUMA outra loja. Senão o dono de duas lojas
+ *      perderia o acesso à que sobrou.
+ *   2. Ela não é administrador da plataforma. Ninguém apaga o próprio
+ *      chaveiro sem querer.
+ *   3. Ela não é a conta de quem está clicando.
+ *
+ * Falhando qualquer uma, a loja é excluída do mesmo jeito e a conta fica —
+ * com um aviso explicando o motivo. Melhor sobrar uma conta do que sumir o
+ * acesso de um cliente que paga.
+ */
+async function apagarContaDoDono(
+  ownerId: string,
+  adminUserId: string,
+): Promise<{ apagada: boolean; motivo?: string }> {
+  if (ownerId === adminUserId) {
+    return { apagada: false, motivo: "é a sua própria conta" };
+  }
+
+  const { data: outras, error: erroOutras } = await supabaseAdmin
+    .from("pizzerias")
+    .select("id")
+    .eq("owner_id", ownerId)
+    .limit(1);
+
+  if (erroOutras) return { apagada: false, motivo: "não consegui conferir as outras lojas" };
+  if ((outras ?? []).length > 0) {
+    return { apagada: false, motivo: "esta conta ainda é dona de outra loja" };
+  }
+
+  const { data: papeis } = await supabaseAdmin
+    .from("user_roles")
+    .select("role")
+    .eq("user_id", ownerId);
+
+  const ehAdmin = (papeis ?? []).some(
+    (p) =>
+      (p as { role?: string }).role === "super_admin" || (p as { role?: string }).role === "admin",
+  );
+  if (ehAdmin) return { apagada: false, motivo: "esta conta é administrador da plataforma" };
+
+  // A ordem importa: primeiro as linhas que apontam para o usuário, depois o
+  // usuário. Não existe chave estrangeira ligando estas tabelas ao cadastro
+  // de login, então o banco não limpa sozinho — se a gente apagasse o login
+  // primeiro, sobrariam fichas apontando para um nome que não existe mais.
+  await supabaseAdmin.from("user_roles").delete().eq("user_id", ownerId);
+  await supabaseAdmin.from("profiles").delete().eq("id", ownerId);
+
+  const { error: erroAuth } = await supabaseAdmin.auth.admin.deleteUser(ownerId);
+  if (erroAuth) return { apagada: false, motivo: erroAuth.message };
+
+  return { apagada: true };
+}
+
 export async function deletePizzeriaPermanently(
   pizzeriaId: string,
   adminUserId: string,
   confirmName: string,
+  /** Apagar junto o login do dono. Só faz sentido para loja de teste. */
+  alsoDeleteOwner = false,
 ): Promise<LifecycleResult> {
   const pz = await fetchPizzeria(pizzeriaId);
   if (!pz) return { success: false, error: "store_not_found" };
@@ -218,6 +290,14 @@ export async function deletePizzeriaPermanently(
     }
   }
 
+  // A conta só é apagada DEPOIS da loja: se apagássemos antes e a exclusão da
+  // loja falhasse, sobraria uma loja sem dono — órfã, sem ninguém para
+  // acessá-la nem para excluí-la.
+  let conta: { apagada: boolean; motivo?: string } = { apagada: false };
+  if (alsoDeleteOwner && pz.owner_id) {
+    conta = await apagarContaDoDono(pz.owner_id, adminUserId);
+  }
+
   await logAdminAction({
     adminUserId,
     action: "STORE_PERMANENTLY_DELETED",
@@ -229,15 +309,23 @@ export async function deletePizzeriaPermanently(
       sf_error: sf.ok ? undefined : sf.error,
       files_found: storagePaths.length,
       files_removed: removedFiles,
+      conta_do_dono_apagada: conta.apagada,
+      conta_do_dono_motivo: conta.motivo,
     },
   });
 
+  const avisos: string[] = [];
   if (!sf.ok) {
-    return {
-      success: true,
-      warning:
-        "Loja excluída no FlyControl, mas não foi possível confirmar a invalidação no SiteCreatorFly agora — verifique manualmente se o cardápio público ainda responde.",
-    };
+    avisos.push(
+      "não foi possível confirmar a invalidação no SiteCreatorFly agora — verifique se o cardápio público ainda responde",
+    );
+  }
+  if (alsoDeleteOwner && !conta.apagada) {
+    avisos.push(`a conta de acesso do dono foi mantida: ${conta.motivo ?? "motivo desconhecido"}`);
+  }
+
+  if (avisos.length > 0) {
+    return { success: true, warning: `Loja excluída, mas ${avisos.join("; ")}.` };
   }
   return { success: true };
 }

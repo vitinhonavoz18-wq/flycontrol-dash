@@ -42,8 +42,17 @@ export const Route = createFileRoute("/api/pizzerias/$id/delete")({
           // corpo vazio/; segue com confirmName vazio, que sempre falha a checagem
         }
         const confirmName = String(body?.confirmName ?? "");
+        // Apagar o login do dono é opção EXPLÍCITA de quem clica. O padrão é
+        // não apagar: conta apagada não volta, e o caso comum é excluir a
+        // loja de um cliente que continua existindo como pessoa.
+        const alsoDeleteOwner = body?.alsoDeleteOwner === true;
 
-        const result = await deletePizzeriaPermanently(id, caller.userId, confirmName);
+        const result = await deletePizzeriaPermanently(
+          id,
+          caller.userId,
+          confirmName,
+          alsoDeleteOwner,
+        );
         if (!result.success) {
           const status =
             result.error === "store_not_found" ? 404 : result.error === "name_mismatch" ? 400 : 500;
