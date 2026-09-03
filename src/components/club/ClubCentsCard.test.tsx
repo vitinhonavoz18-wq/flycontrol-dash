@@ -75,6 +75,16 @@ describe("faixa do CENTS na tela de Pedidos", () => {
     expect(buscar).toHaveBeenCalled();
   });
 
+  it("pergunta pela loja que está na tela, e não pela do próprio usuário", async () => {
+    // O administrador troca de loja no painel. Sem mandar qual é, a faixa
+    // mostraria a progressão da loja ERRADA — ou sumiria, que foi o que
+    // aconteceu. Quem confere se ele pode ver essa loja é o servidor.
+    buscar.mockResolvedValue(progresso());
+    render(<ClubCentsCard tenantId="loja-7" />);
+    await screen.findByText("187");
+    expect(buscar).toHaveBeenCalledWith({ data: { tenantId: "loja-7" } });
+  });
+
   it("mostra o preço da faixa em que a loja está agora", async () => {
     buscar.mockResolvedValue(progresso());
     render(<ClubCentsCard tenantId="loja-1" />);

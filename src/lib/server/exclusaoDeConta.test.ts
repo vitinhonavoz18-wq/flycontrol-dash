@@ -94,3 +94,31 @@ describe("apagar a conta do dono junto com a loja", () => {
     expect(codigo).toContain("conta_do_dono_apagada");
   });
 });
+
+/**
+ * Guarda da progressão do CENTS por loja.
+ *
+ * A faixa da tela de Pedidos recebe do navegador QUAL loja mostrar, porque o
+ * administrador troca de loja no painel. Receber não pode virar obedecer: se
+ * o servidor aceitasse o identificador sem conferir, bastaria trocar o número
+ * na requisição para espiar o faturamento de outra empresa.
+ */
+describe("de quem são os números do CENTS", () => {
+  const cents = readFileSync(join(RAIZ, "src/lib/billing/cents.functions.ts"), "utf8");
+
+  it("a loja pedida pelo navegador é conferida no servidor", () => {
+    const codigo = soCodigo(cents);
+    expect(codigo).toContain("assertOwnsTenant(context.supabase, context.userId, data.tenantId)");
+  });
+
+  it("sem permissão, a faixa some — não devolve os números de outra loja", () => {
+    const codigo = soCodigo(cents);
+    // Ancorar na CHAMADA, não no import lá do topo do arquivo.
+    const pos = codigo.indexOf("assertOwnsTenant(context.supabase");
+    expect(codigo.slice(pos, pos + 400)).toContain("return null");
+  });
+
+  it("sem loja informada, continua valendo a loja do próprio dono", () => {
+    expect(soCodigo(cents)).toContain('.eq("owner_id", context.userId)');
+  });
+});

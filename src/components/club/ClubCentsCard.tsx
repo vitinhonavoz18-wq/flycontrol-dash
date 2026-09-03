@@ -57,7 +57,7 @@ export function ClubCentsCard({ tenantId }: { tenantId: string | null }) {
 
   const carregar = useCallback(async () => {
     try {
-      const r = await buscar({});
+      const r = await buscar({ data: tenantId ? { tenantId } : {} });
       // Resposta sem os números é resposta que não serve. Melhor sumir com a
       // faixa do que escrever "0 pedidos" para quem vendeu o dia inteiro.
       if (!r || typeof r.pedidos !== "number") {
@@ -68,7 +68,7 @@ export function ClubCentsCard({ tenantId }: { tenantId: string | null }) {
     } catch {
       setDados(null);
     }
-  }, [buscar]);
+  }, [buscar, tenantId]);
 
   useEffect(() => {
     void carregar();

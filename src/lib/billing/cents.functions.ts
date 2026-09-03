@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
+import { assertOwnsTenant } from "@/lib/server/plan-guard";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "./supabaseBridge";
 import {
@@ -74,19 +75,47 @@ function paraTela(pedacos: PedacoDaConta[]): FaixaNaTela[] {
 
 export const progressoDoCents = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<ProgressoNaTela | null> => {
-    // A loja sai de quem está logado. Nunca de um id vindo do navegador.
-    const { data: empresa } = await supabaseAdmin
-      .from("pizzerias")
-      .select("id")
-      .eq("owner_id", context.userId)
-      .neq("status", "deleted")
-      .neq("status", "inactive")
-      .limit(1)
-      .maybeSingle();
+  .validator((entrada: { tenantId?: string } | undefined) => ({
+    tenantId: typeof entrada?.tenantId === "string" ? entrada.tenantId : undefined,
+  }))
+  .handler(async ({ context, data }): Promise<ProgressoNaTela | null> => {
+    // QUAL LOJA
+    //
+    // O painel do administrador troca de loja: ele precisa conseguir olhar a
+    // progressão da loja que está vendo na tela, e não a dele. Por isso o
+    // navegador PODE dizer qual loja quer.
+    //
+    // Mas dizer não é o mesmo que ter. O `tenantId` que chega é tratado como
+    // um pedido, nunca como uma verdade: o servidor confere se quem está
+    // logado é dono daquela loja ou administrador da plataforma, e recusa se
+    // não for. É o porteiro conferindo o nome na lista em vez de aceitar quem
+    // diz "pode deixar, eu sou convidado".
+    //
+    // Sem `tenantId`, cai no comportamento de sempre: a loja do próprio dono.
+    let companyId: string;
 
-    if (!empresa) return null;
-    const companyId = (empresa as { id: string }).id;
+    if (data.tenantId) {
+      try {
+        const permitido = await assertOwnsTenant(context.supabase, context.userId, data.tenantId);
+        companyId = permitido.tenantId;
+      } catch {
+        // Acesso negado não vira erro na tela: a faixa simplesmente não
+        // aparece, como acontece para qualquer loja sem CENTS.
+        return null;
+      }
+    } else {
+      const { data: empresa } = await supabaseAdmin
+        .from("pizzerias")
+        .select("id")
+        .eq("owner_id", context.userId)
+        .neq("status", "deleted")
+        .neq("status", "inactive")
+        .limit(1)
+        .maybeSingle();
+
+      if (!empresa) return null;
+      companyId = (empresa as { id: string }).id;
+    }
 
     const db = asBillingDb(supabaseAdmin);
 
