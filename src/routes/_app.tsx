@@ -1,4 +1,6 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
+import { useServerFn } from "@tanstack/react-start";
+import { precisaDeOnboarding } from "@/lib/onboarding/onboarding.functions";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/components/theme-provider";
@@ -101,7 +103,50 @@ function AppLayoutInner() {
     };
   }, [user, isSuperAdmin, loading]);
 
-  if (loading || !user) {
+  // ── A PORTA DO ONBOARDING ────────────────────────────────────────────────
+  //
+  // Quem acabou de se cadastrar passa primeiro pela preparação, mesmo que
+  // digite /dashboard direto na barra de endereços. Confiar só no botão da
+  // tela seria como trancar a porta da frente e deixar a lateral encostada.
+  //
+  // Quem decide é o SERVIDOR: a tela só pergunta. E `null` significa "ainda
+  // não sei" — enquanto for null, o painel não é desenhado. É isso que evita o
+  // dashboard piscar por meio segundo antes de sumir.
+  //
+  // Administrador da plataforma não entra nessa fila: ele não tem loja para
+  // preparar.
+  const perguntarOnboarding = useServerFn(precisaDeOnboarding);
+  const [onboardingPendente, setOnboardingPendente] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    if (loading || !user) return;
+    if (isSuperAdmin) {
+      setOnboardingPendente(false);
+      return;
+    }
+    let cancelado = false;
+    void (async () => {
+      try {
+        const r = await perguntarOnboarding({ data: undefined });
+        if (!cancelado) setOnboardingPendente(!!r?.pendente);
+      } catch {
+        // Não conseguimos perguntar: deixa entrar. Trancar o lojista fora do
+        // próprio painel por causa de uma falha de rede seria pior do que
+        // deixá-lo pular a preparação — ele volta a ver a preparação na
+        // próxima vez que a pergunta funcionar.
+        if (!cancelado) setOnboardingPendente(false);
+      }
+    })();
+    return () => {
+      cancelado = true;
+    };
+  }, [loading, user, isSuperAdmin, perguntarOnboarding]);
+
+  useEffect(() => {
+    if (onboardingPendente) nav({ to: "/preparar" });
+  }, [onboardingPendente, nav]);
+
+  if (loading || !user || onboardingPendente !== false) {
     return (
       <div className="grid min-h-screen place-items-center text-muted-foreground">
         Carregando...

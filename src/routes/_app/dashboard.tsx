@@ -39,6 +39,7 @@ import {
 } from "@/components/flystatus/FlyStatusModal";
 import { TrialBanner } from "@/components/billing/TrialBanner";
 import { ClubCentsCard } from "@/components/club/ClubCentsCard";
+import { PrimeirosPassosCard } from "@/components/onboarding/PrimeirosPassosCard";
 import { HallOfFameStrip } from "@/components/club/HallOfFameStrip";
 import { OrdersKanban } from "@/components/orders/OrdersKanban";
 import { TERMINAL_STATUSES, isKanbanStatus } from "@/components/orders/orderStatusConfig";
@@ -756,6 +757,10 @@ function Dashboard() {
 
       {/* Faixa fina do período grátis. Some sozinha quando não há trial. */}
       <TrialBanner />
+
+      {/* "Prepare sua loja": some sozinha quando todos os passos estiverem
+          feitos. É andaime, não móvel. */}
+      <PrimeirosPassosCard />
 
       <ClubCentsCard tenantId={activeId} />
       <HallOfFameStrip />

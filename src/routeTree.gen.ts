@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlansRouteImport } from './routes/plans'
+import { Route as PrepararRouteImport } from './routes/preparar'
 import { Route as PresentationRouteImport } from './routes/presentation'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SignupRouteImport } from './routes/signup'
@@ -83,6 +84,11 @@ const LoginRoute = LoginRouteImport.update({
 const PlansRoute = PlansRouteImport.update({
   id: '/plans',
   path: '/plans',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PrepararRoute = PrepararRouteImport.update({
+  id: '/preparar',
+  path: '/preparar',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PresentationRoute = PresentationRouteImport.update({
@@ -356,6 +362,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
+  '/preparar': typeof PrepararRoute
   '/presentation': typeof PresentationRoute
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
@@ -413,6 +420,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
+  '/preparar': typeof PrepararRoute
   '/presentation': typeof PresentationRoute
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
@@ -471,6 +479,7 @@ export interface FileRoutesById {
   '/_app': typeof AppRouteWithChildren
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
+  '/preparar': typeof PrepararRoute
   '/presentation': typeof PresentationRoute
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
@@ -530,6 +539,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/plans'
+    | '/preparar'
     | '/presentation'
     | '/privacy'
     | '/signup'
@@ -587,6 +597,7 @@ export interface FileRouteTypes {
     | '/'
     | '/login'
     | '/plans'
+    | '/preparar'
     | '/presentation'
     | '/privacy'
     | '/signup'
@@ -644,6 +655,7 @@ export interface FileRouteTypes {
     | '/_app'
     | '/login'
     | '/plans'
+    | '/preparar'
     | '/presentation'
     | '/privacy'
     | '/signup'
@@ -703,6 +715,7 @@ export interface RootRouteChildren {
   AppRoute: typeof AppRouteWithChildren
   LoginRoute: typeof LoginRoute
   PlansRoute: typeof PlansRoute
+  PrepararRoute: typeof PrepararRoute
   PresentationRoute: typeof PresentationRoute
   PrivacyRoute: typeof PrivacyRoute
   SignupRoute: typeof SignupRoute
@@ -762,6 +775,13 @@ declare module '@tanstack/react-router' {
       path: '/plans'
       fullPath: '/plans'
       preLoaderRoute: typeof PlansRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/preparar': {
+      id: '/preparar'
+      path: '/preparar'
+      fullPath: '/preparar'
+      preLoaderRoute: typeof PrepararRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/presentation': {
@@ -1209,6 +1229,7 @@ const rootRouteChildren: RootRouteChildren = {
   AppRoute: AppRouteWithChildren,
   LoginRoute: LoginRoute,
   PlansRoute: PlansRoute,
+  PrepararRoute: PrepararRoute,
   PresentationRoute: PresentationRoute,
   PrivacyRoute: PrivacyRoute,
   SignupRoute: SignupRoute,
