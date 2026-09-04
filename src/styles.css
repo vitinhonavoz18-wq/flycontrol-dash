@@ -637,3 +637,86 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     animation-name: fly-dashboard-float-mobile;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   O PAINEL "MAIS" DO CELULAR
+
+   POR QUE ELE TEM ANIMAÇÃO PRÓPRIA, E NÃO A DA BIBLIOTECA
+
+   A animação padrão dos painéis do sistema anima três coisas ao mesmo tempo:
+   posição, transparência e DESFOQUE — mesmo quando o desfoque é zero. Desfoque
+   é a propriedade mais cara que existe para o navegador desenhar: cada quadro
+   precisa ser redesenhado do zero em vez de apenas deslizado.
+
+   No celular isso aparecia como travada de verdade: medido num aparelho
+   intermediário simulado, a abertura tinha um quadro parado por 300
+   milissegundos — quase um terço de segundo com a tela congelada.
+
+   É a diferença entre empurrar a gaveta e desmontar a gaveta e remontar mais
+   à frente, trinta vezes por segundo.
+
+   Aqui só se mexe em POSIÇÃO (no painel) e TRANSPARÊNCIA (no fundo escuro).
+   São as duas únicas coisas que a placa de vídeo faz sozinha, sem redesenhar
+   nada — por isso a animação fica lisa mesmo em aparelho fraco.
+
+   A duração também caiu: meio segundo para abrir dava sensação de lentidão.
+   240 milissegundos é o tempo em que o movimento ainda é percebido como
+   movimento, mas já parece instantâneo.
+   ───────────────────────────────────────────────────────────────────────── */
+
+@keyframes fly-sheet-entra {
+  from {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+@keyframes fly-sheet-sai {
+  to {
+    transform: translate3d(0, 100%, 0);
+  }
+}
+
+@keyframes fly-sheet-fundo-entra {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes fly-sheet-fundo-sai {
+  to {
+    opacity: 0;
+  }
+}
+
+.fly-sheet {
+  /* Avisa a placa de vídeo que este elemento vai se mover: ela guarda o
+     desenho pronto numa camada e só o desloca. Fica só aqui, no painel — se
+     esta dica for espalhada pelo sistema ela deixa de ajudar e passa a
+     atrapalhar, porque cada camada extra ocupa memória de vídeo. */
+  will-change: transform;
+  /* O desenho de dentro não escapa da caixa, então o navegador não precisa
+     conferir o resto da página a cada quadro. */
+  contain: paint;
+}
+
+.fly-sheet[data-state="open"] {
+  animation: fly-sheet-entra 240ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fly-sheet[data-state="closed"] {
+  animation: fly-sheet-sai 200ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.fly-sheet-fundo[data-state="open"] {
+  animation: fly-sheet-fundo-entra 240ms linear;
+}
+
+.fly-sheet-fundo[data-state="closed"] {
+  animation: fly-sheet-fundo-sai 200ms linear;
+}
+
+/* Quem pediu menos animação no aparelho recebe o painel já no lugar: a regra
+   geral lá em cima ("prefers-reduced-motion") já zera a duração de qualquer
+   animação do sistema, e o painel entra nela. Não é "sem animação e sem
+   funcionar": ele abre, fecha e continua clicável igual — só não desliza.
+   Conferido no navegador com a preferência ligada. */

@@ -12,7 +12,8 @@ type Props = React.ButtonHTMLAttributes<HTMLButtonElement> & {
  * Sits above the bottom nav. On desktop it floats bottom-right normally.
  */
 export const FAB = forwardRef<HTMLButtonElement, Props>(function FAB(
-  { icon, label, extended, className, ...rest }, ref
+  { icon, label, extended, className, ...rest },
+  ref,
 ) {
   return (
     <button

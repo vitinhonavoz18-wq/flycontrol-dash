@@ -1,5 +1,5 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { useState } from "react";
+import { memo, useCallback, useMemo, useState } from "react";
 import {
   LayoutDashboard,
   ShoppingBag,
@@ -20,7 +20,7 @@ import {
   CreditCard,
   X,
 } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { BottomSheet } from "@/components/mobile/BottomSheet";
 import { useAuth } from "@/lib/auth";
 import { useNavigate } from "@tanstack/react-router";
 
@@ -92,7 +92,17 @@ export function BottomNav() {
 
   // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
   // não assinam a própria plataforma, então o item some para eles.
-  const ownerItems = MORE_OWNER.filter((it) => !(it.to === "/billing" && showAdmin));
+  //
+  // A lista é memoizada porque ela é a chave da grade memoizada logo abaixo:
+  // um array novo a cada render faria a memoização não valer nada.
+  const ownerItems = useMemo(
+    () => MORE_OWNER.filter((it) => !(it.to === "/billing" && showAdmin)),
+    [showAdmin],
+  );
+
+  // Fechar o painel é sempre a mesma ação: uma função estável, para não
+  // invalidar a memoização da grade a cada troca de rota.
+  const fecharPainel = useCallback(() => setOpenMore(false), []);
 
   const isActive = (it: Item) => (it.match ? it.match(path) : path === it.to);
   const moreIsActive =
@@ -156,55 +166,53 @@ export function BottomNav() {
         </ul>
       </nav>
 
-      <Sheet open={openMore} onOpenChange={setOpenMore}>
-        <SheetContent side="bottom" className="rounded-t-2xl p-0 max-h-[85vh] overflow-y-auto">
-          <div className="sticky top-0 flex items-center justify-between px-5 py-4 border-b border-border bg-background">
-            <div>
-              <h2 className="text-lg font-bold">Mais</h2>
-              <p className="text-xs text-muted-foreground truncate max-w-[240px]">{user?.email}</p>
-            </div>
-            <button
-              onClick={() => setOpenMore(false)}
-              aria-label="Fechar"
-              className="h-11 w-11 grid place-items-center rounded-full hover:bg-muted active:scale-95"
+      <BottomSheet aberto={openMore} onAbertoChange={setOpenMore} rotulo="Mais opções">
+        <div className="sticky top-0 z-10 flex items-center justify-between px-5 py-4 border-b border-border bg-background">
+          <div>
+            <h2 className="text-lg font-bold">Mais</h2>
+            <p className="text-xs text-muted-foreground truncate max-w-[240px]">{user?.email}</p>
+          </div>
+          <button
+            onClick={fecharPainel}
+            aria-label="Fechar"
+            className="h-11 w-11 grid place-items-center rounded-full hover:bg-muted active:scale-95"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="p-3">
+          <SectionLabel>Gestão</SectionLabel>
+          <Grid items={ownerItems} path={path} onPick={fecharPainel} />
+
+          {showAdmin && (
+            <>
+              <SectionLabel className="mt-4">Painel Admin</SectionLabel>
+              <Grid items={MORE_ADMIN} path={path} onPick={fecharPainel} />
+            </>
+          )}
+
+          <div className="mt-4 px-2">
+            <Link
+              to="/search-orders"
+              onClick={fecharPainel}
+              className="flex items-center gap-3 min-h-12 px-3 rounded-xl hover:bg-muted text-base"
             >
-              <X className="h-5 w-5" />
+              <Search className="h-5 w-5 text-muted-foreground" /> Buscar Pedidos
+            </Link>
+            <button
+              onClick={async () => {
+                setOpenMore(false);
+                await signOut();
+                nav({ to: "/" });
+              }}
+              className="mt-2 w-full flex items-center gap-3 min-h-12 px-3 rounded-xl text-base text-destructive hover:bg-destructive/10"
+            >
+              <LogOut className="h-5 w-5" /> Sair
             </button>
           </div>
-
-          <div className="p-3">
-            <SectionLabel>Gestão</SectionLabel>
-            <Grid items={ownerItems} path={path} onPick={() => setOpenMore(false)} />
-
-            {showAdmin && (
-              <>
-                <SectionLabel className="mt-4">Painel Admin</SectionLabel>
-                <Grid items={MORE_ADMIN} path={path} onPick={() => setOpenMore(false)} />
-              </>
-            )}
-
-            <div className="mt-4 px-2">
-              <Link
-                to="/search-orders"
-                onClick={() => setOpenMore(false)}
-                className="flex items-center gap-3 min-h-12 px-3 rounded-xl hover:bg-muted text-base"
-              >
-                <Search className="h-5 w-5 text-muted-foreground" /> Buscar Pedidos
-              </Link>
-              <button
-                onClick={async () => {
-                  setOpenMore(false);
-                  await signOut();
-                  nav({ to: "/" });
-                }}
-                className="mt-2 w-full flex items-center gap-3 min-h-12 px-3 rounded-xl text-base text-destructive hover:bg-destructive/10"
-              >
-                <LogOut className="h-5 w-5" /> Sair
-              </button>
-            </div>
-          </div>
-        </SheetContent>
-      </Sheet>
+        </div>
+      </BottomSheet>
     </>
   );
 }
@@ -225,7 +233,28 @@ function SectionLabel({
   );
 }
 
-function Grid({ items, path, onPick }: { items: Item[]; path: string; onPick: () => void }) {
+/**
+ * A grade de cards do painel.
+ *
+ * POR QUE ELA É MEMOIZADA
+ *
+ * Quando o usuário toca num item, duas coisas acontecem ao mesmo tempo: a rota
+ * muda e o painel começa a fechar. Sem esta trava, a troca de rota mandava os
+ * treze cards se redesenharem NO MEIO da animação de fechamento — exatamente
+ * quando o navegador mais precisa de folga.
+ *
+ * É pedir para a equipe reorganizar as mesas enquanto o cliente ainda está
+ * saindo pela porta.
+ */
+const Grid = memo(function Grid({
+  items,
+  path,
+  onPick,
+}: {
+  items: Item[];
+  path: string;
+  onPick: () => void;
+}) {
   return (
     <div className="grid grid-cols-2 gap-2">
       {items.map((it) => {
@@ -252,4 +281,4 @@ function Grid({ items, path, onPick }: { items: Item[]; path: string; onPick: ()
       })}
     </div>
   );
-}
+});
