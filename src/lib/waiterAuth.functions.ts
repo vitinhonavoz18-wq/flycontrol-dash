@@ -66,8 +66,36 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 // ============================================================
 // Opaque session token (HMAC-signed) for waiter portal
 // ============================================================
+/**
+ * A chave que assina o crachá do garçom.
+ *
+ * O QUE ESTAVA ERRADO
+ *
+ * A lista de tentativas terminava em duas opções perigosas: a chave PÚBLICA
+ * do banco — que vai dentro de todo cardápio e qualquer pessoa consegue ler —
+ * e, se nem essa existisse, o texto fixo "fly-waiter-fallback", escrito aqui
+ * mesmo neste arquivo.
+ *
+ * Como é esse segredo que carimba o crachá do garçom, quem soubesse dele
+ * fabricava um crachá em nome de qualquer garçom de qualquer loja e entrava no
+ * salão pelo celular. É o carimbo da portaria ficar em cima do balcão junto
+ * com a almofada de tinta: não adianta conferir o carimbo se qualquer um pode
+ * carimbar.
+ *
+ * O QUE MUDOU
+ *
+ * Agora só valem segredos que de fato são segredos, e faltando todos o sistema
+ * RECUSA em vez de improvisar. Na produção a chave já está configurada, então
+ * nada muda no dia a dia — a diferença é que, se um dia faltar, a porta fica
+ * fechada em vez de aceitar um carimbo que todo mundo tem.
+ */
 async function getHmacKey() {
-  const secret = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY || "fly-waiter-fallback";
+  const secret = process.env.WAITER_TOKEN_SECRET || process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!secret) {
+    throw new Error(
+      "Falta configurar a chave que assina o acesso dos garçons (WAITER_TOKEN_SECRET ou SUPABASE_SERVICE_ROLE_KEY).",
+    );
+  }
   return crypto.subtle.importKey(
     "raw", new TextEncoder().encode(secret) as unknown as BufferSource,
     { name: "HMAC", hash: "SHA-256" }, false, ["sign", "verify"],
