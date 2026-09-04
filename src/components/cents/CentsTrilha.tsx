@@ -35,8 +35,19 @@ export function CentsTrilha({ posicao, marcos, noMaximo, pulso }: Props) {
   // A folga nas laterais é para o último marco caber inteiro: ele fica em cima
   // do fim da barra, com metade do círculo e metade do preço passando do
   // limite. Sem a folga, "R$ 0,40" sairia cortado na borda do cartão.
+  //
+  // A FOLGA DE BAIXO PRECISA CABER O RÓTULO INTEIRO
+  //
+  // Embaixo de cada marco ficam DUAS linhas penduradas: o número de pedidos e
+  // o preço ("250" e "R$ 0,50"). Elas são posicionadas por cima do desenho, e
+  // por isso não empurram nada — quem precisa reservar o espaço delas é esta
+  // folga aqui. Com a folga antiga sobravam 4 pixels de menos, e o preço
+  // encostava na frase logo abaixo do cartão.
+  //
+  // É a prateleira presa baixa demais na parede: cabe, mas esmaga o que está
+  // embaixo. Agora a folga é maior que o rótulo, com sobra.
   return (
-    <div className="px-6 pb-9 pt-10">
+    <div className="px-6 pb-12 pt-10">
       <div className="relative">
         {/* O trilho */}
         <div className="h-2.5 w-full overflow-hidden rounded-full bg-muted">

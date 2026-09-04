@@ -158,8 +158,15 @@ export function ClubCentsCard({ tenantId }: { tenantId: string | null }) {
 
         {/* A mesma trilha da tela de cobrança. Um desenho só para os dois
             lugares: se um dia o preço mudar, não existe uma segunda barra
-            para alguém esquecer de atualizar. */}
-        <div className="-mx-6 -mb-3">
+            para alguém esquecer de atualizar.
+
+            SÓ ESTICA PARA OS LADOS, NUNCA PARA BAIXO. A trilha reserva um
+            espaço embaixo dela para os rótulos dos marcos ("100", "R$ 0,60")
+            ficarem pendurados. Aqui já houve uma margem negativa embaixo para
+            deixar o cartão compacto, e ela comia justamente esse espaço: o
+            preço do marco caía em cima da frase seguinte. O espaço de baixo
+            quem reserva é a própria trilha — daqui não se mexe nele. */}
+        <div className="-mx-6">
           <CentsTrilha
             posicao={dados.posicaoNaTrilha}
             marcos={dados.marcos}
@@ -175,8 +182,13 @@ export function ClubCentsCard({ tenantId }: { tenantId: string | null }) {
                 className="mr-1.5 inline h-4 w-4 align-[-3px] text-primary"
                 aria-hidden="true"
               />
-              Faltam <strong>{dados.proxima.faltam.toLocaleString("pt-BR")}</strong>{" "}
-              {dados.proxima.faltam === 1 ? "pedido" : "pedidos"} para o próximo pedido custar{" "}
+              {/* Frase curta de propósito. A anterior — "para o próximo
+                  pedido custar" — ocupava quase a largura toda do cartão e
+                  encostava no rótulo do marco. Aqui o essencial é: quantos
+                  faltam, e para quanto o preço cai. */}
+              {dados.proxima.faltam === 1 ? "Falta" : "Faltam"}{" "}
+              <strong>{dados.proxima.faltam.toLocaleString("pt-BR")}</strong>{" "}
+              {dados.proxima.faltam === 1 ? "pedido" : "pedidos"} para pagar{" "}
               <strong>{formatCents(dados.proxima.precoCents)}</strong>.
             </p>
           ) : (

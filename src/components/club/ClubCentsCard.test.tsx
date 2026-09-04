@@ -100,6 +100,19 @@ describe("faixa do CENTS na tela de Pedidos", () => {
     expect(texto).toContain("R$ 0,50");
   });
 
+  it("quando falta um só, o texto fica no singular", async () => {
+    // "Faltam 1 pedido" é o tipo de detalhe que faz o painel parecer
+    // improvisado — como o cardápio anunciar "1 fatias".
+    buscar.mockResolvedValue(
+      progresso({ pedidos: 249, proxima: { meta: 250, faltam: 1, precoCents: 50 } }),
+    );
+    const { container } = render(<ClubCentsCard tenantId="loja-1" />);
+    await screen.findByText("249");
+    const tudo = (container.textContent ?? "").replace(/\s+/g, " ");
+    expect(tudo).toContain("Falta 1 pedido");
+    expect(tudo).not.toContain("Faltam 1");
+  });
+
   it("o texto do modelo antigo não pode voltar", async () => {
     buscar.mockResolvedValue(progresso());
     const { container } = render(<ClubCentsCard tenantId="loja-1" />);
@@ -112,7 +125,14 @@ describe("faixa do CENTS na tela de Pedidos", () => {
 
   it("no último degrau, para de prometer desconto que não existe mais", async () => {
     buscar.mockResolvedValue(
-      progresso({ pedidos: 640, nivel: 4, rotuloDoNivel: "CENTS MAX", precoDoProximoPedidoCents: 40, proxima: null, noMaximo: true }),
+      progresso({
+        pedidos: 640,
+        nivel: 4,
+        rotuloDoNivel: "CENTS MAX",
+        precoDoProximoPedidoCents: 40,
+        proxima: null,
+        noMaximo: true,
+      }),
     );
     const { container } = render(<ClubCentsCard tenantId="loja-1" />);
     await screen.findByText("640");
