@@ -33,7 +33,12 @@ export const Route = createFileRoute("/api/orders")({
           tableNumber: string,
           tableToken: string,
         ) => {
-          console.log(`🔍 [API/Orders] Validando mesa: #${tableNumber} com token ${tableToken}`);
+          // O token da mesa é a senha daquela mesa: escrito por extenso no
+          // registro, qualquer um que leia os registros passa a poder abrir
+          // conta em nome dela. Aqui fica só se veio ou não.
+          console.log(
+            `🔍 [API/Orders] Validando mesa: #${tableNumber} (token ${tableToken ? "presente" : "ausente"})`,
+          );
           const { data: table, error } = await supabaseAdmin
             .from("restaurant_tables")
             .select("id, table_number, table_name, public_token, is_active")
@@ -131,7 +136,28 @@ export const Route = createFileRoute("/api/orders")({
             const bodyText = await request.clone().text();
             body = JSON.parse(bodyText);
 
-            console.log("ORDER_RAW_PAYLOAD:", JSON.stringify(body));
+            // O QUE NÃO VAI PARA O REGISTRO
+            //
+            // Antes, o pedido inteiro era copiado para o registro de eventos:
+            // nome, telefone e endereço do cliente e, quando o site mandava a
+            // chave dentro do corpo, a própria chave de integração.
+            //
+            // Registro é caderno que fica: quem tem acesso a ele passa a ter
+            // acesso à agenda de clientes de todas as lojas. É anotar o
+            // telefone do cliente no quadro da cozinha, onde todo mundo passa.
+            //
+            // Aqui fica só o que serve para achar o problema depois: quantos
+            // itens, quanto deu, de que tipo é o pedido.
+            console.log(
+              "ORDER_RECEBIDO:",
+              JSON.stringify({
+                itens: Array.isArray(body?.items) ? body.items.length : 0,
+                total: body?.total ?? null,
+                tipo: body?.order_type ?? body?.service_mode ?? null,
+                mesa: body?.table_number ? "sim" : "não",
+                origem: body?.source ?? null,
+              }),
+            );
           } catch (err) {
             console.error("❌ [API/Orders] JSON inválido");
             console.log("ORDER_RESPONSE_SENT: error (invalid_json)");
@@ -213,6 +239,40 @@ export const Route = createFileRoute("/api/orders")({
           console.log(
             `✅ [API/Orders] Loja identificada: ${pz.name} (ID: ${pz.id}) | Aberta: ${pz.is_open}`,
           );
+
+          // TETO DE PEDIDOS POR MINUTO
+          //
+          // Este endereço aceita pedidos de fora usando só a chave da loja. Se
+          // a chave vazar — e as chaves antigas vazaram —, quem estiver com ela
+          // pode despejar pedidos falsos sem parar. O prejuízo não é só a
+          // bagunça na tela: cada pedido entra na conta do CENTS, ou seja, o
+          // lojista é COBRADO por pedido que ninguém fez.
+          //
+          // É a campainha do delivery tocando sozinha a noite inteira, e a
+          // cozinha pagando o gás de cada pedido fantasma.
+          //
+          // O teto é folgado de propósito: a loja mais movimentada da
+          // plataforma fez 125 pedidos no total. Sessenta por MINUTO é volume
+          // que nenhuma cozinha entrega — só um script alcança.
+          const UM_MINUTO_ATRAS = new Date(Date.now() - 60_000).toISOString();
+          const { count: pedidosNoUltimoMinuto } = await supabaseAdmin
+            .from("orders")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", pz.id)
+            .gte("created_at", UM_MINUTO_ATRAS);
+
+          if ((pedidosNoUltimoMinuto ?? 0) >= 60) {
+            console.error(`❌ [API/Orders] Loja ${pz.id} passou do teto de pedidos por minuto.`);
+            console.log("ORDER_RESPONSE_SENT: error (rate_limited)");
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "rate_limited",
+                message: "Muitos pedidos em pouco tempo. Tente novamente em instantes.",
+              }),
+              { status: 429, headers: cors },
+            );
+          }
 
           // Verificação de assinatura suspensa
           if (pz.subscription_status === "suspended" || pz.is_active === false) {
@@ -655,7 +715,18 @@ export const Route = createFileRoute("/api/orders")({
           };
 
           console.log("ORDER_SAVE_STARTED");
-          console.log("ORDER_INSERT_PAYLOAD:", JSON.stringify(orderToInsert));
+          // Mesmo motivo do registro lá de cima: nome, telefone e endereço do
+          // cliente não vão para o caderno de eventos.
+          console.log(
+            "ORDER_INSERT_RESUMO:",
+            JSON.stringify({
+              loja: orderToInsert.tenant_id,
+              itens: Array.isArray(items) ? items.length : 0,
+              total: orderToInsert.total,
+              tipo: orderToInsert.order_type,
+              origem: orderToInsert.source,
+            }),
+          );
 
           const { data: order, error: orderError } = await (supabaseAdmin.from("orders") as any)
             .insert(orderToInsert)

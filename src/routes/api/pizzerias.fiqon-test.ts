@@ -1,26 +1,46 @@
+/**
+ * Dispara um pedido de mentira para o webhook do FIQON, para o lojista testar
+ * a integração.
+ *
+ * COMO ELE CONFERIA QUEM ESTAVA PEDINDO — E POR QUE ISSO NÃO SERVE MAIS
+ *
+ * A identificação era a chave de API colada no corpo do pedido. Duas coisas
+ * pioraram isso: a chave vazou (ela ficava visível em telas do painel e chegou
+ * a sair pelo cardápio público), e nós tiramos a chave de todas as telas —
+ * então nem o dono legítimo a tem mais em mãos.
+ *
+ * Chave que todo mundo pode ter não identifica ninguém: é o crachá xerocado na
+ * portaria. Agora vale a mesma porta do resto do painel — a conta do dono da
+ * loja, ou a do administrador da plataforma.
+ */
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireOwnerOrAdmin } from "@/integrations/supabase/adminGuard.server";
+
+const cors = { "Content-Type": "application/json" };
 
 export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        // Obter auth/token para validar que é o dono (simplificado aqui para usar api_key ou validar via profile se possível)
-        // Como é um endpoint de servidor, podemos pedir a API Key ou validar a sessão se o tanstack router permitir.
-        // No entanto, para simplicidade e segurança, vamos esperar o payload com a API Key da pizzaria.
-        
         const body = await request.json();
-        const { pizzeria_id, api_key } = body;
+        const { pizzeria_id } = body;
 
-        if (!pizzeria_id || !api_key) {
+        if (!pizzeria_id) {
           return new Response(JSON.stringify({ error: "Missing parameters" }), { status: 400 });
+        }
+
+        try {
+          await requireOwnerOrAdmin(request, cors, String(pizzeria_id), supabaseAdmin as any);
+        } catch (respostaDaPortaria) {
+          if (respostaDaPortaria instanceof Response) return respostaDaPortaria;
+          throw respostaDaPortaria;
         }
 
         const { data: pz, error: pErr } = await supabaseAdmin
           .from("pizzerias")
-          .select("*")
+          .select("id, name, slug, fiqon_webhook_url")
           .eq("id", pizzeria_id)
-          .eq("api_key", api_key)
           .single();
 
         if (pErr || !pz) {

@@ -1,5 +1,23 @@
+/**
+ * Recalcula as contas das mesas abertas de uma loja.
+ *
+ * ESTE ENDEREÇO ESTAVA DESTRANCADO
+ *
+ * Ele recebia só o número da loja e já saía mexendo: juntava pedidos às mesas
+ * abertas e regravava o total de cada conta — usando a chave mestra do banco,
+ * que passa por cima de todas as regras. Não perguntava quem estava pedindo.
+ *
+ * Ou seja: quem descobrisse o número de uma loja (ele aparece em endereços
+ * públicos do cardápio) podia bagunçar as contas das mesas dela de fora, sem
+ * conta, sem senha. É o telefone da cozinha atendendo qualquer um que ligue e
+ * mandando refazer a conta da mesa 5.
+ *
+ * Agora só o dono daquela loja — ou o administrador da plataforma — consegue
+ * disparar isso.
+ */
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { requireOwnerOrAdmin } from "@/integrations/supabase/adminGuard.server";
 
 const cors = {
   "Access-Control-Allow-Origin": "*",
@@ -24,6 +42,13 @@ export const Route = createFileRoute("/api/sync-table-sessions")({
           const { tenant_id } = await request.json();
           if (!tenant_id) {
             return new Response(JSON.stringify({ success: false, error: "missing_tenant_id" }), { status: 400, headers: cors });
+          }
+
+          try {
+            await requireOwnerOrAdmin(request, cors, String(tenant_id), supabaseAdmin as any);
+          } catch (respostaDaPortaria) {
+            if (respostaDaPortaria instanceof Response) return respostaDaPortaria;
+            throw respostaDaPortaria;
           }
 
           console.log("SYNC_TABLE_SESSIONS_START tenant:", tenant_id);
