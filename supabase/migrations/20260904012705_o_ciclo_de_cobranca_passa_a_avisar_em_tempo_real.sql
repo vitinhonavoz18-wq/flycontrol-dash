@@ -1,0 +1,18 @@
+-- O contador de pedidos cobrados passa a avisar quando muda.
+--
+-- POR QUE ISSO É PRECISO
+--
+-- O painel de Insights Globais mostra quanto a FlyControl faturou com a
+-- cobrança por pedido. Esse número vem do ciclo de cobrança de cada loja — é
+-- lá que fica quantos pedidos já entraram na conta do mês.
+--
+-- Só que essa tabela não estava na lista de tabelas que "avisam" quando mudam.
+-- Sem o aviso, a tela só descobriria o pedido novo se alguém recarregasse a
+-- página. É o pedido chegando na cozinha e ninguém tocando a campainha.
+--
+-- QUEM RECEBE O AVISO
+--
+-- As mesmas pessoas que já podiam ler a tabela: o dono daquela loja e o
+-- administrador da plataforma. Entrar nesta lista não abre a tabela para
+-- ninguém novo — o aviso respeita as mesmas regras da leitura.
+alter publication supabase_realtime add table public.billing_cycles;

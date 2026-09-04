@@ -14,6 +14,7 @@ import {
   Pie
 } from "recharts";
 import { useAdminPizzerias } from "@/hooks/admin/use-admin-pizzerias";
+import { ReceitaPorPedidoCard } from "./ReceitaPorPedidoCard";
 
 export const AnalyticsDashboard = () => {
   const { data: metrics, isLoading: loadingMetrics } = useAdminGlobalMetrics();
@@ -38,7 +39,7 @@ export const AnalyticsDashboard = () => {
     <div className="p-8 pb-20">
       <h1 className="text-3xl font-bold mb-4">Insights Globais</h1>
       
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium">Lojas Cadastradas</CardTitle>
@@ -65,14 +66,28 @@ export const AnalyticsDashboard = () => {
             <div className="text-2xl font-bold">{metrics?.total_orders_day || 0}</div>
           </CardContent>
         </Card>
+        {/* Este card sempre mostrou o dinheiro que o CLIENTE FINAL paga pela
+            pizza — receita do restaurante, não da plataforma. O rótulo dizia
+            só "Faturamento", e isso confundia os dois bolsos. Agora o nome diz
+            de quem é o dinheiro. */}
         <Card>
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">Faturamento Hoje</CardTitle>
+            <CardTitle className="text-sm font-medium">Vendas das lojas hoje</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">R$ {Number(metrics?.total_revenue_day || 0).toFixed(2)}</div>
+            <div className="text-2xl font-bold">
+              {Number(metrics?.total_revenue_day || 0).toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              })}
+            </div>
+            <p className="mt-0.5 text-[11px] text-muted-foreground">
+              O que os restaurantes venderam, não o que a FlyControl recebe.
+            </p>
           </CardContent>
         </Card>
+
+        <ReceitaPorPedidoCard />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">

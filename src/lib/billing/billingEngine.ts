@@ -150,6 +150,44 @@ export type CycleTotals = {
  * O preço unitário usado é o do ciclo, congelado na abertura. Atingir a meta
  * durante o ciclo NÃO barateia o próprio ciclo — só o seguinte.
  */
+/** A política de faixas que vale para este ciclo, ou `null` se ele não usa faixas. */
+function politicaDoCiclo(usageBased: boolean, centsPolicy?: string) {
+  return usageBased && centsPolicy === POLITICA_CENTS_V2.versao ? POLITICA_CENTS_V2 : null;
+}
+
+/**
+ * Quanto os PEDIDOS de um ciclo custam — a "cobrança por pedido" propriamente
+ * dita, sem mensalidade nem taxa de cadastro.
+ *
+ * POR QUE ISSO É UMA FUNÇÃO SEPARADA
+ *
+ * Esta é a única conta que transforma "quantos pedidos" em "quantos reais".
+ * A fatura da loja usa ela, e o total da plataforma (Insights Globais) usa a
+ * MESMA. Se cada tela fizesse sua própria conta, um dia a loja veria R$ 0,60,
+ * a fatura cobraria R$ 0,60 e o painel do administrador somaria R$ 0,70 —
+ * dois cadernos para a mesma pergunta sempre acabam discordando.
+ *
+ * Em plano mensal fixo o pedido é métrica, não dinheiro: devolve zero.
+ *
+ * Com faixas, a conta é progressiva, como conta de luz: os primeiros 100
+ * pedidos custam R$ 0,70 cada, os seguintes R$ 0,60, e assim por diante.
+ * Quem fez 600 pedidos NÃO paga R$ 0,40 nos 600.
+ *
+ * Sem faixas (regra antiga), é o preço congelado do ciclo vezes a quantidade.
+ */
+export function consumoDoCicloCents(input: {
+  usageBased: boolean;
+  unitPriceCents: Cents;
+  billableOrderCount: number;
+  centsPolicy?: string;
+}): Cents {
+  if (!input.usageBased) return 0;
+  const politica = politicaDoCiclo(true, input.centsPolicy);
+  return politica
+    ? custoTotalCents(politica, input.billableOrderCount)
+    : multiplyCents(input.unitPriceCents, input.billableOrderCount);
+}
+
 export function calculateCycle(input: CycleInput): CycleTotals {
   const pricing = getPlanPricing(input.planCode);
   const unitPriceCents = assertCents(input.unitPriceCents, "unitPriceCents");
@@ -160,20 +198,14 @@ export function calculateCycle(input: CycleInput): CycleTotals {
 
   const isUsageBased = pricing.billingModel === "usage_per_order";
 
-  // Em plano mensal fixo os pedidos são métrica, não faturamento.
-  //
-  // No CENTS com faixas, a conta é progressiva: os primeiros pedidos custam
-  // mais caro e os seguintes vão barateando, como conta de luz. O desconto
-  // conquistado vale DALI PARA FRENTE — quem faz 600 pedidos não paga R$ 0,40
-  // nos 600.
-  const politicaDeFaixas =
-    isUsageBased && input.centsPolicy === POLITICA_CENTS_V2.versao ? POLITICA_CENTS_V2 : null;
+  const politicaDeFaixas = politicaDoCiclo(isUsageBased, input.centsPolicy);
 
-  const usageAmountCents = !isUsageBased
-    ? 0
-    : politicaDeFaixas
-      ? custoTotalCents(politicaDeFaixas, input.billableOrderCount)
-      : multiplyCents(unitPriceCents, input.billableOrderCount);
+  const usageAmountCents = consumoDoCicloCents({
+    usageBased: isUsageBased,
+    unitPriceCents,
+    billableOrderCount: input.billableOrderCount,
+    centsPolicy: input.centsPolicy,
+  });
 
   const setupFeeAmountCents =
     !input.setupFeeAlreadyCharged && pricing.setupFeeCents > 0 ? pricing.setupFeeCents : 0;
