@@ -149,3 +149,110 @@ describe("syncToExternal — restaurant (loja)", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+describe("syncToExternal — delivery_zone (bairro e taxa)", () => {
+  let chamadas: Array<{ url: string; init: RequestInit }>;
+
+  beforeEach(() => {
+    chamadas = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        chamadas.push({ url, init });
+        // O cabeçalho não é enfeite: o `syncToExternal` só abre o pacote da
+        // resposta quando ela se identifica como JSON — que é o que o
+        // SiteCreatorFly manda de verdade (ver o helper `json` do menu-sync).
+        // Sem ele, o id da zona voltaria vazio e a próxima edição criaria uma
+        // zona duplicada em vez de corrigir a existente.
+        return new Response(JSON.stringify({ success: true, data: { id: "zona-sf-1" } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // O SiteCreatorFly usa /delivery-zone (com hífen) na URL. Escrever
+  // delivery_zone lá daria 400 e a taxa nunca chegaria no cardápio.
+  it("usa o endereço com hífen que o SiteCreatorFly espera", async () => {
+    await syncToExternal({
+      type: "delivery_zone",
+      action: "create",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "fc_key",
+      syncEndpoint: REST_ENDPOINT,
+      data: { neighborhood: "Centro", fee: 5.5, sort_order: 0 },
+    });
+
+    expect(chamadas[0].url).toBe("https://conectfly.com.br/api/menu-sync/delivery-zone");
+    expect(chamadas[0].init.method).toBe("POST");
+  });
+
+  // Os três campos precisam chegar com o MESMO nome. O outro lado grava só o
+  // que reconhece pelo nome exato: renomear qualquer um faz a taxa chegar em
+  // branco e o cliente vê "a combinar" no lugar do preço.
+  it("manda bairro, taxa e ordem com os nomes que o outro lado reconhece", async () => {
+    await syncToExternal({
+      type: "delivery_zone",
+      action: "create",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "fc_key",
+      syncEndpoint: REST_ENDPOINT,
+      data: { neighborhood: "Jardins", fee: 8, sort_order: 2 },
+    });
+
+    expect(JSON.parse(chamadas[0].init.body as string)).toEqual({
+      neighborhood: "Jardins",
+      fee: 8,
+      sort_order: 2,
+    });
+  });
+
+  it("devolve o id que o SiteCreatorFly deu, para a edição achar a linha depois", async () => {
+    const r = await syncToExternal({
+      type: "delivery_zone",
+      action: "create",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "fc_key",
+      syncEndpoint: REST_ENDPOINT,
+      data: { neighborhood: "Centro", fee: 5, sort_order: 0 },
+    });
+
+    expect(r.success).toBe(true);
+    expect(r.externalId).toBe("zona-sf-1");
+  });
+
+  it("editar aponta para a zona certa pelo id do outro lado", async () => {
+    await syncToExternal({
+      type: "delivery_zone",
+      action: "update",
+      externalId: "zona-sf-1",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "fc_key",
+      syncEndpoint: REST_ENDPOINT,
+      data: { neighborhood: "Centro", fee: 7, sort_order: 0 },
+    });
+
+    expect(chamadas[0].url).toBe("https://conectfly.com.br/api/menu-sync/delivery-zone/zona-sf-1");
+    expect(chamadas[0].init.method).toBe("PUT");
+  });
+
+  // Sem o id do outro lado não dá para saber QUAL bairro apagar. Apagar
+  // "algum" seria tirar do ar o bairro errado — melhor recusar.
+  it("não tenta apagar sem saber qual zona é", async () => {
+    const r = await syncToExternal({
+      type: "delivery_zone",
+      action: "delete",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "fc_key",
+      syncEndpoint: REST_ENDPOINT,
+    });
+
+    expect(r.success).toBe(false);
+    expect(chamadas).toHaveLength(0);
+  });
+});
