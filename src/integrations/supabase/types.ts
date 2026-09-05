@@ -1177,6 +1177,47 @@ export type Database = {
           },
         ];
       };
+      delivery_zones: {
+        Row: {
+          created_at: string;
+          external_id: string | null;
+          fee: number;
+          id: string;
+          neighborhood: string;
+          pizzeria_id: string;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          external_id?: string | null;
+          fee?: number;
+          id?: string;
+          neighborhood: string;
+          pizzeria_id: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          external_id?: string | null;
+          fee?: number;
+          id?: string;
+          neighborhood?: string;
+          pizzeria_id?: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "delivery_zones_pizzeria_id_fkey";
+            columns: ["pizzeria_id"];
+            isOneToOne: false;
+            referencedRelation: "pizzerias";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       external_order_logs: {
         Row: {
           api_key_partial: string | null;

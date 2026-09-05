@@ -60,9 +60,9 @@ export function primeirosPassos(s: SinaisDaLoja): Passo[] {
     },
     {
       id: "publicar",
-      rotulo: "Publique seu cardápio",
+      rotulo: "Cardápio online",
       feito: s.cardapioPublicado,
-      para: "/my-store",
+      para: s.cardapioPublicado ? undefined : "/my-store",
     },
     {
       id: "primeiro_pedido",

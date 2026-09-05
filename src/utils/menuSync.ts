@@ -8,6 +8,7 @@ type MenuType =
   | "additional"
   | "combo"
   | "pizza_size"
+  | "delivery_zone"
   | "restaurant";
 
 interface SyncParams {
@@ -33,6 +34,7 @@ const REST_RESOURCE_PATH: Record<MenuType, string> = {
   additional: "additional",
   combo: "combo",
   pizza_size: "pizza-size",
+  delivery_zone: "delivery-zone",
   restaurant: "restaurant",
 };
 
@@ -113,6 +115,7 @@ function mapExternalType(type: string, data?: any): MenuType {
   if (type === "beverage") return "beverage";
   if (type === "combo") return "combo";
   if (type === "pizza_size") return "pizza_size";
+  if (type === "delivery_zone") return "delivery_zone";
   if (type === "restaurant") return "restaurant";
   if (type === "additional" || type === "adicional") return "additional";
   if (type === "extra" || type === "border" || type === "borda") {
@@ -411,6 +414,18 @@ function prepareDataForExternal(type: MenuType, data: any) {
       max_flavors: data.max_flavors,
       slices: data.slices,
       active: data.active !== undefined ? data.active : true,
+      sort_order: data.sort_order,
+    };
+  }
+
+  if (type === "delivery_zone") {
+    // Os três campos viajam com o MESMO nome dos dois lados. O SiteCreatorFly
+    // grava só o que reconhece pelo nome exato, então renomear qualquer um
+    // aqui faria a taxa chegar lá em branco — e o cliente veria "a combinar"
+    // no lugar do preço da entrega dele.
+    return {
+      neighborhood: data.neighborhood,
+      fee: data.fee,
       sort_order: data.sort_order,
     };
   }

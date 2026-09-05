@@ -73,6 +73,57 @@ export function decideProvisioning(subject: ProvisionSubject): ProvisionDecision
 }
 
 /**
+ * O cardápio deste estabelecimento está no ar?
+ *
+ * POR QUE ESTA PERGUNTA PRECISOU DE REGRA PRÓPRIA
+ *
+ * A lista "Prepare sua loja" marcava este passo olhando só para o carimbo do
+ * provisionamento (`provision_status = 'provisioned'` mais `public_url`).
+ * Acontece que existem DOIS caminhos para uma loja ganhar cardápio:
+ *
+ *   1. provisionada — o FlyControl cria a loja no SiteCreatorFly e carimba;
+ *   2. conectada — a loja JÁ existia no SiteCreatorFly e o dono ligou as duas
+ *      pela chave de acesso. Este caminho nunca carimbou nada.
+ *
+ * O resultado é que a loja conectada ficava com o cardápio no ar, vendendo,
+ * e o passo "Cardápio online" nunca marcava — por mais coisa que o dono
+ * configurasse. Era o boletim exigindo a assinatura de um professor que nunca
+ * deu aula para aquela turma: o aluno estudou, fez a prova, e mesmo assim não
+ * tinha como passar.
+ *
+ * O QUE CONTA COMO PROVA
+ *
+ * Vale o carimbo (caminho 1) OU as três peças que fazem o cardápio funcionar
+ * de verdade (caminho 2):
+ *
+ *   - `slug`, o endereço do cardápio na internet;
+ *   - `api_key`, a chave que deixa os dois sistemas conversarem;
+ *   - `sync_endpoint`, o endereço do site — que só é preenchido depois de o
+ *     FlyControl encontrar a loja lá do outro lado.
+ *
+ * As três juntas são o que a tela "Minha Loja" exige antes de publicar
+ * qualquer mudança. Se elas bastam para publicar, bastam para dizer que está
+ * publicado — senão a lista cobra uma coisa e o sistema faz outra.
+ */
+export function cardapioEstaNoAr(subject: {
+  public_url?: string | null;
+  provision_status?: string | null;
+  slug?: string | null;
+  api_key?: string | null;
+  sync_endpoint?: string | null;
+}): boolean {
+  const carimbado =
+    Boolean(subject.public_url?.trim()) && subject.provision_status === PROVISION_DONE;
+  if (carimbado) return true;
+
+  return (
+    Boolean(subject.slug?.trim()) &&
+    Boolean(subject.api_key?.trim()) &&
+    Boolean(subject.sync_endpoint?.trim())
+  );
+}
+
+/**
  * Estabelecimento pronto para ter cardápio.
  *
  * O gatilho é a assinatura ficar ativa: antes disso o cliente ainda não pagou,
