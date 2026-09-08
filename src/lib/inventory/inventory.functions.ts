@@ -675,3 +675,150 @@ export const salvarConfiguracoesDeEstoque = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     return { ok: true };
   });
+
+// ---------------------------------------------------------------------------
+// UM PRODUTO E SUAS EMBALAGENS
+// ---------------------------------------------------------------------------
+
+export const lerProdutoDeEstoque = createServerFn({ method: "POST" })
+  .inputValidator((d: { tenantId: string; id: string }) => d)
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+
+    const { data: produto, error } = await context.supabase
+      .from("inventory_products")
+      .select("*")
+      .eq("id", data.id)
+      .eq("pizzeria_id", data.tenantId)
+      .maybeSingle();
+    if (error) throw new Error(error.message);
+    if (!produto) throw new Error("Produto não encontrado no estoque desta loja.");
+
+    const { data: conversoes } = await context.supabase
+      .from("inventory_package_conversions")
+      .select("id, unit, base_quantity")
+      .eq("product_id", data.id)
+      .order("base_quantity");
+
+    return {
+      produto: produto as unknown as ProdutoDeEstoque & {
+        description: string | null;
+        brand: string | null;
+        low_stock_alert_enabled: boolean;
+        location: string | null;
+      },
+      conversoes: (
+        (conversoes ?? []) as Array<{
+          id: string;
+          unit: string;
+          base_quantity: number;
+        }>
+      ).map((c) => ({ ...c, base_quantity: Number(c.base_quantity) })),
+    };
+  });
+
+/**
+ * "1 caixa = 12 unidades".
+ *
+ * Sem esta ficha, uma entrada de 10 caixas seria recusada pelo motor — ele se
+ * recusa a chutar que caixa é o mesmo que unidade, porque chutar
+ * transformaria 120 latas em 10 e o saldo passaria a mentir em silêncio.
+ */
+export const salvarConversaoDeEmbalagem = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: { tenantId: string; productId: string; unit: string; baseQuantity: number }) => d,
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+
+    const unidade = (data.unit ?? "").trim();
+    if (!unidade) throw new Error("Dê um nome à embalagem (caixa, fardo, pacote…).");
+    if (!(data.baseQuantity > 0)) {
+      throw new Error("Diga quantas unidades cabem nessa embalagem — precisa ser maior que zero.");
+    }
+
+    // O produto precisa ser desta loja. Sem esta conferência, alguém poderia
+    // pendurar uma embalagem na ficha de um produto do vizinho.
+    const { data: dono } = await context.supabase
+      .from("inventory_products")
+      .select("id")
+      .eq("id", data.productId)
+      .eq("pizzeria_id", data.tenantId)
+      .maybeSingle();
+    if (!dono) throw new Error("Produto não encontrado no estoque desta loja.");
+
+    const { error } = await context.supabase.from("inventory_package_conversions").insert({
+      pizzeria_id: data.tenantId,
+      product_id: data.productId,
+      unit: unidade,
+      base_quantity: data.baseQuantity,
+    });
+
+    if (error) {
+      if (error.message.includes("inventory_package_uma_por_produto")) {
+        throw new Error(`Este produto já tem uma embalagem chamada "${unidade}".`);
+      }
+      throw new Error(error.message);
+    }
+    return { ok: true };
+  });
+
+export const excluirConversaoDeEmbalagem = createServerFn({ method: "POST" })
+  .inputValidator((d: { tenantId: string; id: string }) => d)
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+    const { error } = await context.supabase
+      .from("inventory_package_conversions")
+      .delete()
+      .eq("id", data.id)
+      .eq("pizzeria_id", data.tenantId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
+
+/**
+ * A busca do PDV: nome, SKU, código interno ou código de barras.
+ *
+ * Devolve pouca coisa e no máximo 20 itens, porque isso roda a cada tecla
+ * digitada no balcão com o cliente esperando.
+ */
+export const buscarProdutosParaVenda = createServerFn({ method: "POST" })
+  .inputValidator((d: { tenantId: string; termo: string }) => d)
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+
+    const termo = (data.termo ?? "").trim();
+    if (!termo) return [];
+    const escapado = termo.replace(/[%,()]/g, "");
+
+    const { data: linhas, error } = await context.supabase
+      .from("inventory_products")
+      .select(
+        "id, name, image_url, price_cents, base_unit, stock_base, min_stock_base, barcode, sku",
+      )
+      .eq("pizzeria_id", data.tenantId)
+      .eq("active", true)
+      .is("deleted_at", null)
+      .or(
+        `name.ilike.%${escapado}%,sku.ilike.%${escapado}%,internal_code.ilike.%${escapado}%,barcode.ilike.%${escapado}%`,
+      )
+      .order("name")
+      .limit(20);
+
+    if (error) throw new Error(error.message);
+    return ((linhas ?? []) as Array<Record<string, unknown>>).map((p) => ({
+      id: p.id as string,
+      name: p.name as string,
+      image_url: (p.image_url as string) ?? null,
+      price_cents: Number(p.price_cents),
+      base_unit: p.base_unit as string,
+      stock_base: Number(p.stock_base),
+      min_stock_base: Number(p.min_stock_base),
+      barcode: (p.barcode as string) ?? null,
+      sku: (p.sku as string) ?? null,
+    }));
+  });
