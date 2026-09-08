@@ -28,6 +28,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppDocsRouteImport } from './routes/_app/docs'
 import { Route as AppFinanceRouteImport } from './routes/_app/finance'
 import { Route as AppFlydeliveryRouteImport } from './routes/_app/flydelivery'
+import { Route as AppInventoryRouteImport } from './routes/_app/inventory'
 import { Route as AppMarketingRouteImport } from './routes/_app/marketing'
 import { Route as AppMenuRouteImport } from './routes/_app/menu'
 import { Route as AppMyStoreRouteImport } from './routes/_app/my-store'
@@ -159,6 +160,11 @@ const AppFinanceRoute = AppFinanceRouteImport.update({
 const AppFlydeliveryRoute = AppFlydeliveryRouteImport.update({
   id: '/flydelivery',
   path: '/flydelivery',
+  getParentRoute: () => AppRoute,
+} as any)
+const AppInventoryRoute = AppInventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
   getParentRoute: () => AppRoute,
 } as any)
 const AppMarketingRoute = AppMarketingRouteImport.update({
@@ -377,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/docs': typeof AppDocsRoute
   '/finance': typeof AppFinanceRoute
   '/flydelivery': typeof AppFlydeliveryRoute
+  '/inventory': typeof AppInventoryRoute
   '/marketing': typeof AppMarketingRoute
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
@@ -434,6 +441,7 @@ export interface FileRoutesByTo {
   '/docs': typeof AppDocsRoute
   '/finance': typeof AppFinanceRoute
   '/flydelivery': typeof AppFlydeliveryRoute
+  '/inventory': typeof AppInventoryRoute
   '/marketing': typeof AppMarketingRoute
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
@@ -494,6 +502,7 @@ export interface FileRoutesById {
   '/_app/docs': typeof AppDocsRoute
   '/_app/finance': typeof AppFinanceRoute
   '/_app/flydelivery': typeof AppFlydeliveryRoute
+  '/_app/inventory': typeof AppInventoryRoute
   '/_app/marketing': typeof AppMarketingRoute
   '/_app/menu': typeof AppMenuRoute
   '/_app/my-store': typeof AppMyStoreRoute
@@ -554,6 +563,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/finance'
     | '/flydelivery'
+    | '/inventory'
     | '/marketing'
     | '/menu'
     | '/my-store'
@@ -611,6 +621,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/finance'
     | '/flydelivery'
+    | '/inventory'
     | '/marketing'
     | '/menu'
     | '/my-store'
@@ -670,6 +681,7 @@ export interface FileRouteTypes {
     | '/_app/docs'
     | '/_app/finance'
     | '/_app/flydelivery'
+    | '/_app/inventory'
     | '/_app/marketing'
     | '/_app/menu'
     | '/_app/my-store'
@@ -880,6 +892,13 @@ declare module '@tanstack/react-router' {
       path: '/flydelivery'
       fullPath: '/flydelivery'
       preLoaderRoute: typeof AppFlydeliveryRouteImport
+      parentRoute: typeof AppRoute
+    }
+    '/_app/inventory': {
+      id: '/_app/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof AppInventoryRouteImport
       parentRoute: typeof AppRoute
     }
     '/_app/marketing': {
@@ -1184,6 +1203,7 @@ interface AppRouteChildren {
   AppDocsRoute: typeof AppDocsRoute
   AppFinanceRoute: typeof AppFinanceRoute
   AppFlydeliveryRoute: typeof AppFlydeliveryRoute
+  AppInventoryRoute: typeof AppInventoryRoute
   AppMarketingRoute: typeof AppMarketingRoute
   AppMenuRoute: typeof AppMenuRoute
   AppMyStoreRoute: typeof AppMyStoreRoute
@@ -1202,6 +1222,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDocsRoute: AppDocsRoute,
   AppFinanceRoute: AppFinanceRoute,
   AppFlydeliveryRoute: AppFlydeliveryRoute,
+  AppInventoryRoute: AppInventoryRoute,
   AppMarketingRoute: AppMarketingRoute,
   AppMenuRoute: AppMenuRoute,
   AppMyStoreRoute: AppMyStoreRoute,

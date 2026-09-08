@@ -18,12 +18,13 @@
  */
 export type PlanType = "premium" | "cents" | "legacy_full_access";
 
-export type Feature = "tables" | "waiters" | "commissions";
+export type Feature = "tables" | "waiters" | "commissions" | "inventory";
 
 export const FEATURE_LABELS: Record<Feature, string> = {
   tables: "Mesas",
   waiters: "Garçons",
   commissions: "Comissões",
+  inventory: "Estoque & PDV",
 };
 
 // Cada plano lista só as features restritas que ele desbloqueia. Qualquer
@@ -31,9 +32,9 @@ export const FEATURE_LABELS: Record<Feature, string> = {
 // para todos os planos por padrão (dashboard, cardápio, financeiro etc. não
 // precisam ser listados aqui).
 const PLAN_FEATURES: Record<PlanType, Feature[]> = {
-  premium: ["tables", "waiters", "commissions"],
+  premium: ["tables", "waiters", "commissions", "inventory"],
   cents: [],
-  legacy_full_access: ["tables", "waiters", "commissions"],
+  legacy_full_access: ["tables", "waiters", "commissions", "inventory"],
 };
 
 /**
