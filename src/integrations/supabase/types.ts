@@ -2128,6 +2128,51 @@ export type Database = {
         };
         Relationships: [];
       };
+      inventory_imports: {
+        Row: {
+          id: string;
+          pizzeria_id: string;
+          user_id: string | null;
+          idempotency_key: string;
+          total_received: number;
+          total_created: number;
+          total_updated: number;
+          total_skipped: number;
+          total_errors: number;
+          errors: Json;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pizzeria_id: string;
+          user_id?: string | null;
+          idempotency_key: string;
+          total_received?: number;
+          total_created?: number;
+          total_updated?: number;
+          total_skipped?: number;
+          total_errors?: number;
+          errors?: Json;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          user_id?: string | null;
+          idempotency_key?: string;
+          total_received?: number;
+          total_created?: number;
+          total_updated?: number;
+          total_skipped?: number;
+          total_errors?: number;
+          errors?: Json;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
       inventory_movements: {
         Row: {
           id: string;
@@ -2202,6 +2247,7 @@ export type Database = {
       };
       inventory_package_conversions: {
         Row: {
+          price_cents: number | null;
           id: string;
           pizzeria_id: string;
           product_id: string;
@@ -2210,6 +2256,7 @@ export type Database = {
           created_at: string;
         };
         Insert: {
+          price_cents?: number | null;
           id?: string;
           pizzeria_id: string;
           product_id: string;
@@ -5022,6 +5069,15 @@ export type Database = {
       };
       inventory_deduct_order: {
         Args: { p_order_id: string };
+        Returns: Json;
+      };
+      inventory_import_products: {
+        Args: {
+          p_pizzeria_id: string;
+          p_products: Json;
+          p_idempotency_key: string;
+          p_user_id?: string | null;
+        };
         Returns: Json;
       };
       inventory_resolve_menu_product: {

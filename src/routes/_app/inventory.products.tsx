@@ -27,6 +27,7 @@ import {
 import type { SituacaoDoEstoque } from "@/lib/inventory/inventory.functions";
 import { FormularioDeProduto } from "@/components/inventory/FormularioDeProduto";
 import { DialogoDeMovimentacao } from "@/components/inventory/DialogoDeMovimentacao";
+import { ImportadorDeJson } from "@/components/inventory/ImportadorDeJson";
 
 export const Route = createFileRoute("/_app/inventory/products")({ component: TelaDeProdutos });
 
@@ -207,9 +208,11 @@ function TelaDeProdutos() {
         <Button onClick={() => setEditando({})} className="gap-2">
           <Plus className="h-4 w-4" /> Novo produto
         </Button>
+
+        <ImportadorDeJson tenantId={tenantId} onImportado={carregar} />
       </div>
     ),
-    [busca, categoria, situacao, ordenar, categorias],
+    [busca, categoria, situacao, ordenar, categorias, tenantId, carregar],
   );
 
   return (

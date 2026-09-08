@@ -822,3 +822,223 @@ export const buscarProdutosParaVenda = createServerFn({ method: "POST" })
       sku: (p.sku as string) ?? null,
     }));
   });
+
+// ---------------------------------------------------------------------------
+// IMPORTAÇÃO POR JSON
+// ---------------------------------------------------------------------------
+
+export type AcaoDoProduto = "criar" | "atualizar" | "ignorar";
+
+export type ProdutoParaImportar = {
+  nome: string;
+  sku?: string;
+  codigoBarras?: string;
+  categoria?: string;
+  marca?: string;
+  descricao?: string;
+  imagemUrl?: string;
+  unidadeBase?: string;
+  quantidadeEstoque?: number;
+  estoqueMinimo?: number;
+  precoCustoCents?: number;
+  precoVendaCents?: number;
+  ativo?: boolean;
+  embalagens?: Array<{ unidade: string; quantidade: number; precoCents: number | null }>;
+  acao?: AcaoDoProduto;
+  produtoExistenteId?: string | null;
+};
+
+export type ProdutoJaExistente = {
+  /** Índice do produto na lista enviada, para a tela casar com a linha certa. */
+  indice: number;
+  existenteId: string;
+  existenteNome: string;
+  /** Por qual campo bateu — é o que a tela explica ao lojista. */
+  motivo: "codigo_barras" | "sku" | "nome_e_categoria" | "nome";
+};
+
+function normalizarChave(texto: string): string {
+  return String(texto ?? "")
+    .normalize("NFD")
+    .replace(/[̀-ͯ]/g, "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Quais destes produtos já existem no estoque desta loja?
+ *
+ * A ordem da comparação vai do mais confiável para o menos: código de barras
+ * é único no mundo; SKU é único na loja; nome é palpite. Comparar primeiro
+ * pelo nome faria "Coca-Cola 2L" e "Coca Cola 2 Litros" passarem como
+ * produtos diferentes, e dois códigos de barras iguais passarem como iguais —
+ * exatamente ao contrário do que interessa.
+ *
+ * Isto NÃO decide nada: só informa a tela, para o lojista escolher entre
+ * ignorar, atualizar ou criar assim mesmo.
+ */
+export const conferirDuplicidadeDeProdutos = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      tenantId: string;
+      produtos: Array<{ nome: string; sku?: string; codigoBarras?: string; categoria?: string }>;
+    }) => d,
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }): Promise<ProdutoJaExistente[]> => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+
+    if (!Array.isArray(data.produtos) || data.produtos.length === 0) return [];
+
+    // Uma consulta só para a loja inteira. Perguntar produto por produto daria
+    // mil idas ao banco numa importação de mil itens.
+    const { data: existentes, error } = await context.supabase
+      .from("inventory_products")
+      .select("id, name, sku, barcode, category_id, inventory_categories(name)")
+      .eq("pizzeria_id", data.tenantId)
+      .is("deleted_at", null);
+
+    if (error) throw new Error(error.message);
+
+    type Linha = {
+      id: string;
+      name: string;
+      sku: string | null;
+      barcode: string | null;
+      inventory_categories?: { name?: string } | null;
+    };
+
+    const lista = (existentes ?? []) as unknown as Linha[];
+    const porCodigo = new Map<string, Linha>();
+    const porSku = new Map<string, Linha>();
+    const porNomeCategoria = new Map<string, Linha>();
+    const porNome = new Map<string, Linha>();
+
+    for (const p of lista) {
+      if (p.barcode?.trim()) porCodigo.set(p.barcode.trim(), p);
+      if (p.sku?.trim()) porSku.set(normalizarChave(p.sku), p);
+      const chaveNome = normalizarChave(p.name);
+      const categoria = normalizarChave(p.inventory_categories?.name ?? "");
+      porNomeCategoria.set(`${chaveNome}|${categoria}`, p);
+      if (!porNome.has(chaveNome)) porNome.set(chaveNome, p);
+    }
+
+    const achados: ProdutoJaExistente[] = [];
+
+    data.produtos.forEach((novo, indice) => {
+      const codigo = novo.codigoBarras?.trim();
+      const sku = novo.sku?.trim();
+      const chaveNome = normalizarChave(novo.nome);
+      const chaveCategoria = normalizarChave(novo.categoria ?? "");
+
+      let achado: Linha | undefined;
+      let motivo: ProdutoJaExistente["motivo"] = "nome";
+
+      if (codigo && porCodigo.has(codigo)) {
+        achado = porCodigo.get(codigo);
+        motivo = "codigo_barras";
+      } else if (sku && porSku.has(normalizarChave(sku))) {
+        achado = porSku.get(normalizarChave(sku));
+        motivo = "sku";
+      } else if (porNomeCategoria.has(`${chaveNome}|${chaveCategoria}`)) {
+        achado = porNomeCategoria.get(`${chaveNome}|${chaveCategoria}`);
+        motivo = "nome_e_categoria";
+      } else if (porNome.has(chaveNome)) {
+        achado = porNome.get(chaveNome);
+        motivo = "nome";
+      }
+
+      if (achado) {
+        achados.push({
+          indice,
+          existenteId: achado.id,
+          existenteNome: achado.name,
+          motivo,
+        });
+      }
+    });
+
+    return achados;
+  });
+
+export type ResultadoDaImportacao = {
+  import_id: string;
+  repetida: boolean;
+  total_received: number;
+  total_created: number;
+  total_updated: number;
+  total_skipped: number;
+  total_errors: number;
+  errors: Array<{ nome: string; mensagem: string }>;
+};
+
+/**
+ * Grava a importação.
+ *
+ * O `chaveDeImportacao` é a senha desta importação específica, criada pela
+ * tela. Se o dono clicar duas vezes, ou a internet cair e o navegador tentar
+ * de novo, a segunda chegada devolve o resultado da primeira sem cadastrar
+ * nada — é o caderno de reservas que só aceita um nome por mesa.
+ */
+export const importarProdutosPorJson = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: { tenantId: string; chaveDeImportacao: string; produtos: ProdutoParaImportar[] }) => d,
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }): Promise<ResultadoDaImportacao> => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+
+    if (!Array.isArray(data.produtos) || data.produtos.length === 0) {
+      throw new Error("Selecione ao menos um produto para importar.");
+    }
+    if (data.produtos.length > 1000) {
+      throw new Error("O limite é de 1000 produtos por importação. Divida em partes.");
+    }
+    if (!data.chaveDeImportacao?.trim()) {
+      throw new Error("Importação sem identificação. Recarregue a tela e tente de novo.");
+    }
+
+    // O que vai para o banco é montado AQUI, campo por campo. O navegador não
+    // manda tenant_id, nem id de produto solto, nem nada que decida acesso:
+    // a loja é a que o servidor conferiu, e só.
+    const paraGravar = data.produtos.map((p) => ({
+      nome: String(p.nome ?? "").trim(),
+      sku: p.sku ?? "",
+      codigo_barras: p.codigoBarras ?? "",
+      categoria: p.categoria ?? "",
+      marca: p.marca ?? "",
+      descricao: p.descricao ?? "",
+      imagem_url: p.imagemUrl ?? "",
+      unidade_base: p.unidadeBase || "unidade",
+      quantidade_estoque: Math.max(0, Number(p.quantidadeEstoque ?? 0) || 0),
+      estoque_minimo: Math.max(0, Number(p.estoqueMinimo ?? 0) || 0),
+      preco_custo_cents: Math.max(0, Math.round(Number(p.precoCustoCents ?? 0) || 0)),
+      preco_venda_cents: Math.max(0, Math.round(Number(p.precoVendaCents ?? 0) || 0)),
+      ativo: p.ativo !== false,
+      acao: p.acao ?? "criar",
+      produto_existente_id: p.acao === "atualizar" ? (p.produtoExistenteId ?? null) : null,
+      embalagens: (p.embalagens ?? [])
+        .filter((e) => e && e.unidade && Number(e.quantidade) > 0)
+        .map((e) => ({
+          unidade: String(e.unidade).trim(),
+          quantidade: Number(e.quantidade),
+          preco_cents: e.precoCents != null ? Math.max(0, Math.round(e.precoCents)) : null,
+        })),
+    }));
+
+    const { data: r, error } = await context.supabase.rpc("inventory_import_products", {
+      p_pizzeria_id: data.tenantId,
+      p_products: paraGravar,
+      p_idempotency_key: data.chaveDeImportacao.trim(),
+      p_user_id: context.userId,
+    });
+
+    if (error) {
+      console.error("[estoque] importacao falhou:", error.message);
+      throw new Error(mensagemDeErro(error.message));
+    }
+
+    return r as unknown as ResultadoDaImportacao;
+  });
