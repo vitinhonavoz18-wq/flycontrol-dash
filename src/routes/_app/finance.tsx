@@ -36,12 +36,15 @@ import {
   Smartphone,
   Info,
   Truck,
+  ShoppingCart,
   History,
   ArrowUpRight,
   ArrowDownRight,
   LayoutGrid,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { useServerFn } from "@tanstack/react-start";
+import { resumoDoBalcaoNoPeriodo, type ResumoDoBalcao } from "@/lib/inventory/balcao.functions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -178,6 +181,8 @@ function Finance() {
   const [selectedPizzeriaId, setSelectedPizzeriaId] = useState<string>("all");
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [balcao, setBalcao] = useState<ResumoDoBalcao>({ total: 0, quantidade: 0 });
+  const buscarResumoDoBalcao = useServerFn(resumoDoBalcaoNoPeriodo);
   const [paymentFilter, setPaymentFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -279,6 +284,40 @@ function Finance() {
 
   // ============ Derived metrics ============
   const range = useMemo(() => getRange(period), [period]);
+
+  // O faturamento do balcão mora em outra tabela (pos_sales) e em centavos.
+  // Sem isto, quem vende no balcão via o Financeiro mostrando menos do que
+  // entrou no caixa — e era o próprio sistema dando a informação errada.
+  const lojasDoResumo = useMemo(
+    () => (selectedPizzeriaId !== "all" ? [selectedPizzeriaId] : pizzerias.map((p) => p.id)),
+    [pizzerias, selectedPizzeriaId],
+  );
+
+  useEffect(() => {
+    let cancelado = false;
+    if (!user || lojasDoResumo.length === 0) {
+      setBalcao({ total: 0, quantidade: 0 });
+      return;
+    }
+    buscarResumoDoBalcao({
+      data: {
+        tenantIds: lojasDoResumo,
+        de: range.start.toISOString(),
+        ate: range.end.toISOString(),
+      },
+    })
+      .then((r) => {
+        if (!cancelado) setBalcao(r);
+      })
+      .catch(() => {
+        // O balcão é um complemento: se ele falhar, o Financeiro dos pedidos
+        // continua na tela. Zerar é mais honesto que repetir o número antigo.
+        if (!cancelado) setBalcao({ total: 0, quantidade: 0 });
+      });
+    return () => {
+      cancelado = true;
+    };
+  }, [buscarResumoDoBalcao, lojasDoResumo, range, user]);
   const prevRange = useMemo(() => {
     const span = range.end.getTime() - range.start.getTime();
     return {
@@ -670,10 +709,14 @@ function Finance() {
           <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
             <KpiCard
               title="Faturamento Bruto"
-              value={fmtBRL(currentMetrics.revenue)}
+              value={fmtBRL(currentMetrics.revenue + balcao.total)}
               trend={revenueGrowth}
               icon={TrendingUp}
-              description={`Comparado a: ${periodLabel(period === "month" ? "last_month" : period)}`}
+              description={
+                balcao.total > 0
+                  ? `Pedidos ${fmtBRL(currentMetrics.revenue)} + balcão ${fmtBRL(balcao.total)}`
+                  : `Comparado a: ${periodLabel(period === "month" ? "last_month" : period)}`
+              }
               highlight
             />
             <KpiCard
@@ -697,6 +740,25 @@ function Finance() {
               description="Total arrecadado em fretes"
             />
           </section>
+
+          {/* Só aparece para quem usa o balcão. Card vazio em loja que só faz
+              delivery seria ruído tomando espaço na tela. */}
+          {balcao.quantidade > 0 && (
+            <section className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+              <KpiCard
+                title="Venda no Balcão"
+                value={fmtBRL(balcao.total)}
+                icon={ShoppingCart}
+                description={`${balcao.quantidade} ${balcao.quantidade === 1 ? "venda" : "vendas"} no período, já somadas ao faturamento`}
+              />
+              <KpiCard
+                title="Ticket Médio do Balcão"
+                value={fmtBRL(balcao.total / balcao.quantidade)}
+                icon={Receipt}
+                description="Valor médio por venda no balcão"
+              />
+            </section>
+          )}
 
           {/* ========== TABLE KPI ========== */}
           <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">

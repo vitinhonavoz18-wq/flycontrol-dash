@@ -53,6 +53,7 @@ import { Route as AppInventoryIndexRouteImport } from './routes/_app/inventory.i
 import { Route as AppInventoryMovementsRouteImport } from './routes/_app/inventory.movements'
 import { Route as AppInventoryPosRouteImport } from './routes/_app/inventory.pos'
 import { Route as AppInventoryProductsRouteImport } from './routes/_app/inventory.products'
+import { Route as AppInventoryRecipesRouteImport } from './routes/_app/inventory.recipes'
 import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.close-cycles'
 import { Route as ApiMarketingQueueRouteImport } from './routes/api/marketing.queue'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
@@ -291,6 +292,11 @@ const AppInventoryProductsRoute = AppInventoryProductsRouteImport.update({
   path: '/products',
   getParentRoute: () => AppInventoryRoute,
 } as any)
+const AppInventoryRecipesRoute = AppInventoryRecipesRouteImport.update({
+  id: '/recipes',
+  path: '/recipes',
+  getParentRoute: () => AppInventoryRoute,
+} as any)
 const ApiBillingCloseCyclesRoute = ApiBillingCloseCyclesRouteImport.update({
   id: '/api/billing/close-cycles',
   path: '/api/billing/close-cycles',
@@ -430,6 +436,7 @@ export interface FileRoutesByFullPath {
   '/inventory/movements': typeof AppInventoryMovementsRoute
   '/inventory/pos': typeof AppInventoryPosRoute
   '/inventory/products': typeof AppInventoryProductsRoute
+  '/inventory/recipes': typeof AppInventoryRecipesRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -491,6 +498,7 @@ export interface FileRoutesByTo {
   '/inventory/movements': typeof AppInventoryMovementsRoute
   '/inventory/pos': typeof AppInventoryPosRoute
   '/inventory/products': typeof AppInventoryProductsRoute
+  '/inventory/recipes': typeof AppInventoryRecipesRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -556,6 +564,7 @@ export interface FileRoutesById {
   '/_app/inventory/movements': typeof AppInventoryMovementsRoute
   '/_app/inventory/pos': typeof AppInventoryPosRoute
   '/_app/inventory/products': typeof AppInventoryProductsRoute
+  '/_app/inventory/recipes': typeof AppInventoryRecipesRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -621,6 +630,7 @@ export interface FileRouteTypes {
     | '/inventory/movements'
     | '/inventory/pos'
     | '/inventory/products'
+    | '/inventory/recipes'
     | '/api/billing/close-cycles'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -682,6 +692,7 @@ export interface FileRouteTypes {
     | '/inventory/movements'
     | '/inventory/pos'
     | '/inventory/products'
+    | '/inventory/recipes'
     | '/api/billing/close-cycles'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -746,6 +757,7 @@ export interface FileRouteTypes {
     | '/_app/inventory/movements'
     | '/_app/inventory/pos'
     | '/_app/inventory/products'
+    | '/_app/inventory/recipes'
     | '/api/billing/close-cycles'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -1115,6 +1127,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInventoryProductsRouteImport
       parentRoute: typeof AppInventoryRoute
     }
+    '/_app/inventory/recipes': {
+      id: '/_app/inventory/recipes'
+      path: '/recipes'
+      fullPath: '/inventory/recipes'
+      preLoaderRoute: typeof AppInventoryRecipesRouteImport
+      parentRoute: typeof AppInventoryRoute
+    }
     '/api/billing/close-cycles': {
       id: '/api/billing/close-cycles'
       path: '/api/billing/close-cycles'
@@ -1272,6 +1291,7 @@ interface AppInventoryRouteChildren {
   AppInventoryMovementsRoute: typeof AppInventoryMovementsRoute
   AppInventoryPosRoute: typeof AppInventoryPosRoute
   AppInventoryProductsRoute: typeof AppInventoryProductsRoute
+  AppInventoryRecipesRoute: typeof AppInventoryRecipesRoute
   AppInventoryIndexRoute: typeof AppInventoryIndexRoute
 }
 
@@ -1279,6 +1299,7 @@ const AppInventoryRouteChildren: AppInventoryRouteChildren = {
   AppInventoryMovementsRoute: AppInventoryMovementsRoute,
   AppInventoryPosRoute: AppInventoryPosRoute,
   AppInventoryProductsRoute: AppInventoryProductsRoute,
+  AppInventoryRecipesRoute: AppInventoryRecipesRoute,
   AppInventoryIndexRoute: AppInventoryIndexRoute,
 }
 

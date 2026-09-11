@@ -1,5 +1,5 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { ArrowDownToLine, ClipboardList, Package, ShoppingCart } from "lucide-react";
+import { ArrowDownToLine, ChefHat, ClipboardList, Package, ShoppingCart } from "lucide-react";
 import { RequireFeature } from "@/components/PremiumFeatureLock";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { LojaDoEstoqueProvider, useLojaDoEstoque } from "@/lib/inventory/loja-context";
@@ -26,7 +26,12 @@ function LayoutDoEstoque() {
 }
 
 type Aba = {
-  to: "/inventory" | "/inventory/products" | "/inventory/pos" | "/inventory/movements";
+  to:
+    | "/inventory"
+    | "/inventory/products"
+    | "/inventory/recipes"
+    | "/inventory/pos"
+    | "/inventory/movements";
   rotulo: string;
   icone: typeof Package;
   exata?: boolean;
@@ -35,6 +40,7 @@ type Aba = {
 const ABAS: Aba[] = [
   { to: "/inventory", rotulo: "Visão Geral", icone: Package, exata: true },
   { to: "/inventory/products", rotulo: "Produtos", icone: ClipboardList },
+  { to: "/inventory/recipes", rotulo: "Ficha Técnica", icone: ChefHat },
   { to: "/inventory/pos", rotulo: "Venda no Balcão", icone: ShoppingCart },
   { to: "/inventory/movements", rotulo: "Movimentações", icone: ArrowDownToLine },
 ];

@@ -1042,3 +1042,227 @@ export const importarProdutosPorJson = createServerFn({ method: "POST" })
 
     return r as unknown as ResultadoDaImportacao;
   });
+
+// ============================================================================
+// FICHA TÉCNICA — o que cada item do cardápio consome do estoque
+// ============================================================================
+//
+// Sem isto, o estoque nunca baixa sozinho. A baixa automática sabe descontar,
+// mas não sabe que a Pizza Calabresa gasta 1 disco de massa, 150 g de
+// calabresa e 1 embalagem — isso é o dono quem diz, aqui.
+//
+// É a receita afixada na parede da cozinha: o pedido chega dizendo "uma
+// calabresa", e é a receita que traduz isso em quanto sai de cada prateleira.
+//
+// Um item do cardápio pode puxar vários produtos do estoque (um lanche), ou um
+// só (uma lata de refrigerante), ou nenhum — e nesse último caso ele
+// simplesmente não mexe no estoque, o que é legítimo para taxa de entrega,
+// couvert e afins.
+
+export type LinhaDaFichaTecnica = {
+  id: string;
+  inventory_product_id: string;
+  produto_nome: string;
+  produto_unidade: string;
+  produto_estoque_atual: number;
+  quantity_base: number;
+};
+
+export type ItemDeCardapioComFicha = {
+  id: string;
+  name: string;
+  active: boolean;
+  categoria: string | null;
+  itens_na_ficha: number;
+};
+
+/**
+ * Os itens do cardápio da loja, cada um com quantos produtos de estoque já
+ * estão amarrados nele. A contagem é o que deixa visível, numa olhada, quais
+ * itens ainda não descontam nada — que é a pergunta que o dono realmente tem.
+ */
+export const listarCardapioParaFichaTecnica = createServerFn({ method: "POST" })
+  .inputValidator((d: { tenantId: string }) => d)
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }): Promise<ItemDeCardapioComFicha[]> => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+
+    const { data: produtos, error } = await context.supabase
+      .from("menu_products")
+      .select("id, name, active, menu_categories(name)")
+      .eq("pizzeria_id", data.tenantId)
+      .order("name");
+    if (error) throw new Error(error.message);
+
+    const { data: vinculos, error: erroVinculos } = await context.supabase
+      .from("menu_product_inventory_links")
+      .select("menu_product_id")
+      .eq("pizzeria_id", data.tenantId);
+    if (erroVinculos) throw new Error(erroVinculos.message);
+
+    const contagem = new Map<string, number>();
+    for (const v of vinculos ?? []) {
+      contagem.set(v.menu_product_id, (contagem.get(v.menu_product_id) ?? 0) + 1);
+    }
+
+    return (produtos ?? []).map((p) => {
+      const categoria = p.menu_categories as { name: string } | null;
+      return {
+        id: p.id,
+        name: p.name,
+        active: p.active ?? true,
+        categoria: categoria?.name ?? null,
+        itens_na_ficha: contagem.get(p.id) ?? 0,
+      };
+    });
+  });
+
+export type ProdutoParaFicha = {
+  id: string;
+  name: string;
+  base_unit: string;
+};
+
+/**
+ * Todos os produtos ativos do estoque, só com o necessário para montar a
+ * receita. A listagem normal é paginada de 30 em 30, o que serviria para uma
+ * tabela mas não para uma caixa de seleção — o produto da página 4 ficaria
+ * invisível para quem monta a receita.
+ */
+export const listarProdutosParaFicha = createServerFn({ method: "POST" })
+  .inputValidator((d: { tenantId: string }) => d)
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }): Promise<ProdutoParaFicha[]> => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+
+    const { data: produtos, error } = await context.supabase
+      .from("inventory_products")
+      .select("id, name, base_unit")
+      .eq("pizzeria_id", data.tenantId)
+      .eq("active", true)
+      .is("deleted_at", null)
+      .order("name");
+    if (error) throw new Error(error.message);
+
+    return (produtos ?? []).map((p) => ({
+      id: p.id,
+      name: p.name,
+      base_unit: p.base_unit,
+    }));
+  });
+
+/** A receita de um item do cardápio, já com o nome e o saldo de cada produto. */
+export const listarFichaTecnica = createServerFn({ method: "POST" })
+  .inputValidator((d: { tenantId: string; menuProductId: string }) => d)
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }): Promise<LinhaDaFichaTecnica[]> => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+
+    const { data: linhas, error } = await context.supabase
+      .from("menu_product_inventory_links")
+      .select("id, inventory_product_id, quantity_base")
+      .eq("pizzeria_id", data.tenantId)
+      .eq("menu_product_id", data.menuProductId);
+    if (error) throw new Error(error.message);
+    if (!linhas?.length) return [];
+
+    // Duas consultas em vez de um join: o arquivo de tipos do projeto é mais
+    // antigo que estas tabelas e ainda não conhece a ligação entre elas.
+    // Buscar em duas etapas funciona igual e não depende disso.
+    const { data: produtos, error: erroProdutos } = await context.supabase
+      .from("inventory_products")
+      .select("id, name, base_unit, stock_base")
+      .eq("pizzeria_id", data.tenantId)
+      .in(
+        "id",
+        linhas.map((l) => l.inventory_product_id),
+      );
+    if (erroProdutos) throw new Error(erroProdutos.message);
+
+    const porId = new Map((produtos ?? []).map((p) => [p.id, p]));
+
+    return linhas.map((l) => {
+      const p = porId.get(l.inventory_product_id);
+      return {
+        id: l.id,
+        inventory_product_id: l.inventory_product_id,
+        produto_nome: p?.name ?? "(produto removido)",
+        produto_unidade: p?.base_unit ?? "un",
+        produto_estoque_atual: Number(p?.stock_base ?? 0),
+        quantity_base: Number(l.quantity_base),
+      };
+    });
+  });
+
+/**
+ * Amarra (ou reajusta) um produto do estoque na receita de um item do cardápio.
+ *
+ * As duas pontas são conferidas contra a loja de quem está logado. Sem isso,
+ * bastaria alterar o envio para pendurar o estoque do vizinho na própria
+ * receita — e passar a descontar da prateleira dele a cada venda.
+ */
+export const salvarVinculoDaFichaTecnica = createServerFn({ method: "POST" })
+  .inputValidator(
+    (d: {
+      tenantId: string;
+      menuProductId: string;
+      inventoryProductId: string;
+      quantityBase: number;
+    }) => d,
+  )
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+
+    if (!(data.quantityBase > 0)) {
+      throw new Error("A quantidade consumida precisa ser maior que zero.");
+    }
+
+    const [{ data: doCardapio }, { data: doEstoque }] = await Promise.all([
+      context.supabase
+        .from("menu_products")
+        .select("id")
+        .eq("id", data.menuProductId)
+        .eq("pizzeria_id", data.tenantId)
+        .maybeSingle(),
+      context.supabase
+        .from("inventory_products")
+        .select("id")
+        .eq("id", data.inventoryProductId)
+        .eq("pizzeria_id", data.tenantId)
+        .maybeSingle(),
+    ]);
+
+    if (!doCardapio) throw new Error("Item de cardápio não encontrado nesta loja.");
+    if (!doEstoque) throw new Error("Produto não encontrado no estoque desta loja.");
+
+    // Repetir o mesmo produto na mesma receita é reajuste, não erro: o dono
+    // corrigindo "na verdade gasta 200 g, não 150 g".
+    const { error } = await context.supabase.from("menu_product_inventory_links").upsert(
+      {
+        pizzeria_id: data.tenantId,
+        menu_product_id: data.menuProductId,
+        inventory_product_id: data.inventoryProductId,
+        quantity_base: data.quantityBase,
+      },
+      { onConflict: "menu_product_id,inventory_product_id" },
+    );
+    if (error) throw new Error(error.message);
+
+    return { ok: true };
+  });
+
+/** Tira um produto da receita. O saldo já movimentado não é tocado. */
+export const excluirVinculoDaFichaTecnica = createServerFn({ method: "POST" })
+  .inputValidator((d: { tenantId: string; id: string }) => d)
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }) => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+    const { error } = await context.supabase
+      .from("menu_product_inventory_links")
+      .delete()
+      .eq("id", data.id)
+      .eq("pizzeria_id", data.tenantId);
+    if (error) throw new Error(error.message);
+    return { ok: true };
+  });
