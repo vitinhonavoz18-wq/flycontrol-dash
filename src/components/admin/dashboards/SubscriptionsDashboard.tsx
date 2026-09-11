@@ -32,6 +32,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { CreatePizzeriaDialog } from "./CreatePizzeriaDialog";
+import { ChatAddonActions } from "@/components/admin/ChatAddonActions";
+import { situacaoChatDasLojas } from "@/lib/crm/addonAdmin.functions";
+import { useServerFn } from "@tanstack/react-start";
 
 const DEFAULT_CLUB_ID = "00000000-0000-0000-0000-0000000000c1";
 const PREMIUM_PRICE = 375;
@@ -52,6 +55,23 @@ export const SubscriptionsDashboard = () => {
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
+    },
+  });
+
+  // A situação do Chat de cada loja. Fica numa consulta separada de propósito:
+  // se ela falhar (migração ainda não aplicada, por exemplo), a tela de planos
+  // continua funcionando inteira — só a coluna do Chat fica vazia. Uma coluna
+  // nova não pode derrubar a tela que o suporte usa todo dia.
+  const buscarSituacaoChat = useServerFn(situacaoChatDasLojas);
+  const { data: chatPorLoja } = useQuery({
+    queryKey: ["admin-chat-addons"],
+    queryFn: async () => {
+      try {
+        const r = await buscarSituacaoChat({ data: {} });
+        return new Map(r.lojas.map((l) => [l.tenantId, l]));
+      } catch {
+        return new Map();
+      }
     },
   });
 
@@ -146,6 +166,7 @@ export const SubscriptionsDashboard = () => {
               <TableHead>Status</TableHead>
               <TableHead>Vencimento</TableHead>
               <TableHead>Valor</TableHead>
+              <TableHead>Chat (CRM)</TableHead>
               <TableHead>Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -201,6 +222,16 @@ export const SubscriptionsDashboard = () => {
                     {isCents
                       ? `R$ ${Number(centsPrice ?? 0).toFixed(2)} por pedido`
                       : `R$ ${PREMIUM_PRICE.toFixed(2)}`}
+                  </TableCell>
+                  <TableCell>
+                    <ChatAddonActions
+                      tenantId={p.id}
+                      planoEhCents={isCents}
+                      situacao={chatPorLoja?.get(p.id)}
+                      onMudou={() =>
+                        queryClient.invalidateQueries({ queryKey: ["admin-chat-addons"] })
+                      }
+                    />
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-2">
