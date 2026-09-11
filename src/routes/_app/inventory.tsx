@@ -1,5 +1,14 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { ArrowDownToLine, ChefHat, ClipboardList, Package, ShoppingCart } from "lucide-react";
+import {
+  ArrowDownToLine,
+  ChefHat,
+  ClipboardCheck,
+  ClipboardList,
+  Package,
+  PackagePlus,
+  ShoppingCart,
+  Truck,
+} from "lucide-react";
 import { RequireFeature } from "@/components/PremiumFeatureLock";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { LojaDoEstoqueProvider, useLojaDoEstoque } from "@/lib/inventory/loja-context";
@@ -31,17 +40,26 @@ type Aba = {
     | "/inventory/products"
     | "/inventory/recipes"
     | "/inventory/pos"
+    | "/inventory/entries"
+    | "/inventory/count"
+    | "/inventory/suppliers"
     | "/inventory/movements";
   rotulo: string;
   icone: typeof Package;
   exata?: boolean;
 };
 
+// A ordem segue o dia do restaurante: olhar como está, cuidar do cadastro,
+// receber mercadoria, vender, conferir a prateleira e, no fim, consultar o
+// extrato.
 const ABAS: Aba[] = [
   { to: "/inventory", rotulo: "Visão Geral", icone: Package, exata: true },
   { to: "/inventory/products", rotulo: "Produtos", icone: ClipboardList },
   { to: "/inventory/recipes", rotulo: "Ficha Técnica", icone: ChefHat },
+  { to: "/inventory/entries", rotulo: "Entradas", icone: PackagePlus },
   { to: "/inventory/pos", rotulo: "Venda no Balcão", icone: ShoppingCart },
+  { to: "/inventory/count", rotulo: "Contagem", icone: ClipboardCheck },
+  { to: "/inventory/suppliers", rotulo: "Fornecedores", icone: Truck },
   { to: "/inventory/movements", rotulo: "Movimentações", icone: ArrowDownToLine },
 ];
 
