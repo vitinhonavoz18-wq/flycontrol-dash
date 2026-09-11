@@ -6,6 +6,8 @@ import { playSound, unlockAudio, isAudioBlocked } from "@/lib/notification-sound
 import { claimOrderAlert } from "@/lib/orderAlertClaim";
 import { Button } from "@/components/ui/button";
 import { Volume2 } from "lucide-react";
+import { useServerFn } from "@tanstack/react-start";
+import { produtosAcabando } from "@/lib/inventory/alertas.functions";
 
 /**
  * Global admin listener: NEW ORDERS ONLY.
@@ -20,6 +22,8 @@ export function NotificationsProvider() {
   const [pizzeriaIds, setPizzeriaIds] = useState<string[] | "__all__" | null>(null);
   const [audioBlocked, setAudioBlocked] = useState(false);
   const seenOrderIds = useRef<Set<string>>(new Set());
+  const avisadosDeEstoque = useRef<Set<string>>(new Set());
+  const avisarEstoque = useServerFn(produtosAcabando);
 
   useEffect(() => {
     let cancelled = false;
@@ -92,6 +96,55 @@ export function NotificationsProvider() {
       supabase.removeChannel(channel);
     };
   }, [pizzeriaIds]);
+
+  // Estoque acabando.
+  //
+  // Confere ao abrir o painel e de meia em meia hora. Cada produto é avisado
+  // uma vez por sessão: repetir o mesmo aviso a cada meia hora faria o dono
+  // parar de ler todos eles, inclusive o que importava.
+  useEffect(() => {
+    if (!pizzeriaIds || pizzeriaIds === "__all__" || pizzeriaIds.length === 0) return;
+
+    let cancelado = false;
+
+    async function conferir() {
+      try {
+        const acabando = await avisarEstoque({ data: { tenantIds: pizzeriaIds as string[] } });
+        if (cancelado) return;
+
+        const novos = acabando.filter((p) => !avisadosDeEstoque.current.has(p.id));
+        if (novos.length === 0) return;
+        novos.forEach((p) => avisadosDeEstoque.current.add(p.id));
+
+        const acabaram = novos.filter((p) => p.acabou);
+        const primeiro = novos[0];
+        const resto = novos.length - 1;
+
+        toast.warning(
+          novos.length === 1
+            ? `${primeiro.name}: ${primeiro.acabou ? "acabou" : `restam ${primeiro.stock_base} ${primeiro.base_unit}`}`
+            : `${novos.length} produtos no estoque mínimo${acabaram.length > 0 ? ` — ${acabaram.length} já acabou` : ""}`,
+          {
+            description:
+              novos.length === 1
+                ? "Vale repor antes que falte no meio do movimento."
+                : `${primeiro.name}${resto > 0 ? ` e mais ${resto}` : ""}. Veja em Estoque › Visão Geral.`,
+            duration: 10000,
+          },
+        );
+      } catch {
+        // Loja sem o módulo, sem permissão ou rede caindo: o aviso de estoque
+        // é um extra e nunca pode atrapalhar o painel de pedidos.
+      }
+    }
+
+    void conferir();
+    const timer = setInterval(() => void conferir(), 30 * 60 * 1000);
+    return () => {
+      cancelado = true;
+      clearInterval(timer);
+    };
+  }, [avisarEstoque, pizzeriaIds]);
 
   // Browser audio block events
   useEffect(() => {
