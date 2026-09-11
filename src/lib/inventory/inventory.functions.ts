@@ -1702,3 +1702,139 @@ export const fecharContagem = createServerFn({ method: "POST" })
       valor_divergencia_cents: number;
     };
   });
+
+// ============================================================================
+// RELATÓRIOS
+// ============================================================================
+//
+// As perguntas que o dono faz no fim do mês: quanto gastei comprando, quanto
+// saiu em venda, quanto perdi, e o que está parado ocupando prateleira e
+// dinheiro.
+
+export type LinhaDoRelatorio = {
+  product_id: string;
+  produto: string;
+  unidade: string;
+  entrou: number;
+  saiu_vendido: number;
+  perdido: number;
+  saldo_atual: number;
+  custo_cents: number;
+  valor_parado_cents: number;
+  dias_sem_mover: number | null;
+};
+
+export type RelatorioDeEstoque = {
+  compras_cents: number;
+  vendido_balcao_cents: number;
+  perdas_cents: number;
+  valor_em_estoque_cents: number;
+  linhas: LinhaDoRelatorio[];
+};
+
+/** Motivos que significam "perdeu mercadoria", e não "vendeu". */
+const MOTIVOS_DE_PERDA = ["perda", "vencido", "danificado"];
+const MOTIVOS_DE_VENDA = ["venda_balcao", "venda_online"];
+
+export const relatorioDeEstoque = createServerFn({ method: "POST" })
+  .inputValidator((d: { tenantId: string; de: string; ate: string }) => d)
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ data, context }): Promise<RelatorioDeEstoque> => {
+    await assertEstoque(context.supabase, context.userId, data.tenantId);
+
+    const [{ data: produtos, error }, { data: movimentos, error: erroMov }] = await Promise.all([
+      context.supabase
+        .from("inventory_products")
+        .select("id, name, base_unit, stock_base, cost_cents")
+        .eq("pizzeria_id", data.tenantId)
+        .eq("active", true)
+        .is("deleted_at", null),
+      context.supabase
+        .from("inventory_movements")
+        .select("product_id, direction, reason, quantity_base, created_at")
+        .eq("pizzeria_id", data.tenantId)
+        .gte("created_at", data.de)
+        .lte("created_at", data.ate),
+    ]);
+
+    if (error) throw new Error(error.message);
+    if (erroMov) throw new Error(erroMov.message);
+
+    // A última vez que cada produto se mexeu — olhando TODO o histórico, não
+    // só o período. "Parado há 90 dias" não pode virar "parado há 30" só
+    // porque o filtro da tela mostra o último mês.
+    const { data: ultimos } = await context.supabase
+      .from("inventory_movements")
+      .select("product_id, created_at")
+      .eq("pizzeria_id", data.tenantId)
+      .order("created_at", { ascending: false })
+      .limit(5000);
+
+    const ultimoMovimento = new Map<string, string>();
+    for (const m of ultimos ?? []) {
+      if (!ultimoMovimento.has(m.product_id)) ultimoMovimento.set(m.product_id, m.created_at);
+    }
+
+    const porProduto = new Map<string, { entrou: number; vendido: number; perdido: number }>();
+    for (const m of movimentos ?? []) {
+      const atual = porProduto.get(m.product_id) ?? { entrou: 0, vendido: 0, perdido: 0 };
+      // quantity_base já vem negativo nas saídas; o módulo evita somar
+      // subtraindo sem querer.
+      const quantidade = Math.abs(Number(m.quantity_base));
+
+      if (m.direction === "in") atual.entrou += quantidade;
+      else if (MOTIVOS_DE_PERDA.includes(m.reason)) atual.perdido += quantidade;
+      else if (MOTIVOS_DE_VENDA.includes(m.reason)) atual.vendido += quantidade;
+
+      porProduto.set(m.product_id, atual);
+    }
+
+    const agora = Date.now();
+    let comprasCents = 0;
+    let perdasCents = 0;
+    let valorEmEstoqueCents = 0;
+
+    const linhas: LinhaDoRelatorio[] = (produtos ?? []).map((p) => {
+      const m = porProduto.get(p.id) ?? { entrou: 0, vendido: 0, perdido: 0 };
+      const custo = Number(p.cost_cents ?? 0);
+      const saldo = Number(p.stock_base);
+
+      comprasCents += Math.round(m.entrou * custo);
+      perdasCents += Math.round(m.perdido * custo);
+      valorEmEstoqueCents += Math.round(saldo * custo);
+
+      const ultimo = ultimoMovimento.get(p.id);
+      const diasSemMover = ultimo
+        ? Math.floor((agora - new Date(ultimo).getTime()) / 86_400_000)
+        : null;
+
+      return {
+        product_id: p.id,
+        produto: p.name,
+        unidade: p.base_unit,
+        entrou: m.entrou,
+        saiu_vendido: m.vendido,
+        perdido: m.perdido,
+        saldo_atual: saldo,
+        custo_cents: custo,
+        valor_parado_cents: Math.round(saldo * custo),
+        dias_sem_mover: diasSemMover,
+      };
+    });
+
+    const { data: vendas } = await context.supabase
+      .from("pos_sales")
+      .select("total_cents")
+      .eq("pizzeria_id", data.tenantId)
+      .eq("status", "concluida")
+      .gte("created_at", data.de)
+      .lte("created_at", data.ate);
+
+    return {
+      compras_cents: comprasCents,
+      vendido_balcao_cents: (vendas ?? []).reduce((s, v) => s + Number(v.total_cents ?? 0), 0),
+      perdas_cents: perdasCents,
+      valor_em_estoque_cents: valorEmEstoqueCents,
+      linhas: linhas.sort((a, b) => b.saiu_vendido - a.saiu_vendido),
+    };
+  });

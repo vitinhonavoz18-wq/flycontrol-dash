@@ -1,6 +1,7 @@
 import { createFileRoute, Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
   ArrowDownToLine,
+  BarChart3,
   ChefHat,
   ClipboardCheck,
   ClipboardList,
@@ -43,7 +44,8 @@ type Aba = {
     | "/inventory/entries"
     | "/inventory/count"
     | "/inventory/suppliers"
-    | "/inventory/movements";
+    | "/inventory/movements"
+    | "/inventory/reports";
   rotulo: string;
   icone: typeof Package;
   exata?: boolean;
@@ -61,6 +63,7 @@ const ABAS: Aba[] = [
   { to: "/inventory/count", rotulo: "Contagem", icone: ClipboardCheck },
   { to: "/inventory/suppliers", rotulo: "Fornecedores", icone: Truck },
   { to: "/inventory/movements", rotulo: "Movimentações", icone: ArrowDownToLine },
+  { to: "/inventory/reports", rotulo: "Relatórios", icone: BarChart3 },
 ];
 
 function Moldura() {
