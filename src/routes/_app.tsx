@@ -26,6 +26,7 @@ import {
   Wallet,
   Trophy,
   Megaphone,
+  Package,
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -211,6 +212,7 @@ function AppLayoutInner() {
     { to: "/search-orders", label: "Buscar Pedidos", icon: Search },
     { to: "/my-store", label: "Minha Loja", icon: Store },
     { to: "/menu", label: "Cardápio", icon: Menu },
+    { to: "/inventory", label: "Estoque & PDV", icon: Package, feature: "inventory" },
     { to: "/flydelivery", label: "FlyDelivery", icon: Smartphone },
     { to: "/combos", label: "Combos", icon: PieChart },
     { to: "/marketing", label: "Marketing", icon: Megaphone },

@@ -1177,6 +1177,47 @@ export type Database = {
           },
         ];
       };
+      delivery_zones: {
+        Row: {
+          created_at: string;
+          external_id: string | null;
+          fee: number;
+          id: string;
+          neighborhood: string;
+          pizzeria_id: string;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          external_id?: string | null;
+          fee?: number;
+          id?: string;
+          neighborhood: string;
+          pizzeria_id: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          external_id?: string | null;
+          fee?: number;
+          id?: string;
+          neighborhood?: string;
+          pizzeria_id?: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "delivery_zones_pizzeria_id_fkey";
+            columns: ["pizzeria_id"];
+            isOneToOne: false;
+            referencedRelation: "pizzerias";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       external_order_logs: {
         Row: {
           api_key_partial: string | null;
@@ -1913,6 +1954,497 @@ export type Database = {
           },
         ];
       };
+      inventory_categories: {
+        Row: {
+          id: string;
+          pizzeria_id: string;
+          name: string;
+          sort_order: number;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pizzeria_id: string;
+          name: string;
+          sort_order?: number;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          name?: string;
+          sort_order?: number;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      inventory_count_items: {
+        Row: {
+          id: string;
+          count_id: string;
+          product_id: string;
+          system_quantity_base: number;
+          counted_quantity_base: number | null;
+          applied: boolean;
+        };
+        Insert: {
+          id?: string;
+          count_id: string;
+          product_id: string;
+          system_quantity_base: number;
+          counted_quantity_base?: number | null;
+          applied?: boolean;
+        };
+        Update: {
+          id?: string;
+          count_id?: string;
+          product_id?: string;
+          system_quantity_base?: number;
+          counted_quantity_base?: number | null;
+          applied?: boolean;
+        };
+        Relationships: [];
+      };
+      inventory_counts: {
+        Row: {
+          id: string;
+          pizzeria_id: string;
+          scope: string;
+          category_id: string | null;
+          status: string;
+          started_by: string | null;
+          started_at: string;
+          finished_at: string | null;
+          divergence_count: number;
+          divergence_value_cents: number;
+          notes: string | null;
+        };
+        Insert: {
+          id?: string;
+          pizzeria_id: string;
+          scope?: string;
+          category_id?: string | null;
+          status?: string;
+          started_by?: string | null;
+          started_at?: string;
+          finished_at?: string | null;
+          divergence_count?: number;
+          divergence_value_cents?: number;
+          notes?: string | null;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          scope?: string;
+          category_id?: string | null;
+          status?: string;
+          started_by?: string | null;
+          started_at?: string;
+          finished_at?: string | null;
+          divergence_count?: number;
+          divergence_value_cents?: number;
+          notes?: string | null;
+        };
+        Relationships: [];
+      };
+      inventory_entries: {
+        Row: {
+          id: string;
+          pizzeria_id: string;
+          supplier_id: string | null;
+          invoice_number: string | null;
+          notes: string | null;
+          entry_date: string;
+          total_cost_cents: number;
+          status: string;
+          created_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pizzeria_id: string;
+          supplier_id?: string | null;
+          invoice_number?: string | null;
+          notes?: string | null;
+          entry_date?: string;
+          total_cost_cents?: number;
+          status?: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          supplier_id?: string | null;
+          invoice_number?: string | null;
+          notes?: string | null;
+          entry_date?: string;
+          total_cost_cents?: number;
+          status?: string;
+          created_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      inventory_entry_items: {
+        Row: {
+          id: string;
+          entry_id: string;
+          product_id: string;
+          quantity: number;
+          unit: string;
+          quantity_base: number;
+          unit_cost_cents: number;
+          batch: string | null;
+          expires_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          entry_id: string;
+          product_id: string;
+          quantity: number;
+          unit: string;
+          quantity_base: number;
+          unit_cost_cents?: number;
+          batch?: string | null;
+          expires_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          entry_id?: string;
+          product_id?: string;
+          quantity?: number;
+          unit?: string;
+          quantity_base?: number;
+          unit_cost_cents?: number;
+          batch?: string | null;
+          expires_at?: string | null;
+        };
+        Relationships: [];
+      };
+      inventory_imports: {
+        Row: {
+          id: string;
+          pizzeria_id: string;
+          user_id: string | null;
+          idempotency_key: string;
+          total_received: number;
+          total_created: number;
+          total_updated: number;
+          total_skipped: number;
+          total_errors: number;
+          errors: Json;
+          status: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pizzeria_id: string;
+          user_id?: string | null;
+          idempotency_key: string;
+          total_received?: number;
+          total_created?: number;
+          total_updated?: number;
+          total_skipped?: number;
+          total_errors?: number;
+          errors?: Json;
+          status?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          user_id?: string | null;
+          idempotency_key?: string;
+          total_received?: number;
+          total_created?: number;
+          total_updated?: number;
+          total_skipped?: number;
+          total_errors?: number;
+          errors?: Json;
+          status?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      inventory_movements: {
+        Row: {
+          id: string;
+          pizzeria_id: string;
+          product_id: string;
+          direction: string;
+          reason: string;
+          quantity: number;
+          unit: string;
+          quantity_base: number;
+          stock_before: number;
+          stock_after: number;
+          user_id: string | null;
+          notes: string | null;
+          source_type: string | null;
+          source_id: string | null;
+          source_item_id: string | null;
+          supplier_id: string | null;
+          entry_id: string | null;
+          pos_sale_id: string | null;
+          order_id: string | null;
+          count_id: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pizzeria_id: string;
+          product_id: string;
+          direction: string;
+          reason: string;
+          quantity: number;
+          unit: string;
+          quantity_base: number;
+          stock_before: number;
+          stock_after: number;
+          user_id?: string | null;
+          notes?: string | null;
+          source_type?: string | null;
+          source_id?: string | null;
+          source_item_id?: string | null;
+          supplier_id?: string | null;
+          entry_id?: string | null;
+          pos_sale_id?: string | null;
+          order_id?: string | null;
+          count_id?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          product_id?: string;
+          direction?: string;
+          reason?: string;
+          quantity?: number;
+          unit?: string;
+          quantity_base?: number;
+          stock_before?: number;
+          stock_after?: number;
+          user_id?: string | null;
+          notes?: string | null;
+          source_type?: string | null;
+          source_id?: string | null;
+          source_item_id?: string | null;
+          supplier_id?: string | null;
+          entry_id?: string | null;
+          pos_sale_id?: string | null;
+          order_id?: string | null;
+          count_id?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      inventory_package_conversions: {
+        Row: {
+          price_cents: number | null;
+          id: string;
+          pizzeria_id: string;
+          product_id: string;
+          unit: string;
+          base_quantity: number;
+          created_at: string;
+        };
+        Insert: {
+          price_cents?: number | null;
+          id?: string;
+          pizzeria_id: string;
+          product_id: string;
+          unit: string;
+          base_quantity: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          product_id?: string;
+          unit?: string;
+          base_quantity?: number;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      inventory_products: {
+        Row: {
+          id: string;
+          pizzeria_id: string;
+          category_id: string | null;
+          name: string;
+          description: string | null;
+          brand: string | null;
+          internal_code: string | null;
+          sku: string | null;
+          barcode: string | null;
+          image_url: string | null;
+          images: Json;
+          cost_cents: number;
+          price_cents: number;
+          base_unit: string;
+          sale_unit: string | null;
+          stock_base: number;
+          min_stock_base: number;
+          ideal_stock_base: number | null;
+          allow_negative_stock: boolean;
+          low_stock_alert_enabled: boolean;
+          location: string | null;
+          aisle: string | null;
+          shelf: string | null;
+          active: boolean;
+          deleted_at: string | null;
+          low_stock_notified_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pizzeria_id: string;
+          category_id?: string | null;
+          name: string;
+          description?: string | null;
+          brand?: string | null;
+          internal_code?: string | null;
+          sku?: string | null;
+          barcode?: string | null;
+          image_url?: string | null;
+          images?: Json;
+          cost_cents?: number;
+          price_cents?: number;
+          base_unit?: string;
+          sale_unit?: string | null;
+          stock_base?: number;
+          min_stock_base?: number;
+          ideal_stock_base?: number | null;
+          allow_negative_stock?: boolean;
+          low_stock_alert_enabled?: boolean;
+          location?: string | null;
+          aisle?: string | null;
+          shelf?: string | null;
+          active?: boolean;
+          deleted_at?: string | null;
+          low_stock_notified_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          category_id?: string | null;
+          name?: string;
+          description?: string | null;
+          brand?: string | null;
+          internal_code?: string | null;
+          sku?: string | null;
+          barcode?: string | null;
+          image_url?: string | null;
+          images?: Json;
+          cost_cents?: number;
+          price_cents?: number;
+          base_unit?: string;
+          sale_unit?: string | null;
+          stock_base?: number;
+          min_stock_base?: number;
+          ideal_stock_base?: number | null;
+          allow_negative_stock?: boolean;
+          low_stock_alert_enabled?: boolean;
+          location?: string | null;
+          aisle?: string | null;
+          shelf?: string | null;
+          active?: boolean;
+          deleted_at?: string | null;
+          low_stock_notified_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      inventory_settings: {
+        Row: {
+          pizzeria_id: string;
+          deduct_on_status: string;
+          auto_deduct_orders: boolean;
+          low_stock_notifications: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          pizzeria_id: string;
+          deduct_on_status?: string;
+          auto_deduct_orders?: boolean;
+          low_stock_notifications?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          pizzeria_id?: string;
+          deduct_on_status?: string;
+          auto_deduct_orders?: boolean;
+          low_stock_notifications?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      inventory_suppliers: {
+        Row: {
+          id: string;
+          pizzeria_id: string;
+          name: string;
+          legal_name: string | null;
+          trade_name: string | null;
+          tax_id: string | null;
+          phone: string | null;
+          whatsapp: string | null;
+          email: string | null;
+          address: string | null;
+          notes: string | null;
+          active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          pizzeria_id: string;
+          name: string;
+          legal_name?: string | null;
+          trade_name?: string | null;
+          tax_id?: string | null;
+          phone?: string | null;
+          whatsapp?: string | null;
+          email?: string | null;
+          address?: string | null;
+          notes?: string | null;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          name?: string;
+          legal_name?: string | null;
+          trade_name?: string | null;
+          tax_id?: string | null;
+          phone?: string | null;
+          whatsapp?: string | null;
+          email?: string | null;
+          address?: string | null;
+          notes?: string | null;
+          active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       invoice_items: {
         Row: {
           created_at: string;
@@ -2180,6 +2712,33 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      menu_product_inventory_links: {
+        Row: {
+          id: string;
+          pizzeria_id: string;
+          menu_product_id: string;
+          inventory_product_id: string;
+          quantity_base: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          pizzeria_id: string;
+          menu_product_id: string;
+          inventory_product_id: string;
+          quantity_base?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          menu_product_id?: string;
+          inventory_product_id?: string;
+          quantity_base?: number;
+          created_at?: string;
+        };
+        Relationships: [];
       };
       menu_products: {
         Row: {
@@ -2748,6 +3307,96 @@ export type Database = {
             referencedColumns: ["id"];
           },
         ];
+      };
+      pos_sale_items: {
+        Row: {
+          id: string;
+          sale_id: string;
+          product_id: string;
+          product_name: string;
+          quantity: number;
+          unit: string;
+          quantity_base: number;
+          unit_price_cents: number;
+          total_cents: number;
+        };
+        Insert: {
+          id?: string;
+          sale_id: string;
+          product_id: string;
+          product_name: string;
+          quantity: number;
+          unit: string;
+          quantity_base: number;
+          unit_price_cents?: number;
+          total_cents?: number;
+        };
+        Update: {
+          id?: string;
+          sale_id?: string;
+          product_id?: string;
+          product_name?: string;
+          quantity?: number;
+          unit?: string;
+          quantity_base?: number;
+          unit_price_cents?: number;
+          total_cents?: number;
+        };
+        Relationships: [];
+      };
+      pos_sales: {
+        Row: {
+          id: string;
+          pizzeria_id: string;
+          sale_number: number | null;
+          subtotal_cents: number;
+          discount_cents: number;
+          surcharge_cents: number;
+          total_cents: number;
+          payment_method: string | null;
+          customer_name: string | null;
+          customer_phone: string | null;
+          notes: string | null;
+          status: string;
+          operator_id: string | null;
+          created_at: string;
+          cancelled_at: string | null;
+        };
+        Insert: {
+          id?: string;
+          pizzeria_id: string;
+          sale_number?: number | null;
+          subtotal_cents?: number;
+          discount_cents?: number;
+          surcharge_cents?: number;
+          total_cents?: number;
+          payment_method?: string | null;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          notes?: string | null;
+          status?: string;
+          operator_id?: string | null;
+          created_at?: string;
+          cancelled_at?: string | null;
+        };
+        Update: {
+          id?: string;
+          pizzeria_id?: string;
+          sale_number?: number | null;
+          subtotal_cents?: number;
+          discount_cents?: number;
+          surcharge_cents?: number;
+          total_cents?: number;
+          payment_method?: string | null;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          notes?: string | null;
+          status?: string;
+          operator_id?: string | null;
+          created_at?: string;
+          cancelled_at?: string | null;
+        };
+        Relationships: [];
       };
       pizzerias: {
         Row: {
@@ -4397,6 +5046,60 @@ export type Database = {
           _user_id: string;
         };
         Returns: boolean;
+      };
+      inventory_apply_movement: {
+        Args: {
+          p_product_id: string;
+          p_direction: string;
+          p_reason: string;
+          p_quantity: number;
+          p_unit?: string | null;
+          p_notes?: string | null;
+          p_source_type?: string | null;
+          p_source_id?: string | null;
+          p_source_item_id?: string | null;
+          p_supplier_id?: string | null;
+          p_entry_id?: string | null;
+          p_pos_sale_id?: string | null;
+          p_order_id?: string | null;
+          p_count_id?: string | null;
+          p_user_id?: string | null;
+        };
+        Returns: Json;
+      };
+      inventory_deduct_order: {
+        Args: { p_order_id: string };
+        Returns: Json;
+      };
+      inventory_import_products: {
+        Args: {
+          p_pizzeria_id: string;
+          p_products: Json;
+          p_idempotency_key: string;
+          p_user_id?: string | null;
+        };
+        Returns: Json;
+      };
+      inventory_resolve_menu_product: {
+        Args: { p_pizzeria_id: string; p_item: Json };
+        Returns: string;
+      };
+      inventory_restore_order: {
+        Args: { p_order_id: string };
+        Returns: Json;
+      };
+      pos_finalize_sale: {
+        Args: {
+          p_pizzeria_id: string;
+          p_items: Json;
+          p_payment_method?: string | null;
+          p_discount_cents?: number;
+          p_surcharge_cents?: number;
+          p_customer_name?: string | null;
+          p_customer_phone?: string | null;
+          p_notes?: string | null;
+        };
+        Returns: Json;
       };
       is_admin:
         { Args: never; Returns: boolean } | { Args: { p_user_id: string }; Returns: boolean };

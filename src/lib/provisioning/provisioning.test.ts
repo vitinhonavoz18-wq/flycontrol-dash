@@ -4,6 +4,7 @@ import {
   PROVISION_DONE,
   PROVISION_FAILED,
   PROVISION_PENDING,
+  cardapioEstaNoAr,
   decideProvisioning,
   isReadyForProvisioning,
 } from "./provisioning";
@@ -169,5 +170,64 @@ describe("ligação nos pontos de conclusão do onboarding", () => {
     // Falha vira estado gravado e resultado, nunca exceção para quem chamou.
     expect(fonte).not.toMatch(/^\s*throw /m);
     expect(fonte).toContain("PROVISION_FAILED");
+  });
+});
+
+describe("cardapioEstaNoAr", () => {
+  // A loja PROVISIONADA: o FlyControl criou a loja no SiteCreatorFly e
+  // carimbou. Era o único caso que a lista "Prepare sua loja" reconhecia.
+  it("reconhece a loja provisionada pelo carimbo", () => {
+    expect(
+      cardapioEstaNoAr({
+        public_url: "https://conectfly.com.br/lojinha",
+        provision_status: PROVISION_DONE,
+      }),
+    ).toBe(true);
+  });
+
+  // O CASO QUE ESTAVA QUEBRADO. A loja já existia no SiteCreatorFly e o dono
+  // ligou as duas pela chave. Esse caminho nunca carimba nada — e o passo
+  // "Cardápio online" ficava para sempre em aberto, mesmo com a loja vendendo.
+  it("reconhece a loja conectada, que nunca recebeu carimbo", () => {
+    expect(
+      cardapioEstaNoAr({
+        public_url: null,
+        provision_status: null,
+        slug: "emilyburguer",
+        api_key: "fc_abc123",
+        sync_endpoint: "https://conectfly.com.br/api/public/menu-sync/emilyburguer/tok",
+      }),
+    ).toBe(true);
+  });
+
+  it("loja recém-criada, sem nada ligado, não conta como no ar", () => {
+    expect(cardapioEstaNoAr({})).toBe(false);
+    expect(cardapioEstaNoAr({ slug: "nova" })).toBe(false);
+  });
+
+  // Faltando o endereço do site, o cardápio pode até abrir, mas nada que o
+  // dono mudar no painel chega lá. Marcar como pronto seria mentir.
+  it("sem endereço de sincronização não conta como no ar", () => {
+    expect(
+      cardapioEstaNoAr({ slug: "loja", api_key: "fc_abc", sync_endpoint: null }),
+    ).toBe(false);
+  });
+
+  it("sem a chave de acesso não conta como no ar", () => {
+    expect(
+      cardapioEstaNoAr({ slug: "loja", api_key: "  ", sync_endpoint: "https://x/api" }),
+    ).toBe(false);
+  });
+
+  // Carimbo pela metade (status sem URL) não vale sozinho: cai na conferência
+  // das três peças, e sem elas continua falso.
+  it("carimbo sem URL não basta", () => {
+    expect(cardapioEstaNoAr({ provision_status: PROVISION_DONE, public_url: null })).toBe(false);
+  });
+
+  it("provisionamento que falhou não conta como no ar", () => {
+    expect(
+      cardapioEstaNoAr({ public_url: "https://x/loja", provision_status: PROVISION_FAILED }),
+    ).toBe(false);
   });
 });

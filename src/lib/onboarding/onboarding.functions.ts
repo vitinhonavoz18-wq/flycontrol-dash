@@ -18,6 +18,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { layoutRecomendadoPara } from "@/lib/menu/layouts";
+import { cardapioEstaNoAr } from "@/lib/provisioning/provisioning";
 import { aplicarResposta, proximaEtapaPendente, terminou } from "./fluxo";
 import { etapaPorId, type IdDaEtapa, type Respostas } from "./perguntas";
 import type { SinaisDaLoja } from "./primeirosPassos";
@@ -366,7 +367,9 @@ export const sinaisDaLoja = createServerFn({ method: "POST" })
       await Promise.all([
         supabaseAdmin
           .from("pizzerias")
-          .select("name, phone, address, payment_methods, provision_status, public_url")
+          .select(
+            "name, phone, address, payment_methods, provision_status, public_url, slug, api_key, sync_endpoint",
+          )
           .eq("id", loja.id)
           .maybeSingle(),
         caderno.from("onboarding_answers").select("status").eq("company_id", loja.id).maybeSingle(),
@@ -384,6 +387,9 @@ export const sinaisDaLoja = createServerFn({ method: "POST" })
       payment_methods: unknown;
       provision_status: string | null;
       public_url: string | null;
+      slug: string | null;
+      api_key: string | null;
+      sync_endpoint: string | null;
     } | null;
 
     const formas = Array.isArray(p?.payment_methods) ? p.payment_methods : [];
@@ -393,7 +399,11 @@ export const sinaisDaLoja = createServerFn({ method: "POST" })
       produtos,
       lojaIdentificada: !!(p?.name?.trim() && p?.phone?.trim() && p?.address?.trim()),
       temPagamento: formas.length > 0,
-      cardapioPublicado: !!p?.public_url && p?.provision_status === "provisioned",
+      // Vale o carimbo do provisionamento OU as peças que fazem o cardápio
+      // funcionar de verdade — ver `cardapioEstaNoAr`. Sem isso, loja
+      // conectada (e não provisionada) vendia com o cardápio no ar e o passo
+      // ficava eternamente em aberto.
+      cardapioPublicado: cardapioEstaNoAr(p ?? {}),
       pedidos: pedidos ?? 0,
     };
   });

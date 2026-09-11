@@ -28,6 +28,7 @@ import { Route as AppDashboardRouteImport } from './routes/_app/dashboard'
 import { Route as AppDocsRouteImport } from './routes/_app/docs'
 import { Route as AppFinanceRouteImport } from './routes/_app/finance'
 import { Route as AppFlydeliveryRouteImport } from './routes/_app/flydelivery'
+import { Route as AppInventoryRouteImport } from './routes/_app/inventory'
 import { Route as AppMarketingRouteImport } from './routes/_app/marketing'
 import { Route as AppMenuRouteImport } from './routes/_app/menu'
 import { Route as AppMyStoreRouteImport } from './routes/_app/my-store'
@@ -48,6 +49,10 @@ import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin/finance
 import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizzerias'
 import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
+import { Route as AppInventoryIndexRouteImport } from './routes/_app/inventory.index'
+import { Route as AppInventoryMovementsRouteImport } from './routes/_app/inventory.movements'
+import { Route as AppInventoryPosRouteImport } from './routes/_app/inventory.pos'
+import { Route as AppInventoryProductsRouteImport } from './routes/_app/inventory.products'
 import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.close-cycles'
 import { Route as ApiMarketingQueueRouteImport } from './routes/api/marketing.queue'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
@@ -161,6 +166,11 @@ const AppFlydeliveryRoute = AppFlydeliveryRouteImport.update({
   path: '/flydelivery',
   getParentRoute: () => AppRoute,
 } as any)
+const AppInventoryRoute = AppInventoryRouteImport.update({
+  id: '/inventory',
+  path: '/inventory',
+  getParentRoute: () => AppRoute,
+} as any)
 const AppMarketingRoute = AppMarketingRouteImport.update({
   id: '/marketing',
   path: '/marketing',
@@ -260,6 +270,26 @@ const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => AppAdminRoute,
+} as any)
+const AppInventoryIndexRoute = AppInventoryIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppInventoryRoute,
+} as any)
+const AppInventoryMovementsRoute = AppInventoryMovementsRouteImport.update({
+  id: '/movements',
+  path: '/movements',
+  getParentRoute: () => AppInventoryRoute,
+} as any)
+const AppInventoryPosRoute = AppInventoryPosRouteImport.update({
+  id: '/pos',
+  path: '/pos',
+  getParentRoute: () => AppInventoryRoute,
+} as any)
+const AppInventoryProductsRoute = AppInventoryProductsRouteImport.update({
+  id: '/products',
+  path: '/products',
+  getParentRoute: () => AppInventoryRoute,
 } as any)
 const ApiBillingCloseCyclesRoute = ApiBillingCloseCyclesRouteImport.update({
   id: '/api/billing/close-cycles',
@@ -377,6 +407,7 @@ export interface FileRoutesByFullPath {
   '/docs': typeof AppDocsRoute
   '/finance': typeof AppFinanceRoute
   '/flydelivery': typeof AppFlydeliveryRoute
+  '/inventory': typeof AppInventoryRouteWithChildren
   '/marketing': typeof AppMarketingRoute
   '/menu': typeof AppMenuRoute
   '/my-store': typeof AppMyStoreRoute
@@ -396,6 +427,9 @@ export interface FileRoutesByFullPath {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/inventory/movements': typeof AppInventoryMovementsRoute
+  '/inventory/pos': typeof AppInventoryPosRoute
+  '/inventory/products': typeof AppInventoryProductsRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -410,6 +444,7 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/admin/': typeof AppAdminIndexRoute
+  '/inventory/': typeof AppInventoryIndexRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -453,6 +488,9 @@ export interface FileRoutesByTo {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/inventory/movements': typeof AppInventoryMovementsRoute
+  '/inventory/pos': typeof AppInventoryPosRoute
+  '/inventory/products': typeof AppInventoryProductsRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -467,6 +505,7 @@ export interface FileRoutesByTo {
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/admin': typeof AppAdminIndexRoute
+  '/inventory': typeof AppInventoryIndexRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -494,6 +533,7 @@ export interface FileRoutesById {
   '/_app/docs': typeof AppDocsRoute
   '/_app/finance': typeof AppFinanceRoute
   '/_app/flydelivery': typeof AppFlydeliveryRoute
+  '/_app/inventory': typeof AppInventoryRouteWithChildren
   '/_app/marketing': typeof AppMarketingRoute
   '/_app/menu': typeof AppMenuRoute
   '/_app/my-store': typeof AppMyStoreRoute
@@ -513,6 +553,9 @@ export interface FileRoutesById {
   '/_app/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
+  '/_app/inventory/movements': typeof AppInventoryMovementsRoute
+  '/_app/inventory/pos': typeof AppInventoryPosRoute
+  '/_app/inventory/products': typeof AppInventoryProductsRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -527,6 +570,7 @@ export interface FileRoutesById {
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/_app/admin/': typeof AppAdminIndexRoute
+  '/_app/inventory/': typeof AppInventoryIndexRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -554,6 +598,7 @@ export interface FileRouteTypes {
     | '/docs'
     | '/finance'
     | '/flydelivery'
+    | '/inventory'
     | '/marketing'
     | '/menu'
     | '/my-store'
@@ -573,6 +618,9 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/inventory/movements'
+    | '/inventory/pos'
+    | '/inventory/products'
     | '/api/billing/close-cycles'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -587,6 +635,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/infinitypay'
     | '/api/webhooks/whatsapp-status'
     | '/admin/'
+    | '/inventory/'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -630,6 +679,9 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/inventory/movements'
+    | '/inventory/pos'
+    | '/inventory/products'
     | '/api/billing/close-cycles'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -644,6 +696,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/infinitypay'
     | '/api/webhooks/whatsapp-status'
     | '/admin'
+    | '/inventory'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -670,6 +723,7 @@ export interface FileRouteTypes {
     | '/_app/docs'
     | '/_app/finance'
     | '/_app/flydelivery'
+    | '/_app/inventory'
     | '/_app/marketing'
     | '/_app/menu'
     | '/_app/my-store'
@@ -689,6 +743,9 @@ export interface FileRouteTypes {
     | '/_app/admin/pizzerias'
     | '/_app/admin/subscriptions'
     | '/_app/admin/users'
+    | '/_app/inventory/movements'
+    | '/_app/inventory/pos'
+    | '/_app/inventory/products'
     | '/api/billing/close-cycles'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -703,6 +760,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/infinitypay'
     | '/api/webhooks/whatsapp-status'
     | '/_app/admin/'
+    | '/_app/inventory/'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -882,6 +940,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppFlydeliveryRouteImport
       parentRoute: typeof AppRoute
     }
+    '/_app/inventory': {
+      id: '/_app/inventory'
+      path: '/inventory'
+      fullPath: '/inventory'
+      preLoaderRoute: typeof AppInventoryRouteImport
+      parentRoute: typeof AppRoute
+    }
     '/_app/marketing': {
       id: '/_app/marketing'
       path: '/marketing'
@@ -1021,6 +1086,34 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/users'
       preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppAdminRoute
+    }
+    '/_app/inventory/': {
+      id: '/_app/inventory/'
+      path: '/'
+      fullPath: '/inventory/'
+      preLoaderRoute: typeof AppInventoryIndexRouteImport
+      parentRoute: typeof AppInventoryRoute
+    }
+    '/_app/inventory/movements': {
+      id: '/_app/inventory/movements'
+      path: '/movements'
+      fullPath: '/inventory/movements'
+      preLoaderRoute: typeof AppInventoryMovementsRouteImport
+      parentRoute: typeof AppInventoryRoute
+    }
+    '/_app/inventory/pos': {
+      id: '/_app/inventory/pos'
+      path: '/pos'
+      fullPath: '/inventory/pos'
+      preLoaderRoute: typeof AppInventoryPosRouteImport
+      parentRoute: typeof AppInventoryRoute
+    }
+    '/_app/inventory/products': {
+      id: '/_app/inventory/products'
+      path: '/products'
+      fullPath: '/inventory/products'
+      preLoaderRoute: typeof AppInventoryProductsRouteImport
+      parentRoute: typeof AppInventoryRoute
     }
     '/api/billing/close-cycles': {
       id: '/api/billing/close-cycles'
@@ -1175,6 +1268,24 @@ const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
   AppAdminRouteChildren,
 )
 
+interface AppInventoryRouteChildren {
+  AppInventoryMovementsRoute: typeof AppInventoryMovementsRoute
+  AppInventoryPosRoute: typeof AppInventoryPosRoute
+  AppInventoryProductsRoute: typeof AppInventoryProductsRoute
+  AppInventoryIndexRoute: typeof AppInventoryIndexRoute
+}
+
+const AppInventoryRouteChildren: AppInventoryRouteChildren = {
+  AppInventoryMovementsRoute: AppInventoryMovementsRoute,
+  AppInventoryPosRoute: AppInventoryPosRoute,
+  AppInventoryProductsRoute: AppInventoryProductsRoute,
+  AppInventoryIndexRoute: AppInventoryIndexRoute,
+}
+
+const AppInventoryRouteWithChildren = AppInventoryRoute._addFileChildren(
+  AppInventoryRouteChildren,
+)
+
 interface AppRouteChildren {
   AppAdminRoute: typeof AppAdminRouteWithChildren
   AppBillingRoute: typeof AppBillingRoute
@@ -1184,6 +1295,7 @@ interface AppRouteChildren {
   AppDocsRoute: typeof AppDocsRoute
   AppFinanceRoute: typeof AppFinanceRoute
   AppFlydeliveryRoute: typeof AppFlydeliveryRoute
+  AppInventoryRoute: typeof AppInventoryRouteWithChildren
   AppMarketingRoute: typeof AppMarketingRoute
   AppMenuRoute: typeof AppMenuRoute
   AppMyStoreRoute: typeof AppMyStoreRoute
@@ -1202,6 +1314,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppDocsRoute: AppDocsRoute,
   AppFinanceRoute: AppFinanceRoute,
   AppFlydeliveryRoute: AppFlydeliveryRoute,
+  AppInventoryRoute: AppInventoryRouteWithChildren,
   AppMarketingRoute: AppMarketingRoute,
   AppMenuRoute: AppMenuRoute,
   AppMyStoreRoute: AppMyStoreRoute,
