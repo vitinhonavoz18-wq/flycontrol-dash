@@ -100,31 +100,31 @@ NOTIFY pgrst, 'reload schema';
 -- =====================================================================
 -- IMPORTANTE PARA QUEM FOR MEXER NO PAINEL DEPOIS
 --
--- A API do SiteCreatorFly RECEBE os nomes do painel (combo_price, active,
--- highlight) e ela mesma traduz para os nomes das colunas daqui (price,
--- is_active, is_highlighted). É assim que produto e categoria já
--- sincronizam — 379 itens e 15 categorias no ar provam isso.
+-- A rota de COMBO desta API grava o que recebe DIRETO na tabela, sem
+-- traduzir nome de campo. As rotas de produto e categoria NÃO fazem isso —
+-- elas recebem os nomes do painel (active, ...) e traduzem sozinhas para
+-- is_active. São comportamentos diferentes na mesma API.
 --
--- Ou seja: NÃO renomeie os campos em src/utils/menuSync.ts para os nomes
--- das colunas deste banco. Parece a correção certa e quebra a integração
--- inteira. Há teste em menuSync.test.ts travando esse contrato.
+-- Por isso, em src/utils/menuSync.ts, só o bloco `combo` usa os nomes das
+-- colunas deste banco (price, is_active, is_highlighted) e converte `items`
+-- para lista de texto. Mexer nisso para "padronizar" com os outros tipos
+-- derruba o cadastro de combo de novo. Há testes em menuSync.test.ts
+-- travando cada nome, inclusive um que recusa qualquer campo fora da lista
+-- de colunas desta tabela.
+--
+-- Como isso foi descoberto: o erro aparecia um campo por vez. Primeiro
+-- "available_days", e depois de criar a coluna, "combo_price". Foi esse
+-- segundo erro que provou que não há tradução — "combo_price" é nome do
+-- painel e chegou inteiro ao banco.
 --
 -- =====================================================================
 -- O QUE AINDA FALTA NO SITE (não dá para fazer daqui)
 --
--- 1. EXIBIÇÃO. Agora o site GUARDA dias e horários, mas quem decide o que
---    aparece na tela do cliente é o código do SiteCreatorFly. Enquanto ele
---    não ler available_days / start_time / end_time, um combo marcado para
---    "sex, sáb, dom das 18h às 23h" fica salvo certo e continua aparecendo
---    todos os dias. Mesma coisa para original_price: o dado do "de R$ 90
---    por R$ 50" já chega, mas o preço riscado só aparece quando a tela usar
---    o campo.
---
--- 2. CAMPOS QUE A API PODE ESTAR DESCARTANDO. O erro original reclamava de
---    available_days, e não de description — que vai antes no pacote. Isso
---    sugere que a API do site monta o próprio objeto e talvez ignore
---    description, image_url, original_price, start_time e end_time. As
---    colunas já existem aqui; se depois de tudo isso algum desses campos
---    continuar chegando vazio no site, o ajuste é no código da API do
---    SiteCreatorFly, não no painel.
+-- EXIBIÇÃO. Agora o site GUARDA dias e horários, mas quem decide o que
+-- aparece na tela do cliente é o código do SiteCreatorFly. Enquanto ele não
+-- ler available_days / start_time / end_time, um combo marcado para
+-- "sex, sáb, dom das 18h às 23h" fica salvo certo e continua aparecendo
+-- todos os dias. Mesma coisa para original_price: o dado do "de R$ 90 por
+-- R$ 50" já chega, mas o preço riscado só aparece quando a tela usar o
+-- campo.
 -- =====================================================================
