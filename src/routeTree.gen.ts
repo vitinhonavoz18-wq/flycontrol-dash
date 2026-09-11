@@ -50,6 +50,9 @@ import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizze
 import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
 import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.close-cycles'
+import { Route as ApiCrmInboxRouteImport } from './routes/api/crm.inbox'
+import { Route as ApiCrmOutboxRouteImport } from './routes/api/crm.outbox'
+import { Route as ApiCrmPingRouteImport } from './routes/api/crm.ping'
 import { Route as ApiMarketingQueueRouteImport } from './routes/api/marketing.queue'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
@@ -62,6 +65,7 @@ import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/pub
 import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
 import { Route as ApiWebhooksInfinitypayRouteImport } from './routes/api/webhooks.infinitypay'
 import { Route as ApiWebhooksWhatsappStatusRouteImport } from './routes/api/webhooks.whatsapp-status'
+import { Route as ApiCrmOutboxResultRouteImport } from './routes/api/crm.outbox.result'
 import { Route as ApiMarketingQueueResultRouteImport } from './routes/api/marketing.queue.result'
 import { Route as ApiPizzeriasIdDeactivateRouteImport } from './routes/api/pizzerias.$id.deactivate'
 import { Route as ApiPizzeriasIdDeleteRouteImport } from './routes/api/pizzerias.$id.delete'
@@ -272,6 +276,21 @@ const ApiBillingCloseCyclesRoute = ApiBillingCloseCyclesRouteImport.update({
   path: '/api/billing/close-cycles',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCrmInboxRoute = ApiCrmInboxRouteImport.update({
+  id: '/api/crm/inbox',
+  path: '/api/crm/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCrmOutboxRoute = ApiCrmOutboxRouteImport.update({
+  id: '/api/crm/outbox',
+  path: '/api/crm/outbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCrmPingRoute = ApiCrmPingRouteImport.update({
+  id: '/api/crm/ping',
+  path: '/api/crm/ping',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMarketingQueueRoute = ApiMarketingQueueRouteImport.update({
   id: '/api/marketing/queue',
   path: '/api/marketing/queue',
@@ -336,6 +355,11 @@ const ApiWebhooksWhatsappStatusRoute =
     path: '/api/webhooks/whatsapp-status',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiCrmOutboxResultRoute = ApiCrmOutboxResultRouteImport.update({
+  id: '/result',
+  path: '/result',
+  getParentRoute: () => ApiCrmOutboxRoute,
+} as any)
 const ApiMarketingQueueResultRoute = ApiMarketingQueueResultRouteImport.update({
   id: '/result',
   path: '/result',
@@ -404,6 +428,9 @@ export interface FileRoutesByFullPath {
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
+  '/api/crm/inbox': typeof ApiCrmInboxRoute
+  '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
+  '/api/crm/ping': typeof ApiCrmPingRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -417,6 +444,7 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/admin/': typeof AppAdminIndexRoute
+  '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -462,6 +490,9 @@ export interface FileRoutesByTo {
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
+  '/api/crm/inbox': typeof ApiCrmInboxRoute
+  '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
+  '/api/crm/ping': typeof ApiCrmPingRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -475,6 +506,7 @@ export interface FileRoutesByTo {
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/admin': typeof AppAdminIndexRoute
+  '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -523,6 +555,9 @@ export interface FileRoutesById {
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
+  '/api/crm/inbox': typeof ApiCrmInboxRoute
+  '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
+  '/api/crm/ping': typeof ApiCrmPingRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -536,6 +571,7 @@ export interface FileRoutesById {
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/_app/admin/': typeof AppAdminIndexRoute
+  '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -584,6 +620,9 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/users'
     | '/api/billing/close-cycles'
+    | '/api/crm/inbox'
+    | '/api/crm/outbox'
+    | '/api/crm/ping'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -597,6 +636,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/infinitypay'
     | '/api/webhooks/whatsapp-status'
     | '/admin/'
+    | '/api/crm/outbox/result'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -642,6 +682,9 @@ export interface FileRouteTypes {
     | '/admin/subscriptions'
     | '/admin/users'
     | '/api/billing/close-cycles'
+    | '/api/crm/inbox'
+    | '/api/crm/outbox'
+    | '/api/crm/ping'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -655,6 +698,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/infinitypay'
     | '/api/webhooks/whatsapp-status'
     | '/admin'
+    | '/api/crm/outbox/result'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -702,6 +746,9 @@ export interface FileRouteTypes {
     | '/_app/admin/subscriptions'
     | '/_app/admin/users'
     | '/api/billing/close-cycles'
+    | '/api/crm/inbox'
+    | '/api/crm/outbox'
+    | '/api/crm/ping'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -715,6 +762,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/infinitypay'
     | '/api/webhooks/whatsapp-status'
     | '/_app/admin/'
+    | '/api/crm/outbox/result'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -741,6 +789,9 @@ export interface RootRouteChildren {
   PagamentoPlanoRoute: typeof PagamentoPlanoRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiBillingCloseCyclesRoute: typeof ApiBillingCloseCyclesRoute
+  ApiCrmInboxRoute: typeof ApiCrmInboxRoute
+  ApiCrmOutboxRoute: typeof ApiCrmOutboxRouteWithChildren
+  ApiCrmPingRoute: typeof ApiCrmPingRoute
   ApiMarketingQueueRoute: typeof ApiMarketingQueueRouteWithChildren
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPizzeriasFiqonTestRoute: typeof ApiPizzeriasFiqonTestRoute
@@ -1048,6 +1099,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBillingCloseCyclesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/crm/inbox': {
+      id: '/api/crm/inbox'
+      path: '/api/crm/inbox'
+      fullPath: '/api/crm/inbox'
+      preLoaderRoute: typeof ApiCrmInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/crm/outbox': {
+      id: '/api/crm/outbox'
+      path: '/api/crm/outbox'
+      fullPath: '/api/crm/outbox'
+      preLoaderRoute: typeof ApiCrmOutboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/crm/ping': {
+      id: '/api/crm/ping'
+      path: '/api/crm/ping'
+      fullPath: '/api/crm/ping'
+      preLoaderRoute: typeof ApiCrmPingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/marketing/queue': {
       id: '/api/marketing/queue'
       path: '/api/marketing/queue'
@@ -1131,6 +1203,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/webhooks/whatsapp-status'
       preLoaderRoute: typeof ApiWebhooksWhatsappStatusRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/api/crm/outbox/result': {
+      id: '/api/crm/outbox/result'
+      path: '/result'
+      fullPath: '/api/crm/outbox/result'
+      preLoaderRoute: typeof ApiCrmOutboxResultRouteImport
+      parentRoute: typeof ApiCrmOutboxRoute
     }
     '/api/marketing/queue/result': {
       id: '/api/marketing/queue/result'
@@ -1234,6 +1313,18 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface ApiCrmOutboxRouteChildren {
+  ApiCrmOutboxResultRoute: typeof ApiCrmOutboxResultRoute
+}
+
+const ApiCrmOutboxRouteChildren: ApiCrmOutboxRouteChildren = {
+  ApiCrmOutboxResultRoute: ApiCrmOutboxResultRoute,
+}
+
+const ApiCrmOutboxRouteWithChildren = ApiCrmOutboxRoute._addFileChildren(
+  ApiCrmOutboxRouteChildren,
+)
+
 interface ApiMarketingQueueRouteChildren {
   ApiMarketingQueueResultRoute: typeof ApiMarketingQueueResultRoute
 }
@@ -1264,6 +1355,9 @@ const rootRouteChildren: RootRouteChildren = {
   PagamentoPlanoRoute: PagamentoPlanoRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiBillingCloseCyclesRoute: ApiBillingCloseCyclesRoute,
+  ApiCrmInboxRoute: ApiCrmInboxRoute,
+  ApiCrmOutboxRoute: ApiCrmOutboxRouteWithChildren,
+  ApiCrmPingRoute: ApiCrmPingRoute,
   ApiMarketingQueueRoute: ApiMarketingQueueRouteWithChildren,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPizzeriasFiqonTestRoute: ApiPizzeriasFiqonTestRoute,

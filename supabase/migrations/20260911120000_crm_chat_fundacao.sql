@@ -104,6 +104,16 @@ CREATE TABLE IF NOT EXISTS public.crm_n8n_links (
   -- Como o fluxo se chama lá dentro do n8n, para o suporte achar rápido.
   workflow_id TEXT,
   workflow_name TEXT,
+  -- A SENHA DESTA LOJA, diferente da de todas as outras.
+  --
+  -- É o que impede o fluxo de um restaurante de pedir as conversas de outro
+  -- só trocando um número na chamada. Uma chave só para todo mundo seria a
+  -- mesma chave de quarto para todos os hóspedes do hotel.
+  --
+  -- Quem lê esta coluna é SÓ o servidor. Nem o dono da loja enxerga (ver a
+  -- regra de leitura lá embaixo): ele não precisa, e o que ninguém vê ninguém
+  -- cola no grupo do WhatsApp por engano.
+  webhook_token TEXT,
   -- 'active' | 'paused'. Perder o CRM PAUSA o fluxo; nunca apaga.
   status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'paused')),
   -- Última vez que o n8n deu sinal de vida. É por aqui que a tela sabe dizer
@@ -257,9 +267,12 @@ ALTER TABLE public.crm_messages ENABLE ROW LEVEL SECURITY;
 DO $$
 DECLARE t TEXT;
 BEGIN
+  -- `crm_n8n_links` NÃO entra nesta lista de propósito: ela guarda a senha da
+  -- loja. Quem está logado no painel não lê essa tabela de jeito nenhum — o
+  -- que ele precisa saber (se a conexão está no ar) chega pela função do
+  -- servidor, que devolve só as colunas inofensivas.
   FOREACH t IN ARRAY ARRAY[
     'company_addons',
-    'crm_n8n_links',
     'crm_contacts',
     'crm_conversations',
     'crm_messages'
