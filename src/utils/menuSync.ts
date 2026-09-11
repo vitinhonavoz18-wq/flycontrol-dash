@@ -214,7 +214,10 @@ export async function syncToExternal(
         }
         url = `${base}/${resourcePath}/${encodeURIComponent(restId)}`;
         method = "PATCH";
-        bodyObj = { active: data?.value };
+        // Combo é o caso à parte: a rota dele grava o nome recebido direto na
+        // coluna, e lá a coluna se chama is_active. Nas outras rotas quem
+        // traduz é o SiteCreatorFly, então "active" continua certo.
+        bodyObj = externalType === "combo" ? { is_active: data?.value } : { active: data?.value };
       } else {
         // delete
         if (!restId) {
@@ -342,6 +345,28 @@ export async function syncToExternal(
   }
 }
 
+/**
+ * O site guarda os itens do combo como uma lista de frases prontas
+ * ("2x Pizza Grande"), não como fichas com nome e quantidade em campos
+ * separados, que é como o painel trabalha. Sem essa tradução o site recebe as
+ * fichas onde espera texto e recusa o combo inteiro.
+ */
+function formatComboItems(items: unknown): string[] {
+  if (!Array.isArray(items)) return [];
+
+  return items
+    .map((item) => {
+      if (typeof item === "string") return item.trim();
+
+      const name = String(item?.product_name ?? "").trim();
+      if (!name) return "";
+
+      const quantity = Number(item?.quantity);
+      return Number.isFinite(quantity) && quantity > 1 ? `${quantity}x ${name}` : name;
+    })
+    .filter((label) => label !== "");
+}
+
 function prepareDataForExternal(type: MenuType, data: any) {
   if (type === "category") {
     // A descrição e a foto viajam junto com o nome.
@@ -392,18 +417,25 @@ function prepareDataForExternal(type: MenuType, data: any) {
   }
 
   if (type === "combo") {
+    // ATENÇÃO: a rota de combo do SiteCreatorFly é diferente das rotas de
+    // produto e categoria. Aquelas recebem os nomes daqui e traduzem sozinhas;
+    // a de combo grava o que recebe direto na tabela dela. Por isso este bloco
+    // (e só este) usa os nomes das colunas do site.
+    //
+    // Foi assim que o cadastro quebrava: "combo_price" chegava inteiro no
+    // banco do site, que só conhece "price", e o combo voltava recusado.
     return {
       name: data.name,
       description: data.description,
       original_price: data.original_price,
-      combo_price: data.combo_price,
+      price: data.combo_price,
       image_url: data.image_url,
-      active: data.active !== undefined ? data.active : true,
-      highlight: data.highlight,
+      is_active: data.active !== undefined ? data.active : true,
+      is_highlighted: data.highlight ?? false,
       available_days: data.available_days,
       start_time: data.start_time,
       end_time: data.end_time,
-      items: data.items,
+      items: formatComboItems(data.items),
     };
   }
 
