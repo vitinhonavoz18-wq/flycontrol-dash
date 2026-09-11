@@ -389,6 +389,11 @@ function prepareDataForExternal(type: MenuType, data: any) {
   }
 
   if (type === "combo") {
+    // Os nomes aqui são os que a API do SiteCreatorFly espera RECEBER — ela
+    // mesma traduz para os nomes das colunas dela (active → is_active,
+    // combo_price → price). Não "corrija" isto para os nomes das colunas do
+    // site: quem faz a tradução é o outro lado, e mandar o nome final quebra
+    // o que hoje funciona para produtos e categorias.
     return {
       name: data.name,
       description: data.description,

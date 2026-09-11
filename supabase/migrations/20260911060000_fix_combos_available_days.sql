@@ -1,9 +1,13 @@
--- Fix combos available_days column
--- This migration ensures the available_days column exists and is properly typed
+-- Rede de segurança: garante a coluna available_days em combos.
+--
+-- Nota de diagnóstico, para quem vier depois: o erro "Could not find the
+-- 'available_days' column of 'combos'" que aparecia ao criar combo NÃO vinha
+-- daqui. A coluna sempre existiu neste banco. A recusa vinha do banco do
+-- SiteCreatorFly, que não tinha os campos que o painel envia — a correção de
+-- verdade está em docs/sitecreatorfly-combos-aplicar-no-supabase.sql.
+--
+-- Esta migração fica como proteção para bancos recriados do zero.
 
-BEGIN;
-
--- Check if column exists, if not add it
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -12,17 +16,6 @@ BEGIN
       AND table_name = 'combos'
       AND column_name = 'available_days'
   ) THEN
-    ALTER TABLE public.combos ADD COLUMN available_days TEXT[];
+    ALTER TABLE public.combos ADD COLUMN available_days TEXT[] DEFAULT ARRAY[]::TEXT[];
   END IF;
 END $$;
-
--- Ensure column is TEXT array type (in case it exists but with wrong type)
-ALTER TABLE public.combos
-  ALTER COLUMN available_days SET DATA TYPE TEXT[];
-
--- Set default value
-ALTER TABLE public.combos
-  ALTER COLUMN available_days SET DEFAULT ARRAY[]::TEXT[];
-
--- Commit
-COMMIT;

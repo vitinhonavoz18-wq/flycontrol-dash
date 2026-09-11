@@ -149,3 +149,96 @@ describe("syncToExternal — restaurant (loja)", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Criar combo falhava com "Could not find the 'available_days' column of
+ * 'combos'". A causa estava no banco do SiteCreatorFly, que não tinha onde
+ * guardar os campos enviados (corrigido em
+ * docs/sitecreatorfly-combos-aplicar-no-supabase.sql).
+ *
+ * Estes testes existem para impedir a "correção" errada: renomear os campos
+ * aqui para os nomes das colunas do site (price, is_active, is_highlighted).
+ * Quem traduz é a API do SiteCreatorFly — é assim que produto e categoria
+ * sincronizam hoje. Mandar o nome final daqui quebraria a integração inteira.
+ */
+describe("syncToExternal — combo", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ id: "c1" }), { status: 200 })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  async function criarCombo(data: Record<string, unknown>) {
+    await syncToExternal({
+      type: "combo",
+      action: "create",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "chave-123",
+      syncEndpoint: REST_ENDPOINT,
+      data,
+    });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    return JSON.parse(init?.body as string);
+  }
+
+  it("envia preço, ativo e destaque com os nomes que a API do site espera receber", async () => {
+    const body = await criarCombo({
+      name: "Combo Família",
+      combo_price: 50,
+      original_price: 90,
+      active: true,
+      highlight: true,
+    });
+
+    expect(body.combo_price).toBe(50);
+    expect(body.original_price).toBe(90);
+    expect(body.active).toBe(true);
+    expect(body.highlight).toBe(true);
+
+    // Os nomes das colunas do site não podem aparecer aqui: quem converte
+    // para eles é o outro lado.
+    expect(body).not.toHaveProperty("price");
+    expect(body).not.toHaveProperty("is_active");
+    expect(body).not.toHaveProperty("is_highlighted");
+  });
+
+  it("leva descrição, foto, dias e horários — os campos que o site não guardava", async () => {
+    const body = await criarCombo({
+      name: "Combo Fim de Semana",
+      combo_price: 50,
+      description: "Só sexta a domingo",
+      image_url: "https://x/combo.png",
+      available_days: ["sex", "sab", "dom"],
+      start_time: "18:00",
+      end_time: "23:00",
+    });
+
+    expect(body.description).toBe("Só sexta a domingo");
+    expect(body.image_url).toBe("https://x/combo.png");
+    expect(body.available_days).toEqual(["sex", "sab", "dom"]);
+    expect(body.start_time).toBe("18:00");
+    expect(body.end_time).toBe("23:00");
+  });
+
+  it("repassa os itens como o painel monta, sem reformatar", async () => {
+    const items = [
+      { product_name: "Pizza Grande", quantity: 2, product_type: "pizza" },
+      { product_name: "Refrigerante 2L", quantity: 1, product_type: "beverage" },
+    ];
+
+    const body = await criarCombo({ name: "Combo Casal", combo_price: 50, items });
+
+    expect(body.items).toEqual(items);
+  });
+
+  it("mantém o combo ativo quando o painel não diz nada sobre isso", async () => {
+    const body = await criarCombo({ name: "Combo", combo_price: 50 });
+    expect(body.active).toBe(true);
+  });
+});
