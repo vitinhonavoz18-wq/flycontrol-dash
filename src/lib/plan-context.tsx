@@ -7,12 +7,25 @@ import {
   type PlanType,
   normalizePlanType,
 } from "@/lib/planPermissions";
+import { addonDaFeature, ehAddonValido, type Addon } from "@/lib/addons";
 
 interface PlanCtx {
   companyId: string | null;
   planType: PlanType;
   loading: boolean;
+  /**
+   * "Esta aba aparece para esta loja?" — pergunta do PLANO.
+   *
+   * Responde SIM para o Chat de um premium que ainda não contratou: a aba
+   * aparece justamente para ele ver que existe e poder contratar. Quem
+   * responde se ela FUNCIONA é `hasAddon`.
+   */
   hasFeature: (feature: Feature) => boolean;
+  /** "Esta loja contratou este recurso extra?" — pergunta da CONTRATAÇÃO. */
+  hasAddon: (addon: Addon) => boolean;
+  /** Plano E contratação, as duas coisas juntas. */
+  featureLiberada: (feature: Feature) => boolean;
+  addons: Addon[];
 }
 
 const Ctx = createContext<PlanCtx | null>(null);
@@ -21,6 +34,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   const { user, isSuperAdmin, loading: authLoading } = useAuth();
   const [companyId, setCompanyId] = useState<string | null>(null);
   const [planType, setPlanType] = useState<PlanType>("premium");
+  const [addons, setAddons] = useState<Addon[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,6 +43,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       // Admin não é dono de empresa nenhuma: navega com acesso total.
       setCompanyId(null);
       setPlanType("premium");
+      setAddons([]);
       setLoading(false);
       return;
     }
@@ -53,8 +68,39 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       if (!error && data) {
         setCompanyId(data.id);
         setPlanType(normalizePlanType(data.plan_type));
+        await carregarAddons(data.id);
+        if (cancelled) return;
       }
       setLoading(false);
+    }
+
+    // As contratações extras da loja (hoje só o Chat).
+    //
+    // Se a consulta falhar, a lista fica VAZIA — ou seja, o recurso conta como
+    // não contratado. É o mesmo cuidado do resto do sistema: falha de rede
+    // tranca a porta, nunca escancara. O pior que acontece é o lojista ver a
+    // tela de "fale com o suporte" por alguns segundos; o contrário seria
+    // entregar o CRM para quem não pagou.
+    async function carregarAddons(tenantId: string) {
+      // O arquivo de tipos do banco é gerado automaticamente e ainda não
+      // conhece a tabela nova — é a planta da casa desenhada antes do
+      // puxadinho. Depois de aplicar a migração e regerar os tipos, este
+      // atalho sai. Mesma situação já documentada em `lib/marketing/db.ts`.
+      /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+      const { data, error } = await (supabase as any)
+        .from("company_addons")
+        .select("addon")
+        .eq("tenant_id", tenantId)
+        .eq("status", "active");
+
+      if (cancelled) return;
+      if (error || !data) {
+        setAddons([]);
+        return;
+      }
+      setAddons(
+        (data as Array<{ addon: string }>).map((l) => l.addon).filter(ehAddonValido) as Addon[],
+      );
     }
 
     void loadCompanyPlan();
@@ -84,13 +130,62 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     };
   }, [companyId]);
 
+  // O mesmo para a contratação do Chat: quando o suporte liga o recurso, a
+  // aba passa a funcionar na tela do lojista na hora — sem sair e entrar de
+  // novo, sem pedir para ele atualizar a página. Ele está no telefone com
+  // você quando isso acontece; fazer o cliente deslogar no meio da ligação é
+  // péssimo.
+  useEffect(() => {
+    if (!companyId) return;
+    const canal = supabase
+      .channel(`addon-changes-${companyId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "company_addons",
+          filter: `tenant_id=eq.${companyId}`,
+        },
+        () => {
+          void (async () => {
+            /* eslint-disable-next-line @typescript-eslint/no-explicit-any */
+            const { data } = await (supabase as any)
+              .from("company_addons")
+              .select("addon")
+              .eq("tenant_id", companyId)
+              .eq("status", "active");
+            setAddons(
+              ((data ?? []) as Array<{ addon: string }>)
+                .map((l) => l.addon)
+                .filter(ehAddonValido) as Addon[],
+            );
+          })();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(canal);
+    };
+  }, [companyId]);
+
   return (
     <Ctx.Provider
       value={{
         companyId,
         planType,
         loading,
+        addons,
         hasFeature: (feature) => isSuperAdmin || planHasFeature(planType, feature),
+        hasAddon: (addon) => isSuperAdmin || addons.includes(addon),
+        featureLiberada: (feature) => {
+          if (isSuperAdmin) return true;
+          if (!planHasFeature(planType, feature)) return false;
+          const addon = addonDaFeature(feature);
+          // Feature sem contratação separada: o plano já basta.
+          return addon === null || addons.includes(addon);
+        },
       }}
     >
       {children}

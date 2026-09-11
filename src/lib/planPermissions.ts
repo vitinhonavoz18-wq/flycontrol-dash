@@ -18,22 +18,42 @@
  */
 export type PlanType = "premium" | "cents" | "legacy_full_access";
 
-export type Feature = "tables" | "waiters" | "commissions";
+export type Feature = "tables" | "waiters" | "commissions" | "chat";
 
 export const FEATURE_LABELS: Record<Feature, string> = {
   tables: "Mesas",
   waiters: "Garçons",
   commissions: "Comissões",
+  chat: "Chat (CRM)",
 };
+
+/**
+ * Features que o PREMIUM mostra, mas NÃO inclui no preço.
+ *
+ * "Estar no plano" e "estar contratado" viraram duas perguntas diferentes a
+ * partir do Chat. O plano decide se a aba APARECE; a contratação decide se
+ * ela FUNCIONA. É a diferença entre o salão de festas do prédio — todo mundo
+ * vê a porta, só quem reservou entra.
+ *
+ * Quem responde a segunda pergunta é `lib/addons.ts`. Esta lista existe para
+ * que a tela de upgrade não prometa o que o upgrade não entrega: sem ela, o
+ * CENTS leria "assine o PREMIUM e leve o Chat junto" — e ligaria cobrando
+ * uma coisa que ainda precisa ser contratada à parte.
+ */
+export const FEATURES_CONTRATADAS_A_PARTE: Feature[] = ["chat"];
+
+export function featureEhContratadaAParte(feature: Feature): boolean {
+  return FEATURES_CONTRATADAS_A_PARTE.includes(feature);
+}
 
 // Cada plano lista só as features restritas que ele desbloqueia. Qualquer
 // feature que não apareça em nenhum union abaixo é considerada disponível
 // para todos os planos por padrão (dashboard, cardápio, financeiro etc. não
 // precisam ser listados aqui).
 const PLAN_FEATURES: Record<PlanType, Feature[]> = {
-  premium: ["tables", "waiters", "commissions"],
+  premium: ["tables", "waiters", "commissions", "chat"],
   cents: [],
-  legacy_full_access: ["tables", "waiters", "commissions"],
+  legacy_full_access: ["tables", "waiters", "commissions", "chat"],
 };
 
 /**
