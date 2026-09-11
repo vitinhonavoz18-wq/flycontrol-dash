@@ -50,10 +50,14 @@ import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizze
 import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
 import { Route as AppInventoryIndexRouteImport } from './routes/_app/inventory.index'
+import { Route as AppInventoryCountRouteImport } from './routes/_app/inventory.count'
+import { Route as AppInventoryEntriesRouteImport } from './routes/_app/inventory.entries'
 import { Route as AppInventoryMovementsRouteImport } from './routes/_app/inventory.movements'
 import { Route as AppInventoryPosRouteImport } from './routes/_app/inventory.pos'
 import { Route as AppInventoryProductsRouteImport } from './routes/_app/inventory.products'
 import { Route as AppInventoryRecipesRouteImport } from './routes/_app/inventory.recipes'
+import { Route as AppInventoryReportsRouteImport } from './routes/_app/inventory.reports'
+import { Route as AppInventorySuppliersRouteImport } from './routes/_app/inventory.suppliers'
 import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.close-cycles'
 import { Route as ApiMarketingQueueRouteImport } from './routes/api/marketing.queue'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
@@ -277,6 +281,16 @@ const AppInventoryIndexRoute = AppInventoryIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AppInventoryRoute,
 } as any)
+const AppInventoryCountRoute = AppInventoryCountRouteImport.update({
+  id: '/count',
+  path: '/count',
+  getParentRoute: () => AppInventoryRoute,
+} as any)
+const AppInventoryEntriesRoute = AppInventoryEntriesRouteImport.update({
+  id: '/entries',
+  path: '/entries',
+  getParentRoute: () => AppInventoryRoute,
+} as any)
 const AppInventoryMovementsRoute = AppInventoryMovementsRouteImport.update({
   id: '/movements',
   path: '/movements',
@@ -295,6 +309,16 @@ const AppInventoryProductsRoute = AppInventoryProductsRouteImport.update({
 const AppInventoryRecipesRoute = AppInventoryRecipesRouteImport.update({
   id: '/recipes',
   path: '/recipes',
+  getParentRoute: () => AppInventoryRoute,
+} as any)
+const AppInventoryReportsRoute = AppInventoryReportsRouteImport.update({
+  id: '/reports',
+  path: '/reports',
+  getParentRoute: () => AppInventoryRoute,
+} as any)
+const AppInventorySuppliersRoute = AppInventorySuppliersRouteImport.update({
+  id: '/suppliers',
+  path: '/suppliers',
   getParentRoute: () => AppInventoryRoute,
 } as any)
 const ApiBillingCloseCyclesRoute = ApiBillingCloseCyclesRouteImport.update({
@@ -433,10 +457,14 @@ export interface FileRoutesByFullPath {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/inventory/count': typeof AppInventoryCountRoute
+  '/inventory/entries': typeof AppInventoryEntriesRoute
   '/inventory/movements': typeof AppInventoryMovementsRoute
   '/inventory/pos': typeof AppInventoryPosRoute
   '/inventory/products': typeof AppInventoryProductsRoute
   '/inventory/recipes': typeof AppInventoryRecipesRoute
+  '/inventory/reports': typeof AppInventoryReportsRoute
+  '/inventory/suppliers': typeof AppInventorySuppliersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -495,10 +523,14 @@ export interface FileRoutesByTo {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/inventory/count': typeof AppInventoryCountRoute
+  '/inventory/entries': typeof AppInventoryEntriesRoute
   '/inventory/movements': typeof AppInventoryMovementsRoute
   '/inventory/pos': typeof AppInventoryPosRoute
   '/inventory/products': typeof AppInventoryProductsRoute
   '/inventory/recipes': typeof AppInventoryRecipesRoute
+  '/inventory/reports': typeof AppInventoryReportsRoute
+  '/inventory/suppliers': typeof AppInventorySuppliersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -561,10 +593,14 @@ export interface FileRoutesById {
   '/_app/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
+  '/_app/inventory/count': typeof AppInventoryCountRoute
+  '/_app/inventory/entries': typeof AppInventoryEntriesRoute
   '/_app/inventory/movements': typeof AppInventoryMovementsRoute
   '/_app/inventory/pos': typeof AppInventoryPosRoute
   '/_app/inventory/products': typeof AppInventoryProductsRoute
   '/_app/inventory/recipes': typeof AppInventoryRecipesRoute
+  '/_app/inventory/reports': typeof AppInventoryReportsRoute
+  '/_app/inventory/suppliers': typeof AppInventorySuppliersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -627,10 +663,14 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/inventory/count'
+    | '/inventory/entries'
     | '/inventory/movements'
     | '/inventory/pos'
     | '/inventory/products'
     | '/inventory/recipes'
+    | '/inventory/reports'
+    | '/inventory/suppliers'
     | '/api/billing/close-cycles'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -689,10 +729,14 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/inventory/count'
+    | '/inventory/entries'
     | '/inventory/movements'
     | '/inventory/pos'
     | '/inventory/products'
     | '/inventory/recipes'
+    | '/inventory/reports'
+    | '/inventory/suppliers'
     | '/api/billing/close-cycles'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -754,10 +798,14 @@ export interface FileRouteTypes {
     | '/_app/admin/pizzerias'
     | '/_app/admin/subscriptions'
     | '/_app/admin/users'
+    | '/_app/inventory/count'
+    | '/_app/inventory/entries'
     | '/_app/inventory/movements'
     | '/_app/inventory/pos'
     | '/_app/inventory/products'
     | '/_app/inventory/recipes'
+    | '/_app/inventory/reports'
+    | '/_app/inventory/suppliers'
     | '/api/billing/close-cycles'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -1106,6 +1154,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppInventoryIndexRouteImport
       parentRoute: typeof AppInventoryRoute
     }
+    '/_app/inventory/count': {
+      id: '/_app/inventory/count'
+      path: '/count'
+      fullPath: '/inventory/count'
+      preLoaderRoute: typeof AppInventoryCountRouteImport
+      parentRoute: typeof AppInventoryRoute
+    }
+    '/_app/inventory/entries': {
+      id: '/_app/inventory/entries'
+      path: '/entries'
+      fullPath: '/inventory/entries'
+      preLoaderRoute: typeof AppInventoryEntriesRouteImport
+      parentRoute: typeof AppInventoryRoute
+    }
     '/_app/inventory/movements': {
       id: '/_app/inventory/movements'
       path: '/movements'
@@ -1132,6 +1194,20 @@ declare module '@tanstack/react-router' {
       path: '/recipes'
       fullPath: '/inventory/recipes'
       preLoaderRoute: typeof AppInventoryRecipesRouteImport
+      parentRoute: typeof AppInventoryRoute
+    }
+    '/_app/inventory/reports': {
+      id: '/_app/inventory/reports'
+      path: '/reports'
+      fullPath: '/inventory/reports'
+      preLoaderRoute: typeof AppInventoryReportsRouteImport
+      parentRoute: typeof AppInventoryRoute
+    }
+    '/_app/inventory/suppliers': {
+      id: '/_app/inventory/suppliers'
+      path: '/suppliers'
+      fullPath: '/inventory/suppliers'
+      preLoaderRoute: typeof AppInventorySuppliersRouteImport
       parentRoute: typeof AppInventoryRoute
     }
     '/api/billing/close-cycles': {
@@ -1288,18 +1364,26 @@ const AppAdminRouteWithChildren = AppAdminRoute._addFileChildren(
 )
 
 interface AppInventoryRouteChildren {
+  AppInventoryCountRoute: typeof AppInventoryCountRoute
+  AppInventoryEntriesRoute: typeof AppInventoryEntriesRoute
   AppInventoryMovementsRoute: typeof AppInventoryMovementsRoute
   AppInventoryPosRoute: typeof AppInventoryPosRoute
   AppInventoryProductsRoute: typeof AppInventoryProductsRoute
   AppInventoryRecipesRoute: typeof AppInventoryRecipesRoute
+  AppInventoryReportsRoute: typeof AppInventoryReportsRoute
+  AppInventorySuppliersRoute: typeof AppInventorySuppliersRoute
   AppInventoryIndexRoute: typeof AppInventoryIndexRoute
 }
 
 const AppInventoryRouteChildren: AppInventoryRouteChildren = {
+  AppInventoryCountRoute: AppInventoryCountRoute,
+  AppInventoryEntriesRoute: AppInventoryEntriesRoute,
   AppInventoryMovementsRoute: AppInventoryMovementsRoute,
   AppInventoryPosRoute: AppInventoryPosRoute,
   AppInventoryProductsRoute: AppInventoryProductsRoute,
   AppInventoryRecipesRoute: AppInventoryRecipesRoute,
+  AppInventoryReportsRoute: AppInventoryReportsRoute,
+  AppInventorySuppliersRoute: AppInventorySuppliersRoute,
   AppInventoryIndexRoute: AppInventoryIndexRoute,
 }
 

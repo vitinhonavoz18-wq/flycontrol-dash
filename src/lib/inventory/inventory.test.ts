@@ -76,4 +76,75 @@ describe("a tranca não fica só na tela", () => {
     // inventory_apply_movement, que grava o extrato junto.
     expect(fonte).not.toMatch(/update\([^)]*stock_base/i);
   });
+
+  it("o nome da função do banco nunca vem de fora", () => {
+    // `rpcDaFase6` existe porque o arquivo de tipos é mais antigo que as
+    // funções da Fase 6. O atalho é aceitável enquanto o nome for uma
+    // constante escrita no código; se algum dia ele passar a vir do que o
+    // navegador manda, vira uma porta para chamar qualquer função do banco.
+    const bloco = fonte.slice(
+      fonte.indexOf("function rpcDaFase6("),
+      fonte.indexOf(
+        "// ============================================================================\n// ENTRADA DE MERCADORIA",
+      ),
+    );
+    const parametroNome = bloco.match(/nome:\s*([\s\S]*?),\n\s*argumentos:/)?.[1] ?? "";
+
+    expect(parametroNome).toContain('"inventory_register_entry"');
+    expect(parametroNome).toContain('"inventory_start_count"');
+    expect(parametroNome).toContain('"inventory_apply_count"');
+    // O tipo é a lista fechada de nomes, e não `string` — que aceitaria
+    // qualquer função do banco vinda de fora.
+    expect(parametroNome).not.toMatch(/\bstring\b/);
+  });
+});
+
+/**
+ * As operações da Fase 6 mexem em dinheiro e em saldo. Estes testes olham o
+ * SQL aplicado, porque é lá que as regras moram — e uma regra perdida aqui só
+ * apareceria no dia do acerto de estoque, com o prejuízo já feito.
+ */
+describe("entrada de mercadoria e contagem", () => {
+  const sql = readFileSync(
+    "supabase/migrations/20260911220000_estoque_entradas_e_inventario.sql",
+    "utf8",
+  );
+
+  it("a contagem compara com o saldo de AGORA, não com o congelado", () => {
+    // Entre abrir e fechar a contagem o restaurante continuou vendendo. Usar o
+    // saldo congelado apagaria essas vendas ao aplicar o acerto.
+    expect(sql).toMatch(/SELECT stock_base INTO v_saldo_atual/);
+    expect(sql).toMatch(/v_item\.counted_quantity_base - v_saldo_atual/);
+  });
+
+  it("produto sem contagem não é tocado", () => {
+    // Contagem parcial é comum (conferir só as bebidas numa terça). Zerar o
+    // que não foi contado transformaria a conferência em estrago.
+    expect(sql).toMatch(/counted_quantity_base IS NOT NULL/);
+  });
+
+  it("a diferença vira movimentação, nunca UPDATE no saldo", () => {
+    expect(sql).toMatch(/inventory_apply_movement\(/);
+    expect(sql).not.toMatch(/UPDATE inventory_products\s+SET stock_base/i);
+  });
+
+  it("duas contagens abertas ao mesmo tempo são recusadas", () => {
+    // A segunda a ser aplicada desfaria o acerto da primeira.
+    expect(sql).toContain("CONTAGEM_JA_ABERTA");
+  });
+
+  it("clicar duas vezes não lança a mesma nota duas vezes", () => {
+    expect(sql).toMatch(/idempotency_key/);
+    expect(sql).toMatch(/'repetida',\s*TRUE/);
+  });
+
+  it("a entrada recusa item sem quantidade em vez de lançar zero", () => {
+    expect(sql).toContain("QUANTIDADE_INVALIDA");
+  });
+
+  it("o produto da entrada precisa ser da própria loja", () => {
+    // Sem esta conferência, bastaria mandar o código de um produto do vizinho
+    // para fazer entrar mercadoria no estoque dele.
+    expect(sql).toMatch(/AND pizzeria_id = p_pizzeria_id/);
+  });
 });
