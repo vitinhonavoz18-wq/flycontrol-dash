@@ -26,6 +26,7 @@ import {
   Wallet,
   Trophy,
   Megaphone,
+  MessageSquare,
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -214,6 +215,11 @@ function AppLayoutInner() {
     { to: "/flydelivery", label: "FlyDelivery", icon: Smartphone },
     { to: "/combos", label: "Combos", icon: PieChart },
     { to: "/marketing", label: "Marketing", icon: Megaphone },
+    // A aba do Chat APARECE para todo premium, inclusive para quem ainda não
+    // contratou — é assim que ele descobre que o recurso existe e pede para
+    // ativar. Quem não pode nem ver é o CENTS, e disso cuida o `feature`.
+    // Dentro da tela, a contratação decide o que ele encontra.
+    { to: "/chat", label: "Chat", icon: MessageSquare, feature: "chat" },
     { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },
     { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
     { to: "/settings", label: "Configurações", icon: Settings },

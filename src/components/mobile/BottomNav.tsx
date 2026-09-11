@@ -18,10 +18,13 @@ import {
   LogOut,
   Users,
   CreditCard,
+  MessageSquare,
   X,
 } from "lucide-react";
 import { BottomSheet } from "@/components/mobile/BottomSheet";
 import { useAuth } from "@/lib/auth";
+import { usePlan } from "@/lib/plan-context";
+import type { Feature } from "@/lib/planPermissions";
 import { useNavigate } from "@tanstack/react-router";
 
 type Item = {
@@ -29,6 +32,8 @@ type Item = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   match?: (p: string) => boolean;
+  /** Quando presente, o item só aparece se o plano da loja incluir o recurso. */
+  feature?: Feature;
 };
 
 const PRIMARY: Item[] = [
@@ -40,6 +45,7 @@ const PRIMARY: Item[] = [
 
 const MORE_OWNER: Item[] = [
   { to: "/my-store", label: "Minha Loja", icon: Store },
+  { to: "/chat", label: "Chat", icon: MessageSquare, feature: "chat" },
   { to: "/combos", label: "Combos / Produtos", icon: Package },
   { to: "/finance", label: "Relatórios", icon: BarChart3 },
   { to: "/commissions", label: "Comissões", icon: Wallet },
@@ -89,15 +95,23 @@ export function BottomNav() {
   const [openMore, setOpenMore] = useState(false);
   const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
   const showAdmin = isSuperAdmin || isHardcodedAdmin;
+  const { hasFeature } = usePlan();
 
   // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
   // não assinam a própria plataforma, então o item some para eles.
   //
   // A lista é memoizada porque ela é a chave da grade memoizada logo abaixo:
   // um array novo a cada render faria a memoização não valer nada.
+  //
+  // O filtro por plano também vale aqui, e não só no menu do computador: um
+  // atalho visível que só leva a uma porta trancada é pior do que não existir
+  // — o lojista clica, bate na parede e acha que o sistema quebrou.
   const ownerItems = useMemo(
-    () => MORE_OWNER.filter((it) => !(it.to === "/billing" && showAdmin)),
-    [showAdmin],
+    () =>
+      MORE_OWNER.filter(
+        (it) => !(it.to === "/billing" && showAdmin) && (!it.feature || hasFeature(it.feature)),
+      ),
+    [showAdmin, hasFeature],
   );
 
   // Fechar o painel é sempre a mesma ação: uma função estável, para não
