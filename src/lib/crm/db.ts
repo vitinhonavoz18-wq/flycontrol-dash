@@ -17,7 +17,14 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
  */
 
 export type TabelaCrm =
-  "company_addons" | "crm_n8n_links" | "crm_contacts" | "crm_conversations" | "crm_messages";
+  | "company_addons"
+  | "crm_n8n_links"
+  | "crm_contacts"
+  | "crm_conversations"
+  | "crm_messages"
+  // O cofre do token do aparelho de WhatsApp. Fica nesta lista porque a fila
+  // de saída precisa entregar a credencial ao fluxo do n8n.
+  | "whatsapp_instance_secrets";
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export function crm(tabela: TabelaCrm): any {

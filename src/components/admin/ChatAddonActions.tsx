@@ -51,6 +51,7 @@ export function ChatAddonActions({
   const [dialogoAberto, setDialogoAberto] = useState(false);
   const [nomeFluxo, setNomeFluxo] = useState(situacao?.workflowName ?? "");
   const [idFluxo, setIdFluxo] = useState("");
+  const [urlEntrada, setUrlEntrada] = useState("");
   const [senhaGerada, setSenhaGerada] = useState<string | null>(null);
   const [configurando, setConfigurando] = useState(false);
 
@@ -87,6 +88,7 @@ export function ChatAddonActions({
           tenantId,
           workflowName: nomeFluxo || undefined,
           workflowId: idFluxo || undefined,
+          inboundWebhookUrl: urlEntrada || undefined,
           // Loja sem conexão ainda: o servidor sorteia a senha sozinho, por
           // não existir nenhuma. Loja que já tem: só troca se você pedir — e
           // é exatamente isso que o botão "Gerar nova senha" faz.
@@ -118,6 +120,15 @@ export function ChatAddonActions({
       {contratado && !situacao?.fluxoConfigurado && (
         <Badge variant="destructive" className="text-[10px]">
           sem conexão
+        </Badge>
+      )}
+
+      {/* Conexão criada mas sem endereço de entrada: o lojista consegue
+          conectar o WhatsApp e mesmo assim não recebe nada. Parece funcionar
+          e não funciona — o pior tipo de defeito. */}
+      {contratado && situacao?.fluxoConfigurado && !situacao?.temEnderecoDeEntrada && (
+        <Badge variant="destructive" className="text-[10px]">
+          sem endereço de entrada
         </Badge>
       )}
 
@@ -168,6 +179,21 @@ export function ChatAddonActions({
                 onChange={(e) => setIdFluxo(e.target.value)}
                 placeholder="Aparece na barra de endereço do n8n"
               />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label htmlFor="url-entrada">Endereço de entrada do fluxo (webhook do n8n)</Label>
+              <Input
+                id="url-entrada"
+                value={urlEntrada}
+                onChange={(e) => setUrlEntrada(e.target.value)}
+                placeholder="https://seu-n8n/webhook/crm-loja-x"
+              />
+              <p className="text-xs text-muted-foreground">
+                É para cá que o WhatsApp avisa quando um cliente escreve. Com ele preenchido, toda
+                vez que o lojista reler o QR Code o sistema reaponta o aviso sozinho — sem ninguém
+                abrir a UAZAPI.
+              </p>
             </div>
 
             <div className="rounded-md border border-border bg-muted/40 p-3 text-xs">

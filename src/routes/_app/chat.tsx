@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { MessageSquare } from "lucide-react";
+import { Tabs, TabsContent } from "@/components/ui/tabs";
+import { ScrollableTabs } from "@/components/layout/ScrollableTabs";
 import {
   Select,
   SelectContent,
@@ -14,6 +16,7 @@ import { usePlan } from "@/lib/plan-context";
 import { RequireFeature } from "@/components/PremiumFeatureLock";
 import { CrmNaoContratado } from "@/components/chat/CrmNaoContratado";
 import { ChatCrm } from "@/components/chat/ChatCrm";
+import { ConexaoWhatsApp } from "@/components/whatsapp/ConexaoWhatsApp";
 
 export const Route = createFileRoute("/_app/chat")({ component: ChatPage });
 
@@ -39,6 +42,19 @@ export const Route = createFileRoute("/_app/chat")({ component: ChatPage });
 
 type Loja = { id: string; name: string };
 
+/**
+ * A aba "Conexão" fica DENTRO do Chat, e não escondida nas configurações.
+ *
+ * Quando o WhatsApp cai, é aqui que o lojista está — olhando uma lista de
+ * conversas que parou de crescer. Obrigá-lo a caçar a tela de religar em
+ * outro canto do painel, num sábado à noite com cliente esperando, é o tipo
+ * de detalhe que faz ele ligar para o suporte em vez de resolver sozinho.
+ */
+const ABAS = [
+  { value: "conversas", label: "Conversas" },
+  { value: "conexao", label: "Conexão do WhatsApp" },
+];
+
 function ChatPage() {
   return (
     <RequireFeature feature="chat" semContratacao={<CrmNaoContratado />}>
@@ -53,6 +69,7 @@ function ChatPageInner() {
   const [lojas, setLojas] = useState<Loja[]>([]);
   const [tenantId, setTenantId] = useState("");
   const [carregandoLojas, setCarregandoLojas] = useState(true);
+  const [aba, setAba] = useState("conversas");
 
   useEffect(() => {
     let cancelado = false;
@@ -129,7 +146,24 @@ function ChatPageInner() {
         )}
       </div>
 
-      {tenantId && <ChatCrm key={tenantId} tenantId={tenantId} />}
+      {tenantId && (
+        <Tabs value={aba} onValueChange={setAba} className="min-w-0">
+          <div className="px-4 pt-3 md:px-6">
+            <ScrollableTabs items={ABAS} value={aba} />
+          </div>
+
+          {/* `forceMount` ficaria tentador para não perder a rolagem da lista
+              ao trocar de aba, mas manteria a conferência de status do
+              WhatsApp rodando o dia inteiro em segundo plano. */}
+          <TabsContent value="conversas" className="mt-0">
+            <ChatCrm key={tenantId} tenantId={tenantId} />
+          </TabsContent>
+
+          <TabsContent value="conexao" className="mt-0 p-4 md:p-6">
+            <ConexaoWhatsApp key={tenantId} tenantId={tenantId} />
+          </TabsContent>
+        </Tabs>
+      )}
     </div>
   );
 }

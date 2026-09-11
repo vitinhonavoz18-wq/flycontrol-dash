@@ -46,6 +46,8 @@ export type SituacaoChatDaLoja = {
   fluxoConfigurado: boolean;
   fluxoStatus: string | null;
   workflowName: string | null;
+  /** Se o endereço de entrada já foi cadastrado. Sem ele, o Chat fica mudo. */
+  temEnderecoDeEntrada: boolean;
   ultimoSinal: string | null;
 };
 
@@ -83,6 +85,7 @@ export const situacaoChatDasLojas = createServerFn({ method: "POST" })
         fluxoConfigurado: false,
         fluxoStatus: null,
         workflowName: null,
+        temEnderecoDeEntrada: false,
         ultimoSinal: null,
       });
     }
@@ -95,9 +98,11 @@ export const situacaoChatDasLojas = createServerFn({ method: "POST" })
         fluxoConfigurado: false,
         fluxoStatus: null,
         workflowName: null,
+        temEnderecoDeEntrada: false,
         ultimoSinal: null,
       };
       atual.fluxoConfigurado = true;
+      atual.temEnderecoDeEntrada = Boolean(l.inbound_webhook_url);
       atual.fluxoStatus = l.status ?? null;
       atual.workflowName = l.workflow_name ?? null;
       atual.ultimoSinal = l.last_seen_at ?? null;
@@ -177,9 +182,24 @@ export const configurarFluxoN8n = createServerFn({ method: "POST" })
       tenantId: string;
       workflowId?: string;
       workflowName?: string;
+      inboundWebhookUrl?: string;
       gerarNovaSenha?: boolean;
     }) => {
       if (!d?.tenantId) throw new Error("Loja não informada.");
+      const url = (d.inboundWebhookUrl ?? "").trim();
+      if (url) {
+        // Endereço torto aqui não dá erro na hora: dá um restaurante mudo
+        // semanas depois, sem ninguém entender por quê. Melhor recusar agora.
+        let parsed: URL;
+        try {
+          parsed = new URL(url);
+        } catch {
+          throw new Error("Endereço do fluxo inválido. Precisa começar com https://");
+        }
+        if (parsed.protocol !== "https:") {
+          throw new Error("O endereço do fluxo precisa ser https.");
+        }
+      }
       return d;
     },
   )
@@ -203,6 +223,10 @@ export const configurarFluxoN8n = createServerFn({ method: "POST" })
       status: "active",
       updated_at: agora,
     };
+    // O endereço para onde a UAZAPI deve avisar "chegou mensagem". É ele que
+    // o sistema reaponta sozinho toda vez que o lojista lê o QR Code.
+    const url = (data.inboundWebhookUrl ?? "").trim();
+    if (url) linha.inbound_webhook_url = url;
     if (senha) linha.webhook_token = senha;
 
     const { error } = await crm("crm_n8n_links").upsert(linha, { onConflict: "tenant_id" });

@@ -6,17 +6,15 @@ import { crm } from "@/lib/crm/db";
 /**
  * O "estou vivo" do fluxo de cada loja.
  *
- * POR QUE EXISTE UM ENDEREÇO SÓ PARA ISSO
+ * ELE É OPCIONAL. A busca da fila (/api/crm/outbox) já conta como sinal de
+ * vida: quem passa de minuto em minuto perguntando "tem algo para levar?" já
+ * provou que está de pé. Um pedaço a menos para montar em cada loja é um
+ * pedaço a menos para alguém esquecer de montar.
  *
- * Uma loja pode passar a manhã inteira sem nenhuma mensagem entrando ou
- * saindo — e isso é normal num dia parado. Sem um sinal de vida próprio, o
- * sistema não conseguiria distinguir "hoje ninguém escreveu" de "o WhatsApp
- * caiu às 7 da manhã". São coisas muito diferentes para quem depende do
- * atendimento.
- *
- * Basta o fluxo do n8n chamar este endereço de tempos em tempos (a cada 5 ou
- * 10 minutos). É o vigia batendo o ponto de hora em hora: enquanto ele bate,
- * está tudo bem.
+ * Este endereço continua existindo para o caso em que o fluxo detecta um
+ * problema POR CONTA PRÓPRIA e quer contar ("o aparelho desconectou"). Esse
+ * texto aparece na tarja de aviso da tela do lojista, que é bem mais útil do
+ * que um silêncio.
  *
  *   Método:    POST
  *   URL:       https://<seu-dominio>/api/crm/ping

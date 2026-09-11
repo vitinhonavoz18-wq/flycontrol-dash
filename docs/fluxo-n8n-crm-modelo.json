@@ -1,0 +1,207 @@
+{
+  "name": "FlyControl CRM — MODELO (duplicar por loja)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "flycontrol-crm",
+        "responseMode": "onReceived",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000001",
+      "name": "Chegou mensagem (UAZAPI)",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [-460, -120],
+      "webhookId": "a1000000-0000-4000-8000-000000000001",
+      "notes": "Copie a URL de produção deste no e cole no painel do FlyControl, em Clientes e Planos > Conexao > Endereco de entrada."
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"fly_base\": \"https://flycontrol.conectfly.com.br\",\n  \"tenant_id\": \"COLE-AQUI-O-ID-DA-LOJA\",\n  \"token\": \"COLE-AQUI-A-SENHA-DA-LOJA\"\n}",
+        "includeOtherFields": true,
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000002",
+      "name": "CONFIG DA LOJA (entrada)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [-240, -120],
+      "notes": "EDITE AQUI. Os mesmos tres valores do no CONFIG DA LOJA (saida)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.fly_base }}/api/crm/inbox",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer COLE-AQUI-A-CHAVE-MESTRA-CRM_N8N_SECRET"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenant_id: $json.tenant_id, token: $json.token, event: $json.body.event, instance: $json.body.instance, data: $json.body.data }) }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "a1000000-0000-4000-8000-000000000003",
+      "name": "Entregar ao FlyControl",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-20, -120],
+      "notes": "O evento da UAZAPI vai cru. O FlyControl entende o formato e descarta sozinho o eco do proprio restaurante e as mensagens de grupo."
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [{ "field": "minutes", "minutesInterval": 1 }]
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000010",
+      "name": "De minuto em minuto",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.4,
+      "position": [-460, 160]
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={\n  \"fly_base\": \"https://flycontrol.conectfly.com.br\",\n  \"tenant_id\": \"COLE-AQUI-O-ID-DA-LOJA\",\n  \"token\": \"COLE-AQUI-A-SENHA-DA-LOJA\"\n}",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000011",
+      "name": "CONFIG DA LOJA (saida)",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.5,
+      "position": [-240, 160],
+      "notes": "EDITE AQUI. Os mesmos tres valores do no CONFIG DA LOJA (entrada)."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $json.fly_base }}/api/crm/outbox",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer COLE-AQUI-A-CHAVE-MESTRA-CRM_N8N_SECRET"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenant_id: $json.tenant_id, token: $json.token, limit: 50, worker: 'n8n', lease: 300 }) }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "a1000000-0000-4000-8000-000000000012",
+      "name": "Buscar fila",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [-20, 160],
+      "notes": "A resposta ja traz a credencial do aparelho daquela loja, no campo uazapi. Nunca guarde essa credencial dentro do fluxo: ela pode mudar quando o lojista religa o WhatsApp."
+    },
+    {
+      "parameters": {
+        "fieldToSplitOut": "messages",
+        "options": {}
+      },
+      "id": "a1000000-0000-4000-8000-000000000013",
+      "name": "Uma mensagem por vez",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [200, 160],
+      "notes": "Fila vazia nao produz item nenhum, entao o resto do fluxo simplesmente nao roda."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('Buscar fila').first().json.uazapi.baseUrl }}/send/text",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "token",
+              "value": "={{ $('Buscar fila').first().json.uazapi.instanceToken }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ number: $json.phone_e164, text: $json.body, linkPreview: false }) }}",
+        "options": {
+          "timeout": 20000,
+          "response": { "response": { "neverError": true, "fullResponse": true } }
+        }
+      },
+      "id": "a1000000-0000-4000-8000-000000000014",
+      "name": "Enviar pela UAZAPI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [420, 160],
+      "notes": "neverError deixa o fluxo seguir quando um numero e invalido, para o FlyControl ser avisado da falha daquela mensagem em vez de o lote inteiro parar."
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $('CONFIG DA LOJA (saida)').first().json.fly_base }}/api/crm/outbox/result",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer COLE-AQUI-A-CHAVE-MESTRA-CRM_N8N_SECRET"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ tenant_id: $('CONFIG DA LOJA (saida)').first().json.tenant_id, token: $('CONFIG DA LOJA (saida)').first().json.token, results: [ { message_id: $('Uma mensagem por vez').item.json.message_id, status: $json.statusCode >= 200 && $json.statusCode < 300 ? 'sent' : 'failed', external_id: $json.body && $json.body.messageid ? $json.body.messageid : null, error: $json.statusCode >= 300 ? ('UAZAPI respondeu ' + $json.statusCode) : null } ] }) }}",
+        "options": { "timeout": 15000 }
+      },
+      "id": "a1000000-0000-4000-8000-000000000015",
+      "name": "Contar o resultado",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [640, 160],
+      "notes": "Sem este passo a mensagem fica marcada como saindo ate a reserva vencer, e e enviada de novo."
+    }
+  ],
+  "connections": {
+    "Chegou mensagem (UAZAPI)": {
+      "main": [[{ "node": "CONFIG DA LOJA (entrada)", "type": "main", "index": 0 }]]
+    },
+    "CONFIG DA LOJA (entrada)": {
+      "main": [[{ "node": "Entregar ao FlyControl", "type": "main", "index": 0 }]]
+    },
+    "De minuto em minuto": {
+      "main": [[{ "node": "CONFIG DA LOJA (saida)", "type": "main", "index": 0 }]]
+    },
+    "CONFIG DA LOJA (saida)": {
+      "main": [[{ "node": "Buscar fila", "type": "main", "index": 0 }]]
+    },
+    "Buscar fila": {
+      "main": [[{ "node": "Uma mensagem por vez", "type": "main", "index": 0 }]]
+    },
+    "Uma mensagem por vez": {
+      "main": [[{ "node": "Enviar pela UAZAPI", "type": "main", "index": 0 }]]
+    },
+    "Enviar pela UAZAPI": {
+      "main": [[{ "node": "Contar o resultado", "type": "main", "index": 0 }]]
+    }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}

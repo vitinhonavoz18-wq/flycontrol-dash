@@ -13,10 +13,41 @@ Quem for montar o fluxo só precisa deste arquivo.
 
 O FlyControl **não envia nem recebe** mensagem sozinho: ele deixa as respostas
 do restaurante numa fila e espera o n8n vir buscar, e recebe do n8n o que os
-clientes escreveram.
+clientes escreveram. Quem fala com o WhatsApp de verdade é a **UAZAPI**.
 
 É o entregador passando na loja para pegar os pedidos prontos, em vez de a
 cozinha correr atrás de cada moto.
+
+## A divisão de tarefas (vale a pena decorar)
+
+| Tarefa | Quem faz |
+|---|---|
+| **Ligar o aparelho** (QR Code, status, desligar) | FlyControl ↔ UAZAPI, direto |
+| **Mensagem que chega** | UAZAPI → n8n → FlyControl |
+| **Mensagem que sai** | FlyControl → n8n → UAZAPI |
+
+**Por que ligar o aparelho é direto:** um QR Code do WhatsApp vive poucos
+segundos e é trocado na cara do lojista enquanto ele aponta o celular. Passar
+essa figurinha por um intermediário a cada renovação seria como pedir a senha
+do cofre por carta: quando a carta chega, a senha já mudou.
+
+## Quem lê o QR Code agora é o próprio lojista
+
+Ele abre **Chat → Conexão do WhatsApp** (ou Marketing → Configurações), clica
+em **Conectar WhatsApp** e aponta a câmera — igual ao WhatsApp Web.
+
+Isso importa porque o WhatsApp derruba a conexão sozinho de tempos em tempos.
+Antes, quando caía, o restaurante ficava mudo até alguém do suporte ler o
+código por ele — num sábado à noite, com cliente esperando. Agora ele religa
+sozinho em trinta segundos.
+
+Quem usa o painel pelo próprio celular (não dá para apontar a câmera do
+aparelho para a tela dele mesmo) tem o caminho alternativo: o **código de 8
+letras**, em "Não consigo ler o QR Code".
+
+**Toda vez que ele reconecta, o FlyControl reaponta sozinho o aviso de
+mensagem nova para o fluxo daquela loja.** É por isso que o endereço de
+entrada precisa estar cadastrado no painel antes — veja o passo 3.
 
 ---
 
@@ -49,13 +80,39 @@ precisa sair e entrar de novo.
 
 **2. Duplique o fluxo-modelo no n8n**
 
-Copie o fluxo-modelo do CRM e dê a ele um nome que identifique a loja, por
-exemplo `CRM — Pizzaria do Zé`.
+Existe um modelo pronto neste repositório: **`docs/fluxo-n8n-crm-modelo.json`**.
+No n8n, use *Import from File*, e dê ao fluxo um nome que identifique a loja —
+por exemplo `CRM — Pizzaria do Zé`.
+
+> ⚠️ **Teste o modelo com UMA loja antes de sair duplicando.** Ele foi escrito
+> a partir da documentação da UAZAPI e do n8n, mas não foi executado contra o
+> seu n8n de verdade — isso só dá para fazer aí, com a chave e o servidor
+> reais na mão.
+
+Depois de importar, são **quatro** coisas para editar, e só quatro:
+
+| Onde | O que colar |
+|---|---|
+| Nó **CONFIG DA LOJA (entrada)** | `fly_base`, `tenant_id` e `token` daquela loja |
+| Nó **CONFIG DA LOJA (saída)** | os mesmos três valores |
+| Nó **Entregar ao FlyControl** | a chave mestra (`CRM_N8N_SECRET`) no cabeçalho |
+| Nós **Buscar fila** e **Contar o resultado** | a mesma chave mestra |
+
+Os dois nós de configuração são propositalmente idênticos: cada disparo do
+n8n (a mensagem que chega e a busca da fila) é uma execução separada e não
+enxerga o outro. Se um dia os valores divergirem, o sintoma é o clássico
+"recebe mas não responde" — ou o contrário.
 
 **3. Crie a conexão no painel e guarde a senha**
 
-Ainda em *Clientes e Planos*, clique em **Conexão**, escreva o nome do fluxo
-e clique em **Criar conexão**.
+Ainda em *Clientes e Planos*, clique em **Conexão**, escreva o nome do fluxo,
+**cole o endereço de entrada do fluxo** (a URL do nó Webhook do n8n daquela
+loja) e clique em **Criar conexão**.
+
+> O endereço de entrada não é opcional na prática: sem ele, o lojista consegue
+> conectar o WhatsApp e mesmo assim não recebe nada. O painel marca essas
+> lojas com a etiqueta vermelha **"sem endereço de entrada"** justamente
+> porque parece funcionar e não funciona — o pior tipo de defeito.
 
 O painel devolve duas coisas:
 
@@ -95,6 +152,16 @@ POST https://<seu-dominio>/api/crm/inbox
 }
 ```
 
+**O jeito mais simples: repasse o evento da UAZAPI cru.** O FlyControl entende
+o formato dela (`{ event, instance, data }`) — basta acrescentar `tenant_id` e
+`token` ao corpo. Quanto menos o fluxo remontar, menos lugar existe para ele
+errar, e um erro desses teria de ser corrigido loja por loja.
+
+Mensagem que o próprio restaurante enviou e mensagem de grupo são descartadas
+automaticamente (respondendo `200` com `"ignorada": true`). Sem esse filtro, a
+resposta do atendente voltaria como se o cliente tivesse falado e a conversa
+viraria um eco.
+
 **Mande sempre o `external_id`.** É o número que o WhatsApp deu para aquela
 mensagem. Com ele, se o fluxo entregar o mesmo recado duas vezes (tentou de
 novo depois de uma queda de internet), a mensagem aparece **uma** vez na
@@ -111,6 +178,21 @@ POST https://<seu-dominio>/api/crm/outbox
 
 Devolve, para cada mensagem: `message_id`, `phone_e164` (já no formato pronto:
 55 + DDD + número), `contact_name`, `body` e, quando houver, `media_url`.
+
+**E devolve também a credencial do aparelho daquela loja**, em `uazapi`:
+
+```json
+{ "uazapi": { "baseUrl": "https://sua.uazapi.com", "instanceToken": "..." } }
+```
+
+Use esse `instanceToken` no cabeçalho `token` do `POST /send/text` da UAZAPI.
+**Não guarde essa credencial dentro do fluxo.** Ela vem a cada visita de
+propósito: quando o lojista reconecta o WhatsApp, ela pode mudar — e se
+estivesse escrita no fluxo, cada religamento exigiria um humano editando o
+fluxo daquela loja. O lojista religaria sozinho e continuaria mudo.
+
+Se vier `"uazapi": null`, a loja ainda não conectou o WhatsApp. O fluxo deve
+parar: não há para onde enviar.
 
 As mensagens vêm **reservadas** por `lease` segundos. Se o fluxo travar no
 meio, a reserva vence sozinha e elas voltam para a fila. Nada fica preso,
@@ -139,7 +221,7 @@ Avisar duas vezes não faz mal: mensagem já marcada como enviada continua
 enviada. É o carimbo de "pago" na comanda — carimbar de novo não cobra de
 novo.
 
-### 4. Bater o ponto (sinal de vida)
+### 4. Bater o ponto (OPCIONAL)
 
 ```
 POST https://<seu-dominio>/api/crm/ping
@@ -147,16 +229,15 @@ POST https://<seu-dominio>/api/crm/ping
 { "tenant_id": "...", "token": "...", "error": "(opcional)" }
 ```
 
-Chame a cada 5 ou 10 minutos, mesmo sem nada para fazer.
+**Você não precisa montar isto.** A própria busca da fila (item 2) já conta
+como sinal de vida: quem passa de minuto em minuto perguntando "tem algo para
+levar?" já provou que está de pé. Um pedaço a menos para montar em cada loja
+é um pedaço a menos para alguém esquecer de montar.
 
-**Por que isso importa:** uma loja pode passar a manhã inteira sem nenhuma
-mensagem, e isso é normal num dia parado. Sem o sinal de vida, o sistema não
-conseguiria distinguir "hoje ninguém escreveu" de "o WhatsApp caiu às 7 da
-manhã" — e o lojista passaria o dia achando que está atendendo.
-
-Se o fluxo detectar um problema por conta própria (o aparelho desconectou,
-por exemplo), mande junto em `error`: esse texto aparece na tarja de aviso da
-tela do lojista.
+Este endereço serve para quando o fluxo detecta um problema **por conta
+própria** ("o aparelho desconectou") e quer contar. O texto do `error`
+aparece na tarja de aviso da tela do lojista, que é bem mais útil que um
+silêncio.
 
 ---
 
@@ -168,6 +249,7 @@ tela do lojista.
 | `409 crm_nao_contratado` | A loja não tem mais o Chat (cancelou ou fez downgrade) | Parar. Não é erro de rede |
 | `409 fluxo_pausado` | A conexão foi pausada no painel | Parar até ser religada |
 | `503` | A integração não está configurada no servidor | Avisar o suporte |
+| `200` com `"ignorada": true` | Era eco do próprio restaurante ou grupo | Nada. Está correto |
 | `500` | Problema nosso | Tentar de novo daqui a pouco |
 
 ---
@@ -184,3 +266,36 @@ Você desliga no painel. A partir daí:
 Se ele voltar em três meses, é só ativar de novo: o histórico está inteiro.
 Apagar conversa de cliente é decisão séria demais para acontecer de carona
 num cancelamento de plano.
+
+
+---
+
+## O que a UAZAPI precisa do outro lado
+
+O FlyControl configura o aviso de mensagem nova sozinho, toda vez que o
+lojista conecta. O que ele manda para a UAZAPI é isto:
+
+```json
+{
+  "enabled": true,
+  "url": "<o endereço de entrada do fluxo daquela loja>",
+  "events": ["messages", "connection"],
+  "excludeMessages": ["fromMeYes", "isGroupYes"]
+}
+```
+
+Ou seja: **você não precisa configurar webhook na UAZAPI na mão.** Se alguém
+mexer nisso por fora e tirar os filtros, o FlyControl ainda descarta o eco e
+os grupos por conta própria — são duas redes debaixo do trapezista.
+
+### As duas chaves da UAZAPI, e a diferença entre elas
+
+| Chave | Para que serve | Onde mora |
+|---|---|---|
+| `UAZAPI_ADMIN_TOKEN` | **Criar** o aparelho de um restaurante novo | Só no servidor do FlyControl |
+| Token do aparelho | Mexer naquele aparelho: QR Code, status, enviar | Criado sozinho na primeira conexão, guardado num cofre no banco que só o servidor abre |
+
+A chave de administrador é a do cofre: quem a tiver mexe nos aparelhos de
+**todos** os seus clientes. Ela nunca vai para o navegador, nem para o banco,
+nem para o n8n. O que o n8n recebe é só o token do aparelho **daquela** loja,
+e só depois de apresentar as duas senhas.

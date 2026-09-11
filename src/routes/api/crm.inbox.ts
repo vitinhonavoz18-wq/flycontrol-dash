@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { conferirChaveMestra, respostaNegadaCrm } from "@/lib/crm/n8nAuth";
 import { autenticarLoja } from "@/lib/crm/n8nTenant";
 import { crmRpc } from "@/lib/crm/db";
+import { extrairDaUazapi } from "@/lib/crm/uazapiEvento";
 
 /**
  * O n8n entregando uma mensagem que o CLIENTE mandou no WhatsApp da loja.
@@ -52,7 +53,25 @@ export const Route = createFileRoute("/api/crm/inbox")({
         const loja = await autenticarLoja(corpo);
         if (!loja.ok) return respostaNegadaCrm(loja);
 
-        const telefone = String(corpo.phone ?? corpo.phone_e164 ?? "").replace(/[^0-9]/g, "");
+        // O fluxo do n8n pode repassar o evento da UAZAPI CRU, sem montar
+        // nada. Isso é de propósito: quanto menos o fluxo precisar remontar,
+        // menos lugar existe para ele errar — e um fluxo por loja significa
+        // que um erro desses teria de ser corrigido loja por loja.
+        const uaz = extrairDaUazapi(corpo);
+        if (uaz?.ignorar) {
+          // Mensagem que o próprio restaurante enviou, ou de grupo. Recusar
+          // com erro faria o n8n tentar de novo para sempre; 200 diz
+          // "recebi e não era para mim".
+          return new Response(JSON.stringify({ success: true, ignorada: true }), {
+            status: 200,
+            headers: cabecalhos,
+          });
+        }
+
+        const telefone = String(uaz?.telefone ?? corpo.phone ?? corpo.phone_e164 ?? "").replace(
+          /[^0-9]/g,
+          "",
+        );
         if (!telefone) {
           return new Response(JSON.stringify({ success: false, error: "telefone_ausente" }), {
             status: 400,
@@ -60,16 +79,16 @@ export const Route = createFileRoute("/api/crm/inbox")({
           });
         }
 
-        const texto = corpo.message ?? corpo.body ?? corpo.text ?? null;
+        const texto = uaz?.texto ?? corpo.message ?? corpo.body ?? corpo.text ?? null;
 
         const { data, error } = await crmRpc("crm_receive_message", {
           p_tenant_id: loja.tenantId,
           p_phone_e164: telefone,
           p_body: texto === null ? null : String(texto),
-          p_contact_name: corpo.name ? String(corpo.name) : null,
-          p_external_id: corpo.external_id ? String(corpo.external_id) : null,
-          p_media_url: corpo.media_url ? String(corpo.media_url) : null,
-          p_media_type: corpo.media_type ? String(corpo.media_type) : null,
+          p_contact_name: uaz?.nome ?? (corpo.name ? String(corpo.name) : null),
+          p_external_id: uaz?.externalId ?? (corpo.external_id ? String(corpo.external_id) : null),
+          p_media_url: uaz?.mediaUrl ?? (corpo.media_url ? String(corpo.media_url) : null),
+          p_media_type: uaz?.mediaType ?? (corpo.media_type ? String(corpo.media_type) : null),
         });
 
         if (error) {

@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { conferirChaveMestra, respostaNegadaCrm } from "@/lib/crm/n8nAuth";
 import { autenticarLoja } from "@/lib/crm/n8nTenant";
-import { crmRpc } from "@/lib/crm/db";
+import { crm, crmRpc } from "@/lib/crm/db";
+import { configUazapi } from "@/lib/whatsapp/uazapi";
 
 /**
  * A fila de saída: o que o RESTAURANTE respondeu e ainda não foi entregue.
@@ -19,6 +20,18 @@ import { crmRpc } from "@/lib/crm/db";
  *   Cabeçalho: Authorization: Bearer <CRM_N8N_SECRET>
  *   Corpo:     { "tenant_id": "<id da loja>", "token": "<senha da loja>",
  *                "limit": 50, "worker": "n8n-loja-x", "lease": 300 }
+ *
+ * A RESPOSTA JÁ TRAZ A CREDENCIAL DO APARELHO daquela loja, em `uazapi`. O
+ * fluxo usa isso direto no `POST /send/text` da UAZAPI, sem ninguém precisar
+ * colar token nenhum na mão.
+ *
+ * Isso não é preguiça: é o que faz o religamento pelo QR Code valer. Quando o
+ * lojista reconecta o WhatsApp, a credencial pode mudar — se ela estivesse
+ * escrita dentro do fluxo, cada religamento exigiria um humano editando o
+ * fluxo daquela loja. O lojista religaria sozinho e continuaria mudo.
+ *
+ * A credencial só sai daqui para quem já apresentou as DUAS chaves (a mestra e
+ * a da loja), e vale só para o aparelho daquela loja.
  *
  * A RESERVA é o que impede o mesmo recado de sair duas vezes: cada mensagem
  * entregue ao n8n fica reservada por alguns minutos. Se o fluxo travar no
@@ -73,8 +86,40 @@ export const Route = createFileRoute("/api/crm/outbox")({
 
         const mensagens = (data ?? []) as Array<Record<string, unknown>>;
 
+        // A credencial do aparelho só é buscada quando há o que enviar: não há
+        // motivo para ela circular numa visita em que a fila estava vazia.
+        let uazapi: { baseUrl: string; instanceToken: string } | null = null;
+        if (mensagens.length > 0) {
+          const cfg = configUazapi();
+          const { data: cofre } = await crm("whatsapp_instance_secrets")
+            .select("instance_token")
+            .eq("tenant_id", loja.tenantId)
+            .eq("provider", "uazapi")
+            .maybeSingle();
+
+          if (cfg && cofre?.instance_token) {
+            uazapi = { baseUrl: cfg.baseUrl, instanceToken: String(cofre.instance_token) };
+          }
+        }
+
+        // A própria visita é o sinal de vida do fluxo. Antes disso existia um
+        // endereço só para bater o ponto; agora ele virou opcional, porque
+        // quem vem buscar a fila de minuto em minuto já provou que está de pé.
+        // Um pedaço a menos para montar em cada loja é um pedaço a menos para
+        // alguém esquecer de montar.
+        await crm("crm_n8n_links")
+          .update({ last_seen_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+          .eq("tenant_id", loja.tenantId);
+
         return new Response(
-          JSON.stringify({ success: true, count: mensagens.length, messages: mensagens }),
+          JSON.stringify({
+            success: true,
+            count: mensagens.length,
+            // `null` quando a loja ainda não conectou o WhatsApp. O fluxo deve
+            // parar e não tentar enviar: sem aparelho, não há para onde ir.
+            uazapi,
+            messages: mensagens,
+          }),
           { status: 200, headers: cabecalhos },
         );
       },
