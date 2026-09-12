@@ -19,6 +19,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { layoutRecomendadoPara } from "@/lib/menu/layouts";
 import { cardapioEstaNoAr } from "@/lib/provisioning/provisioning";
+import { assertOwnsTenant } from "@/lib/server/plan-guard";
 import { aplicarResposta, proximaEtapaPendente, terminou } from "./fluxo";
 import { etapaPorId, type IdDaEtapa, type Respostas } from "./perguntas";
 import type { SinaisDaLoja } from "./primeirosPassos";
@@ -358,9 +359,29 @@ export const precisaDeOnboarding = createServerFn({ method: "POST" })
  * se marca sozinho é boletim que dá nota para matéria que ninguém deu.
  */
 export const sinaisDaLoja = createServerFn({ method: "POST" })
+  .inputValidator((d: { tenantId?: string } | undefined) => d ?? {})
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<SinaisDaLoja | null> => {
-    const loja = await lojaDoUsuario(context.userId);
+  .handler(async ({ data, context }): Promise<SinaisDaLoja | null> => {
+    // Quem tem mais de uma loja (ou é administrador) troca de loja no seletor
+    // do topo. Sem honrar essa escolha, o painel mostrava o checklist de UMA
+    // loja enquanto o cabeçalho anunciava outra — e o dono ficava tentando
+    // completar um passo que já estava feito na loja que ele estava vendo.
+    //
+    // O código da loja continua sendo tratado como pedido, nunca como
+    // verdade: `assertOwnsTenant` confere dono (ou administrador) antes de
+    // devolver qualquer dado.
+    const loja = data.tenantId
+      ? await (async () => {
+          await assertOwnsTenant(context.supabase, context.userId, data.tenantId!);
+          const { data: escolhida } = await supabaseAdmin
+            .from("pizzerias")
+            .select("id, name")
+            .eq("id", data.tenantId!)
+            .maybeSingle();
+          return escolhida as { id: string; name: string } | null;
+        })()
+      : await lojaDoUsuario(context.userId);
+
     if (!loja) return null;
 
     const [{ data: dados }, { data: fichaOnboarding }, produtos, { count: pedidos }] =

@@ -125,4 +125,34 @@ describe('a lista "Prepare sua loja"', () => {
     expect(passo?.para).toBe("/menu");
     expect(passo?.feito).toBe(false);
   });
+
+  it("todo passo em aberto tem para onde levar", () => {
+    // Passo sem destino vira texto morto na tela: o dono clica, nada acontece
+    // e não há como descobrir o que fazer. Foi exatamente isso que travou o
+    // "Conhecemos seu estabelecimento" — o único sem destino da lista.
+    const nada = {
+      onboardingConcluido: false,
+      produtos: 0,
+      lojaIdentificada: false,
+      temPagamento: false,
+      cardapioPublicado: false,
+      pedidos: 0,
+    };
+
+    // "Receba seu primeiro pedido" é a exceção legítima: não existe tela que
+    // faça um cliente pedir — quem completa esse passo é o cliente, não o dono.
+    const semDestino = primeirosPassos(nada)
+      .filter((p) => !p.feito && p.id !== "primeiro_pedido")
+      .filter((p) => !p.para);
+
+    expect(semDestino).toEqual([]);
+  });
+
+  it("o passo do onboarding leva para o questionário", () => {
+    const passo = primeirosPassos({ ...cheio, onboardingConcluido: false }).find(
+      (p) => p.id === "conhecemos",
+    );
+    expect(passo?.para).toBe("/preparar");
+    expect(passo?.feito).toBe(false);
+  });
 });
