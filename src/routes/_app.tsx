@@ -232,10 +232,16 @@ function AppLayoutInner() {
     (it) => (!it.feature || hasFeature(it.feature)) && !(it.to === "/billing" && showAdmin),
   );
 
+  // O Painel Admin tinha seis itens, e dois deles eram metades de outros:
+  // "FlyPizzarias" listava as lojas das mesmas contas que "Usuários" já
+  // listava, e "Financeiro Global" respondia a outra metade da pergunta que
+  // "Insights Globais" respondia. Viraram abas dentro deles.
+  //
+  // Menu grande não é menu completo: é menu onde ninguém acha nada. Os
+  // endereços antigos continuam existindo e redirecionam, então link salvo
+  // nos favoritos não quebra.
   const adminItems = [
-    { to: "/admin/pizzerias", label: "FlyPizzarias", icon: Store },
     { to: "/admin/analytics", label: "Insights Globais", icon: PieChart },
-    { to: "/admin/finance", label: "Financeiro Global", icon: BarChart3 },
     { to: "/admin/users", label: "Usuários", icon: Users },
     { to: "/admin/subscriptions", label: "Clientes e Planos", icon: CreditCard },
     { to: "/admin/cents", label: "Clube CENTS", icon: Trophy },
