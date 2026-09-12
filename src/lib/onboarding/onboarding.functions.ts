@@ -113,6 +113,12 @@ export const lerOnboarding = createServerFn({ method: "POST" })
       .eq("company_id", loja.id)
       .maybeSingle();
 
+    // Sem caderno não há convite em aberto. Devolver nulo faz a tela de
+    // preparação mandar a pessoa para o painel em vez de abrir um
+    // questionário que ninguém pediu — a mesma regra de
+    // `precisaDeOnboarding`, para as duas portas não discordarem.
+    if (!data) return null;
+
     const linha = data;
     const respostas = respostasDe(data);
 
@@ -330,9 +336,21 @@ export const concluirOnboarding = createServerFn({ method: "POST" })
  * enxuta — uma consulta, sem contar produtos nem carregar respostas. É a
  * portaria conferindo a pulseira, não revistando a mochila.
  *
- * Loja SEM caderno é loja nova: toda empresa que já existia quando esta
- * funcionalidade entrou no ar recebeu um caderno marcado como concluído.
- * Ninguém que já é cliente cai no questionário.
+ * SÓ VÊ O QUESTIONÁRIO QUEM FOI CONVIDADO
+ *
+ * O convite é o caderno: o cadastro abre um, com status "not_started", e é
+ * ele que faz o questionário aparecer — uma vez só, para quem acabou de se
+ * cadastrar.
+ *
+ * A regra já foi o contrário, e foi um erro caro: loja SEM caderno era
+ * tratada como loja nova. Só que caderno não nasce sozinho — quem cria loja
+ * pelo Painel Admin, quem restaura uma loja e quem se cadastrou e fechou a
+ * aba antes da primeira resposta ficavam todos sem caderno. Resultado: o
+ * questionário voltava a cada login, para sempre.
+ *
+ * Era a recepcionista parando TODO mundo que não estava na lista de visitas —
+ * inclusive o funcionário que trabalha ali há meses e só quer chegar na sala
+ * dele. Agora ela para só quem tem convite em aberto na mão.
  */
 export const precisaDeOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -348,7 +366,52 @@ export const precisaDeOnboarding = createServerFn({ method: "POST" })
       .eq("company_id", loja.id)
       .maybeSingle();
 
-    return { pendente: data?.status !== "completed" };
+    // Sem caderno não há convite, e sem convite não há questionário.
+    if (!data) return { pendente: false };
+
+    return { pendente: data.status !== "completed" };
+  });
+
+/**
+ * "Pular por agora".
+ *
+ * A TRAVA DE SEGURANÇA DA PORTA
+ *
+ * Toda porta que só abre de um jeito acaba prendendo alguém. Se uma pergunta
+ * não carregar, se uma opção não servir para o negócio dele, ou se ele só
+ * quiser ver os pedidos primeiro, precisa haver uma saída — senão o cliente
+ * fica trancado do lado de fora do próprio painel, e a única saída vira
+ * ligar para o suporte.
+ *
+ * Pular fecha o caderno como concluído, marcando que foi pulado. O painel
+ * continua cobrando a preparação pelo "Prepare sua loja", que é um lembrete
+ * e não uma tranca.
+ */
+export const pularOnboarding = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ ok: boolean }> => {
+    const loja = await lojaDoUsuario(context.userId);
+    if (!loja) return { ok: true };
+
+    const agora = new Date().toISOString();
+    const { error } = await caderno.from("onboarding_answers").upsert(
+      {
+        company_id: loja.id,
+        status: "completed",
+        current_step: null,
+        respostas: { pulado: true },
+        started_at: agora,
+        completed_at: agora,
+        last_activity_at: agora,
+      },
+      { onConflict: "company_id", ignoreDuplicates: false },
+    );
+
+    if (error) {
+      console.error("[onboarding] falha ao pular:", error.message);
+      return { ok: false };
+    }
+    return { ok: true };
   });
 
 /**

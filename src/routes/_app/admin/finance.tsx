@@ -1,10 +1,13 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { FinanceDashboard } from "@/components/admin/dashboards/FinanceDashboard";
+import { createFileRoute, redirect } from "@tanstack/react-router";
 
-export const Route = createFileRoute("/_app/admin/finance")({ 
-  component: AdminFinancePage 
+/**
+ * O "Financeiro Global" virou uma aba dentro de Insights Globais.
+ *
+ * O endereço antigo continua valendo e leva para lá — link salvo nos
+ * favoritos não pode virar página de erro só porque a tela mudou de lugar.
+ */
+export const Route = createFileRoute("/_app/admin/finance")({
+  beforeLoad: () => {
+    throw redirect({ to: "/admin/analytics" });
+  },
 });
-
-function AdminFinancePage() {
-  return <FinanceDashboard />;
-}

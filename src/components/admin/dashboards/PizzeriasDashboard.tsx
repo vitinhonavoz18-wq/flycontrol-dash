@@ -38,26 +38,27 @@ export const PizzeriasDashboard = () => {
     });
   }, [data, search, statusFilter]);
 
-  const copyLink = (slug: string, id: string) => {
-    const url = `https://sitecreatorfly.lovable.app/${slug}`;
-    navigator.clipboard.writeText(url);
+  // O link que o admin copia é o MESMO que o cliente final abre. Ele vem
+  // gravado na ficha da loja; montar um aqui a partir do nome já entregou
+  // endereço quebrado para cliente.
+  const copiarLink = (endereco: string | null, id: string) => {
+    if (!endereco) {
+      toast.error("Esta loja ainda não tem cardápio publicado.");
+      return;
+    }
+    navigator.clipboard.writeText(endereco);
     setCopiedId(id);
     toast.success("Link copiado!");
     setTimeout(() => setCopiedId(null), 2000);
   };
 
-  if (isLoading)
-    return (
-      <div className="p-8">
-        <Skeleton className="h-64 w-full" />
-      </div>
-    );
-  if (error) return <div className="p-8 text-destructive">Erro ao carregar lojas.</div>;
+  if (isLoading) return <Skeleton className="h-64 w-full" />;
+  if (error) return <div className="text-destructive">Erro ao carregar lojas.</div>;
 
   return (
-    <div className="p-8">
+    <div>
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <h1 className="text-3xl font-bold">FlyPizzarias</h1>
+        <p className="text-sm text-muted-foreground">{filteredData.length} loja(s) listada(s).</p>
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="flex gap-1 rounded-md border p-1">
             {(
@@ -124,22 +125,23 @@ export const PizzeriasDashboard = () => {
                   variant="outline"
                   size="icon"
                   className="h-11 w-11"
-                  asChild
-                  title="Abrir Cardápio"
+                  asChild={!!p.endereco_do_cardapio}
+                  disabled={!p.endereco_do_cardapio}
+                  title={p.endereco_do_cardapio ? "Abrir Cardápio" : "Cardápio ainda não publicado"}
                 >
-                  <a
-                    href={`https://sitecreatorfly.lovable.app/${p.pizzeria_id}`}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
+                  {p.endereco_do_cardapio ? (
+                    <a href={p.endereco_do_cardapio} target="_blank" rel="noreferrer">
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                  ) : (
                     <ExternalLink className="h-4 w-4" />
-                  </a>
+                  )}
                 </Button>
                 <Button
                   variant="outline"
                   size="icon"
                   className="h-11 w-11"
-                  onClick={() => copyLink(p.pizzeria_id || "", p.pizzeria_id || "")}
+                  onClick={() => copiarLink(p.endereco_do_cardapio, p.pizzeria_id || "")}
                   title="Copiar Link"
                 >
                   {copiedId === p.pizzeria_id ? (
@@ -228,22 +230,25 @@ export const PizzeriasDashboard = () => {
                       variant="outline"
                       size="icon"
                       className="h-11 w-11"
-                      asChild
-                      title="Abrir Cardápio"
+                      asChild={!!p.endereco_do_cardapio}
+                      disabled={!p.endereco_do_cardapio}
+                      title={
+                        p.endereco_do_cardapio ? "Abrir Cardápio" : "Cardápio ainda não publicado"
+                      }
                     >
-                      <a
-                        href={`https://sitecreatorfly.lovable.app/${p.pizzeria_id}`}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
+                      {p.endereco_do_cardapio ? (
+                        <a href={p.endereco_do_cardapio} target="_blank" rel="noreferrer">
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                      ) : (
                         <ExternalLink className="h-4 w-4" />
-                      </a>
+                      )}
                     </Button>
                     <Button
                       variant="outline"
                       size="icon"
                       className="h-11 w-11"
-                      onClick={() => copyLink(p.pizzeria_id || "", p.pizzeria_id || "")}
+                      onClick={() => copiarLink(p.endereco_do_cardapio, p.pizzeria_id || "")}
                       title="Copiar Link"
                     >
                       {copiedId === p.pizzeria_id ? (
