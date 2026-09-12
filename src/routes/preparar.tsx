@@ -8,6 +8,7 @@ import { CardDeOpcao } from "@/components/onboarding/CardDeOpcao";
 import {
   concluirOnboarding,
   lerOnboarding,
+  pularOnboarding,
   salvarEtapa,
   type EstadoDoOnboarding,
 } from "@/lib/onboarding/onboarding.functions";
@@ -41,6 +42,7 @@ function PrepararPage() {
   const buscar = useServerFn(lerOnboarding);
   const salvar = useServerFn(salvarEtapa);
   const concluir = useServerFn(concluirOnboarding);
+  const pular = useServerFn(pularOnboarding);
 
   const [estado, setEstado] = useState<Estado>(null);
   const [carregando, setCarregando] = useState(true);
@@ -157,6 +159,27 @@ function PrepararPage() {
     const anterior = etapaAnterior(respostas, etapaId);
     if (anterior) setEtapaId(anterior);
   }, [naConclusao, respostas, etapaId]);
+
+  // "Pular por agora" — a trava de segurança da porta.
+  //
+  // Toda porta que só abre de um jeito acaba prendendo alguém. Sem esta saída,
+  // uma pergunta que não serve para o negócio dele (ou que simplesmente não
+  // carregou) deixa o lojista trancado do lado de fora do próprio painel, com
+  // o suporte como único caminho.
+  const pularAgora = useCallback(async () => {
+    setSalvando(true);
+    setErro(null);
+    try {
+      await pular({ data: undefined });
+    } catch {
+      // Mesmo se não conseguirmos gravar o "pulou", ele entra. Prender o
+      // cliente fora do painel por causa de uma falha de rede é pior do que
+      // mostrar o questionário mais uma vez.
+    } finally {
+      setSalvando(false);
+      nav({ to: "/dashboard" });
+    }
+  }, [pular, nav]);
 
   const finalizar = useCallback(async () => {
     setSalvando(true);
@@ -297,6 +320,18 @@ function PrepararPage() {
           >
             <ArrowLeft className="mr-1.5 h-4 w-4" aria-hidden="true" /> Voltar
           </Button>
+
+          {!naConclusao && (
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={pularAgora}
+              disabled={salvando}
+              className="min-h-12 px-3 text-muted-foreground"
+            >
+              Pular
+            </Button>
+          )}
 
           {naConclusao ? (
             <Button
