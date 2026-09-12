@@ -26,18 +26,23 @@ import {
  * recebido, cardápio no ar. Passo que se marca sozinho é boletim que dá nota
  * para matéria que ninguém deu.
  */
-export function PrimeirosPassosCard() {
+export function PrimeirosPassosCard({ tenantId }: { tenantId?: string | null }) {
   const buscar = useServerFn(sinaisDaLoja);
   const [sinais, setSinais] = useState<SinaisDaLoja | null>(null);
 
   const carregar = useCallback(async () => {
     try {
-      const r = (await buscar({ data: undefined })) as SinaisDaLoja | null;
+      // A lista é da loja que está escolhida no topo. Ignorar essa escolha
+      // fazia o painel cobrar um passo de uma loja enquanto exibia o nome de
+      // outra no cabeçalho.
+      const r = (await buscar({
+        data: tenantId ? { tenantId } : {},
+      })) as SinaisDaLoja | null;
       setSinais(r && typeof r.produtos === "number" ? r : null);
     } catch {
       setSinais(null);
     }
-  }, [buscar]);
+  }, [buscar, tenantId]);
 
   useEffect(() => {
     void carregar();
