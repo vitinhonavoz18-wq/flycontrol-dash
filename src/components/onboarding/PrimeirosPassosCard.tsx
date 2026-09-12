@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Check, Circle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { sinaisDaLoja } from "@/lib/onboarding/onboarding.functions";
+import { garantirContagemCents } from "@/lib/billing/ativarContagemCents.functions";
 import {
   primeirosPassos,
   tudoFeito,
@@ -28,6 +29,7 @@ import {
  */
 export function PrimeirosPassosCard({ tenantId }: { tenantId?: string | null }) {
   const buscar = useServerFn(sinaisDaLoja);
+  const ligarContagem = useServerFn(garantirContagemCents);
   const [sinais, setSinais] = useState<SinaisDaLoja | null>(null);
 
   const carregar = useCallback(async () => {
@@ -38,11 +40,22 @@ export function PrimeirosPassosCard({ tenantId }: { tenantId?: string | null }) 
       const r = (await buscar({
         data: tenantId ? { tenantId } : {},
       })) as SinaisDaLoja | null;
-      setSinais(r && typeof r.produtos === "number" ? r : null);
+      const sinaisValidos = r && typeof r.produtos === "number" ? r : null;
+      setSinais(sinaisValidos);
+
+      // Loja pronta para vender é loja pronta para contar. A função confere
+      // tudo de novo no servidor e não faz nada se a contagem já estiver
+      // valendo — chamar de novo a cada carregamento é inofensivo.
+      if (sinaisValidos && tudoFeito(sinaisValidos) && tenantId) {
+        await ligarContagem({ data: { tenantId } }).catch(() => {
+          // A cobrança nunca pode derrubar o painel de pedidos. Se falhar,
+          // o próximo carregamento tenta de novo.
+        });
+      }
     } catch {
       setSinais(null);
     }
-  }, [buscar, tenantId]);
+  }, [buscar, ligarContagem, tenantId]);
 
   useEffect(() => {
     void carregar();
