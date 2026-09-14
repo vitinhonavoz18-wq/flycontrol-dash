@@ -147,14 +147,43 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
       status_message: r.dados.instance?.lastDisconnectReason ?? null,
     });
 
+    // ── O CONSERTO QUE SE FAZ SOZINHO ───────────────────────────────────────
+    //
+    // O aviso de "chegou mensagem" só era apontado no momento de ler o QR
+    // Code. Só que a ordem real das coisas no dia a dia é outra: o lojista
+    // conecta primeiro e o suporte cadastra o endereço do fluxo depois.
+    //
+    // Quando isso acontecia, o aparelho ficava conectado e mudo para sempre —
+    // e o único jeito de consertar era desconectar e reconectar, porque o
+    // botão de conectar nem aparece para quem já está conectado. Era o
+    // telefone instalado e funcionando, sem ninguém ter dito à central para
+    // qual ramal transferir; e a única saída era arrancar o telefone da
+    // parede e instalar de novo.
+    //
+    // Agora a conferência de status, que roda a cada minuto com a tela
+    // aberta, arruma isso sozinha assim que o endereço aparece. Repetir não
+    // faz mal: apontar o aviso duas vezes para o mesmo lugar dá no mesmo.
+    let avisoPendente = conectado && !ficha?.webhook_configured_at;
+
+    if (avisoPendente) {
+      const url = await enderecoDoFluxo(tenantId);
+      if (url) {
+        const w = await configurarWebhook(token, url);
+        if (w.ok) {
+          await gravarFicha(tenantId, { webhook_configured_at: new Date().toISOString() });
+          avisoPendente = false;
+        }
+      }
+    }
+
     return {
       configurado: true,
       status,
       telefone,
       nomePerfil: r.dados.instance?.profileName ?? null,
-      // Aparelho conectado e aviso não apontado = o WhatsApp recebe mensagem e
-      // ninguém fica sabendo. Parece que está tudo bem, e não está.
-      avisoWebhook: conectado && !ficha?.webhook_configured_at,
+      // Só sobra o aviso quando NÃO há endereço cadastrado — aí é mesmo coisa
+      // do suporte, e não algo que o lojista possa resolver.
+      avisoWebhook: avisoPendente,
       ultimaVerificacao: agora,
       mensagem: null,
     };
