@@ -91,7 +91,7 @@ describe("o aviso de mensagem nova (webhook na UAZAPI)", () => {
     process.env.UAZAPI_ADMIN_TOKEN = original.UAZAPI_ADMIN_TOKEN;
   });
 
-  it("manda o filtro que impede a própria resposta de voltar como pergunta", async () => {
+  it("corta o eco do sistema, mas deixa passar o que o dono digita no celular", async () => {
     const chamadas: Array<{ url: string; init: RequestInit }> = [];
     vi.stubGlobal("fetch", async (url: string, init: RequestInit) => {
       chamadas.push({ url, init });
@@ -105,9 +105,13 @@ describe("o aviso de mensagem nova (webhook na UAZAPI)", () => {
 
     expect(corpo.url).toBe("https://n8n.test/webhook/loja");
     expect(corpo.enabled).toBe(true);
-    // Sem "fromMeYes" a conversa vira um eco; sem "isGroupYes" o CRM enche de
-    // grupo de família.
-    expect(corpo.excludeMessages).toContain("fromMeYes");
+
+    // "wasSentByApi" corta o eco do que o SISTEMA enviou (painel e IA). O que
+    // a pessoa digitou no celular precisa chegar, para a atendente automática
+    // saber que um humano assumiu e se calar — por isso NÃO se filtra
+    // "fromMeYes", que jogaria fora as duas coisas de uma vez.
+    expect(corpo.excludeMessages).toContain("wasSentByApi");
+    expect(corpo.excludeMessages).not.toContain("fromMeYes");
     expect(corpo.excludeMessages).toContain("isGroupYes");
     expect(corpo.events).toContain("messages");
   });

@@ -219,10 +219,20 @@ export async function desconectarInstancia(
  * reconecta, o aviso é reapontado para o lugar certo, sem ninguém precisar
  * abrir a UAZAPI.
  *
- * `excludeMessages` é o filtro que evita ruído: mensagem que o próprio
- * restaurante enviou volta como evento, e sem o filtro ela entraria na tela
- * como se o cliente tivesse falado. Grupo também fica de fora — CRM de
- * atendimento não é grupo da família.
+ * O FILTRO `excludeMessages`, E POR QUE ELE MUDOU
+ *
+ * Antes ele descartava TUDO que saía do lado do restaurante (`fromMeYes`).
+ * Parecia certo — evita o eco da própria resposta voltando como pergunta —
+ * mas jogava fora junto uma informação valiosa: quando o DONO responde pelo
+ * celular dele, a atendente automática precisa saber, para calar a boca e
+ * deixar o humano conduzir. Sem isso, os dois respondem ao mesmo tempo e o
+ * cliente recebe duas versões da mesma conversa.
+ *
+ * Agora descarta `wasSentByApi`: o que o SISTEMA enviou (a resposta do painel
+ * e a da IA) não volta, mas o que a pessoa digitou no celular chega. É a
+ * diferença entre ignorar o próprio eco e ignorar o colega falando ao lado.
+ *
+ * Grupo continua de fora: CRM de atendimento não é grupo da família.
  */
 export async function configurarWebhook(
   token: string,
@@ -234,7 +244,7 @@ export async function configurarWebhook(
       enabled: true,
       url,
       events: ["messages", "connection"],
-      excludeMessages: ["fromMeYes", "isGroupYes"],
+      excludeMessages: ["wasSentByApi", "isGroupYes"],
       addUrlEvents: false,
       addUrlTypesMessages: false,
     },

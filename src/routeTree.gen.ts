@@ -60,6 +60,7 @@ import { Route as AppInventoryRecipesRouteImport } from './routes/_app/inventory
 import { Route as AppInventoryReportsRouteImport } from './routes/_app/inventory.reports'
 import { Route as AppInventorySuppliersRouteImport } from './routes/_app/inventory.suppliers'
 import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.close-cycles'
+import { Route as ApiCrmCatalogRouteImport } from './routes/api/crm.catalog'
 import { Route as ApiCrmInboxRouteImport } from './routes/api/crm.inbox'
 import { Route as ApiCrmOutboxRouteImport } from './routes/api/crm.outbox'
 import { Route as ApiCrmPingRouteImport } from './routes/api/crm.ping'
@@ -336,6 +337,11 @@ const ApiBillingCloseCyclesRoute = ApiBillingCloseCyclesRouteImport.update({
   path: '/api/billing/close-cycles',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCrmCatalogRoute = ApiCrmCatalogRouteImport.update({
+  id: '/api/crm/catalog',
+  path: '/api/crm/catalog',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCrmInboxRoute = ApiCrmInboxRouteImport.update({
   id: '/api/crm/inbox',
   path: '/api/crm/inbox',
@@ -497,6 +503,7 @@ export interface FileRoutesByFullPath {
   '/inventory/reports': typeof AppInventoryReportsRoute
   '/inventory/suppliers': typeof AppInventorySuppliersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
+  '/api/crm/catalog': typeof ApiCrmCatalogRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
@@ -568,6 +575,7 @@ export interface FileRoutesByTo {
   '/inventory/reports': typeof AppInventoryReportsRoute
   '/inventory/suppliers': typeof AppInventorySuppliersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
+  '/api/crm/catalog': typeof ApiCrmCatalogRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
@@ -643,6 +651,7 @@ export interface FileRoutesById {
   '/_app/inventory/reports': typeof AppInventoryReportsRoute
   '/_app/inventory/suppliers': typeof AppInventorySuppliersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
+  '/api/crm/catalog': typeof ApiCrmCatalogRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
@@ -718,6 +727,7 @@ export interface FileRouteTypes {
     | '/inventory/reports'
     | '/inventory/suppliers'
     | '/api/billing/close-cycles'
+    | '/api/crm/catalog'
     | '/api/crm/inbox'
     | '/api/crm/outbox'
     | '/api/crm/ping'
@@ -789,6 +799,7 @@ export interface FileRouteTypes {
     | '/inventory/reports'
     | '/inventory/suppliers'
     | '/api/billing/close-cycles'
+    | '/api/crm/catalog'
     | '/api/crm/inbox'
     | '/api/crm/outbox'
     | '/api/crm/ping'
@@ -863,6 +874,7 @@ export interface FileRouteTypes {
     | '/_app/inventory/reports'
     | '/_app/inventory/suppliers'
     | '/api/billing/close-cycles'
+    | '/api/crm/catalog'
     | '/api/crm/inbox'
     | '/api/crm/outbox'
     | '/api/crm/ping'
@@ -907,6 +919,7 @@ export interface RootRouteChildren {
   PagamentoPlanoRoute: typeof PagamentoPlanoRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiBillingCloseCyclesRoute: typeof ApiBillingCloseCyclesRoute
+  ApiCrmCatalogRoute: typeof ApiCrmCatalogRoute
   ApiCrmInboxRoute: typeof ApiCrmInboxRoute
   ApiCrmOutboxRoute: typeof ApiCrmOutboxRouteWithChildren
   ApiCrmPingRoute: typeof ApiCrmPingRoute
@@ -1287,6 +1300,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiBillingCloseCyclesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/crm/catalog': {
+      id: '/api/crm/catalog'
+      path: '/api/crm/catalog'
+      fullPath: '/api/crm/catalog'
+      preLoaderRoute: typeof ApiCrmCatalogRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/crm/inbox': {
       id: '/api/crm/inbox'
       path: '/api/crm/inbox'
@@ -1573,6 +1593,7 @@ const rootRouteChildren: RootRouteChildren = {
   PagamentoPlanoRoute: PagamentoPlanoRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiBillingCloseCyclesRoute: ApiBillingCloseCyclesRoute,
+  ApiCrmCatalogRoute: ApiCrmCatalogRoute,
   ApiCrmInboxRoute: ApiCrmInboxRoute,
   ApiCrmOutboxRoute: ApiCrmOutboxRouteWithChildren,
   ApiCrmPingRoute: ApiCrmPingRoute,
