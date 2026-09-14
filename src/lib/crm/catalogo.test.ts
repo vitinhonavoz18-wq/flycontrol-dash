@@ -1,3 +1,6 @@
+/* O banco de mentira imita a corrente de chamadas do supabase-js, que não tem
+   um tipo público simples para imitar. */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, expect, it } from "vitest";
 import { montarCatalogo, comboNoAr } from "./catalogo";
 
