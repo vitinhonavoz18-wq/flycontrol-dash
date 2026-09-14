@@ -59,11 +59,8 @@ export const UsersDashboard = () => {
 
   if (isLoading) {
     return (
-      <div className="p-8 space-y-4">
-        <div className="flex justify-between items-center">
-          <Skeleton className="h-10 w-48" />
-          <Skeleton className="h-10 w-64" />
-        </div>
+      <div className="space-y-4">
+        <Skeleton className="h-10 w-64" />
         <Skeleton className="h-96 w-full" />
       </div>
     );
@@ -71,7 +68,7 @@ export const UsersDashboard = () => {
 
   if (error) {
     return (
-      <div className="p-8">
+      <div>
         <Alert variant="destructive">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Erro</AlertTitle>
@@ -86,9 +83,11 @@ export const UsersDashboard = () => {
   }
 
   return (
-    <div className="p-8 space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <h1 className="text-3xl font-bold">Usuários</h1>
+        <p className="text-sm text-muted-foreground">
+          {filteredUsers?.length ?? 0} conta(s) listada(s).
+        </p>
         <div className="relative w-full md:w-96">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
@@ -100,7 +99,7 @@ export const UsersDashboard = () => {
         </div>
       </div>
 
-      <div className="bg-card border rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-card border rounded-lg shadow-sm overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>

@@ -32,6 +32,7 @@ import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
 import { syncToExternal } from "@/utils/menuSync";
 import { CheckoutLayoutPicker } from "@/components/store/CheckoutLayoutPicker";
+import { DeliveryZonesManager } from "@/components/store/DeliveryZonesManager";
 import { AppearanceEditor } from "@/components/store/AppearanceEditor";
 import { MenuTextsEditor } from "@/components/store/MenuTextsEditor";
 import { HeroScheduleEditor } from "@/components/store/HeroScheduleEditor";
@@ -644,6 +645,19 @@ function StoreEditor({
         <TabsContent value="delivery" className="space-y-6">
           <Card>
             <CardHeader>
+              <CardTitle>Bairros que você atende</CardTitle>
+              <CardDescription>
+                Cada bairro com a sua taxa. No cardápio, o cliente escolhe o bairro dele e já vê
+                quanto vai pagar pela entrega — sem você precisar ajustar depois no WhatsApp.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <DeliveryZonesManager pizzeria={pizzeria} ensureSyncEndpoint={ensureSyncEndpoint} />
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
               <CardTitle>Logística e Pagamento</CardTitle>
               <CardDescription>Taxas, prazos e como você recebe dos clientes.</CardDescription>
             </CardHeader>
@@ -658,6 +672,9 @@ function StoreEditor({
                     defaultValue={pizzeria.delivery_fee || 0}
                     onBlur={(e) => handleUpdate("delivery_fee", parseFloat(e.target.value) || 0)}
                   />
+                  <p className="text-[10px] text-muted-foreground">
+                    Vale para os bairros que você não cadastrar abaixo.
+                  </p>
                 </div>
                 <div className="space-y-2">
                   <Label htmlFor="delivery-time">Tempo Médio de Entrega</Label>

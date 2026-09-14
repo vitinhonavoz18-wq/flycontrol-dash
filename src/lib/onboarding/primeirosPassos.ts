@@ -39,6 +39,11 @@ export function primeirosPassos(s: SinaisDaLoja): Passo[] {
       id: "conhecemos",
       rotulo: "Conhecemos seu estabelecimento",
       feito: s.onboardingConcluido,
+      // Sem destino, este era o único passo que não levava a lugar nenhum:
+      // o dono clicava, nada acontecia, e não havia como descobrir o que
+      // fazer para completá-lo. É a porta do corredor sem maçaneta — dá para
+      // ver que existe e não dá para abrir.
+      para: "/preparar",
     },
     {
       id: "produtos",
@@ -60,9 +65,9 @@ export function primeirosPassos(s: SinaisDaLoja): Passo[] {
     },
     {
       id: "publicar",
-      rotulo: "Publique seu cardápio",
+      rotulo: "Cardápio online",
       feito: s.cardapioPublicado,
-      para: "/my-store",
+      para: s.cardapioPublicado ? undefined : "/my-store",
     },
     {
       id: "primeiro_pedido",

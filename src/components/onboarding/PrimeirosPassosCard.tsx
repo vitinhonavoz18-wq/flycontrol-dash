@@ -4,6 +4,7 @@ import { useServerFn } from "@tanstack/react-start";
 import { Check, Circle } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { sinaisDaLoja } from "@/lib/onboarding/onboarding.functions";
+import { garantirContagemCents } from "@/lib/billing/ativarContagemCents.functions";
 import {
   primeirosPassos,
   tudoFeito,
@@ -26,18 +27,35 @@ import {
  * recebido, cardápio no ar. Passo que se marca sozinho é boletim que dá nota
  * para matéria que ninguém deu.
  */
-export function PrimeirosPassosCard() {
+export function PrimeirosPassosCard({ tenantId }: { tenantId?: string | null }) {
   const buscar = useServerFn(sinaisDaLoja);
+  const ligarContagem = useServerFn(garantirContagemCents);
   const [sinais, setSinais] = useState<SinaisDaLoja | null>(null);
 
   const carregar = useCallback(async () => {
     try {
-      const r = (await buscar({ data: undefined })) as SinaisDaLoja | null;
-      setSinais(r && typeof r.produtos === "number" ? r : null);
+      // A lista é da loja que está escolhida no topo. Ignorar essa escolha
+      // fazia o painel cobrar um passo de uma loja enquanto exibia o nome de
+      // outra no cabeçalho.
+      const r = (await buscar({
+        data: tenantId ? { tenantId } : {},
+      })) as SinaisDaLoja | null;
+      const sinaisValidos = r && typeof r.produtos === "number" ? r : null;
+      setSinais(sinaisValidos);
+
+      // Loja pronta para vender é loja pronta para contar. A função confere
+      // tudo de novo no servidor e não faz nada se a contagem já estiver
+      // valendo — chamar de novo a cada carregamento é inofensivo.
+      if (sinaisValidos && tudoFeito(sinaisValidos) && tenantId) {
+        await ligarContagem({ data: { tenantId } }).catch(() => {
+          // A cobrança nunca pode derrubar o painel de pedidos. Se falhar,
+          // o próximo carregamento tenta de novo.
+        });
+      }
     } catch {
       setSinais(null);
     }
-  }, [buscar]);
+  }, [buscar, ligarContagem, tenantId]);
 
   useEffect(() => {
     void carregar();

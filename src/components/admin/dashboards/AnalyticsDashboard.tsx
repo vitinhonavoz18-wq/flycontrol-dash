@@ -20,7 +20,7 @@ export const AnalyticsDashboard = () => {
   const { data: metrics, isLoading: loadingMetrics } = useAdminGlobalMetrics();
   const { data: pizzerias, isLoading: loadingPizzerias } = useAdminPizzerias();
 
-  if (loadingMetrics || loadingPizzerias) return <div className="p-8"><Skeleton className="h-64 w-full" /></div>;
+  if (loadingMetrics || loadingPizzerias) return <Skeleton className="h-64 w-full" />;
 
   const chartData = pizzerias?.map(p => ({
     name: p.pizzeria_name,
@@ -36,9 +36,7 @@ export const AnalyticsDashboard = () => {
   const COLORS = ["#10b981", "#ef4444", "#f59e0b", "#3b82f6"];
 
   return (
-    <div className="p-8 pb-20">
-      <h1 className="text-3xl font-bold mb-4">Insights Globais</h1>
-      
+    <div>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-8">
         <Card>
           <CardHeader className="pb-2">

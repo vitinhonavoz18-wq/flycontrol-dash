@@ -172,7 +172,7 @@ export const FinanceDashboard = () => {
 
   if (loading) {
     return (
-      <div className="flex min-h-[40dvh] items-center justify-center p-8">
+      <div className="flex min-h-[40dvh] items-center justify-center">
         <Loader2 className="h-8 w-8 animate-spin text-primary" aria-hidden="true" />
       </div>
     );
@@ -180,7 +180,7 @@ export const FinanceDashboard = () => {
 
   if (missingTables) {
     return (
-      <div className="p-8">
+      <div>
         <Card className="border-amber-500/30 bg-amber-500/5">
           <CardContent className="flex gap-3 p-4 text-sm">
             <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" aria-hidden="true" />
@@ -200,10 +200,10 @@ export const FinanceDashboard = () => {
   }
 
   return (
-    <div className="p-8 pb-20">
+    <div>
       <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Financeiro Global</h1>
+          <h2 className="text-xl font-bold">Financeiro Global</h2>
           <p className="mt-1 text-sm text-muted-foreground">
             O que a FlyControl fatura com a assinatura das lojas — não o que as lojas vendem.
           </p>

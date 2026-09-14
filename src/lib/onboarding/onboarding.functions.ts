@@ -18,6 +18,8 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { layoutRecomendadoPara } from "@/lib/menu/layouts";
+import { cardapioEstaNoAr } from "@/lib/provisioning/provisioning";
+import { assertOwnsTenant } from "@/lib/server/plan-guard";
 import { aplicarResposta, proximaEtapaPendente, terminou } from "./fluxo";
 import { etapaPorId, type IdDaEtapa, type Respostas } from "./perguntas";
 import type { SinaisDaLoja } from "./primeirosPassos";
@@ -110,6 +112,12 @@ export const lerOnboarding = createServerFn({ method: "POST" })
       .select("status, current_step, respostas")
       .eq("company_id", loja.id)
       .maybeSingle();
+
+    // Sem caderno não há convite em aberto. Devolver nulo faz a tela de
+    // preparação mandar a pessoa para o painel em vez de abrir um
+    // questionário que ninguém pediu — a mesma regra de
+    // `precisaDeOnboarding`, para as duas portas não discordarem.
+    if (!data) return null;
 
     const linha = data;
     const respostas = respostasDe(data);
@@ -328,9 +336,21 @@ export const concluirOnboarding = createServerFn({ method: "POST" })
  * enxuta — uma consulta, sem contar produtos nem carregar respostas. É a
  * portaria conferindo a pulseira, não revistando a mochila.
  *
- * Loja SEM caderno é loja nova: toda empresa que já existia quando esta
- * funcionalidade entrou no ar recebeu um caderno marcado como concluído.
- * Ninguém que já é cliente cai no questionário.
+ * SÓ VÊ O QUESTIONÁRIO QUEM FOI CONVIDADO
+ *
+ * O convite é o caderno: o cadastro abre um, com status "not_started", e é
+ * ele que faz o questionário aparecer — uma vez só, para quem acabou de se
+ * cadastrar.
+ *
+ * A regra já foi o contrário, e foi um erro caro: loja SEM caderno era
+ * tratada como loja nova. Só que caderno não nasce sozinho — quem cria loja
+ * pelo Painel Admin, quem restaura uma loja e quem se cadastrou e fechou a
+ * aba antes da primeira resposta ficavam todos sem caderno. Resultado: o
+ * questionário voltava a cada login, para sempre.
+ *
+ * Era a recepcionista parando TODO mundo que não estava na lista de visitas —
+ * inclusive o funcionário que trabalha ali há meses e só quer chegar na sala
+ * dele. Agora ela para só quem tem convite em aberto na mão.
  */
 export const precisaDeOnboarding = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -346,7 +366,52 @@ export const precisaDeOnboarding = createServerFn({ method: "POST" })
       .eq("company_id", loja.id)
       .maybeSingle();
 
-    return { pendente: data?.status !== "completed" };
+    // Sem caderno não há convite, e sem convite não há questionário.
+    if (!data) return { pendente: false };
+
+    return { pendente: data.status !== "completed" };
+  });
+
+/**
+ * "Pular por agora".
+ *
+ * A TRAVA DE SEGURANÇA DA PORTA
+ *
+ * Toda porta que só abre de um jeito acaba prendendo alguém. Se uma pergunta
+ * não carregar, se uma opção não servir para o negócio dele, ou se ele só
+ * quiser ver os pedidos primeiro, precisa haver uma saída — senão o cliente
+ * fica trancado do lado de fora do próprio painel, e a única saída vira
+ * ligar para o suporte.
+ *
+ * Pular fecha o caderno como concluído, marcando que foi pulado. O painel
+ * continua cobrando a preparação pelo "Prepare sua loja", que é um lembrete
+ * e não uma tranca.
+ */
+export const pularOnboarding = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ ok: boolean }> => {
+    const loja = await lojaDoUsuario(context.userId);
+    if (!loja) return { ok: true };
+
+    const agora = new Date().toISOString();
+    const { error } = await caderno.from("onboarding_answers").upsert(
+      {
+        company_id: loja.id,
+        status: "completed",
+        current_step: null,
+        respostas: { pulado: true },
+        started_at: agora,
+        completed_at: agora,
+        last_activity_at: agora,
+      },
+      { onConflict: "company_id", ignoreDuplicates: false },
+    );
+
+    if (error) {
+      console.error("[onboarding] falha ao pular:", error.message);
+      return { ok: false };
+    }
+    return { ok: true };
   });
 
 /**
@@ -357,16 +422,38 @@ export const precisaDeOnboarding = createServerFn({ method: "POST" })
  * se marca sozinho é boletim que dá nota para matéria que ninguém deu.
  */
 export const sinaisDaLoja = createServerFn({ method: "POST" })
+  .inputValidator((d: { tenantId?: string } | undefined) => d ?? {})
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<SinaisDaLoja | null> => {
-    const loja = await lojaDoUsuario(context.userId);
+  .handler(async ({ data, context }): Promise<SinaisDaLoja | null> => {
+    // Quem tem mais de uma loja (ou é administrador) troca de loja no seletor
+    // do topo. Sem honrar essa escolha, o painel mostrava o checklist de UMA
+    // loja enquanto o cabeçalho anunciava outra — e o dono ficava tentando
+    // completar um passo que já estava feito na loja que ele estava vendo.
+    //
+    // O código da loja continua sendo tratado como pedido, nunca como
+    // verdade: `assertOwnsTenant` confere dono (ou administrador) antes de
+    // devolver qualquer dado.
+    const loja = data.tenantId
+      ? await (async () => {
+          await assertOwnsTenant(context.supabase, context.userId, data.tenantId!);
+          const { data: escolhida } = await supabaseAdmin
+            .from("pizzerias")
+            .select("id, name")
+            .eq("id", data.tenantId!)
+            .maybeSingle();
+          return escolhida as { id: string; name: string } | null;
+        })()
+      : await lojaDoUsuario(context.userId);
+
     if (!loja) return null;
 
     const [{ data: dados }, { data: fichaOnboarding }, produtos, { count: pedidos }] =
       await Promise.all([
         supabaseAdmin
           .from("pizzerias")
-          .select("name, phone, address, payment_methods, provision_status, public_url")
+          .select(
+            "name, phone, address, payment_methods, provision_status, public_url, slug, api_key, sync_endpoint",
+          )
           .eq("id", loja.id)
           .maybeSingle(),
         caderno.from("onboarding_answers").select("status").eq("company_id", loja.id).maybeSingle(),
@@ -384,6 +471,9 @@ export const sinaisDaLoja = createServerFn({ method: "POST" })
       payment_methods: unknown;
       provision_status: string | null;
       public_url: string | null;
+      slug: string | null;
+      api_key: string | null;
+      sync_endpoint: string | null;
     } | null;
 
     const formas = Array.isArray(p?.payment_methods) ? p.payment_methods : [];
@@ -393,7 +483,11 @@ export const sinaisDaLoja = createServerFn({ method: "POST" })
       produtos,
       lojaIdentificada: !!(p?.name?.trim() && p?.phone?.trim() && p?.address?.trim()),
       temPagamento: formas.length > 0,
-      cardapioPublicado: !!p?.public_url && p?.provision_status === "provisioned",
+      // Vale o carimbo do provisionamento OU as peças que fazem o cardápio
+      // funcionar de verdade — ver `cardapioEstaNoAr`. Sem isso, loja
+      // conectada (e não provisionada) vendia com o cardápio no ar e o passo
+      // ficava eternamente em aberto.
+      cardapioPublicado: cardapioEstaNoAr(p ?? {}),
       pedidos: pedidos ?? 0,
     };
   });

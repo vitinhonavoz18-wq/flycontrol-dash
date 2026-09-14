@@ -149,3 +149,288 @@ describe("syncToExternal — restaurant (loja)", () => {
     expect(fetch).not.toHaveBeenCalled();
   });
 });
+
+/**
+ * Criar combo falhava com "Could not find the '<campo>' column of 'combos'".
+ *
+ * A rota de combo do SiteCreatorFly grava o que recebe DIRETO na tabela dela,
+ * sem traduzir nomes — diferente das rotas de produto e categoria, que
+ * traduzem. Por isso o combo, e só ele, viaja com os nomes das colunas do
+ * site. Os testes abaixo travam cada nome: trocar qualquer um de volta para o
+ * nome usado no painel derruba o cadastro inteiro de novo.
+ */
+describe("syncToExternal — combo", () => {
+  beforeEach(() => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => new Response(JSON.stringify({ id: "c1" }), { status: 200 })),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  async function criarCombo(data: Record<string, unknown>) {
+    await syncToExternal({
+      type: "combo",
+      action: "create",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "chave-123",
+      syncEndpoint: REST_ENDPOINT,
+      data,
+    });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    return JSON.parse(init?.body as string);
+  }
+
+  it("traduz preço, ativo e destaque para os nomes das colunas do site", async () => {
+    const body = await criarCombo({
+      name: "Combo Família",
+      combo_price: 50,
+      active: true,
+      highlight: true,
+    });
+
+    expect(body.price).toBe(50);
+    expect(body.is_active).toBe(true);
+    expect(body.is_highlighted).toBe(true);
+
+    // Os nomes do painel não podem sobrar no pacote: foi exatamente
+    // "combo_price" chegando cru que derrubou o cadastro.
+    expect(body).not.toHaveProperty("combo_price");
+    expect(body).not.toHaveProperty("active");
+    expect(body).not.toHaveProperty("highlight");
+  });
+
+  it("leva descrição, foto, preço original, dias e horários", async () => {
+    const body = await criarCombo({
+      name: "Combo Fim de Semana",
+      combo_price: 50,
+      original_price: 90,
+      description: "Só sexta a domingo",
+      image_url: "https://x/combo.png",
+      available_days: ["sex", "sab", "dom"],
+      start_time: "18:00",
+      end_time: "23:00",
+    });
+
+    expect(body.description).toBe("Só sexta a domingo");
+    expect(body.image_url).toBe("https://x/combo.png");
+    expect(body.original_price).toBe(90);
+    expect(body.available_days).toEqual(["sex", "sab", "dom"]);
+    expect(body.start_time).toBe("18:00");
+    expect(body.end_time).toBe("23:00");
+  });
+
+  it("transforma as fichas de item em frases prontas, que é como o site guarda", async () => {
+    const body = await criarCombo({
+      name: "Combo Casal",
+      combo_price: 50,
+      items: [
+        { product_name: "Pizza Grande", quantity: 2, product_type: "pizza" },
+        { product_name: "Refrigerante 2L", quantity: 1, product_type: "beverage" },
+      ],
+    });
+
+    expect(body.items).toEqual(["2x Pizza Grande", "Refrigerante 2L"]);
+  });
+
+  it("descarta item sem nome em vez de mandar linha vazia para o cardápio", async () => {
+    const body = await criarCombo({
+      name: "Combo",
+      combo_price: 50,
+      items: [{ product_name: "  ", quantity: 1 }, { product_name: "Pizza" }, "Brinde"],
+    });
+
+    expect(body.items).toEqual(["Pizza", "Brinde"]);
+  });
+
+  it("combo sem itens vira lista vazia, não quebra o envio", async () => {
+    const body = await criarCombo({ name: "Combo", combo_price: 50 });
+    expect(body.items).toEqual([]);
+  });
+
+  it("mantém o combo ativo e sem destaque quando o painel não diz nada", async () => {
+    const body = await criarCombo({ name: "Combo", combo_price: 50 });
+    expect(body.is_active).toBe(true);
+    expect(body.is_highlighted).toBe(false);
+  });
+
+  it("não manda nenhum campo que a tabela do site desconheça", async () => {
+    // Lista real das colunas de `combos` no SiteCreatorFly. Qualquer campo
+    // fora dela faz o site recusar o cadastro inteiro — foi assim que
+    // available_days e depois combo_price apareceram, um de cada vez.
+    const COLUNAS_DO_SITE = new Set([
+      "name",
+      "description",
+      "original_price",
+      "price",
+      "image_url",
+      "is_active",
+      "is_highlighted",
+      "available_days",
+      "start_time",
+      "end_time",
+      "items",
+      "badge",
+      "sort_order",
+      "external_id",
+    ]);
+
+    const body = await criarCombo({
+      pizzeria_id: "não deve viajar",
+      name: "Combo",
+      description: "d",
+      original_price: 90,
+      combo_price: 50,
+      image_url: "https://x/c.png",
+      active: true,
+      highlight: true,
+      available_days: ["sex"],
+      start_time: "18:00",
+      end_time: "23:00",
+      items: [{ product_name: "Pizza", quantity: 1 }],
+    });
+
+    expect(Object.keys(body).filter((campo) => !COLUNAS_DO_SITE.has(campo))).toEqual([]);
+  });
+
+  it("liga e desliga o combo usando is_active, não active", async () => {
+    await syncToExternal({
+      type: "combo",
+      action: "status",
+      externalId: "c1",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "chave-123",
+      syncEndpoint: REST_ENDPOINT,
+      data: { value: false },
+    });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(init?.body as string)).toEqual({ is_active: false });
+  });
+
+  it("produto continua usando active — só o combo é o caso à parte", async () => {
+    await syncToExternal({
+      type: "product",
+      action: "status",
+      externalId: "p1",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "chave-123",
+      syncEndpoint: REST_ENDPOINT,
+      data: { value: false },
+    });
+
+    const [, init] = vi.mocked(fetch).mock.calls[0];
+    expect(JSON.parse(init?.body as string)).toEqual({ active: false });
+  });
+});
+
+describe("syncToExternal — delivery_zone (bairro e taxa)", () => {
+  let chamadas: Array<{ url: string; init: RequestInit }>;
+
+  beforeEach(() => {
+    chamadas = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (url: string, init: RequestInit) => {
+        chamadas.push({ url, init });
+        // O cabeçalho não é enfeite: o `syncToExternal` só abre o pacote da
+        // resposta quando ela se identifica como JSON — que é o que o
+        // SiteCreatorFly manda de verdade (ver o helper `json` do menu-sync).
+        // Sem ele, o id da zona voltaria vazio e a próxima edição criaria uma
+        // zona duplicada em vez de corrigir a existente.
+        return new Response(JSON.stringify({ success: true, data: { id: "zona-sf-1" } }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        });
+      }),
+    );
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  // O SiteCreatorFly usa /delivery-zone (com hífen) na URL. Escrever
+  // delivery_zone lá daria 400 e a taxa nunca chegaria no cardápio.
+  it("usa o endereço com hífen que o SiteCreatorFly espera", async () => {
+    await syncToExternal({
+      type: "delivery_zone",
+      action: "create",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "fc_key",
+      syncEndpoint: REST_ENDPOINT,
+      data: { neighborhood: "Centro", fee: 5.5, sort_order: 0 },
+    });
+
+    expect(chamadas[0].url).toBe("https://conectfly.com.br/api/menu-sync/delivery-zone");
+    expect(chamadas[0].init.method).toBe("POST");
+  });
+
+  // Os três campos precisam chegar com o MESMO nome. O outro lado grava só o
+  // que reconhece pelo nome exato: renomear qualquer um faz a taxa chegar em
+  // branco e o cliente vê "a combinar" no lugar do preço.
+  it("manda bairro, taxa e ordem com os nomes que o outro lado reconhece", async () => {
+    await syncToExternal({
+      type: "delivery_zone",
+      action: "create",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "fc_key",
+      syncEndpoint: REST_ENDPOINT,
+      data: { neighborhood: "Jardins", fee: 8, sort_order: 2 },
+    });
+
+    expect(JSON.parse(chamadas[0].init.body as string)).toEqual({
+      neighborhood: "Jardins",
+      fee: 8,
+      sort_order: 2,
+    });
+  });
+
+  it("devolve o id que o SiteCreatorFly deu, para a edição achar a linha depois", async () => {
+    const r = await syncToExternal({
+      type: "delivery_zone",
+      action: "create",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "fc_key",
+      syncEndpoint: REST_ENDPOINT,
+      data: { neighborhood: "Centro", fee: 5, sort_order: 0 },
+    });
+
+    expect(r.success).toBe(true);
+    expect(r.externalId).toBe("zona-sf-1");
+  });
+
+  it("editar aponta para a zona certa pelo id do outro lado", async () => {
+    await syncToExternal({
+      type: "delivery_zone",
+      action: "update",
+      externalId: "zona-sf-1",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "fc_key",
+      syncEndpoint: REST_ENDPOINT,
+      data: { neighborhood: "Centro", fee: 7, sort_order: 0 },
+    });
+
+    expect(chamadas[0].url).toBe("https://conectfly.com.br/api/menu-sync/delivery-zone/zona-sf-1");
+    expect(chamadas[0].init.method).toBe("PUT");
+  });
+
+  // Sem o id do outro lado não dá para saber QUAL bairro apagar. Apagar
+  // "algum" seria tirar do ar o bairro errado — melhor recusar.
+  it("não tenta apagar sem saber qual zona é", async () => {
+    const r = await syncToExternal({
+      type: "delivery_zone",
+      action: "delete",
+      pizzeriaSlug: "minha-loja",
+      pizzeriaApiKey: "fc_key",
+      syncEndpoint: REST_ENDPOINT,
+    });
+
+    expect(r.success).toBe(false);
+    expect(chamadas).toHaveLength(0);
+  });
+});

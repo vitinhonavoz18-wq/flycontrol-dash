@@ -18,12 +18,13 @@
  */
 export type PlanType = "premium" | "cents" | "legacy_full_access";
 
-export type Feature = "tables" | "waiters" | "commissions" | "chat";
+export type Feature = "tables" | "waiters" | "commissions" | "inventory" | "chat";
 
 export const FEATURE_LABELS: Record<Feature, string> = {
   tables: "Mesas",
   waiters: "Garçons",
   commissions: "Comissões",
+  inventory: "Estoque & PDV",
   chat: "Chat (CRM)",
 };
 
@@ -51,9 +52,9 @@ export function featureEhContratadaAParte(feature: Feature): boolean {
 // para todos os planos por padrão (dashboard, cardápio, financeiro etc. não
 // precisam ser listados aqui).
 const PLAN_FEATURES: Record<PlanType, Feature[]> = {
-  premium: ["tables", "waiters", "commissions", "chat"],
+  premium: ["tables", "waiters", "commissions", "inventory", "chat"],
   cents: [],
-  legacy_full_access: ["tables", "waiters", "commissions", "chat"],
+  legacy_full_access: ["tables", "waiters", "commissions", "inventory", "chat"],
 };
 
 /**

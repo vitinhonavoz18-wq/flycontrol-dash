@@ -468,6 +468,34 @@ export const createAccount = createServerFn({ method: "POST" })
 
       companyId = company.id;
 
+      // ---- 2b. Convite para a preparação ----------------------------------
+      //
+      // O questionário "Prepare seu FlyControl" aparece para quem tem ESTE
+      // caderno em aberto, e para mais ninguém. Ele é o convite: quem acabou
+      // de se cadastrar recebe um, responde uma vez, e o caderno fecha.
+      //
+      // Já foi o contrário — quem NÃO tinha caderno era tratado como cliente
+      // novo — e o efeito era o questionário voltando a cada login para quem
+      // já trabalhava há meses. É a diferença entre o porteiro conferir quem
+      // TEM convite na mão e barrar todo mundo que não está na lista de
+      // visitas do dia, morador do prédio incluído.
+      //
+      // Falhar aqui não derruba o cadastro: a conta e a loja valem mais do
+      // que o questionário. O cliente entra direto no painel e continua com o
+      // lembrete "Prepare sua loja" para se guiar.
+      const { error: erroConvite } = await supabaseAdmin
+        .from("onboarding_answers" as never)
+        .insert({
+          company_id: companyId,
+          status: "not_started",
+          respostas: {},
+          started_at: new Date().toISOString(),
+        } as never);
+
+      if (erroConvite) {
+        console.error("[signup] falha ao abrir o onboarding:", erroConvite);
+      }
+
       // ---- 3. Assinatura --------------------------------------------------
       const db = asBillingDb(supabaseAdmin);
 

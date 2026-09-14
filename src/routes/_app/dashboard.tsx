@@ -760,7 +760,7 @@ function Dashboard() {
 
       {/* "Prepare sua loja": some sozinha quando todos os passos estiverem
           feitos. É andaime, não móvel. */}
-      <PrimeirosPassosCard />
+      <PrimeirosPassosCard tenantId={activeId} />
 
       <ClubCentsCard tenantId={activeId} />
       <HallOfFameStrip />
