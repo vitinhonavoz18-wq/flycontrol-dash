@@ -1,7 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { conferirChaveMestra, respostaNegadaCrm } from "@/lib/crm/n8nAuth";
 import { autenticarLoja } from "@/lib/crm/n8nTenant";
-import { crmRpc } from "@/lib/crm/db";
+import { crm, crmRpc } from "@/lib/crm/db";
+import { configUazapi } from "@/lib/whatsapp/uazapi";
 import { extrairDaUazapi } from "@/lib/crm/uazapiEvento";
 
 /**
