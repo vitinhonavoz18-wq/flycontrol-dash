@@ -136,6 +136,8 @@ describe("a chave mestra do CRM sozinha não alcança a loja de outro", () => {
       "src/routes/api/crm.outbox.ts",
       "src/routes/api/crm.outbox.result.ts",
       "src/routes/api/crm.ping.ts",
+      "src/routes/api/crm.catalog.ts",
+      "src/routes/api/crm.reply.ts",
     ]) {
       const codigo = soCodigo(arquivo);
       expect(codigo).toContain("conferirChaveMestra");
@@ -159,6 +161,8 @@ describe("a chave mestra do CRM sozinha não alcança a loja de outro", () => {
       "src/routes/api/crm.outbox.ts",
       "src/routes/api/crm.outbox.result.ts",
       "src/routes/api/crm.ping.ts",
+      "src/routes/api/crm.catalog.ts",
+      "src/routes/api/crm.reply.ts",
     ]) {
       const codigo = soCodigo(arquivo);
       expect(codigo).toContain("loja.tenantId");
@@ -258,5 +262,32 @@ describe("as trancas do banco", () => {
         new RegExp(`REVOKE ALL ON FUNCTION public\\.${fn}[\\s\\S]*?authenticated`),
       );
     }
+  });
+});
+
+describe("a resposta da IA nunca sai duas vezes", () => {
+  it("nasce como 'saindo', e nao na fila", () => {
+    // Se nascesse na fila ('queued'), a busca de minuto em minuto pegaria a
+    // mesma mensagem e o cliente receberia duas vezes: uma da IA na hora,
+    // outra do carteiro depois.
+    const codigo = soCodigo("src/routes/api/crm.reply.ts");
+    expect(codigo).toContain('status: "sending"');
+    expect(codigo).not.toContain('status: "queued"');
+    expect(codigo).toContain("lease_until");
+  });
+
+  it("registra no painel ANTES de devolver a chave de envio", () => {
+    // Enviar sem registrar produziria um cliente que recebeu algo que o
+    // restaurante nao sabe que mandou.
+    const codigo = soCodigo("src/routes/api/crm.reply.ts");
+    const posRegistro = codigo.indexOf(".insert({");
+    const posChave = codigo.indexOf("instance_token");
+    expect(posRegistro).toBeGreaterThan(0);
+    expect(posChave).toBeGreaterThan(posRegistro);
+  });
+
+  it("recusa responder a uma conversa que nao existe", () => {
+    const codigo = soCodigo("src/routes/api/crm.reply.ts");
+    expect(codigo).toContain("conversa_nao_encontrada");
   });
 });

@@ -64,6 +64,7 @@ import { Route as ApiCrmCatalogRouteImport } from './routes/api/crm.catalog'
 import { Route as ApiCrmInboxRouteImport } from './routes/api/crm.inbox'
 import { Route as ApiCrmOutboxRouteImport } from './routes/api/crm.outbox'
 import { Route as ApiCrmPingRouteImport } from './routes/api/crm.ping'
+import { Route as ApiCrmReplyRouteImport } from './routes/api/crm.reply'
 import { Route as ApiMarketingQueueRouteImport } from './routes/api/marketing.queue'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
@@ -357,6 +358,11 @@ const ApiCrmPingRoute = ApiCrmPingRouteImport.update({
   path: '/api/crm/ping',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCrmReplyRoute = ApiCrmReplyRouteImport.update({
+  id: '/api/crm/reply',
+  path: '/api/crm/reply',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMarketingQueueRoute = ApiMarketingQueueRouteImport.update({
   id: '/api/marketing/queue',
   path: '/api/marketing/queue',
@@ -507,6 +513,7 @@ export interface FileRoutesByFullPath {
   '/api/crm/inbox': typeof ApiCrmInboxRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
+  '/api/crm/reply': typeof ApiCrmReplyRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -579,6 +586,7 @@ export interface FileRoutesByTo {
   '/api/crm/inbox': typeof ApiCrmInboxRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
+  '/api/crm/reply': typeof ApiCrmReplyRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -655,6 +663,7 @@ export interface FileRoutesById {
   '/api/crm/inbox': typeof ApiCrmInboxRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
+  '/api/crm/reply': typeof ApiCrmReplyRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -731,6 +740,7 @@ export interface FileRouteTypes {
     | '/api/crm/inbox'
     | '/api/crm/outbox'
     | '/api/crm/ping'
+    | '/api/crm/reply'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -803,6 +813,7 @@ export interface FileRouteTypes {
     | '/api/crm/inbox'
     | '/api/crm/outbox'
     | '/api/crm/ping'
+    | '/api/crm/reply'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -878,6 +889,7 @@ export interface FileRouteTypes {
     | '/api/crm/inbox'
     | '/api/crm/outbox'
     | '/api/crm/ping'
+    | '/api/crm/reply'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -923,6 +935,7 @@ export interface RootRouteChildren {
   ApiCrmInboxRoute: typeof ApiCrmInboxRoute
   ApiCrmOutboxRoute: typeof ApiCrmOutboxRouteWithChildren
   ApiCrmPingRoute: typeof ApiCrmPingRoute
+  ApiCrmReplyRoute: typeof ApiCrmReplyRoute
   ApiMarketingQueueRoute: typeof ApiMarketingQueueRouteWithChildren
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPizzeriasFiqonTestRoute: typeof ApiPizzeriasFiqonTestRoute
@@ -1328,6 +1341,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCrmPingRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/crm/reply': {
+      id: '/api/crm/reply'
+      path: '/api/crm/reply'
+      fullPath: '/api/crm/reply'
+      preLoaderRoute: typeof ApiCrmReplyRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/marketing/queue': {
       id: '/api/marketing/queue'
       path: '/api/marketing/queue'
@@ -1597,6 +1617,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCrmInboxRoute: ApiCrmInboxRoute,
   ApiCrmOutboxRoute: ApiCrmOutboxRouteWithChildren,
   ApiCrmPingRoute: ApiCrmPingRoute,
+  ApiCrmReplyRoute: ApiCrmReplyRoute,
   ApiMarketingQueueRoute: ApiMarketingQueueRouteWithChildren,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPizzeriasFiqonTestRoute: ApiPizzeriasFiqonTestRoute,
