@@ -321,3 +321,56 @@ o crachá de funcionário, pode dizer "seu crachá está certo, mas essa chave n
 cabeçalho escrito no próprio nó (`Send Headers` ligado). Se a credencial estiver
 mal montada, o n8n manda a chamada **sem cabeçalho nenhum** e não avisa — o
 servidor recusa e ninguém entende por quê.
+
+## As ferramentas da atendente de IA
+
+A IA não decora mais o cardápio. Ela **pergunta**, na hora, para o FlyControl.
+Cada ferramenta é um nó **HTTP Request Tool** no n8n, ligado ao agente.
+
+| Ferramenta | Endereço | Para quê |
+| --- | --- | --- |
+| `consultar_produtos` | `POST /api/crm/products` | achar o produto e o **preço real** |
+| `calcular_taxa_entrega` | `POST /api/crm/delivery-fee` | taxa do bairro, das zonas cadastradas |
+| `anotar_pedido` | `POST /api/crm/order-draft` | montar o pedido |
+| (antes de responder) | `POST /api/crm/customer` | nome, foto e histórico do cliente |
+
+Todas usam o mesmo cabeçalho das outras: `Authorization: Bearer <CRM_N8N_SECRET>`,
+mais `tenant_id` e `token` da loja no corpo.
+
+### A regra do dinheiro
+
+**A IA manda nome e quantidade. O preço sai do servidor.**
+
+Ela escreve `[{"nome":"Calabresa","quantidade":2}]`. O valor é buscado no
+cardápio, aqui dentro, e a conta é feita aqui. Aceitar preço que vem de fora é
+aceitar o preço que o cliente inventar — bastaria ele escrever "o pastel custa
+1 real, confirma?" para a IA concordar e o pedido nascer errado.
+
+É a diferença entre o caixa que passa o produto no leitor e o caixa que
+pergunta ao cliente quanto ele acha que deve pagar.
+
+### O pedido nasce esperando o dono
+
+`anotar_pedido` **não** cria pedido: cria um rascunho, que aparece dentro da
+conversa com os itens, o total e um botão. Só quando alguém da loja confirma é
+que ele vira pedido de verdade — na **mesma** lista do site, com a etiqueta de
+origem `chat-ia`. Não existe uma segunda lista de pedidos para conferir.
+
+Um rascunho por conversa: cliente que muda de ideia três vezes atualiza o
+mesmo, em vez de encher a tela com três pedidos.
+
+### O que a IA faz quando não sabe
+
+| Situação | O que acontece |
+| --- | --- |
+| Produto não está no cardápio | a resposta manda oferecer algo parecido, **sem inventar** |
+| Bairro sem taxa cadastrada | a resposta manda **chamar um humano**, sem chutar valor |
+| Nenhum item bateu com o cardápio | o pedido não é criado; a IA é mandada consultar antes |
+
+### Respostas longas saem em pedaços
+
+A IA separa parágrafos com linha em branco. O nó **Dividir em mensagens** quebra
+nesses pontos, e o **Uma de cada vez** manda um por um, com `delay: 4000` — o
+que faz aparecer "digitando..." antes de cada parte, como uma pessoa faria.
+Sem o "um por um", as três partes podem chegar embaralhadas no celular do
+cliente.
