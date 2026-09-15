@@ -20,6 +20,7 @@ import { extrairDaUazapi } from "@/lib/crm/uazapiEvento";
  *                "message":     "texto que o cliente mandou",
  *                "name":        "nome do cliente (opcional)",
  *                "external_id": "id da mensagem no WhatsApp (recomendado)",
+ *                "from_me":     true quando foi o DONO quem digitou (opcional),
  *                "media_url":   "(opcional)",
  *                "media_type":  "(opcional)"
  *              }
@@ -60,14 +61,20 @@ export const Route = createFileRoute("/api/crm/inbox")({
         // que um erro desses teria de ser corrigido loja por loja.
         const uaz = extrairDaUazapi(corpo);
         if (uaz?.ignorar) {
-          // Mensagem que o próprio restaurante enviou, ou de grupo. Recusar
-          // com erro faria o n8n tentar de novo para sempre; 200 diz
-          // "recebi e não era para mim".
+          // Mensagem de grupo ou de transmissão. Recusar com erro faria o n8n
+          // tentar de novo para sempre; 200 diz "recebi e não era para mim".
           return new Response(JSON.stringify({ success: true, ignorada: true }), {
             status: 200,
             headers: cabecalhos,
           });
         }
+
+        // Quem digitou: o cliente ou o próprio dono, no celular dele?
+        // Isso decide de que lado a mensagem aparece na tela E se o nome que
+        // veio junto pode ser usado — numa mensagem do dono, o nome que vem é
+        // o do perfil DA LOJA.
+        const doRestaurante =
+          uaz?.fromMe === true || corpo.from_me === true || corpo.fromMe === true;
 
         const telefone = String(uaz?.telefone ?? corpo.phone ?? corpo.phone_e164 ?? "").replace(
           /[^0-9]/g,
@@ -86,7 +93,10 @@ export const Route = createFileRoute("/api/crm/inbox")({
           p_tenant_id: loja.tenantId,
           p_phone_e164: telefone,
           p_body: texto === null ? null : String(texto),
-          p_contact_name: uaz?.nome ?? (corpo.name ? String(corpo.name) : null),
+          p_contact_name: doRestaurante
+            ? null
+            : (uaz?.nome ?? (corpo.name ? String(corpo.name) : null)),
+          p_from_me: doRestaurante,
           p_external_id: uaz?.externalId ?? (corpo.external_id ? String(corpo.external_id) : null),
           p_media_url: uaz?.mediaUrl ?? (corpo.media_url ? String(corpo.media_url) : null),
           p_media_type: uaz?.mediaType ?? (corpo.media_type ? String(corpo.media_type) : null),

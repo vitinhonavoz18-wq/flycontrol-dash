@@ -8,22 +8,39 @@
  * para ele errar — e, como há um fluxo por loja, um erro desses teria de ser
  * corrigido loja por loja, uma por uma.
  *
- * DUAS COISAS SÃO JOGADAS FORA DE PROPÓSITO:
+ * ONDE ESTÁ O NOME DO CLIENTE (e onde NÃO está)
  *
- *   - o que o PRÓPRIO RESTAURANTE enviou (`fromMe`). Sem esse filtro, a
- *     resposta que o atendente acabou de mandar voltaria para a tela como se
- *     o cliente tivesse falado, e a conversa viraria um eco;
- *   - mensagem de GRUPO, porque CRM de atendimento não é grupo da família.
+ * Este foi um erro caro. O evento traz vários campos com cara de nome, e
+ * quase todos são armadilha:
  *
- * O mesmo filtro também é pedido à UAZAPI na hora de configurar o aviso
- * (`excludeMessages`). Estar nos dois lugares é intencional: se alguém
- * reconfigurar o aparelho por fora e esquecer o filtro de lá, este aqui
- * continua segurando. Duas redes debaixo do trapezista.
+ *   chat.lead_fullName / chat.lead_name .. o nome que alguém cadastrou. Vale.
+ *   chat.name / chat.wa_name ............. como o cliente aparece na agenda
+ *                                          do aparelho. Vale.
+ *   chat.wa_contactName .................. costuma vir VAZIO.
+ *   message.senderName ................... quem ASSINOU a mensagem. Só vale
+ *                                          quando quem falou foi o cliente.
+ *
+ * Numa mensagem que o próprio dono digitou no celular dele, `senderName` é o
+ * nome do perfil DA LOJA. O fluxo lia "wa_contactName, e se estiver vazio usa
+ * senderName" — e foi exatamente assim que três clientes diferentes foram
+ * gravados com o nome da loja. Como o nome só era gravado na primeira
+ * mensagem e nunca mais, ficou errado para sempre.
+ *
+ * O QUE O PRÓPRIO RESTAURANTE ENVIOU NÃO É DESCARTADO — É VIRADO DO LADO CERTO
+ *
+ * Antes, `fromMe` era jogado fora. O efeito colateral: a resposta que o dono
+ * digitou no celular dele sumia do painel, e quem olhasse a conversa via o
+ * cliente perguntando e ninguém respondendo. Agora ela entra como mensagem da
+ * loja, do lado da loja. Jogar fora era a comanda sem a parte do garçom.
+ *
+ * Mensagem de GRUPO continua fora: CRM de atendimento não é grupo da família.
  */
 
 export type EventoTraduzido = {
-  /** Recebido e descartado de propósito (eco do próprio restaurante, grupo). */
+  /** Recebido e descartado de propósito (grupo, transmissão). */
   ignorar?: boolean;
+  /** Digitada pelo próprio restaurante — entra como mensagem da loja. */
+  fromMe?: boolean;
   telefone?: string;
   texto?: string | null;
   nome?: string | null;
@@ -32,37 +49,83 @@ export type EventoTraduzido = {
   mediaType?: string | null;
 };
 
+function textoUtil(v: unknown): string | null {
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
+/**
+ * O nome do cliente, na ordem de quem merece mais confiança.
+ *
+ * `senderName` entra por último E só quando quem falou foi o cliente.
+ */
+export function nomeDoCliente(
+  chat: Record<string, unknown> | null,
+  mensagem: Record<string, unknown>,
+  fromMe: boolean,
+): string | null {
+  const c = chat ?? {};
+  return (
+    textoUtil(c.lead_fullName) ??
+    textoUtil(c.lead_name) ??
+    textoUtil(c.name) ??
+    textoUtil(c.wa_name) ??
+    textoUtil(c.wa_contactName) ??
+    (fromMe ? null : textoUtil(mensagem.senderName))
+  );
+}
+
+/** Só os dígitos de um endereço tipo `557199999999@s.whatsapp.net`. */
+function soDigitos(valor: unknown): string {
+  return String(valor ?? "")
+    .split("@")[0]
+    .replace(/[^0-9]/g, "");
+}
+
 /**
  * Devolve `null` quando NÃO é um evento da UAZAPI — aí valem os campos
  * simples (`phone`, `message`), para um fluxo que prefira montar tudo na mão.
  */
 export function extrairDaUazapi(corpo: Record<string, unknown>): EventoTraduzido | null {
-  const dados = corpo.data ?? corpo.message ?? null;
-  if (!dados || typeof dados !== "object") return null;
+  const bruto = corpo.data ?? corpo.message ?? null;
+  if (!bruto || typeof bruto !== "object") return null;
 
-  const m = (Array.isArray(dados) ? dados[0] : dados) as Record<string, unknown> | undefined;
+  const m = (Array.isArray(bruto) ? bruto[0] : bruto) as Record<string, unknown> | undefined;
   if (!m || typeof m !== "object") return null;
 
   // Sem nenhum destes campos, não é o formato da UAZAPI.
   if (!("chatid" in m) && !("messageid" in m) && !("sender" in m)) return null;
 
-  if (m.fromMe === true || m.isGroup === true) return { ignorar: true };
+  const chat =
+    corpo.chat && typeof corpo.chat === "object" && !Array.isArray(corpo.chat)
+      ? (corpo.chat as Record<string, unknown>)
+      : null;
 
-  const de = String(m.sender ?? m.chatid ?? "");
-  // Grupo e canal de transmissão nunca viram conversa de atendimento.
-  if (de.includes("@g.us") || de.includes("@newsletter") || de.includes("@broadcast")) {
+  if (m.isGroup === true) return { ignorar: true };
+
+  const fromMe = m.fromMe === true;
+
+  // O TELEFONE É SEMPRE O DO CLIENTE, mesmo quando quem falou foi a loja.
+  // Numa mensagem do dono, `sender` é o dono — usar esse número abriria uma
+  // conversa da loja com ela mesma. Quem identifica o cliente é o `chatid`.
+  const endereco = String(m.chatid ?? (fromMe ? "" : (m.sender ?? "")) ?? "");
+  if (
+    endereco.includes("@g.us") ||
+    endereco.includes("@newsletter") ||
+    endereco.includes("@broadcast")
+  ) {
     return { ignorar: true };
   }
 
-  const telefone = de.split("@")[0]?.replace(/[^0-9]/g, "") ?? "";
+  const telefone = soDigitos(endereco) || soDigitos(chat?.wa_chatid);
   const tipo = String(m.messageType ?? "").toLowerCase();
 
   return {
+    fromMe,
     telefone,
-    texto: typeof m.text === "string" && m.text !== "" ? m.text : null,
-    nome: typeof m.senderName === "string" && m.senderName.trim() ? m.senderName.trim() : null,
-    externalId: typeof m.messageid === "string" && m.messageid ? m.messageid : null,
-    mediaUrl: typeof m.fileURL === "string" && m.fileURL ? m.fileURL : null,
+    texto: textoUtil(m.text) ?? textoUtil(m.content),
+    nome: nomeDoCliente(chat, m, fromMe),
+    externalId: textoUtil(m.messageid),
+    mediaUrl: textoUtil(m.fileURL),
     mediaType: tipo || null,
   };
 }

@@ -8,6 +8,8 @@ import {
   Clock,
   Bot,
   Paperclip,
+  Pencil,
+  ShoppingBag,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -77,6 +79,7 @@ const ESTILO_BALAO: Record<Autoria, string> = {
   voce: "bg-primary text-primary-foreground",
   equipe: "bg-slate-700 text-white dark:bg-slate-600",
   ia: "bg-sky-600 text-white dark:bg-sky-600",
+  celular: "bg-slate-700 text-white dark:bg-slate-600",
 };
 
 const ESTILO_AVATAR: Record<Autoria, string> = {
@@ -84,6 +87,7 @@ const ESTILO_AVATAR: Record<Autoria, string> = {
   voce: "bg-primary text-primary-foreground",
   equipe: "bg-slate-700 text-white dark:bg-slate-600",
   ia: "bg-sky-600 text-white",
+  celular: "bg-slate-700 text-white dark:bg-slate-600",
 };
 
 const ESTILO_PONTO: Record<Autoria, string> = {
@@ -91,6 +95,7 @@ const ESTILO_PONTO: Record<Autoria, string> = {
   voce: "bg-primary",
   equipe: "bg-slate-700 dark:bg-slate-400",
   ia: "bg-sky-600",
+  celular: "bg-slate-700 dark:bg-slate-400",
 };
 
 function MarcaDeEnvio({ status, erro }: { status: string; erro: string | null }) {
@@ -147,6 +152,7 @@ export function JanelaConversa({
   meuUserId,
   onEnviar,
   onMudarStatus,
+  onCorrigirNome,
 }: {
   conversa: ConversaCrm | null;
   mensagens: MensagemCrm[];
@@ -155,6 +161,7 @@ export function JanelaConversa({
   meuUserId: string | null;
   onEnviar: (texto: string) => Promise<void>;
   onMudarStatus: (status: "open" | "pending" | "closed") => void;
+  onCorrigirNome: () => void;
 }) {
   const [texto, setTexto] = useState("");
   const fim = useRef<HTMLDivElement | null>(null);
@@ -202,6 +209,14 @@ export function JanelaConversa({
   const nome = conversa.contato?.name?.trim();
   const telefone = conversa.contato?.phone_e164 ?? "";
   const titulo = nome || formatPhoneForDisplay(telefone) || "Sem nome";
+  const pedidos = conversa.contato?.orders_count ?? 0;
+  const gasto = conversa.contato?.total_spent_cents ?? 0;
+  // Dinheiro é guardado em centavos inteiros; a divisão acontece só aqui, na
+  // hora de mostrar.
+  const gasto_formatado = (gasto / 100).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
 
   async function enviar() {
     const limpo = texto.trim();
@@ -230,9 +245,37 @@ export function JanelaConversa({
               {titulo.charAt(0).toUpperCase()}
             </span>
             <div className="min-w-0">
-              <p className="truncate text-sm font-bold leading-tight text-foreground">{titulo}</p>
-              <p className="truncate text-xs font-medium text-muted-foreground">
-                {formatPhoneForDisplay(telefone)}
+              {/* O nome é um botão. O WhatsApp nem sempre manda o nome certo, e
+                  quem percebe o erro está olhando exatamente para ele — ter de
+                  caçar a correção em outra tela é o que faz ninguém corrigir. */}
+              <button
+                type="button"
+                onClick={onCorrigirNome}
+                className="group flex min-w-0 items-center gap-1.5 text-left"
+                title="Corrigir o nome deste cliente"
+              >
+                <span className="truncate text-sm font-bold leading-tight text-foreground group-hover:underline">
+                  {titulo}
+                </span>
+                <Pencil
+                  className="h-3.5 w-3.5 shrink-0 text-muted-foreground group-hover:text-foreground"
+                  aria-hidden="true"
+                />
+              </button>
+              <p className="flex flex-wrap items-center gap-x-2 text-xs font-medium text-muted-foreground">
+                <span className="truncate">{formatPhoneForDisplay(telefone)}</span>
+                {/* A ficha é a mesma do Marketing: atender sabendo que do outro
+                    lado está quem já comprou 14 vezes é diferente de atender às
+                    cegas. */}
+                {pedidos > 0 && (
+                  <span className="flex items-center gap-1 font-semibold text-foreground">
+                    <ShoppingBag className="h-3.5 w-3.5" aria-hidden="true" />
+                    {pedidos === 1 ? "1 pedido" : `${pedidos} pedidos`}
+                    {gasto > 0 && (
+                      <span className="text-muted-foreground">· {gasto_formatado}</span>
+                    )}
+                  </span>
+                )}
               </p>
             </div>
           </div>

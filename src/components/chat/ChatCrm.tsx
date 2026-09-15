@@ -21,6 +21,7 @@ import {
   marcarComoLida,
   alterarStatusConversa,
   iniciarConversa,
+  renomearContato,
   statusDaIntegracao,
   type ConversaCrm,
   type MensagemCrm,
@@ -58,6 +59,7 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   const mudarStatus = useServerFn(alterarStatusConversa);
   const criarConversa = useServerFn(iniciarConversa);
   const buscarStatus = useServerFn(statusDaIntegracao);
+  const renomear = useServerFn(renomearContato);
 
   const [conversas, setConversas] = useState<ConversaCrm[]>([]);
   const [mensagens, setMensagens] = useState<MensagemCrm[]>([]);
@@ -73,6 +75,9 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   const [novoTelefone, setNovoTelefone] = useState("");
   const [novoNome, setNovoNome] = useState("");
   const [criando, setCriando] = useState(false);
+  const [nomeAberto, setNomeAberto] = useState(false);
+  const [nomeEditado, setNomeEditado] = useState("");
+  const [salvandoNome, setSalvandoNome] = useState(false);
 
   // A conversa aberta agora, guardada fora do estado da tela: os avisos do
   // banco em tempo real chegam de fora do React e precisam saber qual
@@ -230,6 +235,35 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
     }
   }
 
+  function abrirCorrecaoDeNome() {
+    setNomeEditado(conversaAberta?.contato?.name ?? "");
+    setNomeAberto(true);
+  }
+
+  async function aoSalvarNome() {
+    const customerId = conversaAberta?.contato?.id;
+    if (!customerId) return;
+    setSalvandoNome(true);
+    try {
+      const r = await renomear({
+        data: { tenantId, customerId, nome: nomeEditado },
+      });
+      // A ficha é a mesma do Marketing, então a tela inteira passa a mostrar o
+      // nome novo sem precisar recarregar nada do servidor.
+      setConversas((atual) =>
+        atual.map((c) =>
+          c.contato?.id === customerId ? { ...c, contato: { ...c.contato, name: r.nome } } : c,
+        ),
+      );
+      setNomeAberto(false);
+      toast.success(r.nome ? "Nome corrigido." : "Nome apagado.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível salvar o nome.");
+    } finally {
+      setSalvandoNome(false);
+    }
+  }
+
   async function aoCriarConversa() {
     setCriando(true);
     try {
@@ -295,10 +329,47 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
               enviando={enviando}
               onEnviar={aoEnviar}
               onMudarStatus={aoMudarStatus}
+              onCorrigirNome={abrirCorrecaoDeNome}
             />
           </div>
         </div>
       </div>
+
+      <Dialog open={nomeAberto} onOpenChange={setNomeAberto}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nome do cliente</DialogTitle>
+            <DialogDescription>
+              O WhatsApp nem sempre manda o nome certo. O que você escrever aqui passa a valer, e o
+              WhatsApp não sobrescreve mais. É o mesmo cadastro que o Marketing usa: corrigir aqui
+              corrige lá também. Deixe em branco para voltar a usar o nome do WhatsApp.
+            </DialogDescription>
+          </DialogHeader>
+          <Input
+            value={nomeEditado}
+            onChange={(e) => setNomeEditado(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                void aoSalvarNome();
+              }
+            }}
+            placeholder="Nome do cliente"
+            maxLength={120}
+            aria-label="Nome do cliente"
+            autoFocus
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setNomeAberto(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={() => void aoSalvarNome()} disabled={salvandoNome}>
+              {salvandoNome && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={novaAberta} onOpenChange={setNovaAberta}>
         <DialogContent>

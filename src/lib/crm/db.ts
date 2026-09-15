@@ -19,7 +19,11 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 export type TabelaCrm =
   | "company_addons"
   | "crm_n8n_links"
-  | "crm_contacts"
+  // A ficha do cliente é UMA só: a mesma tabela que o Marketing usa. Quem
+  // conversou pelo WhatsApp e quem pediu pelo site são a mesma pessoa, e
+  // manter duas fichas era descobrir no fim do mês que o "Seu João" do
+  // delivery e o do balcão eram o mesmo Seu João.
+  | "marketing_customers"
   | "crm_conversations"
   | "crm_messages"
   // O cofre do token do aparelho de WhatsApp. Fica nesta lista porque a fila

@@ -77,7 +77,7 @@ export const Route = createFileRoute("/api/crm/reply")({
         // A conversa TEM de existir: quem responde está respondendo a alguém.
         // Se não existe, é sinal de que a mensagem do cliente não foi
         // registrada antes — e responder assim mesmo esconderia esse defeito.
-        const { data: contato } = await crm("crm_contacts")
+        const { data: contato } = await crm("marketing_customers")
           .select("id")
           .eq("tenant_id", loja.tenantId)
           .eq("phone_e164", telefone)
@@ -96,7 +96,7 @@ export const Route = createFileRoute("/api/crm/reply")({
         const { data: conversa } = await crm("crm_conversations")
           .select("id")
           .eq("tenant_id", loja.tenantId)
-          .eq("contact_id", contato.id)
+          .eq("customer_id", contato.id)
           .maybeSingle();
 
         if (!conversa) {
@@ -121,6 +121,7 @@ export const Route = createFileRoute("/api/crm/reply")({
             // fluxo, agora. Deixá-la na fila faria a busca de minuto em minuto
             // pegá-la também, e o cliente receberia duas vezes.
             status: "sending",
+            origin: "ia",
             lease_worker: "ia",
             lease_until: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
           })

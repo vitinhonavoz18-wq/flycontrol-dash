@@ -11,9 +11,23 @@ describe("quem falou na conversa", () => {
     expect(quemFalou({ direction: "in", sent_by: EU }, EU)).toBe("cliente");
   });
 
-  it("resposta sem assinatura é da IA", () => {
+  it("resposta sem assinatura e sem carimbo é da IA (mensagens antigas)", () => {
     expect(quemFalou({ direction: "out", sent_by: null }, EU)).toBe("ia");
     expect(quemFalou({ direction: "out" }, EU)).toBe("ia");
+  });
+
+  it("o carimbo manda: resposta digitada no celular do dono não vira IA", () => {
+    // Esta é a que doía: a IA seria anunciada ao lojista como autora de uma
+    // frase que ele mesmo digitou.
+    expect(quemFalou({ direction: "out", sent_by: null, origin: "celular" }, EU)).toBe("celular");
+  });
+
+  it("o carimbo da IA vale mesmo com assinatura, se um dia houver", () => {
+    expect(quemFalou({ direction: "out", sent_by: EU, origin: "ia" }, EU)).toBe("ia");
+  });
+
+  it("carimbo do painel sem assinatura é gente da loja, não a IA", () => {
+    expect(quemFalou({ direction: "out", sent_by: null, origin: "painel" }, EU)).toBe("equipe");
   });
 
   it("resposta assinada por mim sou eu", () => {
@@ -33,6 +47,7 @@ describe("quem falou na conversa", () => {
     expect(ladoDireito("voce")).toBe(true);
     expect(ladoDireito("equipe")).toBe(true);
     expect(ladoDireito("ia")).toBe(true);
+    expect(ladoDireito("celular")).toBe(true);
   });
 
   it("os quatro têm nomes diferentes na tela", () => {
