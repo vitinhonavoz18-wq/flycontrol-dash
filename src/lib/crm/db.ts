@@ -26,8 +26,6 @@ export type TabelaCrm =
   | "marketing_customers"
   | "crm_conversations"
   | "crm_messages"
-  // O rascunho de pedido que a IA monta e o lojista confirma.
-  | "crm_order_drafts"
   // As taxas de entrega por bairro, que a IA consulta antes de prometer preço.
   | "delivery_zones"
   // O pedido de verdade, criado quando o lojista confirma o rascunho.

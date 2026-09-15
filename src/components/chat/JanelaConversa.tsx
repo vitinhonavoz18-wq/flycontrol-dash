@@ -28,8 +28,8 @@ import {
   INICIAL_AUTORIA,
   type Autoria,
 } from "@/lib/crm/autoria";
-import type { ConversaCrm, MensagemCrm, RascunhoPedido } from "@/lib/crm/crm.functions";
-import { CartaoRascunho } from "./CartaoRascunho";
+import type { ConversaCrm, MensagemCrm, PedidoDoChat } from "@/lib/crm/crm.functions";
+import { CartaoPedido } from "./CartaoPedido";
 
 /**
  * A coluna da direita: a conversa aberta.
@@ -154,8 +154,8 @@ export function JanelaConversa({
   onEnviar,
   onMudarStatus,
   onCorrigirNome,
-  rascunho,
-  onDecidirRascunho,
+  pedido,
+  onCancelarPedido,
 }: {
   conversa: ConversaCrm | null;
   mensagens: MensagemCrm[];
@@ -165,8 +165,8 @@ export function JanelaConversa({
   onEnviar: (texto: string) => Promise<void>;
   onMudarStatus: (status: "open" | "pending" | "closed") => void;
   onCorrigirNome: () => void;
-  rascunho: RascunhoPedido | null;
-  onDecidirRascunho: (decisao: "confirmar" | "recusar") => Promise<void>;
+  pedido: PedidoDoChat | null;
+  onCancelarPedido: () => Promise<void>;
 }) {
   const [texto, setTexto] = useState("");
   const fim = useRef<HTMLDivElement | null>(null);
@@ -427,7 +427,7 @@ export function JanelaConversa({
         <div ref={fim} />
       </div>
 
-      {rascunho && <CartaoRascunho rascunho={rascunho} onDecidir={onDecidirRascunho} />}
+      {pedido && <CartaoPedido pedido={pedido} onCancelar={onCancelarPedido} />}
 
       {/* ------- CAIXA DE ESCREVER: colada embaixo, nunca rola ------- */}
       <div className="shrink-0 border-t-2 border-border bg-card p-3">

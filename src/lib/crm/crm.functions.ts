@@ -3,6 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { crm, crmRpc } from "./db";
 import { assertOwnsTenantWithAddon } from "@/lib/server/plan-guard";
 import { normalizePhone } from "@/lib/marketing/phone";
+import { podeSerAlteradoPelaIa } from "./pedidoStatus";
 
 /* As tabelas do CRM ainda não constam do arquivo de tipos gerado (ver
    `db.ts`), então as linhas chegam sem tipo. Depois de regerar os tipos,
@@ -423,164 +424,124 @@ export const renomearContato = createServerFn({ method: "POST" })
   });
 
 /**
- * O PEDIDO QUE A IA MONTOU, ESPERANDO O DONO.
+ * O PEDIDO QUE A IA FEZ, dentro da conversa.
  *
- * Ele não vai para a cozinha sozinho. Fica na conversa com um botão, e só
- * vira pedido de verdade quando alguém da loja confirma. É a comanda que o
- * garçom repete em voz alta antes de passar para a chapa: se a IA entendeu
- * "sem cebola" como "com cebola", o erro morre aqui e não no prato.
+ * O pedido entra direto na lista de Pedidos — sem ninguém confirmar. Mas o
+ * lojista continua vendo, ali na conversa, o que foi vendido e em que pé está:
+ * é a comanda pregada ao lado do telefone, não guardada numa gaveta em outra
+ * sala.
+ *
+ * E tem o botão de cancelar. Como não existe mais a conferência antes, o
+ * cancelamento é a rede: percebeu que a IA entendeu errado, um clique desfaz
+ * — enquanto a cozinha não começou.
  */
-export type RascunhoPedido = {
+export type PedidoDoChat = {
   id: string;
-  itens: Array<{
-    nome: string;
-    quantidade: number;
-    preco_unitario_cents: number;
-    total_cents: number;
-    observacao: string | null;
-    menu_product_id: string;
-  }>;
-  subtotal_cents: number;
-  taxa_entrega_cents: number;
-  total_cents: number;
-  endereco: string | null;
-  bairro: string | null;
-  forma_pagamento: string | null;
-  observacoes: string | null;
-  nao_encontrados: string[];
-  status: "aguardando" | "confirmado" | "recusado" | "cancelado";
-  order_id: string | null;
+  numero: number | null;
+  status: string;
+  total: number;
+  delivery_fee: number;
+  customer_address: string | null;
+  neighborhood: string | null;
+  payment_method: string | null;
+  notes: string | null;
   created_at: string;
+  items: Array<{
+    name?: string;
+    quantity?: number;
+    unit_price?: number;
+    total_price?: number;
+    notes?: string;
+  }>;
 };
 
-const CAMPOS_RASCUNHO =
-  "id, itens, subtotal_cents, taxa_entrega_cents, total_cents, endereco, bairro, " +
-  "forma_pagamento, observacoes, nao_encontrados, status, order_id, created_at";
+const CAMPOS_PEDIDO =
+  "id, order_number, status, total, delivery_fee, customer_address, neighborhood, " +
+  "payment_method, notes, created_at, items";
 
-/** O rascunho que está esperando decisão nesta conversa (se houver). */
-export const rascunhoDaConversa = createServerFn({ method: "POST" })
+/** O último pedido que o Chat gerou para o cliente desta conversa. */
+export const pedidoDaConversa = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: { tenantId: string; conversationId: string }) => d)
   .handler(async ({ data, context }) => {
     const { tenantId } = await porteiro(context, data.tenantId);
     if (!data.conversationId) throw new Error("Conversa não informada.");
 
-    const { data: linha, error } = await crm("crm_order_drafts")
-      .select(CAMPOS_RASCUNHO)
+    const { data: conversa, error: erroConversa } = await crm("crm_conversations")
+      .select("customer_id")
       .eq("tenant_id", tenantId)
-      .eq("conversation_id", data.conversationId)
-      .eq("status", "aguardando")
+      .eq("id", data.conversationId)
+      .maybeSingle();
+
+    if (erroConversa) throw new Error(erroConversa.message);
+    if (!conversa) return { pedido: null };
+
+    const { data: linha, error } = await crm("orders")
+      .select(CAMPOS_PEDIDO)
+      .eq("tenant_id", tenantId)
+      .eq("customer_id", conversa.customer_id)
+      .eq("source", "chat-ia")
+      .neq("status", "deleted")
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) throw new Error(error.message);
-    return { rascunho: (linha ?? null) as RascunhoPedido | null };
-  });
-
-/** Centavos inteiros viram reais só aqui, na fronteira com a tabela de pedidos. */
-function reais(cents: number): number {
-  return Math.round(Number(cents) || 0) / 100;
-}
-
-/**
- * O lojista decide: vira pedido de verdade, ou não vira.
- *
- * CONFIRMAR CRIA O PEDIDO NO MESMO LUGAR QUE O SITE. Não existe uma lista
- * separada de "pedidos do WhatsApp" — seria o segundo caderno de comandas que
- * ninguém lembra de conferir. Entra na mesma tela, com a etiqueta de origem.
- *
- * O TOTAL É RECALCULADO AQUI. Mesmo que alguém tenha mexido na linha do
- * rascunho no meio do caminho, a conta que vale é a soma dos itens gravados.
- */
-export const decidirRascunho = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator(
-    (d: { tenantId: string; rascunhoId: string; decisao: "confirmar" | "recusar" }) => d,
-  )
-  .handler(async ({ data, context }) => {
-    const { tenantId } = await porteiro(context, data.tenantId);
-    if (!data.rascunhoId) throw new Error("Pedido não informado.");
-
-    const { data: rascunho, error } = await crm("crm_order_drafts")
-      .select(CAMPOS_RASCUNHO + ", customer_id, conversation_id")
-      .eq("tenant_id", tenantId)
-      .eq("id", data.rascunhoId)
-      .maybeSingle();
-
-    if (error) throw new Error(error.message);
-    if (!rascunho) throw new Error("Pedido não encontrado nesta loja.");
-    if (rascunho.status !== "aguardando") {
-      throw new Error("Este pedido já foi decidido.");
-    }
-
-    if (data.decisao === "recusar") {
-      const { error: e } = await crm("crm_order_drafts")
-        .update({
-          status: "recusado",
-          decidido_por: context.userId,
-          decidido_em: new Date().toISOString(),
-        })
-        .eq("id", rascunho.id);
-      if (e) throw new Error(e.message);
-      return { status: "recusado" as const, orderId: null };
-    }
-
-    const { data: cliente } = await crm("marketing_customers")
-      .select("name, phone_e164")
-      .eq("id", rascunho.customer_id)
-      .maybeSingle();
-
-    const itens = (rascunho.itens ?? []) as RascunhoPedido["itens"];
-    const subtotalCents = itens.reduce((t: number, i) => t + Number(i.total_cents || 0), 0);
-    const taxaCents = Number(rascunho.taxa_entrega_cents || 0);
-
-    const { data: pedido, error: erroPedido } = await crm("orders")
-      .insert({
-        tenant_id: tenantId,
-        customer_name: cliente?.name || "Cliente do WhatsApp",
-        customer_phone: cliente?.phone_e164 ?? null,
-        customer_address: rascunho.endereco || "Não informado",
-        neighborhood: rascunho.bairro ?? null,
-        subtotal: reais(subtotalCents),
-        delivery_fee: reais(taxaCents),
-        total: reais(subtotalCents + taxaCents),
-        payment_method: rascunho.forma_pagamento || "Não informado",
-        notes: rascunho.observacoes || "",
-        status: "novo",
-        order_type: "delivery",
-        delivery_type: "delivery",
-        service_mode: "delivery",
-        // A etiqueta de origem é o que permite, depois, saber quanto o Chat
-        // vendeu — e conferir se a IA está acertando ou dando prejuízo.
-        source: "chat-ia",
-        customer_id: rascunho.customer_id,
-        items: itens.map((i) => ({
-          name: i.nome,
-          type: "other",
-          notes: i.observacao ?? "",
-          quantity: i.quantidade,
-          unit_price: reais(i.preco_unitario_cents),
-          total_price: reais(i.total_cents),
-          menu_product_id: i.menu_product_id,
-        })),
-      })
-      .select("id, order_number")
-      .single();
-
-    if (erroPedido) throw new Error(erroPedido.message);
-
-    const { error: erroFecha } = await crm("crm_order_drafts")
-      .update({
-        status: "confirmado",
-        order_id: pedido.id,
-        decidido_por: context.userId,
-        decidido_em: new Date().toISOString(),
-      })
-      .eq("id", rascunho.id);
-    if (erroFecha) throw new Error(erroFecha.message);
+    if (!linha) return { pedido: null };
 
     return {
-      status: "confirmado" as const,
-      orderId: pedido.id as string,
-      numero: pedido.order_number as number | null,
+      pedido: {
+        id: linha.id,
+        numero: linha.order_number ?? null,
+        status: String(linha.status ?? ""),
+        total: Number(linha.total ?? 0),
+        delivery_fee: Number(linha.delivery_fee ?? 0),
+        customer_address: linha.customer_address ?? null,
+        neighborhood: linha.neighborhood ?? null,
+        payment_method: linha.payment_method ?? null,
+        notes: linha.notes ?? null,
+        created_at: String(linha.created_at),
+        items: Array.isArray(linha.items) ? linha.items : [],
+      } as PedidoDoChat,
     };
+  });
+
+/**
+ * Cancelar o pedido que a IA fez.
+ *
+ * SÓ ENQUANTO A COZINHA NÃO COMEÇOU. Depois de "em preparo" o cancelamento
+ * deixa de ser um clique e vira uma conversa com a cozinha — e cancelar na
+ * tela sem avisar ninguém faria a comida sair mesmo assim, sem pedido para
+ * cobrar.
+ */
+export const cancelarPedidoDoChat = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { tenantId: string; pedidoId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { tenantId } = await porteiro(context, data.tenantId);
+    if (!data.pedidoId) throw new Error("Pedido não informado.");
+
+    const { data: pedido, error } = await crm("orders")
+      .select("id, status, order_number")
+      .eq("tenant_id", tenantId)
+      .eq("id", data.pedidoId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!pedido) throw new Error("Pedido não encontrado nesta loja.");
+
+    if (!podeSerAlteradoPelaIa(pedido.status)) {
+      throw new Error(
+        "Este pedido já entrou em preparo. Cancele pela tela de Pedidos, avisando a cozinha.",
+      );
+    }
+
+    const { error: erroCancela } = await crm("orders")
+      .update({ status: "cancelado", updated_at: new Date().toISOString() })
+      .eq("id", pedido.id)
+      .eq("tenant_id", tenantId);
+
+    if (erroCancela) throw new Error(erroCancela.message);
+
+    return { numero: (pedido.order_number as number) ?? null };
   });

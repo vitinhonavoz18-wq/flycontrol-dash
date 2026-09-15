@@ -64,7 +64,8 @@ import { Route as ApiCrmCatalogRouteImport } from './routes/api/crm.catalog'
 import { Route as ApiCrmCustomerRouteImport } from './routes/api/crm.customer'
 import { Route as ApiCrmDeliveryFeeRouteImport } from './routes/api/crm.delivery-fee'
 import { Route as ApiCrmInboxRouteImport } from './routes/api/crm.inbox'
-import { Route as ApiCrmOrderDraftRouteImport } from './routes/api/crm.order-draft'
+import { Route as ApiCrmOrderRouteImport } from './routes/api/crm.order'
+import { Route as ApiCrmOrderStatusRouteImport } from './routes/api/crm.order-status'
 import { Route as ApiCrmOutboxRouteImport } from './routes/api/crm.outbox'
 import { Route as ApiCrmPingRouteImport } from './routes/api/crm.ping'
 import { Route as ApiCrmProductsRouteImport } from './routes/api/crm.products'
@@ -362,9 +363,14 @@ const ApiCrmInboxRoute = ApiCrmInboxRouteImport.update({
   path: '/api/crm/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
-const ApiCrmOrderDraftRoute = ApiCrmOrderDraftRouteImport.update({
-  id: '/api/crm/order-draft',
-  path: '/api/crm/order-draft',
+const ApiCrmOrderRoute = ApiCrmOrderRouteImport.update({
+  id: '/api/crm/order',
+  path: '/api/crm/order',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCrmOrderStatusRoute = ApiCrmOrderStatusRouteImport.update({
+  id: '/api/crm/order-status',
+  path: '/api/crm/order-status',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCrmOutboxRoute = ApiCrmOutboxRouteImport.update({
@@ -537,7 +543,8 @@ export interface FileRoutesByFullPath {
   '/api/crm/customer': typeof ApiCrmCustomerRoute
   '/api/crm/delivery-fee': typeof ApiCrmDeliveryFeeRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
-  '/api/crm/order-draft': typeof ApiCrmOrderDraftRoute
+  '/api/crm/order': typeof ApiCrmOrderRoute
+  '/api/crm/order-status': typeof ApiCrmOrderStatusRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
   '/api/crm/products': typeof ApiCrmProductsRoute
@@ -614,7 +621,8 @@ export interface FileRoutesByTo {
   '/api/crm/customer': typeof ApiCrmCustomerRoute
   '/api/crm/delivery-fee': typeof ApiCrmDeliveryFeeRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
-  '/api/crm/order-draft': typeof ApiCrmOrderDraftRoute
+  '/api/crm/order': typeof ApiCrmOrderRoute
+  '/api/crm/order-status': typeof ApiCrmOrderStatusRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
   '/api/crm/products': typeof ApiCrmProductsRoute
@@ -695,7 +703,8 @@ export interface FileRoutesById {
   '/api/crm/customer': typeof ApiCrmCustomerRoute
   '/api/crm/delivery-fee': typeof ApiCrmDeliveryFeeRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
-  '/api/crm/order-draft': typeof ApiCrmOrderDraftRoute
+  '/api/crm/order': typeof ApiCrmOrderRoute
+  '/api/crm/order-status': typeof ApiCrmOrderStatusRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
   '/api/crm/products': typeof ApiCrmProductsRoute
@@ -776,7 +785,8 @@ export interface FileRouteTypes {
     | '/api/crm/customer'
     | '/api/crm/delivery-fee'
     | '/api/crm/inbox'
-    | '/api/crm/order-draft'
+    | '/api/crm/order'
+    | '/api/crm/order-status'
     | '/api/crm/outbox'
     | '/api/crm/ping'
     | '/api/crm/products'
@@ -853,7 +863,8 @@ export interface FileRouteTypes {
     | '/api/crm/customer'
     | '/api/crm/delivery-fee'
     | '/api/crm/inbox'
-    | '/api/crm/order-draft'
+    | '/api/crm/order'
+    | '/api/crm/order-status'
     | '/api/crm/outbox'
     | '/api/crm/ping'
     | '/api/crm/products'
@@ -933,7 +944,8 @@ export interface FileRouteTypes {
     | '/api/crm/customer'
     | '/api/crm/delivery-fee'
     | '/api/crm/inbox'
-    | '/api/crm/order-draft'
+    | '/api/crm/order'
+    | '/api/crm/order-status'
     | '/api/crm/outbox'
     | '/api/crm/ping'
     | '/api/crm/products'
@@ -983,7 +995,8 @@ export interface RootRouteChildren {
   ApiCrmCustomerRoute: typeof ApiCrmCustomerRoute
   ApiCrmDeliveryFeeRoute: typeof ApiCrmDeliveryFeeRoute
   ApiCrmInboxRoute: typeof ApiCrmInboxRoute
-  ApiCrmOrderDraftRoute: typeof ApiCrmOrderDraftRoute
+  ApiCrmOrderRoute: typeof ApiCrmOrderRoute
+  ApiCrmOrderStatusRoute: typeof ApiCrmOrderStatusRoute
   ApiCrmOutboxRoute: typeof ApiCrmOutboxRouteWithChildren
   ApiCrmPingRoute: typeof ApiCrmPingRoute
   ApiCrmProductsRoute: typeof ApiCrmProductsRoute
@@ -1393,11 +1406,18 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCrmInboxRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/api/crm/order-draft': {
-      id: '/api/crm/order-draft'
-      path: '/api/crm/order-draft'
-      fullPath: '/api/crm/order-draft'
-      preLoaderRoute: typeof ApiCrmOrderDraftRouteImport
+    '/api/crm/order': {
+      id: '/api/crm/order'
+      path: '/api/crm/order'
+      fullPath: '/api/crm/order'
+      preLoaderRoute: typeof ApiCrmOrderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/crm/order-status': {
+      id: '/api/crm/order-status'
+      path: '/api/crm/order-status'
+      fullPath: '/api/crm/order-status'
+      preLoaderRoute: typeof ApiCrmOrderStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/crm/outbox': {
@@ -1697,7 +1717,8 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCrmCustomerRoute: ApiCrmCustomerRoute,
   ApiCrmDeliveryFeeRoute: ApiCrmDeliveryFeeRoute,
   ApiCrmInboxRoute: ApiCrmInboxRoute,
-  ApiCrmOrderDraftRoute: ApiCrmOrderDraftRoute,
+  ApiCrmOrderRoute: ApiCrmOrderRoute,
+  ApiCrmOrderStatusRoute: ApiCrmOrderStatusRoute,
   ApiCrmOutboxRoute: ApiCrmOutboxRouteWithChildren,
   ApiCrmPingRoute: ApiCrmPingRoute,
   ApiCrmProductsRoute: ApiCrmProductsRoute,

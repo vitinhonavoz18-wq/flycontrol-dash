@@ -22,12 +22,12 @@ import {
   alterarStatusConversa,
   iniciarConversa,
   renomearContato,
-  rascunhoDaConversa,
-  decidirRascunho,
+  pedidoDaConversa,
+  cancelarPedidoDoChat,
   statusDaIntegracao,
   type ConversaCrm,
   type MensagemCrm,
-  type RascunhoPedido,
+  type PedidoDoChat,
 } from "@/lib/crm/crm.functions";
 import { ListaConversas } from "./ListaConversas";
 import { JanelaConversa } from "./JanelaConversa";
@@ -63,8 +63,8 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   const criarConversa = useServerFn(iniciarConversa);
   const buscarStatus = useServerFn(statusDaIntegracao);
   const renomear = useServerFn(renomearContato);
-  const buscarRascunho = useServerFn(rascunhoDaConversa);
-  const decidir = useServerFn(decidirRascunho);
+  const buscarPedido = useServerFn(pedidoDaConversa);
+  const cancelarPedido = useServerFn(cancelarPedidoDoChat);
 
   const [conversas, setConversas] = useState<ConversaCrm[]>([]);
   const [mensagens, setMensagens] = useState<MensagemCrm[]>([]);
@@ -83,7 +83,7 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   const [nomeAberto, setNomeAberto] = useState(false);
   const [nomeEditado, setNomeEditado] = useState("");
   const [salvandoNome, setSalvandoNome] = useState(false);
-  const [rascunho, setRascunho] = useState<RascunhoPedido | null>(null);
+  const [pedido, setPedido] = useState<PedidoDoChat | null>(null);
 
   // A conversa aberta agora, guardada fora do estado da tela: os avisos do
   // banco em tempo real chegam de fora do React e precisam saber qual
@@ -140,28 +140,29 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
     void carregarConversas();
   }, [carregarConversas]);
 
-  // O pedido que a IA montou para ESTA conversa. Recarregado junto das
-  // mensagens e sempre que o banco avisar que algo mudou.
-  const carregarRascunho = useCallback(
+  // O pedido que a IA fez para ESTA conversa. Recarregado junto das mensagens
+  // e sempre que o banco avisar que a situação dele mudou — assim o lojista vê
+  // "em preparo" virar "saiu para entrega" sem apertar F5.
+  const carregarPedido = useCallback(
     async (conversationId: string) => {
       try {
-        const r = await buscarRascunho({ data: { tenantId, conversationId } });
-        setRascunho(r.rascunho);
+        const r = await buscarPedido({ data: { tenantId, conversationId } });
+        setPedido(r.pedido);
       } catch {
-        // Não conseguir ler o rascunho não pode derrubar a conversa: o
-        // atendimento continua, só o cartão de pedido não aparece.
+        // Não conseguir ler o pedido não pode derrubar a conversa: o
+        // atendimento continua, só o cartão não aparece.
       }
     },
-    [buscarRascunho, tenantId],
+    [buscarPedido, tenantId],
   );
 
   useEffect(() => {
     if (!selecionada) {
       setMensagens([]);
-      setRascunho(null);
+      setPedido(null);
       return;
     }
-    void carregarRascunho(selecionada);
+    void carregarPedido(selecionada);
     void carregarMensagens(selecionada);
     void marcarLida({ data: { tenantId, conversationId: selecionada } })
       .then(() =>
@@ -173,7 +174,7 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
         /* marcar como lida é conveniência: falhar aqui não atrapalha o
            atendimento e não vale um alerta na cara do lojista. */
       });
-  }, [selecionada, carregarMensagens, carregarRascunho, marcarLida, tenantId]);
+  }, [selecionada, carregarMensagens, carregarPedido, marcarLida, tenantId]);
 
   // Mensagem nova acende na tela sozinha. Sem isso o lojista teria de ficar
   // apertando F5 — e um cliente esperando resposta não espera F5.
@@ -198,21 +199,20 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
       )
       .subscribe();
 
+    // A tabela de pedidos é a MESMA do site. Ouvir aqui faz a situação mudar
+    // sozinha na conversa quando a cozinha mexe no pedido lá na tela dela.
     const canalPedidos = supabase
-      .channel(`crm-rascunhos-${tenantId}`)
+      .channel(`crm-pedidos-${tenantId}`)
       .on(
         "postgres_changes",
         {
           event: "*",
           schema: "public",
-          table: "crm_order_drafts",
+          table: "orders",
           filter: `tenant_id=eq.${tenantId}`,
         },
-        (payload) => {
-          const linha = (payload.new ?? payload.old ?? {}) as { conversation_id?: string };
-          if (linha.conversation_id && linha.conversation_id === selecionadaRef.current) {
-            void carregarRascunho(linha.conversation_id);
-          }
+        () => {
+          if (selecionadaRef.current) void carregarPedido(selecionadaRef.current);
         },
       )
       .subscribe();
@@ -221,7 +221,7 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
       supabase.removeChannel(canal);
       supabase.removeChannel(canalPedidos);
     };
-  }, [tenantId, carregarMensagens, carregarConversas, carregarRascunho]);
+  }, [tenantId, carregarMensagens, carregarConversas, carregarPedido]);
 
   // A saúde da conexão é conferida de minuto em minuto. É barato e é o que
   // permite avisar cedo que o WhatsApp caiu.
@@ -278,22 +278,17 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
     }
   }
 
-  async function aoDecidirRascunho(decisao: "confirmar" | "recusar") {
-    if (!rascunho) return;
+  async function aoCancelarPedido() {
+    if (!pedido) return;
     try {
-      const r = await decidir({ data: { tenantId, rascunhoId: rascunho.id, decisao } });
-      setRascunho(null);
-      if (r.status === "confirmado") {
-        toast.success(
-          r.numero ? `Pedido #${r.numero} criado.` : "Pedido criado e enviado para a cozinha.",
-        );
-      } else {
-        toast.success("Pedido descartado.");
-      }
+      const r = await cancelarPedido({ data: { tenantId, pedidoId: pedido.id } });
+      toast.success(r.numero ? `Pedido #${r.numero} cancelado.` : "Pedido cancelado.");
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : "Não foi possível decidir o pedido.");
-      // A decisão falhou: o cartão volta, para ninguém achar que resolveu.
-      if (selecionada) void carregarRascunho(selecionada);
+      toast.error(e instanceof Error ? e.message : "Não foi possível cancelar o pedido.");
+    } finally {
+      // Dando certo ou não, a tela volta a mostrar o que o banco diz — nunca o
+      // que a gente supôs que aconteceu.
+      if (selecionada) void carregarPedido(selecionada);
     }
   }
 
@@ -392,8 +387,8 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
               onEnviar={aoEnviar}
               onMudarStatus={aoMudarStatus}
               onCorrigirNome={abrirCorrecaoDeNome}
-              rascunho={rascunho}
-              onDecidirRascunho={aoDecidirRascunho}
+              pedido={pedido}
+              onCancelarPedido={aoCancelarPedido}
             />
           </div>
         </div>
