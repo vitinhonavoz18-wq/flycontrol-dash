@@ -111,6 +111,12 @@ export const listarConversas = createServerFn({ method: "POST" })
 export type MensagemCrm = {
   id: string;
   direction: "in" | "out";
+  /**
+   * Quem digitou, quando foi gente da loja. Vazio significa que foi a IA — ela
+   * responde pelo fluxo, sem entrar no painel, então não deixa assinatura.
+   * É o que permite a tela separar "você", "sua equipe" e "a IA".
+   */
+  sent_by: string | null;
   body: string | null;
   media_url: string | null;
   media_type: string | null;
@@ -136,7 +142,9 @@ export const listarMensagens = createServerFn({ method: "POST" })
     const limite = Math.min(Math.max(data.limite ?? 100, 1), 300);
 
     const { data: linhas, error } = await crm("crm_messages")
-      .select("id, direction, body, media_url, media_type, status, error_message, created_at")
+      .select(
+        "id, direction, sent_by, body, media_url, media_type, status, error_message, created_at",
+      )
       .eq("tenant_id", tenantId)
       .eq("conversation_id", data.conversationId)
       .order("created_at", { ascending: false })
@@ -185,7 +193,9 @@ export const enviarMensagem = createServerFn({ method: "POST" })
         status: "queued",
         sent_by: context.userId,
       })
-      .select("id, direction, body, media_url, media_type, status, error_message, created_at")
+      .select(
+        "id, direction, sent_by, body, media_url, media_type, status, error_message, created_at",
+      )
       .single();
 
     if (error) throw new Error(error.message);

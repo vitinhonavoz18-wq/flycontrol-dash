@@ -13,6 +13,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/lib/auth";
 import {
   listarConversas,
   listarMensagens,
@@ -39,11 +40,17 @@ import { AvisoIntegracao, type StatusIntegracao } from "./AvisoIntegracao";
  * SE A INTERNET OU O n8n CAÍREM, a tela não quebra: o histórico que já veio
  * continua na frente, a tarja de cima explica o que está acontecendo e o que
  * a pessoa escrever fica guardado para sair depois.
+ *
+ * A ALTURA VEM DE FORA. Esta peça ocupa 100% do espaço que a aba Chat reservou
+ * para ela (`h-full`) e não tenta adivinhar o tamanho da tela. Enquanto ela
+ * mesma calculava — "a tela menos 4rem" — qualquer mudança no cabeçalho do
+ * painel fazia a caixa de escrever cair para fora da tela no celular.
  */
 
 const INTERVALO_STATUS_MS = 60_000;
 
 export function ChatCrm({ tenantId }: { tenantId: string }) {
+  const { user } = useAuth();
   const buscarConversas = useServerFn(listarConversas);
   const buscarMensagens = useServerFn(listarMensagens);
   const enviar = useServerFn(enviarMensagem);
@@ -242,12 +249,16 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <div className="flex h-[calc(100dvh-4rem)] min-h-0 flex-col md:h-[calc(100dvh-2rem)]">
+    <div className="flex h-full min-h-0 flex-col">
       <AvisoIntegracao status={integracao} carregando={carregandoIntegracao} />
 
-      <div className="grid min-h-0 flex-1 md:grid-cols-[320px_1fr]">
+      {/* `grid-rows-[1fr]` não é enfeite. Sem ele a linha da grade cresce junto
+          com a conversa mais longa — e a caixa de escrever é empurrada para
+          fora da tela, exatamente o que a gente queria evitar. Com uma linha de
+          altura fixa, quem cresce demais é obrigado a rolar por dentro. */}
+      <div className="grid min-h-0 flex-1 grid-rows-[1fr] overflow-hidden md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
         {/* No celular, uma tela de cada vez. */}
-        <div className={`min-h-0 ${selecionada ? "hidden md:block" : "block"}`}>
+        <div className={`h-full min-h-0 min-w-0 ${selecionada ? "hidden md:block" : "block"}`}>
           <ListaConversas
             conversas={conversas}
             carregando={carregandoLista}
@@ -259,22 +270,33 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
           />
         </div>
 
-        <div className={`min-h-0 ${selecionada ? "block" : "hidden md:block"}`}>
+        <div className={`min-h-0 min-w-0 flex-col ${selecionada ? "flex" : "hidden md:flex"}`}>
           {selecionada && (
-            <div className="border-b border-border p-2 md:hidden">
-              <Button variant="ghost" size="sm" onClick={() => setSelecionada(null)}>
+            <div className="shrink-0 border-b-2 border-border bg-card px-2 py-1.5 md:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="font-semibold"
+                onClick={() => setSelecionada(null)}
+              >
                 ← Todas as conversas
               </Button>
             </div>
           )}
-          <JanelaConversa
-            conversa={conversaAberta}
-            mensagens={mensagens}
-            carregando={carregandoMensagens}
-            enviando={enviando}
-            onEnviar={aoEnviar}
-            onMudarStatus={aoMudarStatus}
-          />
+          {/* `min-h-0 flex-1` em vez de `h-full`: com o botão "voltar" em cima,
+              100% da altura do pai seria alto DEMAIS e empurraria a caixa de
+              escrever para fora da tela no celular. */}
+          <div className="min-h-0 flex-1">
+            <JanelaConversa
+              meuUserId={user?.id ?? null}
+              conversa={conversaAberta}
+              mensagens={mensagens}
+              carregando={carregandoMensagens}
+              enviando={enviando}
+              onEnviar={aoEnviar}
+              onMudarStatus={aoMudarStatus}
+            />
+          </div>
         </div>
       </div>
 

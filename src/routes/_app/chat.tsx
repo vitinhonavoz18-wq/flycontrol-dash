@@ -117,15 +117,25 @@ function ChatPageInner() {
     );
   }
 
+  /* A TELA DO CHAT É TRAVADA, COMO A DO WHATSAPP.
+   *
+   * `tela-chat` fixa a altura exata que sobra da janela, e daí para dentro
+   * ninguém mais rola: o título fica em cima, as abas logo abaixo, e só a
+   * lista de mensagens se move. Antes a página inteira escorregava — a pessoa
+   * rolava para reler um pedido antigo e a caixa de escrever sumia da tela,
+   * bem no meio de um atendimento.
+   *
+   * O cálculo da altura mora no CSS, junto dos outros tokens de layout, e não
+   * espalhado em `calc()` aqui dentro. */
   return (
-    <div className="flex min-w-0 flex-col">
-      <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border p-4 md:px-6">
+    <div className="tela-chat flex min-w-0 flex-col overflow-hidden">
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b-2 border-border bg-card p-4 md:px-6">
         <div>
-          <h1 className="flex items-center gap-2 text-2xl font-bold">
+          <h1 className="flex items-center gap-2 text-xl font-bold md:text-2xl">
             <MessageSquare className="h-6 w-6 text-primary" />
             Chat
           </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="mt-0.5 text-sm text-muted-foreground">
             Todas as conversas do WhatsApp da loja em um lugar só.
           </p>
         </div>
@@ -147,19 +157,20 @@ function ChatPageInner() {
       </div>
 
       {tenantId && (
-        <Tabs value={aba} onValueChange={setAba} className="min-w-0">
-          <div className="px-4 pt-3 md:px-6">
+        <Tabs value={aba} onValueChange={setAba} className="flex min-h-0 min-w-0 flex-1 flex-col">
+          <div className="shrink-0 border-b border-border bg-card px-4 pt-3 md:px-6">
             <ScrollableTabs items={ABAS} value={aba} />
           </div>
 
           {/* `forceMount` ficaria tentador para não perder a rolagem da lista
               ao trocar de aba, mas manteria a conferência de status do
               WhatsApp rodando o dia inteiro em segundo plano. */}
-          <TabsContent value="conversas" className="mt-0">
+          <TabsContent value="conversas" className="mt-0 min-h-0 flex-1">
             <ChatCrm key={tenantId} tenantId={tenantId} />
           </TabsContent>
 
-          <TabsContent value="conexao" className="mt-0 p-4 md:p-6">
+          {/* A Conexão é uma tela de leitura: essa, sim, rola normalmente. */}
+          <TabsContent value="conexao" className="mt-0 min-h-0 flex-1 overflow-y-auto p-4 md:p-6">
             <ConexaoWhatsApp key={tenantId} tenantId={tenantId} />
           </TabsContent>
         </Tabs>

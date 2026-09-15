@@ -51,7 +51,7 @@ export function AvisoIntegracao({
 }) {
   if (carregando) {
     return (
-      <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
+      <div className="flex shrink-0 items-center gap-2 border-b-2 border-border bg-muted px-4 py-2 text-xs font-medium text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
         Conferindo a conexão com o WhatsApp...
       </div>
@@ -63,14 +63,14 @@ export function AvisoIntegracao({
   // Caso 1: contratado, mas o fluxo ainda não foi montado do lado do n8n.
   if (!status.configurado) {
     return (
-      <div className="flex flex-wrap items-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-900 dark:text-amber-200">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b-2 border-amber-600 bg-amber-500 px-4 py-2 text-xs font-semibold text-amber-950">
         <PlugZap className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         <span>
           O Chat está contratado, mas a conexão com o WhatsApp ainda não foi ligada. As mensagens
           não vão entrar nem sair até isso ser feito.
         </span>
         <a
-          className="font-semibold underline underline-offset-2"
+          className="font-bold underline decoration-2 underline-offset-2"
           href={linkWhatsAppSuporte(
             "Olá! Meu Chat do Fly Control está contratado mas a conexão com o WhatsApp ainda não foi ligada.",
           )}
@@ -86,7 +86,7 @@ export function AvisoIntegracao({
   // Caso 2: alguém pausou o fluxo (downgrade, cancelamento, manutenção).
   if (status.status === "paused") {
     return (
-      <div className="flex flex-wrap items-center gap-2 border-b border-amber-500/30 bg-amber-500/10 px-4 py-2 text-xs text-amber-900 dark:text-amber-200">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b-2 border-amber-600 bg-amber-500 px-4 py-2 text-xs font-semibold text-amber-950">
         <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         <span>
           A conexão com o WhatsApp está pausada. O histórico continua aqui, mas nada entra nem sai
@@ -102,7 +102,7 @@ export function AvisoIntegracao({
   // Caso 3: ligado, mas mudo faz tempo.
   if (semSinal) {
     return (
-      <div className="flex flex-wrap items-center gap-2 border-b border-destructive/30 bg-destructive/10 px-4 py-2 text-xs text-destructive">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b-2 border-destructive bg-destructive px-4 py-2 text-xs font-semibold text-destructive-foreground">
         <AlertTriangle className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
         <span>
           {minutos === null
@@ -119,7 +119,7 @@ export function AvisoIntegracao({
   // Caso 4: tudo certo, mas com fila acumulando.
   if (status.mensagensNaFila > 3) {
     return (
-      <div className="flex items-center gap-2 border-b border-border bg-muted/40 px-4 py-2 text-xs text-muted-foreground">
+      <div className="flex shrink-0 items-center gap-2 border-b-2 border-border bg-muted px-4 py-2 text-xs font-medium text-muted-foreground">
         <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
         {status.mensagensNaFila} mensagens saindo agora.
       </div>
