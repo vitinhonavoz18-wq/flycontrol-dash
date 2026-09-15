@@ -280,3 +280,49 @@ export function traduzirStatusInstancia(
   if (v === "error" || v === "banned" || v === "removed") return "error";
   return "disconnected";
 }
+
+/**
+ * A ficha do contato no WhatsApp: foto de perfil e o nome que ele usa.
+ *
+ * `preview: true` pede a foto pequena. A grande é a mesma imagem em tamanho de
+ * pôster — pesa mais e não muda nada numa bolinha de 40 pixels na tela.
+ *
+ * O ENDEREÇO DA FOTO VENCE. O WhatsApp entrega um link temporário; por isso a
+ * foto é guardada com a data em que foi buscada, e não tratada como definitiva.
+ * É o cupom do estacionamento: vale hoje, amanhã não abre mais a cancela.
+ */
+export type DetalhesContatoUazapi = {
+  foto: string | null;
+  nome: string | null;
+};
+
+export async function detalhesDoContato(
+  token: string,
+  numero: string,
+): Promise<RespostaUazapi<DetalhesContatoUazapi>> {
+  const r = await chamar<Record<string, unknown>>("/chat/details", {
+    metodo: "POST",
+    token,
+    corpo: { number: numero, preview: true },
+  });
+
+  if (!r.ok) return r;
+
+  const d = (r.dados ?? {}) as Record<string, unknown>;
+  const texto = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+
+  return {
+    ok: true,
+    dados: {
+      foto: texto(d.imagePreview) ?? texto(d.image) ?? null,
+      // A mesma ordem de confiança usada na porta de entrada das mensagens:
+      // cadastro feito à mão primeiro, apelido do WhatsApp por último.
+      nome:
+        texto(d.lead_fullName) ??
+        texto(d.lead_name) ??
+        texto(d.name) ??
+        texto(d.wa_name) ??
+        texto(d.wa_contactName),
+    },
+  };
+}

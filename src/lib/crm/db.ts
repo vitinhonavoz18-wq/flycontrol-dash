@@ -26,6 +26,12 @@ export type TabelaCrm =
   | "marketing_customers"
   | "crm_conversations"
   | "crm_messages"
+  // O rascunho de pedido que a IA monta e o lojista confirma.
+  | "crm_order_drafts"
+  // As taxas de entrega por bairro, que a IA consulta antes de prometer preço.
+  | "delivery_zones"
+  // O pedido de verdade, criado quando o lojista confirma o rascunho.
+  | "orders"
   // O cofre do token do aparelho de WhatsApp. Fica nesta lista porque a fila
   // de saída precisa entregar a credencial ao fluxo do n8n.
   | "whatsapp_instance_secrets";

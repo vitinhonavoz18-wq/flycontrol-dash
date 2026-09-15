@@ -61,9 +61,13 @@ import { Route as AppInventoryReportsRouteImport } from './routes/_app/inventory
 import { Route as AppInventorySuppliersRouteImport } from './routes/_app/inventory.suppliers'
 import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.close-cycles'
 import { Route as ApiCrmCatalogRouteImport } from './routes/api/crm.catalog'
+import { Route as ApiCrmCustomerRouteImport } from './routes/api/crm.customer'
+import { Route as ApiCrmDeliveryFeeRouteImport } from './routes/api/crm.delivery-fee'
 import { Route as ApiCrmInboxRouteImport } from './routes/api/crm.inbox'
+import { Route as ApiCrmOrderDraftRouteImport } from './routes/api/crm.order-draft'
 import { Route as ApiCrmOutboxRouteImport } from './routes/api/crm.outbox'
 import { Route as ApiCrmPingRouteImport } from './routes/api/crm.ping'
+import { Route as ApiCrmProductsRouteImport } from './routes/api/crm.products'
 import { Route as ApiCrmReplyRouteImport } from './routes/api/crm.reply'
 import { Route as ApiMarketingQueueRouteImport } from './routes/api/marketing.queue'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
@@ -343,9 +347,24 @@ const ApiCrmCatalogRoute = ApiCrmCatalogRouteImport.update({
   path: '/api/crm/catalog',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCrmCustomerRoute = ApiCrmCustomerRouteImport.update({
+  id: '/api/crm/customer',
+  path: '/api/crm/customer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCrmDeliveryFeeRoute = ApiCrmDeliveryFeeRouteImport.update({
+  id: '/api/crm/delivery-fee',
+  path: '/api/crm/delivery-fee',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCrmInboxRoute = ApiCrmInboxRouteImport.update({
   id: '/api/crm/inbox',
   path: '/api/crm/inbox',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCrmOrderDraftRoute = ApiCrmOrderDraftRouteImport.update({
+  id: '/api/crm/order-draft',
+  path: '/api/crm/order-draft',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCrmOutboxRoute = ApiCrmOutboxRouteImport.update({
@@ -356,6 +375,11 @@ const ApiCrmOutboxRoute = ApiCrmOutboxRouteImport.update({
 const ApiCrmPingRoute = ApiCrmPingRouteImport.update({
   id: '/api/crm/ping',
   path: '/api/crm/ping',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiCrmProductsRoute = ApiCrmProductsRouteImport.update({
+  id: '/api/crm/products',
+  path: '/api/crm/products',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCrmReplyRoute = ApiCrmReplyRouteImport.update({
@@ -510,9 +534,13 @@ export interface FileRoutesByFullPath {
   '/inventory/suppliers': typeof AppInventorySuppliersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/crm/catalog': typeof ApiCrmCatalogRoute
+  '/api/crm/customer': typeof ApiCrmCustomerRoute
+  '/api/crm/delivery-fee': typeof ApiCrmDeliveryFeeRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
+  '/api/crm/order-draft': typeof ApiCrmOrderDraftRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
+  '/api/crm/products': typeof ApiCrmProductsRoute
   '/api/crm/reply': typeof ApiCrmReplyRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -583,9 +611,13 @@ export interface FileRoutesByTo {
   '/inventory/suppliers': typeof AppInventorySuppliersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/crm/catalog': typeof ApiCrmCatalogRoute
+  '/api/crm/customer': typeof ApiCrmCustomerRoute
+  '/api/crm/delivery-fee': typeof ApiCrmDeliveryFeeRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
+  '/api/crm/order-draft': typeof ApiCrmOrderDraftRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
+  '/api/crm/products': typeof ApiCrmProductsRoute
   '/api/crm/reply': typeof ApiCrmReplyRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -660,9 +692,13 @@ export interface FileRoutesById {
   '/_app/inventory/suppliers': typeof AppInventorySuppliersRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/crm/catalog': typeof ApiCrmCatalogRoute
+  '/api/crm/customer': typeof ApiCrmCustomerRoute
+  '/api/crm/delivery-fee': typeof ApiCrmDeliveryFeeRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
+  '/api/crm/order-draft': typeof ApiCrmOrderDraftRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
+  '/api/crm/products': typeof ApiCrmProductsRoute
   '/api/crm/reply': typeof ApiCrmReplyRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
@@ -737,9 +773,13 @@ export interface FileRouteTypes {
     | '/inventory/suppliers'
     | '/api/billing/close-cycles'
     | '/api/crm/catalog'
+    | '/api/crm/customer'
+    | '/api/crm/delivery-fee'
     | '/api/crm/inbox'
+    | '/api/crm/order-draft'
     | '/api/crm/outbox'
     | '/api/crm/ping'
+    | '/api/crm/products'
     | '/api/crm/reply'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -810,9 +850,13 @@ export interface FileRouteTypes {
     | '/inventory/suppliers'
     | '/api/billing/close-cycles'
     | '/api/crm/catalog'
+    | '/api/crm/customer'
+    | '/api/crm/delivery-fee'
     | '/api/crm/inbox'
+    | '/api/crm/order-draft'
     | '/api/crm/outbox'
     | '/api/crm/ping'
+    | '/api/crm/products'
     | '/api/crm/reply'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -886,9 +930,13 @@ export interface FileRouteTypes {
     | '/_app/inventory/suppliers'
     | '/api/billing/close-cycles'
     | '/api/crm/catalog'
+    | '/api/crm/customer'
+    | '/api/crm/delivery-fee'
     | '/api/crm/inbox'
+    | '/api/crm/order-draft'
     | '/api/crm/outbox'
     | '/api/crm/ping'
+    | '/api/crm/products'
     | '/api/crm/reply'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
@@ -932,9 +980,13 @@ export interface RootRouteChildren {
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiBillingCloseCyclesRoute: typeof ApiBillingCloseCyclesRoute
   ApiCrmCatalogRoute: typeof ApiCrmCatalogRoute
+  ApiCrmCustomerRoute: typeof ApiCrmCustomerRoute
+  ApiCrmDeliveryFeeRoute: typeof ApiCrmDeliveryFeeRoute
   ApiCrmInboxRoute: typeof ApiCrmInboxRoute
+  ApiCrmOrderDraftRoute: typeof ApiCrmOrderDraftRoute
   ApiCrmOutboxRoute: typeof ApiCrmOutboxRouteWithChildren
   ApiCrmPingRoute: typeof ApiCrmPingRoute
+  ApiCrmProductsRoute: typeof ApiCrmProductsRoute
   ApiCrmReplyRoute: typeof ApiCrmReplyRoute
   ApiMarketingQueueRoute: typeof ApiMarketingQueueRouteWithChildren
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
@@ -1320,11 +1372,32 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCrmCatalogRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/crm/customer': {
+      id: '/api/crm/customer'
+      path: '/api/crm/customer'
+      fullPath: '/api/crm/customer'
+      preLoaderRoute: typeof ApiCrmCustomerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/crm/delivery-fee': {
+      id: '/api/crm/delivery-fee'
+      path: '/api/crm/delivery-fee'
+      fullPath: '/api/crm/delivery-fee'
+      preLoaderRoute: typeof ApiCrmDeliveryFeeRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/crm/inbox': {
       id: '/api/crm/inbox'
       path: '/api/crm/inbox'
       fullPath: '/api/crm/inbox'
       preLoaderRoute: typeof ApiCrmInboxRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/crm/order-draft': {
+      id: '/api/crm/order-draft'
+      path: '/api/crm/order-draft'
+      fullPath: '/api/crm/order-draft'
+      preLoaderRoute: typeof ApiCrmOrderDraftRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/crm/outbox': {
@@ -1339,6 +1412,13 @@ declare module '@tanstack/react-router' {
       path: '/api/crm/ping'
       fullPath: '/api/crm/ping'
       preLoaderRoute: typeof ApiCrmPingRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/crm/products': {
+      id: '/api/crm/products'
+      path: '/api/crm/products'
+      fullPath: '/api/crm/products'
+      preLoaderRoute: typeof ApiCrmProductsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/crm/reply': {
@@ -1614,9 +1694,13 @@ const rootRouteChildren: RootRouteChildren = {
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiBillingCloseCyclesRoute: ApiBillingCloseCyclesRoute,
   ApiCrmCatalogRoute: ApiCrmCatalogRoute,
+  ApiCrmCustomerRoute: ApiCrmCustomerRoute,
+  ApiCrmDeliveryFeeRoute: ApiCrmDeliveryFeeRoute,
   ApiCrmInboxRoute: ApiCrmInboxRoute,
+  ApiCrmOrderDraftRoute: ApiCrmOrderDraftRoute,
   ApiCrmOutboxRoute: ApiCrmOutboxRouteWithChildren,
   ApiCrmPingRoute: ApiCrmPingRoute,
+  ApiCrmProductsRoute: ApiCrmProductsRoute,
   ApiCrmReplyRoute: ApiCrmReplyRoute,
   ApiMarketingQueueRoute: ApiMarketingQueueRouteWithChildren,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,

@@ -28,7 +28,8 @@ import {
   INICIAL_AUTORIA,
   type Autoria,
 } from "@/lib/crm/autoria";
-import type { ConversaCrm, MensagemCrm } from "@/lib/crm/crm.functions";
+import type { ConversaCrm, MensagemCrm, RascunhoPedido } from "@/lib/crm/crm.functions";
+import { CartaoRascunho } from "./CartaoRascunho";
 
 /**
  * A coluna da direita: a conversa aberta.
@@ -153,6 +154,8 @@ export function JanelaConversa({
   onEnviar,
   onMudarStatus,
   onCorrigirNome,
+  rascunho,
+  onDecidirRascunho,
 }: {
   conversa: ConversaCrm | null;
   mensagens: MensagemCrm[];
@@ -162,6 +165,8 @@ export function JanelaConversa({
   onEnviar: (texto: string) => Promise<void>;
   onMudarStatus: (status: "open" | "pending" | "closed") => void;
   onCorrigirNome: () => void;
+  rascunho: RascunhoPedido | null;
+  onDecidirRascunho: (decisao: "confirmar" | "recusar") => Promise<void>;
 }) {
   const [texto, setTexto] = useState("");
   const fim = useRef<HTMLDivElement | null>(null);
@@ -209,6 +214,7 @@ export function JanelaConversa({
   const nome = conversa.contato?.name?.trim();
   const telefone = conversa.contato?.phone_e164 ?? "";
   const titulo = nome || formatPhoneForDisplay(telefone) || "Sem nome";
+  const foto = conversa.contato?.avatar_url ?? null;
   const pedidos = conversa.contato?.orders_count ?? 0;
   const gasto = conversa.contato?.total_spent_cents ?? 0;
   // Dinheiro é guardado em centavos inteiros; a divisão acontece só aqui, na
@@ -238,8 +244,21 @@ export function JanelaConversa({
       <div className="shrink-0 border-b-2 border-border bg-card px-3 py-2.5 shadow-sm sm:px-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex min-w-0 items-center gap-2.5">
+            {foto ? (
+              <img
+                src={foto}
+                alt=""
+                className="h-9 w-9 shrink-0 rounded-full border border-border object-cover"
+                onError={(e) => {
+                  e.currentTarget.style.display = "none";
+                  e.currentTarget.nextElementSibling?.classList.remove("hidden");
+                }}
+              />
+            ) : null}
             <span
-              className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-muted text-sm font-bold text-foreground"
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-full border border-border bg-muted text-sm font-bold text-foreground ${
+                foto ? "hidden" : ""
+              }`}
               aria-hidden="true"
             >
               {titulo.charAt(0).toUpperCase()}
@@ -407,6 +426,8 @@ export function JanelaConversa({
         </div>
         <div ref={fim} />
       </div>
+
+      {rascunho && <CartaoRascunho rascunho={rascunho} onDecidir={onDecidirRascunho} />}
 
       {/* ------- CAIXA DE ESCREVER: colada embaixo, nunca rola ------- */}
       <div className="shrink-0 border-t-2 border-border bg-card p-3">

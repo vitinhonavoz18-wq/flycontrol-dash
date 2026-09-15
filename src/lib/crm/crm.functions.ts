@@ -55,6 +55,8 @@ export type ConversaCrm = {
     id: string;
     name: string | null;
     phone_e164: string;
+    /** Foto do WhatsApp, guardada pelo servidor. Pode não existir. */
+    avatar_url: string | null;
     orders_count: number;
     total_spent_cents: number;
     last_order_at: string | null;
@@ -89,7 +91,7 @@ export const listarConversas = createServerFn({ method: "POST" })
       .select(
         "id, customer_id, status, assigned_to, last_message_at, last_message_preview, unread_count, " +
           "contato:marketing_customers!crm_conversations_customer_id_fkey" +
-          "(id, name, phone_e164, orders_count, total_spent_cents, last_order_at, marketing_opt_in)",
+          "(id, name, phone_e164, avatar_url, orders_count, total_spent_cents, last_order_at, marketing_opt_in)",
         { count: "exact" },
       )
       .eq("tenant_id", tenantId);
@@ -418,4 +420,167 @@ export const renomearContato = createServerFn({ method: "POST" })
     if (!ok) throw new Error("Cliente não encontrado nesta loja.");
 
     return { nome: nome || null };
+  });
+
+/**
+ * O PEDIDO QUE A IA MONTOU, ESPERANDO O DONO.
+ *
+ * Ele não vai para a cozinha sozinho. Fica na conversa com um botão, e só
+ * vira pedido de verdade quando alguém da loja confirma. É a comanda que o
+ * garçom repete em voz alta antes de passar para a chapa: se a IA entendeu
+ * "sem cebola" como "com cebola", o erro morre aqui e não no prato.
+ */
+export type RascunhoPedido = {
+  id: string;
+  itens: Array<{
+    nome: string;
+    quantidade: number;
+    preco_unitario_cents: number;
+    total_cents: number;
+    observacao: string | null;
+    menu_product_id: string;
+  }>;
+  subtotal_cents: number;
+  taxa_entrega_cents: number;
+  total_cents: number;
+  endereco: string | null;
+  bairro: string | null;
+  forma_pagamento: string | null;
+  observacoes: string | null;
+  nao_encontrados: string[];
+  status: "aguardando" | "confirmado" | "recusado" | "cancelado";
+  order_id: string | null;
+  created_at: string;
+};
+
+const CAMPOS_RASCUNHO =
+  "id, itens, subtotal_cents, taxa_entrega_cents, total_cents, endereco, bairro, " +
+  "forma_pagamento, observacoes, nao_encontrados, status, order_id, created_at";
+
+/** O rascunho que está esperando decisão nesta conversa (se houver). */
+export const rascunhoDaConversa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { tenantId: string; conversationId: string }) => d)
+  .handler(async ({ data, context }) => {
+    const { tenantId } = await porteiro(context, data.tenantId);
+    if (!data.conversationId) throw new Error("Conversa não informada.");
+
+    const { data: linha, error } = await crm("crm_order_drafts")
+      .select(CAMPOS_RASCUNHO)
+      .eq("tenant_id", tenantId)
+      .eq("conversation_id", data.conversationId)
+      .eq("status", "aguardando")
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    return { rascunho: (linha ?? null) as RascunhoPedido | null };
+  });
+
+/** Centavos inteiros viram reais só aqui, na fronteira com a tabela de pedidos. */
+function reais(cents: number): number {
+  return Math.round(Number(cents) || 0) / 100;
+}
+
+/**
+ * O lojista decide: vira pedido de verdade, ou não vira.
+ *
+ * CONFIRMAR CRIA O PEDIDO NO MESMO LUGAR QUE O SITE. Não existe uma lista
+ * separada de "pedidos do WhatsApp" — seria o segundo caderno de comandas que
+ * ninguém lembra de conferir. Entra na mesma tela, com a etiqueta de origem.
+ *
+ * O TOTAL É RECALCULADO AQUI. Mesmo que alguém tenha mexido na linha do
+ * rascunho no meio do caminho, a conta que vale é a soma dos itens gravados.
+ */
+export const decidirRascunho = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: { tenantId: string; rascunhoId: string; decisao: "confirmar" | "recusar" }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    const { tenantId } = await porteiro(context, data.tenantId);
+    if (!data.rascunhoId) throw new Error("Pedido não informado.");
+
+    const { data: rascunho, error } = await crm("crm_order_drafts")
+      .select(CAMPOS_RASCUNHO + ", customer_id, conversation_id")
+      .eq("tenant_id", tenantId)
+      .eq("id", data.rascunhoId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!rascunho) throw new Error("Pedido não encontrado nesta loja.");
+    if (rascunho.status !== "aguardando") {
+      throw new Error("Este pedido já foi decidido.");
+    }
+
+    if (data.decisao === "recusar") {
+      const { error: e } = await crm("crm_order_drafts")
+        .update({
+          status: "recusado",
+          decidido_por: context.userId,
+          decidido_em: new Date().toISOString(),
+        })
+        .eq("id", rascunho.id);
+      if (e) throw new Error(e.message);
+      return { status: "recusado" as const, orderId: null };
+    }
+
+    const { data: cliente } = await crm("marketing_customers")
+      .select("name, phone_e164")
+      .eq("id", rascunho.customer_id)
+      .maybeSingle();
+
+    const itens = (rascunho.itens ?? []) as RascunhoPedido["itens"];
+    const subtotalCents = itens.reduce((t: number, i) => t + Number(i.total_cents || 0), 0);
+    const taxaCents = Number(rascunho.taxa_entrega_cents || 0);
+
+    const { data: pedido, error: erroPedido } = await crm("orders")
+      .insert({
+        tenant_id: tenantId,
+        customer_name: cliente?.name || "Cliente do WhatsApp",
+        customer_phone: cliente?.phone_e164 ?? null,
+        customer_address: rascunho.endereco || "Não informado",
+        neighborhood: rascunho.bairro ?? null,
+        subtotal: reais(subtotalCents),
+        delivery_fee: reais(taxaCents),
+        total: reais(subtotalCents + taxaCents),
+        payment_method: rascunho.forma_pagamento || "Não informado",
+        notes: rascunho.observacoes || "",
+        status: "novo",
+        order_type: "delivery",
+        delivery_type: "delivery",
+        service_mode: "delivery",
+        // A etiqueta de origem é o que permite, depois, saber quanto o Chat
+        // vendeu — e conferir se a IA está acertando ou dando prejuízo.
+        source: "chat-ia",
+        customer_id: rascunho.customer_id,
+        items: itens.map((i) => ({
+          name: i.nome,
+          type: "other",
+          notes: i.observacao ?? "",
+          quantity: i.quantidade,
+          unit_price: reais(i.preco_unitario_cents),
+          total_price: reais(i.total_cents),
+          menu_product_id: i.menu_product_id,
+        })),
+      })
+      .select("id, order_number")
+      .single();
+
+    if (erroPedido) throw new Error(erroPedido.message);
+
+    const { error: erroFecha } = await crm("crm_order_drafts")
+      .update({
+        status: "confirmado",
+        order_id: pedido.id,
+        decidido_por: context.userId,
+        decidido_em: new Date().toISOString(),
+      })
+      .eq("id", rascunho.id);
+    if (erroFecha) throw new Error(erroFecha.message);
+
+    return {
+      status: "confirmado" as const,
+      orderId: pedido.id as string,
+      numero: pedido.order_number as number | null,
+    };
   });

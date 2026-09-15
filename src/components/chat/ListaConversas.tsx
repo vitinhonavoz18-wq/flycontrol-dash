@@ -145,8 +145,26 @@ export function ListaConversas({
                 aria-hidden="true"
               />
 
+              {/* A foto do WhatsApp quando existe; a inicial quando não.
+                  `onError` derruba a foto para a inicial porque o endereço que
+                  o WhatsApp entrega VENCE — sem isso, a lista encheria de
+                  quadradinho de imagem quebrada depois de um dia. */}
+              {c.contato?.avatar_url ? (
+                <img
+                  src={c.contato.avatar_url}
+                  alt=""
+                  loading="lazy"
+                  className="ml-1 h-10 w-10 shrink-0 rounded-full border border-border object-cover"
+                  onError={(e) => {
+                    e.currentTarget.style.display = "none";
+                    e.currentTarget.nextElementSibling?.classList.remove("hidden");
+                  }}
+                />
+              ) : null}
               <span
                 className={`ml-1 grid h-10 w-10 shrink-0 place-items-center rounded-full text-sm font-bold ${
+                  c.contato?.avatar_url ? "hidden" : ""
+                } ${
                   ativa
                     ? "bg-primary text-primary-foreground"
                     : "border border-border bg-muted text-foreground"

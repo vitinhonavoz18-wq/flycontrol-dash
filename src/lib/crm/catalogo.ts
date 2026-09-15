@@ -20,6 +20,12 @@
  */
 
 export type ItemCardapio = {
+  /**
+   * O número do produto no cardápio. Vai junto porque o pedido montado pela IA
+   * precisa apontar para o produto DE VERDADE — dois pratos podem se chamar
+   * "Pastel de queijo" com preços diferentes, e o nome sozinho não decide qual.
+   */
+  id: string;
   nome: string;
   descricao: string | null;
   preco_cents: number;
@@ -167,6 +173,7 @@ export async function montarCatalogo(supabase: any, tenantId: string): Promise<C
 
     const lista = porCategoria.get(categoria) ?? [];
     lista.push({
+      id: String(p.id),
       nome: String(p.name),
       descricao: p.description ? String(p.description) : null,
       preco_cents: paraCentavos(p.price),
