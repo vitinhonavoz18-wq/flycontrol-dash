@@ -17,12 +17,26 @@ import { comparaSemVazar } from "./n8nAuth";
 export type ResultadoLoja =
   { ok: true; tenantId: string } | { ok: false; status: number; erro: string };
 
+/**
+ * POR QUE AQUI O ERRO PODE SER ESPECÍFICO
+ *
+ * Só chega nesta função quem já passou pela chave mestra. Ou seja: quem está
+ * batendo já provou que é o n8n do FlyControl, não um estranho. Dizer para ele
+ * "a senha da loja é que está errada" não entrega nada a ninguém de fora — é
+ * como o porteiro, depois de conferir o crachá de funcionário, poder dizer
+ * "seu crachá está certo, mas essa chave não é a da sala 12".
+ *
+ * Quando os dois erros eram a mesma frase, ninguém conseguia saber QUAL das
+ * duas chaves estava errada, e a procura virava adivinhação.
+ */
+export const ERRO_SENHA_DA_LOJA = "senha_da_loja_invalida";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
 export async function autenticarLoja(entrada: Record<string, unknown>): Promise<ResultadoLoja> {
   const tenantId = String(entrada.tenant_id ?? entrada.tenantId ?? "").trim();
   const token = String(entrada.token ?? entrada.webhook_token ?? "").trim();
 
-  if (!tenantId || !token) return { ok: false, status: 401, erro: "nao_autorizado" };
+  if (!tenantId || !token) return { ok: false, status: 401, erro: ERRO_SENHA_DA_LOJA };
 
   const { data, error } = await crm("crm_n8n_links")
     .select("tenant_id, webhook_token, status")
@@ -32,10 +46,10 @@ export async function autenticarLoja(entrada: Record<string, unknown>): Promise<
   // Erro de banco não libera ninguém: uma consulta que falhou não é prova de
   // que a senha estava certa.
   if (error) return { ok: false, status: 503, erro: "indisponivel" };
-  if (!data || !data.webhook_token) return { ok: false, status: 401, erro: "nao_autorizado" };
+  if (!data || !data.webhook_token) return { ok: false, status: 401, erro: ERRO_SENHA_DA_LOJA };
 
   if (!comparaSemVazar(token, String(data.webhook_token))) {
-    return { ok: false, status: 401, erro: "nao_autorizado" };
+    return { ok: false, status: 401, erro: ERRO_SENHA_DA_LOJA };
   }
 
   // Fluxo pausado (downgrade, cancelamento, manutenção) não entrega nem

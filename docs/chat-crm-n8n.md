@@ -299,3 +299,25 @@ A chave de administrador é a do cofre: quem a tiver mexe nos aparelhos de
 **todos** os seus clientes. Ela nunca vai para o navegador, nem para o banco,
 nem para o n8n. O que o n8n recebe é só o token do aparelho **daquela** loja,
 e só depois de apresentar as duas senhas.
+
+## Quando der erro 401 (não autorizado)
+
+A resposta agora **diz qual das duas chaves recusou**. Olhe o campo `error`:
+
+| `error` | O que está errado | Onde arrumar |
+| --- | --- | --- |
+| `integracao_nao_configurada` | a chave mestra não existe no servidor | Cloudflare → Variáveis → `CRM_N8N_SECRET` |
+| `nao_autorizado` | a chave mestra veio errada, ou não veio | no n8n, o cabeçalho `Authorization: Bearer <chave>` do nó |
+| `senha_da_loja_invalida` | a chave mestra está certa, a senha da loja não | painel Admin → Clientes e Planos → Conexão |
+| `crm_nao_contratado` | a loja não tem o Chat contratado | painel Admin → ativar o Chat (CRM) |
+| `fluxo_pausado` | o fluxo desta loja está pausado | painel Admin → Conexão |
+
+Dizer "é a senha da loja" não entrega nada a estranho: para chegar nessa
+conferência, a chave mestra **já passou**. É o porteiro que, depois de conferir
+o crachá de funcionário, pode dizer "seu crachá está certo, mas essa chave não
+é a da sala 12".
+
+**Não use credencial do tipo "Custom Auth" nos nós do FlyControl.** Prefira o
+cabeçalho escrito no próprio nó (`Send Headers` ligado). Se a credencial estiver
+mal montada, o n8n manda a chamada **sem cabeçalho nenhum** e não avisa — o
+servidor recusa e ninguém entende por quê.

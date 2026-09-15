@@ -74,12 +74,30 @@ export function conferirChaveMestra(
   return { ok: true };
 }
 
-/** Resposta padrão quando a tranca recusa. Sem detalhes que ajudem quem tenta. */
+/**
+ * Resposta padrão quando a tranca recusa.
+ *
+ * A mensagem diz QUAL das duas chaves recusou — e isso é seguro. A senha da
+ * loja só é conferida depois que a chave mestra já passou, então quem recebe
+ * "senha da loja" já provou ser o n8n do FlyControl. Para um estranho, que
+ * nunca passa da primeira porta, a resposta continua sendo sempre a mesma.
+ *
+ * Antes as duas recusas diziam exatamente a mesma frase, e descobrir qual
+ * chave estava errada virava tentativa e erro.
+ */
+const MENSAGENS: Record<string, string> = {
+  integracao_nao_configurada: "A integração do Chat ainda não foi configurada neste ambiente.",
+  nao_autorizado:
+    "A chave mestra do CRM (CRM_N8N_SECRET) não confere, ou não veio no cabeçalho Authorization.",
+  senha_da_loja_invalida:
+    "A chave mestra está certa, mas a senha desta loja não confere com a que está no painel.",
+  fluxo_pausado: "O fluxo desta loja está pausado.",
+  crm_nao_contratado: "Esta loja não tem o Chat (CRM) contratado.",
+  indisponivel: "Não foi possível conferir agora. Tente de novo em instantes.",
+};
+
 export function respostaNegadaCrm(r: { status: number; erro: string }): Response {
-  const mensagem =
-    r.status === 503
-      ? "A integração do Chat ainda não foi configurada neste ambiente."
-      : "Não autorizado.";
+  const mensagem = MENSAGENS[r.erro] ?? "Não autorizado.";
   return new Response(JSON.stringify({ success: false, error: r.erro, message: mensagem }), {
     status: r.status,
     headers: { "Content-Type": "application/json" },
