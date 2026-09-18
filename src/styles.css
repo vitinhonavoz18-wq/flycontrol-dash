@@ -386,6 +386,66 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .pb-bottom-nav { padding-bottom: 0; }
 }
 
+/* === A TELA DO CHAT É TRAVADA ==============================================
+   Igual à do WhatsApp: a página não rola, só a lista de mensagens rola por
+   dentro. Para isso a tela precisa ter uma altura EXATA — o que sobra da
+   janela depois do cabeçalho do celular e da barra inferior.
+
+   Por que o cálculo mora aqui e não numa classe solta no componente: as duas
+   medidas que entram na conta (a altura do cabeçalho e a reserva da barra de
+   baixo) já são tokens deste arquivo. Deixar `calc(100dvh - 4rem)` escrito
+   dentro da tela do Chat faria com que mexer no cabeçalho do painel quebrasse
+   o Chat sem ninguém perceber — a caixa de escrever cairia para fora da tela.
+
+   `100dvh` (e não `100vh`) é o que faz a conta continuar certa quando o
+   teclado do celular sobe e a barra do navegador se recolhe.
+   ========================================================================= */
+.tela-chat {
+  height: calc(100dvh - 4rem - var(--bottom-nav-offset) - 1rem);
+}
+
+/* Celular deitado: o cabeçalho encolhe e a barra de baixo não existe. */
+@media (orientation: landscape) and (max-height: 600px) {
+  .tela-chat {
+    height: calc(100dvh - var(--landscape-header-height) - 1rem);
+  }
+}
+
+/* Do tablet para cima não há cabeçalho móvel nem barra inferior: a tela do
+   Chat ocupa a janela inteira. */
+@media (min-width: 768px) {
+  .tela-chat {
+    height: 100dvh;
+  }
+}
+
+/* O fundo atrás dos balões de conversa.
+   Um cinza chapado deixava tudo com cara de desbotado. A trama de pontinhos
+   é discreta, mas dá profundidade: os balões passam a parecer apoiados sobre
+   alguma coisa, em vez de flutuando num vazio cinza. */
+.fundo-conversa {
+  background-color: var(--muted);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in oklch, var(--foreground) 12%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 18px 18px;
+}
+
+/* No tema escuro o fundo precisa ser MAIS escuro que os balões, senão o balão
+   do cliente afunda em vez de saltar — foi o que aconteceu: a tela ficou com a
+   mesma cara "apagada" da versão antiga, só que no escuro. */
+.dark .fundo-conversa {
+  background-color: var(--background);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    color-mix(in oklch, var(--foreground) 10%, transparent) 1px,
+    transparent 0
+  );
+  background-size: 18px 18px;
+}
+
 /* Faixa rolável na horizontal, sem barra visível. `pan-x` impede que o gesto
    horizontal roube a rolagem vertical da página. */
 .scroll-x-hidden {

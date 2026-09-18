@@ -29,5 +29,21 @@ export const WHATSAPP_LINK = `https://wa.me/${NUMERO_LIMPO}?text=${encodeURIComp
   PRIMEIRA_MENSAGEM,
 )}`;
 
+/**
+ * O mesmo número do suporte, com outra frase já digitada.
+ *
+ * Serve para as telas de dentro do painel que precisam mandar o lojista falar
+ * com você por um motivo específico — contratar o Chat, por exemplo. O número
+ * continua saindo de um lugar só: se um dia mudar, muda aqui e muda em todas
+ * as telas de uma vez, sem sobrar panfleto antigo com o telefone velho
+ * circulando por aí.
+ *
+ * O `wa.me` só carrega TEXTO. Não adianta tentar mandar imagem ou anexo por
+ * aqui — isso já derrubou uma tela antes (ver FlyStatusModal).
+ */
+export function linkWhatsAppSuporte(mensagem: string): string {
+  return `https://wa.me/${NUMERO_LIMPO}?text=${encodeURIComponent(mensagem)}`;
+}
+
 export const INSTAGRAM_VISIVEL = "@flycontrolofc";
 export const INSTAGRAM_LINK = "https://instagram.com/flycontrolofc";

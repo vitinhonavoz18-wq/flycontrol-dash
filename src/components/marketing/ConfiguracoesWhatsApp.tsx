@@ -1,26 +1,25 @@
 import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Loader2, Smartphone, AlertTriangle, RefreshCw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { statusWhatsApp } from "@/lib/marketing/marketing.functions";
 import { formatPhoneForDisplay } from "@/lib/marketing/phone";
+import { ConexaoWhatsApp } from "@/components/whatsapp/ConexaoWhatsApp";
 
 /**
- * A tela de conexão do WhatsApp.
+ * A tela de conexão do WhatsApp, no Marketing.
  *
- * O QUE ELA FAZ HOJE, COM HONESTIDADE
+ * O QUE MUDOU AQUI
  *
- * Ela MOSTRA o estado da conexão. Ela ainda não CONECTA — quem conecta o
- * aparelho ao WhatsApp é o n8n, do lado de fora. Os botões de conectar e
- * desconectar só fazem sentido depois que essa ligação existir, então eles
- * não estão aqui fingindo funcionar. Botão que não faz nada é pior que botão
- * que não existe: o dono clica, não acontece nada, e ele conclui que o
- * sistema está quebrado.
+ * Antes esta tela só MOSTRAVA o estado: conectar era tarefa de alguém de fora.
+ * Agora o próprio lojista conecta, pelo mesmo componente usado no Chat — é o
+ * mesmo aparelho, o mesmo número, a mesma tela. Duas telas diferentes para
+ * ligar o mesmo WhatsApp seriam duas agendas com o mesmo telefone: uma hora
+ * alguém atualiza só uma.
  *
- * Quando a integração estiver de pé, o estado passa a chegar sozinho e os
- * botões entram.
+ * Abaixo da conexão fica o diagnóstico das campanhas, que é só do Marketing:
+ * quantas falharam e por quê.
  */
 
 type Estado = Awaited<ReturnType<typeof statusWhatsApp>>;
@@ -28,30 +27,6 @@ type ErroRecente = {
   error_code: string | null;
   error_message: string | null;
   failed_at: string | null;
-};
-
-const TEXTOS: Record<string, { titulo: string; explicacao: string; cor: string }> = {
-  connected: {
-    titulo: "WhatsApp conectado",
-    explicacao: "Suas campanhas saem normalmente.",
-    cor: "text-emerald-600 dark:text-emerald-400",
-  },
-  connecting: {
-    titulo: "Conectando…",
-    explicacao: "A ligação está sendo feita. Aguarde um instante.",
-    cor: "text-amber-600 dark:text-amber-400",
-  },
-  disconnected: {
-    titulo: "WhatsApp desconectado",
-    explicacao:
-      "Nada se perde: as mensagens ficam esperando na fila e saem quando a conexão voltar.",
-    cor: "text-muted-foreground",
-  },
-  error: {
-    titulo: "Problema na conexão",
-    explicacao: "O WhatsApp recusou a ligação. Pode ser preciso ler o QR Code de novo.",
-    cor: "text-destructive",
-  },
 };
 
 export function ConfiguracoesWhatsApp({ tenantId }: { tenantId: string }) {
@@ -83,26 +58,17 @@ export function ConfiguracoesWhatsApp({ tenantId }: { tenantId: string }) {
     );
   }
 
-  const status = dados?.instancia?.status ?? "disconnected";
-  const t = TEXTOS[status] ?? TEXTOS.disconnected;
-
   return (
     <div className="space-y-4">
+      {/* Ligar/desligar o aparelho: o mesmo componente que o Chat usa. */}
+      <ConexaoWhatsApp tenantId={tenantId} />
+
+      {/* Só o diagnóstico: quem manda no estado da conexão é o quadro acima.
+          Repetir "conectado/desconectado" em dois lugares da mesma tela é
+          pedir para os dois discordarem um dia. */}
       <Card>
         <CardContent className="space-y-4 p-5 md:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex items-start gap-3">
-              <Smartphone className={`mt-0.5 h-6 w-6 ${t.cor}`} />
-              <div>
-                <h3 className={`font-semibold ${t.cor}`}>{t.titulo}</h3>
-                <p className="mt-1 max-w-md text-sm text-muted-foreground">{t.explicacao}</p>
-              </div>
-            </div>
-            <Button variant="outline" size="sm" onClick={carregar} disabled={carregando}>
-              <RefreshCw className={`mr-1 h-3.5 w-3.5 ${carregando ? "animate-spin" : ""}`} />
-              Atualizar
-            </Button>
-          </div>
+          <h3 className="font-semibold">Detalhes do envio</h3>
 
           <dl className="grid gap-3 border-t pt-4 text-sm sm:grid-cols-2">
             <Linha
@@ -133,25 +99,6 @@ export function ConfiguracoesWhatsApp({ tenantId }: { tenantId: string }) {
           </dl>
         </CardContent>
       </Card>
-
-      {!dados?.instancia && (
-        <Card className="border-amber-500/40 bg-amber-500/5">
-          <CardContent className="flex gap-3 p-5">
-            <AlertTriangle className="mt-0.5 h-5 w-5 flex-shrink-0 text-amber-600 dark:text-amber-500" />
-            <div>
-              <h3 className="font-semibold">O envio ainda não está ligado</h3>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Você já pode montar campanhas e ver seu público — tudo isso funciona. O que falta é
-                a ponte que leva a mensagem até o WhatsApp, que é configurada por fora do painel.
-              </p>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Enquanto ela não existir, as campanhas ficam guardadas na fila em vez de se
-                perderem. No dia em que a ponte subir, elas saem.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
 
       {(dados?.errosRecentes.length ?? 0) > 0 && (
         <Card>

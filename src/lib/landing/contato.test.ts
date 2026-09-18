@@ -1,7 +1,13 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
-import { INSTAGRAM_LINK, INSTAGRAM_VISIVEL, WHATSAPP_LINK, WHATSAPP_VISIVEL } from "./contato";
+import {
+  INSTAGRAM_LINK,
+  INSTAGRAM_VISIVEL,
+  WHATSAPP_LINK,
+  WHATSAPP_VISIVEL,
+  linkWhatsAppSuporte,
+} from "./contato";
 
 /**
  * Guardas do contato da plataforma.
@@ -70,5 +76,29 @@ describe("contato da plataforma", () => {
       expect(aberturas, `${nome}: abre aba nova sem proteção`).toBe(protecoes);
       expect(aberturas).toBeGreaterThan(0);
     }
+  });
+});
+
+describe("o link do suporte usado dentro do painel", () => {
+  it("usa o mesmo número do site, sem cópia própria", () => {
+    const link = linkWhatsAppSuporte("Teste");
+    const doLink = link.match(/wa\.me\/(\d+)/)?.[1];
+    const escrito = WHATSAPP_VISIVEL.replace(/\D/g, "");
+    // O número que a pessoa lê e o número que o botão liga têm de ser o
+    // mesmo. Um panfleto com o telefone velho ainda faz alguém ligar errado.
+    expect(doLink?.endsWith(escrito)).toBe(true);
+  });
+
+  it("leva a frase já digitada, pronta para enviar", () => {
+    const link = linkWhatsAppSuporte("Olá! Quero contratar o CRM/Chat.");
+    const texto = decodeURIComponent(link.split("?text=")[1] ?? "");
+    expect(texto).toBe("Olá! Quero contratar o CRM/Chat.");
+  });
+
+  it("não deixa espaço nem acento soltos no endereço", () => {
+    // `wa.me` engasga com texto não codificado: a mensagem chegaria cortada.
+    const link = linkWhatsAppSuporte("Olá, tudo bem? Quero o Chat!");
+    expect(link).not.toMatch(/\s/);
+    expect(link).toMatch(/^https:\/\/wa\.me\/\d{12,13}\?text=/);
   });
 });
