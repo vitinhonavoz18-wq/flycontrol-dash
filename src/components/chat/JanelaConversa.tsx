@@ -10,6 +10,9 @@ import {
   Paperclip,
   Pencil,
   ShoppingBag,
+  X,
+  Maximize2,
+  Minimize2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +33,14 @@ import {
 } from "@/lib/crm/autoria";
 import type { ConversaCrm, MensagemCrm, PedidoDoChat } from "@/lib/crm/crm.functions";
 import { CartaoPedido } from "./CartaoPedido";
+import { BalaoMidia } from "./BalaoMidia";
+import { GravadorDeAudio } from "./GravadorDeAudio";
+import { conferirArquivo, ROTULO_MIDIA, ehTipoMidia } from "@/lib/crm/midia";
+import {
+  lerArquivoComoBase64,
+  tamanhoLegivel,
+  type ArquivoParaEnviar,
+} from "@/lib/crm/midiaNavegador";
 
 /**
  * A coluna da direita: a conversa aberta.
@@ -156,19 +167,27 @@ export function JanelaConversa({
   onCorrigirNome,
   pedido,
   onCancelarPedido,
+  ampliado = false,
+  onAmpliar,
 }: {
   conversa: ConversaCrm | null;
   mensagens: MensagemCrm[];
   carregando: boolean;
   enviando: boolean;
   meuUserId: string | null;
-  onEnviar: (texto: string) => Promise<void>;
+  onEnviar: (texto: string, arquivo?: ArquivoParaEnviar | null) => Promise<void>;
   onMudarStatus: (status: "open" | "pending" | "closed") => void;
   onCorrigirNome: () => void;
   pedido: PedidoDoChat | null;
   onCancelarPedido: () => Promise<void>;
+  /** Tela cheia: some a lista da esquerda e o painel em volta. */
+  ampliado?: boolean;
+  onAmpliar?: () => void;
 }) {
   const [texto, setTexto] = useState("");
+  const [anexo, setAnexo] = useState<ArquivoParaEnviar | null>(null);
+  const [erroAnexo, setErroAnexo] = useState<string | null>(null);
+  const seletor = useRef<HTMLInputElement | null>(null);
   const fim = useRef<HTMLDivElement | null>(null);
 
   // Cada mensagem já sai daqui sabendo quem falou, se precisa de faixa de dia
@@ -226,16 +245,43 @@ export function JanelaConversa({
 
   async function enviar() {
     const limpo = texto.trim();
-    if (!limpo || enviando) return;
+    // Com arquivo, o texto vira legenda e pode ficar vazio: mandar uma foto
+    // sem escrever nada é o normal no WhatsApp.
+    if ((!limpo && !anexo) || enviando) return;
+    const guardado = anexo;
     // A caixa esvazia antes da confirmação: se der erro, o texto volta. Deixar
     // a frase presa na caixa enquanto o envio acontece faz a pessoa apertar
     // enviar de novo e mandar duas vezes.
     setTexto("");
+    setAnexo(null);
     try {
-      await onEnviar(limpo);
+      await onEnviar(limpo, guardado);
     } catch {
       setTexto(limpo);
+      setAnexo(guardado);
     }
+  }
+
+  /**
+   * O ARQUIVO É CONFERIDO AQUI, ANTES DE SAIR DAQUI.
+   *
+   * O WhatsApp recusa arquivo grande, e a recusa dele chega depois — com o
+   * lojista já achando que mandou. Dizer não agora é dizer não enquanto ele
+   * ainda está olhando a tela.
+   */
+  function aoEscolherArquivo(arquivo: File | null | undefined) {
+    if (!arquivo) return;
+    const conferido = conferirArquivo(arquivo.type, arquivo.size);
+    if (!conferido.ok) {
+      setErroAnexo(conferido.motivo);
+      return;
+    }
+    setErroAnexo(null);
+    void lerArquivoComoBase64(arquivo)
+      .then(setAnexo)
+      .catch((e: unknown) =>
+        setErroAnexo(e instanceof Error ? e.message : "Não consegui ler o arquivo."),
+      );
   }
 
   return (
@@ -298,24 +344,48 @@ export function JanelaConversa({
               </p>
             </div>
           </div>
-          <Select
-            value={conversa.status}
-            onValueChange={(v) => onMudarStatus(v as "open" | "pending" | "closed")}
-          >
-            <SelectTrigger
-              className="h-9 w-full border-2 text-xs font-semibold sm:w-[190px]"
-              aria-label="Situação da conversa"
+          <div className="flex items-center gap-2">
+            {/* AMPLIAR: a conversa toma a tela inteira.
+                Numa tela de notebook, a coluna da conversa fica com menos de
+                metade da largura e uma mensagem de cinco linhas vira quinze. É
+                o mesmo gesto de encostar a comanda no olho para ler a letra
+                miúda — só que aqui a letra é que cresce. */}
+            {onAmpliar && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onAmpliar}
+                className="h-9 w-9 shrink-0 border-2 p-0"
+                aria-label={ampliado ? "Voltar ao tamanho normal" : "Ampliar a conversa"}
+                title={ampliado ? "Voltar ao tamanho normal" : "Ampliar a conversa"}
+              >
+                {ampliado ? (
+                  <Minimize2 className="h-4 w-4" aria-hidden="true" />
+                ) : (
+                  <Maximize2 className="h-4 w-4" aria-hidden="true" />
+                )}
+              </Button>
+            )}
+            <Select
+              value={conversa.status}
+              onValueChange={(v) => onMudarStatus(v as "open" | "pending" | "closed")}
             >
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {ROTULO_STATUS_CONVERSA.map((s) => (
-                <SelectItem key={s.valor} value={s.valor}>
-                  {s.rotulo}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              <SelectTrigger
+                className="h-9 w-full border-2 text-xs font-semibold sm:w-[190px]"
+                aria-label="Situação da conversa"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {ROTULO_STATUS_CONVERSA.map((s) => (
+                  <SelectItem key={s.valor} value={s.valor}>
+                    {s.rotulo}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         </div>
         <div className="mt-2 border-t border-border pt-2">
           <Legenda />
@@ -393,11 +463,24 @@ export function JanelaConversa({
                       {m.body && (
                         <p className="whitespace-pre-wrap break-words leading-relaxed">{m.body}</p>
                       )}
-                      {m.media_url && (
-                        <p className="flex items-center gap-1.5 text-xs font-medium italic opacity-90">
-                          <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
-                          arquivo recebido
-                        </p>
+                      {/* O ARQUIVO VEM ANTES DO TEXTO, como no WhatsApp: a foto
+                          em cima, a legenda embaixo. */}
+                      {m.media_url ? (
+                        <BalaoMidia
+                          url={m.media_url}
+                          tipo={m.media_type}
+                          claro={autor !== "cliente"}
+                        />
+                      ) : (
+                        // Chegou arquivo mas o endereço ainda não veio (o fluxo
+                        // está baixando). Dizer "Áudio" é melhor que um balão
+                        // em branco, que foi justamente o defeito relatado.
+                        ehTipoMidia(m.media_type) && (
+                          <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold italic opacity-90">
+                            <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
+                            {ROTULO_MIDIA[m.media_type]}
+                          </p>
+                        )
                       )}
                       <div
                         className={`mt-1 flex items-center justify-end gap-1.5 text-[11px] font-medium ${
@@ -431,7 +514,69 @@ export function JanelaConversa({
 
       {/* ------- CAIXA DE ESCREVER: colada embaixo, nunca rola ------- */}
       <div className="shrink-0 border-t-2 border-border bg-card p-3">
+        {/* O QUE ESTÁ PRESO NA MENSAGEM, antes de ela sair. Ver o nome e o
+            tamanho do arquivo evita o clássico "mandei a foto errada". */}
+        {anexo && (
+          <div className="mx-auto mb-2 flex max-w-3xl items-center gap-2 rounded-xl border-2 border-border bg-muted/50 px-3 py-2">
+            <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-xs font-bold text-foreground">{anexo.nome}</p>
+              <p className="text-[11px] font-medium text-muted-foreground">
+                {tamanhoLegivel(anexo.tamanho)} · vai junto com o que você escrever
+              </p>
+            </div>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setAnexo(null)}
+              className="h-8 w-8 shrink-0 p-0"
+              aria-label="Tirar o arquivo"
+              title="Tirar o arquivo"
+            >
+              <X className="h-4 w-4" aria-hidden="true" />
+            </Button>
+          </div>
+        )}
+
+        {erroAnexo && (
+          <p className="mx-auto mb-2 max-w-3xl text-xs font-semibold text-destructive">
+            {erroAnexo}
+          </p>
+        )}
+
         <div className="mx-auto flex max-w-3xl items-end gap-2">
+          <input
+            ref={seletor}
+            type="file"
+            className="hidden"
+            accept="image/*,audio/*,video/*,application/pdf"
+            onChange={(e) => {
+              aoEscolherArquivo(e.target.files?.[0]);
+              // Zerar permite escolher DE NOVO o mesmo arquivo depois de tirá-lo.
+              e.target.value = "";
+            }}
+          />
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => seletor.current?.click()}
+            disabled={enviando}
+            className="h-11 w-11 shrink-0 rounded-xl border-2 p-0"
+            aria-label="Mandar uma foto ou arquivo"
+            title="Mandar uma foto ou arquivo"
+          >
+            <Paperclip className="h-5 w-5" aria-hidden="true" />
+          </Button>
+
+          <GravadorDeAudio
+            desabilitado={enviando}
+            onPronto={(a) => {
+              setErroAnexo(null);
+              setAnexo(a);
+            }}
+            onErro={setErroAnexo}
+          />
+
           <Textarea
             value={texto}
             onChange={(e) => setTexto(e.target.value)}
@@ -442,14 +587,14 @@ export function JanelaConversa({
                 void enviar();
               }
             }}
-            placeholder="Escreva a resposta..."
+            placeholder={anexo ? "Escreva uma legenda (opcional)..." : "Escreva a resposta..."}
             rows={1}
             className="max-h-32 min-h-[44px] resize-none rounded-xl border-2 bg-background text-sm"
             aria-label="Mensagem"
           />
           <Button
             onClick={() => void enviar()}
-            disabled={enviando || !texto.trim()}
+            disabled={enviando || (!texto.trim() && !anexo)}
             className="h-11 w-11 shrink-0 rounded-xl p-0 shadow-md"
             aria-label="Enviar mensagem"
           >

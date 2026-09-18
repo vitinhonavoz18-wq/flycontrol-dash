@@ -29,6 +29,7 @@ import {
   type MensagemCrm,
   type PedidoDoChat,
 } from "@/lib/crm/crm.functions";
+import type { ArquivoParaEnviar } from "@/lib/crm/midiaNavegador";
 import { ListaConversas } from "./ListaConversas";
 import { JanelaConversa } from "./JanelaConversa";
 import { AvisoIntegracao, type StatusIntegracao } from "./AvisoIntegracao";
@@ -66,6 +67,10 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   const buscarPedido = useServerFn(pedidoDaConversa);
   const cancelarPedido = useServerFn(cancelarPedidoDoChat);
 
+  // AMPLIAR: a conversa toma a tela inteira, por cima do painel. Não muda
+  // nada do que está guardado — é só o tamanho da janela, como abrir o mapa
+  // inteiro em vez de olhar pelo retrovisor.
+  const [ampliado, setAmpliado] = useState(false);
   const [conversas, setConversas] = useState<ConversaCrm[]>([]);
   const [mensagens, setMensagens] = useState<MensagemCrm[]>([]);
   const [selecionada, setSelecionada] = useState<string | null>(null);
@@ -251,11 +256,20 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
     [conversas, selecionada],
   );
 
-  async function aoEnviar(texto: string) {
+  async function aoEnviar(texto: string, arquivo?: ArquivoParaEnviar | null) {
     if (!selecionada) return;
     setEnviando(true);
     try {
-      const r = await enviar({ data: { tenantId, conversationId: selecionada, texto } });
+      const r = await enviar({
+        data: {
+          tenantId,
+          conversationId: selecionada,
+          texto,
+          arquivo: arquivo
+            ? { nome: arquivo.nome, mime: arquivo.mime, base64: arquivo.base64 }
+            : null,
+        },
+      });
       setMensagens((atual) => [...atual, r.mensagem]);
       void carregarConversas(true);
     } catch (e: unknown) {
@@ -340,16 +354,30 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <AvisoIntegracao status={integracao} carregando={carregandoIntegracao} />
+    <div
+      className={
+        ampliado
+          ? "fixed inset-0 z-50 flex min-h-0 flex-col bg-background"
+          : "flex h-full min-h-0 flex-col"
+      }
+    >
+      {!ampliado && <AvisoIntegracao status={integracao} carregando={carregandoIntegracao} />}
 
       {/* `grid-rows-[1fr]` não é enfeite. Sem ele a linha da grade cresce junto
           com a conversa mais longa — e a caixa de escrever é empurrada para
           fora da tela, exatamente o que a gente queria evitar. Com uma linha de
           altura fixa, quem cresce demais é obrigado a rolar por dentro. */}
-      <div className="grid min-h-0 flex-1 grid-rows-[1fr] overflow-hidden md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]">
+      <div
+        className={`grid min-h-0 flex-1 grid-rows-[1fr] overflow-hidden ${
+          ampliado ? "" : "md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]"
+        }`}
+      >
         {/* No celular, uma tela de cada vez. */}
-        <div className={`h-full min-h-0 min-w-0 ${selecionada ? "hidden md:block" : "block"}`}>
+        <div
+          className={`h-full min-h-0 min-w-0 ${
+            ampliado ? "hidden" : selecionada ? "hidden md:block" : "block"
+          }`}
+        >
           <ListaConversas
             conversas={conversas}
             carregando={carregandoLista}
@@ -368,7 +396,13 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
                 variant="ghost"
                 size="sm"
                 className="font-semibold"
-                onClick={() => setSelecionada(null)}
+                onClick={() => {
+                  // Voltar para a lista desfaz o ampliado: com a conversa
+                  // fechada, a tela cheia não teria nada para mostrar nem
+                  // botão nenhum para sair dela.
+                  setAmpliado(false);
+                  setSelecionada(null);
+                }}
               >
                 ← Todas as conversas
               </Button>
@@ -389,6 +423,8 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
               onCorrigirNome={abrirCorrecaoDeNome}
               pedido={pedido}
               onCancelarPedido={aoCancelarPedido}
+              ampliado={ampliado}
+              onAmpliar={() => setAmpliado((a) => !a)}
             />
           </div>
         </div>
