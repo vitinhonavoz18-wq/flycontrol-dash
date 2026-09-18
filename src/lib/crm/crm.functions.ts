@@ -467,19 +467,25 @@ export const pedidoDaConversa = createServerFn({ method: "POST" })
     const { tenantId } = await porteiro(context, data.tenantId);
     if (!data.conversationId) throw new Error("Conversa não informada.");
 
+    // O pedido é achado pelo TELEFONE do cliente, não por `orders.customer_id`
+    // — esse campo aponta para usuário do painel (auth.users), não para o
+    // cliente do WhatsApp. É uma armadilha de nome.
     const { data: conversa, error: erroConversa } = await crm("crm_conversations")
-      .select("customer_id")
+      .select(
+        "customer_id, cliente:marketing_customers!crm_conversations_customer_id_fkey(phone_e164)",
+      )
       .eq("tenant_id", tenantId)
       .eq("id", data.conversationId)
       .maybeSingle();
 
     if (erroConversa) throw new Error(erroConversa.message);
-    if (!conversa) return { pedido: null };
+    const telefone = conversa?.cliente?.phone_e164;
+    if (!telefone) return { pedido: null };
 
     const { data: linha, error } = await crm("orders")
       .select(CAMPOS_PEDIDO)
       .eq("tenant_id", tenantId)
-      .eq("customer_id", conversa.customer_id)
+      .eq("customer_phone", telefone)
       .eq("source", "chat-ia")
       .neq("status", "deleted")
       .order("created_at", { ascending: false })

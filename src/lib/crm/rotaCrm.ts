@@ -24,8 +24,30 @@ export function respostaCrm(dados: unknown, status = 200): Response {
   return new Response(JSON.stringify(dados), { status, headers: CABECALHOS });
 }
 
+/**
+ * A recusa, escrita para a IA ENTENDER — e não só para o programador.
+ *
+ * Isto nasceu de um susto real: o pedido falhou, e a atendente anunciou ao
+ * cliente "Pedido feito". Ela recebeu um erro seco, não entendeu, e preencheu
+ * o vazio com otimismo. É o garçom que não ouviu a cozinha dizer "acabou" e
+ * garante ao cliente que já está saindo.
+ *
+ * Por isso toda recusa carrega um `texto` dizendo, em português e no
+ * imperativo, o que a IA deve fazer: avisar que NÃO deu certo.
+ */
 export function erroCrm(erro: string, status: number, mensagem?: string): Response {
-  return respostaCrm({ success: false, error: erro, message: mensagem }, status);
+  return respostaCrm(
+    {
+      success: false,
+      error: erro,
+      message: mensagem,
+      texto:
+        `NÃO DEU CERTO: ${mensagem ?? erro}. ` +
+        "NÃO diga ao cliente que deu certo. Avise que não conseguiu agora e " +
+        "chame um atendente.",
+    },
+    status,
+  );
 }
 
 export function rotaDoCrm(

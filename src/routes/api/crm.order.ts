@@ -158,9 +158,12 @@ export const Route = createFileRoute("/api/crm/order")({
           .filter(Boolean)
           .join(" ");
 
+        // ATENÇÃO: `orders.customer_id` aponta para USUÁRIO DO PAINEL
+        // (auth.users), e não para a ficha do cliente. Gravar aqui o id da
+        // ficha faz o banco recusar o pedido inteiro. Quem amarra o pedido ao
+        // cliente do WhatsApp é o TELEFONE.
         const linhaPedido = {
           tenant_id: tenantId,
-          customer_id: cliente.id,
           customer_name: cliente.name || "Cliente do WhatsApp",
           customer_phone: telefone,
           customer_address: retirada
@@ -196,7 +199,7 @@ export const Route = createFileRoute("/api/crm/order")({
         const { data: aberto } = await crm("orders")
           .select("id, order_number, status")
           .eq("tenant_id", tenantId)
-          .eq("customer_id", cliente.id)
+          .eq("customer_phone", telefone)
           .eq("source", "chat-ia")
           .order("created_at", { ascending: false })
           .limit(1)

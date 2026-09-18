@@ -39,24 +39,17 @@ export const Route = createFileRoute("/api/crm/order-status")({
         const telefone = telefoneDoCorpo(corpo);
         if (!telefone) return erroCrm("telefone_ausente", 400, "Informe o telefone do cliente.");
 
-        // A busca é sempre amarrada à loja conferida E ao telefone da conversa.
-        const { data: cliente } = await crm("marketing_customers")
-          .select("id")
-          .eq("tenant_id", tenantId)
-          .eq("phone_e164", telefone)
-          .maybeSingle();
-
-        let q = crm("orders")
+        // A busca é amarrada à loja conferida E ao TELEFONE da conversa.
+        //
+        // Pelo telefone, e não por `orders.customer_id`: esse campo aponta para
+        // usuário do painel (auth.users), não para o cliente do WhatsApp. É uma
+        // armadilha de nome — "customer" ali significa outra coisa.
+        const { data: linhas, error } = await crm("orders")
           .select("id, order_number, status, total, created_at, items, delivery_type")
           .eq("tenant_id", tenantId)
+          .eq("customer_phone", telefone)
           .order("created_at", { ascending: false })
           .limit(QUANTOS * 2);
-
-        // Pelo cadastro quando existe; pelo telefone quando o pedido veio do
-        // site antes de a pessoa ter ficha.
-        q = cliente ? q.eq("customer_id", cliente.id) : q.eq("customer_phone", telefone);
-
-        const { data: linhas, error } = await q;
         if (error) throw error;
 
         const pedidos = ((linhas ?? []) as Array<Record<string, unknown>>)
