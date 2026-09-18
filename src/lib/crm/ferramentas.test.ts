@@ -6,6 +6,9 @@ import {
   taxaParaCentavos,
   normalizar,
   emReais,
+  listarCardapio,
+  listarBairros,
+  textoDosBairros,
 } from "./ferramentas";
 import type { Catalogo } from "./catalogo";
 
@@ -203,5 +206,63 @@ describe("dinheiro", () => {
 
   it("normalizar tira acento e espaço sobrando", () => {
     expect(normalizar("  Pastel   de  Frangó ")).toBe("pastel de frango");
+  });
+});
+
+/**
+ * O DEFEITO QUE ESTES TESTES SEGURAM
+ *
+ * O cliente perguntava "qual é o cardápio?" e a atendente respondia que não
+ * sabia — com a loja tendo 23 pratos cadastrados. E perguntava "vocês entregam
+ * no meu bairro?" e ela ficava muda. Nos dois casos ela tinha de saber
+ * responder sem que ninguém dissesse antes o nome do prato ou do bairro.
+ */
+describe("o cardápio inteiro, quando perguntam o que a loja tem", () => {
+  it("lista os itens com preço, sem precisar de termo de busca", () => {
+    const texto = listarCardapio(catalogo);
+    expect(texto).toContain("Pastel de Mussarela");
+    expect(texto).toContain("Coca-Cola Lata");
+    expect(texto).toContain(emReais(1400));
+  });
+
+  it("loja sem nenhum produto manda chamar atendente, e não inventar", () => {
+    const vazio = { ...catalogo, cardapio: [] } as unknown as Catalogo;
+    const texto = listarCardapio(vazio);
+    expect(texto).toContain("NÃO invente");
+    expect(texto).toContain("atendente");
+  });
+
+  it("cardápio grande vira seções com exemplos, não uma lista de 300 linhas", () => {
+    const texto = listarCardapio(catalogo, 2);
+    expect(texto).toContain("## Pastéis — 3 itens");
+    // O teto cortou: o item que sobrou de fora não pode aparecer inteiro.
+    expect(texto).not.toContain("- Pastel Misto:");
+  });
+});
+
+describe("os bairros de entrega", () => {
+  const zonas = [
+    { neighborhood: "Brotas", fee: 7.5 },
+    { neighborhood: "Alagados", fee: 0 },
+    { neighborhood: "  ", fee: 10 },
+  ];
+
+  it("ordena e converte para centavos", () => {
+    expect(listarBairros(zonas)).toEqual([
+      { bairro: "Alagados", taxa_cents: 0 },
+      { bairro: "Brotas", taxa_cents: 750 },
+    ]);
+  });
+
+  it("escreve a taxa e marca a entrega grátis", () => {
+    const texto = textoDosBairros(zonas);
+    expect(texto).toContain(`Brotas: ${emReais(750)}`);
+    expect(texto).toContain("Alagados: grátis");
+  });
+
+  it("loja sem bairro cadastrado diz o que está faltando, e não promete nada", () => {
+    const texto = textoDosBairros([]);
+    expect(texto).toContain("NÃO cadastrou nenhum bairro");
+    expect(texto).toContain("NÃO invente taxa");
   });
 });

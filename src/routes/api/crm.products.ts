@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { montarCatalogo } from "@/lib/crm/catalogo";
-import { procurarProdutos, emReais } from "@/lib/crm/ferramentas";
+import { procurarProdutos, listarCardapio, emReais } from "@/lib/crm/ferramentas";
 import { rotaDoCrm, respostaCrm, textoOpcional } from "@/lib/crm/rotaCrm";
 
 /**
@@ -23,6 +23,11 @@ import { rotaDoCrm, respostaCrm, textoOpcional } from "@/lib/crm/rotaCrm";
  *   POST https://<dominio>/api/crm/products
  *   Authorization: Bearer <CRM_N8N_SECRET>
  *   { "tenant_id": "...", "token": "...", "busca": "pastel de frango" }
+ *
+ * SEM `busca`, ELA RECEBE O CARDÁPIO INTEIRO. Isso é o conserto de um defeito
+ * real: o cliente perguntava "qual é o cardápio?" e a atendente dizia que não
+ * sabia, com 23 pratos cadastrados na loja. Ela só sabia responder se já
+ * soubesse o nome do prato — o garçom que precisa que você adivinhe o menu.
  */
 
 export const Route = createFileRoute("/api/crm/products")({
@@ -33,16 +38,24 @@ export const Route = createFileRoute("/api/crm/products")({
 
         const catalogo = await montarCatalogo(supabaseAdmin, tenantId);
 
-        // Sem termo de busca, a IA recebe o resumo da loja (aberta? entrega?)
-        // e um aviso — nunca o cardápio inteiro despejado.
+        // SEM TERMO DE BUSCA, VAI O CARDÁPIO. "O que vocês têm?" é a primeira
+        // pergunta de quase toda conversa, e ela precisa ter resposta.
         if (!busca) {
+          const itens = catalogo.cardapio.flatMap((c) =>
+            c.itens.map((i) => ({
+              nome: i.nome,
+              descricao: i.descricao,
+              categoria: i.categoria,
+              preco_cents: i.preco_cents,
+              preco: emReais(i.preco_cents),
+            })),
+          );
           return respostaCrm({
             success: true,
             loja: catalogo.loja,
-            encontrados: [],
-            texto:
-              "Nenhum termo de busca foi informado. Diga o nome (ou parte do nome) do " +
-              "produto que o cliente pediu.",
+            cardapio_completo: true,
+            encontrados: itens,
+            texto: listarCardapio(catalogo),
           });
         }
 

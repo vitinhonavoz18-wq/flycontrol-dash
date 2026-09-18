@@ -3,6 +3,7 @@ import { conferirChaveMestra, respostaNegadaCrm } from "@/lib/crm/n8nAuth";
 import { autenticarLoja } from "@/lib/crm/n8nTenant";
 import { crm, crmRpc } from "@/lib/crm/db";
 import { configUazapi } from "@/lib/whatsapp/uazapi";
+import { enderecosAssinados } from "@/lib/crm/midiaServidor";
 
 /**
  * A fila de saída: o que o RESTAURANTE respondeu e ainda não foi entregue.
@@ -37,6 +38,10 @@ import { configUazapi } from "@/lib/whatsapp/uazapi";
  * entregue ao n8n fica reservada por alguns minutos. Se o fluxo travar no
  * meio, a reserva vence sozinha e a mensagem volta para a fila. Nada fica
  * preso, nada é enviado em dobro.
+ *
+ * QUANDO A MENSAGEM LEVA ARQUIVO, vem `media_url` (endereço assinado, válido
+ * por uma hora) e `media_type` ("image", "audio", "video" ou "document"). O
+ * fluxo usa o `POST /send/media` da UAZAPI em vez do `/send/text`.
  *
  * Depois de enviar, o n8n precisa avisar em POST /api/crm/outbox/result —
  * senão a mensagem fica como "saindo" até a reserva vencer e ser tentada de
@@ -85,6 +90,20 @@ export const Route = createFileRoute("/api/crm/outbox")({
         }
 
         const mensagens = (data ?? []) as Array<Record<string, unknown>>;
+
+        // O ARQUIVO VAI COM ENDEREÇO ASSINADO E COM HORA PARA VENCER.
+        //
+        // A pasta é fechada, então o n8n não conseguiria baixar nada com o
+        // caminho cru. O endereço assinado é o crachá de visitante: abre aquela
+        // porta, por aquele tempo, e depois não abre mais. Sem isso, a foto que
+        // o lojista mandou nunca chegaria ao cliente.
+        const assinados = await enderecosAssinados(
+          mensagens.map((m) => String(m.media_path ?? "")).filter(Boolean),
+        );
+        for (const m of mensagens) {
+          const caminho = String(m.media_path ?? "");
+          if (caminho && assinados.has(caminho)) m.media_url = assinados.get(caminho);
+        }
 
         // A credencial do aparelho só é buscada quando há o que enviar: não há
         // motivo para ela circular numa visita em que a fila estava vazia.

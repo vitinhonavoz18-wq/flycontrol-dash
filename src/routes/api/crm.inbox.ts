@@ -4,6 +4,7 @@ import { autenticarLoja } from "@/lib/crm/n8nTenant";
 import { crm, crmRpc } from "@/lib/crm/db";
 import { configUazapi } from "@/lib/whatsapp/uazapi";
 import { extrairDaUazapi } from "@/lib/crm/uazapiEvento";
+import { tipoPeloWhatsApp } from "@/lib/crm/midia";
 
 /**
  * O n8n entregando uma mensagem que o CLIENTE mandou no WhatsApp da loja.
@@ -31,6 +32,12 @@ import { extrairDaUazapi } from "@/lib/crm/uazapiEvento";
  * entregar o mesmo recado duas vezes (tentou de novo depois de uma queda de
  * internet), a mensagem aparece UMA vez na tela. Sem ele, o cliente parece
  * ter falado duas vezes — e o atendente responde duas vezes.
+ *
+ * A RESPOSTA DEVOLVE A CREDENCIAL DO APARELHO, em `uazapi`, igual à fila de
+ * saída. É o que permite o fluxo BAIXAR o áudio ou a foto que acabou de
+ * chegar, para transcrever. Sem isso o fluxo ficava com o recado na mão e sem
+ * a chave do armário onde o arquivo estava guardado — e era exatamente esse o
+ * defeito: áudio chegava, ninguém ouvia, ninguém respondia.
  */
 
 const cabecalhos = { "Content-Type": "application/json" };
@@ -99,7 +106,12 @@ export const Route = createFileRoute("/api/crm/inbox")({
           p_from_me: doRestaurante,
           p_external_id: uaz?.externalId ?? (corpo.external_id ? String(corpo.external_id) : null),
           p_media_url: uaz?.mediaUrl ?? (corpo.media_url ? String(corpo.media_url) : null),
-          p_media_type: uaz?.mediaType ?? (corpo.media_type ? String(corpo.media_type) : null),
+          // O TIPO É NORMALIZADO ANTES DE ENTRAR. A UAZAPI escreve a mesma
+          // coisa de várias formas ("ptt", "audioMessage", "AudioMessage"), e
+          // "conversation" — que é mensagem de texto comum — não pode virar
+          // arquivo nenhum. Sem essa tradução, o balão do áudio chegava em
+          // branco na tela e o lojista não tinha como saber que alguém falou.
+          p_media_type: tipoPeloWhatsApp(uaz?.mediaType ?? corpo.media_type ?? corpo.tipo) ?? null,
         });
 
         if (error) {
@@ -122,12 +134,33 @@ export const Route = createFileRoute("/api/crm/inbox")({
         const linha = (Array.isArray(data) ? data[0] : data) as
           { message_id: string; conversation_id: string; duplicada: boolean } | undefined;
 
+        // A CHAVE DO ARMÁRIO, junto com o recado.
+        //
+        // Quando o cliente manda um áudio, o WhatsApp não entrega o som: ele
+        // entrega um bilhete dizendo "tem um áudio guardado ali". Para pegar o
+        // arquivo é preciso a credencial do aparelho da loja — a mesma que a
+        // fila de saída já devolve. Sem ela, o fluxo ficava com o bilhete na
+        // mão e sem a chave, e o cliente falava sozinho.
+        const cfg = configUazapi();
+        const { data: cofre } = await crm("whatsapp_instance_secrets")
+          .select("instance_token")
+          .eq("tenant_id", loja.tenantId)
+          .eq("provider", "uazapi")
+          .maybeSingle();
+
+        const uazapi =
+          cfg && cofre?.instance_token
+            ? { baseUrl: cfg.baseUrl, instanceToken: String(cofre.instance_token) }
+            : null;
+
         return new Response(
           JSON.stringify({
             success: true,
             message_id: linha?.message_id ?? null,
             conversation_id: linha?.conversation_id ?? null,
             duplicada: Boolean(linha?.duplicada),
+            external_id: uaz?.externalId ?? (corpo.external_id ? String(corpo.external_id) : null),
+            uazapi,
           }),
           { status: 200, headers: cabecalhos },
         );

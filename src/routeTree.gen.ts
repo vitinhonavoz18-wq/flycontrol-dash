@@ -64,6 +64,7 @@ import { Route as ApiCrmCatalogRouteImport } from './routes/api/crm.catalog'
 import { Route as ApiCrmCustomerRouteImport } from './routes/api/crm.customer'
 import { Route as ApiCrmDeliveryFeeRouteImport } from './routes/api/crm.delivery-fee'
 import { Route as ApiCrmInboxRouteImport } from './routes/api/crm.inbox'
+import { Route as ApiCrmMessageMediaRouteImport } from './routes/api/crm.message-media'
 import { Route as ApiCrmOrderRouteImport } from './routes/api/crm.order'
 import { Route as ApiCrmOrderStatusRouteImport } from './routes/api/crm.order-status'
 import { Route as ApiCrmOutboxRouteImport } from './routes/api/crm.outbox'
@@ -363,6 +364,11 @@ const ApiCrmInboxRoute = ApiCrmInboxRouteImport.update({
   path: '/api/crm/inbox',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCrmMessageMediaRoute = ApiCrmMessageMediaRouteImport.update({
+  id: '/api/crm/message-media',
+  path: '/api/crm/message-media',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCrmOrderRoute = ApiCrmOrderRouteImport.update({
   id: '/api/crm/order',
   path: '/api/crm/order',
@@ -543,6 +549,7 @@ export interface FileRoutesByFullPath {
   '/api/crm/customer': typeof ApiCrmCustomerRoute
   '/api/crm/delivery-fee': typeof ApiCrmDeliveryFeeRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
+  '/api/crm/message-media': typeof ApiCrmMessageMediaRoute
   '/api/crm/order': typeof ApiCrmOrderRoute
   '/api/crm/order-status': typeof ApiCrmOrderStatusRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
@@ -621,6 +628,7 @@ export interface FileRoutesByTo {
   '/api/crm/customer': typeof ApiCrmCustomerRoute
   '/api/crm/delivery-fee': typeof ApiCrmDeliveryFeeRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
+  '/api/crm/message-media': typeof ApiCrmMessageMediaRoute
   '/api/crm/order': typeof ApiCrmOrderRoute
   '/api/crm/order-status': typeof ApiCrmOrderStatusRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
@@ -703,6 +711,7 @@ export interface FileRoutesById {
   '/api/crm/customer': typeof ApiCrmCustomerRoute
   '/api/crm/delivery-fee': typeof ApiCrmDeliveryFeeRoute
   '/api/crm/inbox': typeof ApiCrmInboxRoute
+  '/api/crm/message-media': typeof ApiCrmMessageMediaRoute
   '/api/crm/order': typeof ApiCrmOrderRoute
   '/api/crm/order-status': typeof ApiCrmOrderStatusRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
@@ -785,6 +794,7 @@ export interface FileRouteTypes {
     | '/api/crm/customer'
     | '/api/crm/delivery-fee'
     | '/api/crm/inbox'
+    | '/api/crm/message-media'
     | '/api/crm/order'
     | '/api/crm/order-status'
     | '/api/crm/outbox'
@@ -863,6 +873,7 @@ export interface FileRouteTypes {
     | '/api/crm/customer'
     | '/api/crm/delivery-fee'
     | '/api/crm/inbox'
+    | '/api/crm/message-media'
     | '/api/crm/order'
     | '/api/crm/order-status'
     | '/api/crm/outbox'
@@ -944,6 +955,7 @@ export interface FileRouteTypes {
     | '/api/crm/customer'
     | '/api/crm/delivery-fee'
     | '/api/crm/inbox'
+    | '/api/crm/message-media'
     | '/api/crm/order'
     | '/api/crm/order-status'
     | '/api/crm/outbox'
@@ -995,6 +1007,7 @@ export interface RootRouteChildren {
   ApiCrmCustomerRoute: typeof ApiCrmCustomerRoute
   ApiCrmDeliveryFeeRoute: typeof ApiCrmDeliveryFeeRoute
   ApiCrmInboxRoute: typeof ApiCrmInboxRoute
+  ApiCrmMessageMediaRoute: typeof ApiCrmMessageMediaRoute
   ApiCrmOrderRoute: typeof ApiCrmOrderRoute
   ApiCrmOrderStatusRoute: typeof ApiCrmOrderStatusRoute
   ApiCrmOutboxRoute: typeof ApiCrmOutboxRouteWithChildren
@@ -1406,6 +1419,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCrmInboxRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/crm/message-media': {
+      id: '/api/crm/message-media'
+      path: '/api/crm/message-media'
+      fullPath: '/api/crm/message-media'
+      preLoaderRoute: typeof ApiCrmMessageMediaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/crm/order': {
       id: '/api/crm/order'
       path: '/api/crm/order'
@@ -1717,6 +1737,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCrmCustomerRoute: ApiCrmCustomerRoute,
   ApiCrmDeliveryFeeRoute: ApiCrmDeliveryFeeRoute,
   ApiCrmInboxRoute: ApiCrmInboxRoute,
+  ApiCrmMessageMediaRoute: ApiCrmMessageMediaRoute,
   ApiCrmOrderRoute: ApiCrmOrderRoute,
   ApiCrmOrderStatusRoute: ApiCrmOrderStatusRoute,
   ApiCrmOutboxRoute: ApiCrmOutboxRouteWithChildren,

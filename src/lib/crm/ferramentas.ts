@@ -208,3 +208,112 @@ export function emReais(cents: number): string {
     currency: "BRL",
   });
 }
+
+/**
+ * O CARDÁPIO INTEIRO, quando o cliente pergunta "o que vocês têm?".
+ *
+ * ISTO NASCEU DE UM ERRO MEU. A busca (`procurarProdutos`) devolve lista vazia
+ * quando não tem termo — e eu tinha deixado só a busca. Resultado: o cliente
+ * perguntava "qual é o cardápio?" e a atendente respondia que não sabia, com a
+ * loja tendo 23 pratos cadastrados. É o garçom que só sabe responder se você
+ * já souber o nome do prato.
+ *
+ * O TETO EXISTE POR UM MOTIVO. Uma loja com 300 itens não cabe numa mensagem
+ * de WhatsApp — nem na cabeça de quem lê. Passando do teto, vão os nomes das
+ * categorias e alguns exemplos, e a atendente pergunta o que a pessoa quer.
+ * Recitar 300 pratos é o mesmo que não responder.
+ */
+export function listarCardapio(catalogo: Catalogo, teto = 60): string {
+  const total = itensDoCatalogo(catalogo).length;
+  if (total === 0) {
+    return (
+      "Esta loja ainda não tem nenhum produto disponível no cardápio. " +
+      "NÃO invente itens. Diga ao cliente que vai chamar um atendente."
+    );
+  }
+
+  const linhas: string[] = [
+    `CARDÁPIO DE ${catalogo.loja.nome.toUpperCase()} (${total} itens):`,
+    "",
+  ];
+
+  if (total > teto) {
+    linhas.push(
+      "O cardápio é grande. Estas são as seções e alguns exemplos de cada uma.",
+      "Pergunte ao cliente o que ele procura e use a busca por nome.",
+      "",
+    );
+    for (const c of catalogo.cardapio) {
+      const exemplos = c.itens.slice(0, 3).map((i) => `${i.nome} (${emReais(i.preco_cents)})`);
+      linhas.push(`## ${c.categoria} — ${c.itens.length} itens: ${exemplos.join(", ")}...`);
+    }
+  } else {
+    for (const c of catalogo.cardapio) {
+      linhas.push(`## ${c.categoria}`);
+      for (const i of c.itens) {
+        const desc = i.descricao ? ` — ${i.descricao}` : "";
+        linhas.push(`- ${i.nome}: ${emReais(i.preco_cents)}${desc}`);
+      }
+      linhas.push("");
+    }
+  }
+
+  if (catalogo.combos.length > 0) {
+    linhas.push("## Combos no ar agora");
+    for (const c of catalogo.combos) linhas.push(`- ${c.nome}: ${emReais(c.preco_cents)}`);
+    linhas.push("");
+  }
+
+  if (catalogo.tamanhos_pizza.length > 0) {
+    linhas.push("## Tamanhos de pizza");
+    for (const t of catalogo.tamanhos_pizza) {
+      const sab = t.sabores ? ` (até ${t.sabores} sabores)` : "";
+      linhas.push(`- ${t.nome}: ${emReais(t.preco_cents)}${sab}`);
+    }
+    linhas.push("");
+  }
+
+  linhas.push(
+    "Ofereça SOMENTE o que está escrito acima, com ESTES preços.",
+    "Não mande a lista inteira de uma vez: sugira 3 ou 4 e pergunte.",
+  );
+
+  return linhas.join("\n");
+}
+
+/** Os bairros onde a loja entrega, com a taxa de cada um. */
+export function listarBairros(zonas: ZonaEntrega[]): Array<{ bairro: string; taxa_cents: number }> {
+  return (zonas ?? [])
+    .map((z) => ({
+      bairro: String(z.neighborhood ?? "").trim(),
+      taxa_cents: taxaParaCentavos(z.fee),
+    }))
+    .filter((z) => z.bairro)
+    .sort((a, b) => a.bairro.localeCompare(b.bairro, "pt-BR"));
+}
+
+/**
+ * A lista de bairros escrita para a IA ler.
+ *
+ * QUANDO A LOJA NÃO CADASTROU NENHUM BAIRRO, o texto diz isso com todas as
+ * letras. Antes o silêncio parecia defeito do robô; era cadastro faltando. É a
+ * diferença entre o entregador dizer "não sei se a gente vai aí" e dizer "a
+ * gente ainda não marcou no mapa até onde vai" — a segunda frase manda alguém
+ * resolver.
+ */
+export function textoDosBairros(zonas: ZonaEntrega[]): string {
+  const lista = listarBairros(zonas);
+  if (lista.length === 0) {
+    return (
+      "Esta loja ainda NÃO cadastrou nenhum bairro de entrega no painel. " +
+      "NÃO invente taxa e NÃO prometa entrega. Pergunte o endereço, diga que " +
+      "um atendente confirma o valor da entrega, e chame um atendente."
+    );
+  }
+  return [
+    `A loja entrega em ${lista.length} bairro(s):`,
+    ...lista.map((z) => `- ${z.bairro}: ${z.taxa_cents === 0 ? "grátis" : emReais(z.taxa_cents)}`),
+    "",
+    "Só estes. Bairro fora desta lista: NÃO prometa entrega, chame um atendente.",
+  ].join("\n");
+}

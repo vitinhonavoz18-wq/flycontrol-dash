@@ -4,6 +4,8 @@ import { crm, crmRpc } from "./db";
 import { assertOwnsTenantWithAddon } from "@/lib/server/plan-guard";
 import { normalizePhone } from "@/lib/marketing/phone";
 import { podeSerAlteradoPelaIa } from "./pedidoStatus";
+import { enderecosAssinados, guardarArquivoDoPainel } from "./midiaServidor";
+import { ROTULO_MIDIA, ehTipoMidia } from "./midia";
 
 /* As tabelas do CRM ainda não constam do arquivo de tipos gerado (ver
    `db.ts`), então as linhas chegam sem tipo. Depois de regerar os tipos,
@@ -140,8 +142,14 @@ export type MensagemCrm = {
   /** O carimbo de quem respondeu: "painel", "ia" ou "celular". */
   origin: string | null;
   body: string | null;
+  /**
+   * O endereço para OUVIR ou VER o arquivo. Vem assinado e com hora para
+   * vencer, e por isso é montado na hora de mostrar — nunca fica guardado.
+   */
   media_url: string | null;
   media_type: string | null;
+  /** Onde o arquivo mora na pasta. Serve para reassinar o endereço depois. */
+  media_path?: string | null;
   status: string;
   error_message: string | null;
   created_at: string;
@@ -165,7 +173,7 @@ export const listarMensagens = createServerFn({ method: "POST" })
 
     const { data: linhas, error } = await crm("crm_messages")
       .select(
-        "id, direction, sent_by, origin, body, media_url, media_type, status, error_message, created_at",
+        "id, direction, sent_by, origin, body, media_url, media_type, media_path, status, error_message, created_at",
       )
       .eq("tenant_id", tenantId)
       .eq("conversation_id", data.conversationId)
@@ -174,9 +182,21 @@ export const listarMensagens = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
 
-    // Vêm do banco do mais novo para o mais velho (é o que o índice faz
-    // rápido) e a tela lê de cima para baixo. A inversão acontece aqui.
-    return { mensagens: ((linhas ?? []) as MensagemCrm[]).slice().reverse() };
+    const mensagens = ((linhas ?? []) as MensagemCrm[]).slice().reverse();
+
+    // O ENDEREÇO DO ARQUIVO É MONTADO AGORA, e vence em uma hora. Guardá-lo
+    // pronto no banco seria guardar o cupom do estacionamento: vale hoje,
+    // amanhã o lojista abre a conversa e vê a foto quebrada.
+    const assinados = await enderecosAssinados(
+      mensagens.map((m) => m.media_path ?? "").filter(Boolean),
+    );
+    for (const m of mensagens) {
+      if (m.media_path && assinados.has(m.media_path)) {
+        m.media_url = assinados.get(m.media_path) ?? m.media_url;
+      }
+    }
+
+    return { mensagens };
   });
 
 /**
@@ -189,12 +209,23 @@ export const listarMensagens = createServerFn({ method: "POST" })
  */
 export const enviarMensagem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { tenantId: string; conversationId: string; texto: string }) => d)
+  .inputValidator(
+    (d: {
+      tenantId: string;
+      conversationId: string;
+      texto: string;
+      /** Um arquivo junto: foto, áudio gravado na hora, vídeo ou PDF. */
+      arquivo?: { nome: string; mime: string; base64: string } | null;
+    }) => d,
+  )
   .handler(async ({ data, context }) => {
     const { tenantId } = await porteiro(context, data.tenantId);
 
     const texto = (data.texto ?? "").trim();
-    if (!texto) throw new Error("Escreva a mensagem antes de enviar.");
+    const temArquivo = Boolean(data.arquivo?.base64);
+    // Com arquivo, o texto vira legenda e pode ficar vazio — mandar uma foto
+    // sem escrever nada é o normal no WhatsApp.
+    if (!texto && !temArquivo) throw new Error("Escreva a mensagem antes de enviar.");
     if (texto.length > 4096) throw new Error("Mensagem muito longa (máximo de 4096 caracteres).");
 
     const { data: conversa, error: erroConversa } = await crm("crm_conversations")
@@ -206,29 +237,59 @@ export const enviarMensagem = createServerFn({ method: "POST" })
     if (erroConversa) throw new Error(erroConversa.message);
     if (!conversa) throw new Error("Conversa não encontrada.");
 
+    // O ARQUIVO VAI PARA A PASTA ANTES DE A MENSAGEM NASCER. Se guardar falhar,
+    // nada é criado — melhor o lojista ver o erro e tentar de novo do que ficar
+    // um balão na tela apontando para um arquivo que não existe.
+    let guardado: { caminho: string; tipo: string } | null = null;
+    if (data.arquivo?.base64) {
+      const r = await guardarArquivoDoPainel({
+        tenantId,
+        conversationId: conversa.id,
+        nome: String(data.arquivo.nome ?? "arquivo"),
+        mime: String(data.arquivo.mime ?? ""),
+        base64: String(data.arquivo.base64),
+      });
+      guardado = { caminho: r.caminho, tipo: r.tipo };
+    }
+
     const { data: criada, error } = await crm("crm_messages")
       .insert({
         tenant_id: tenantId,
         conversation_id: conversa.id,
         direction: "out",
-        body: texto,
+        body: texto || null,
+        media_path: guardado?.caminho ?? null,
+        media_type: guardado?.tipo ?? null,
         status: "queued",
         sent_by: context.userId,
         origin: "painel",
       })
       .select(
-        "id, direction, sent_by, origin, body, media_url, media_type, status, error_message, created_at",
+        "id, direction, sent_by, origin, body, media_url, media_type, media_path, status, error_message, created_at",
       )
       .single();
 
     if (error) throw new Error(error.message);
+
+    // A tela precisa do endereço para tocar o áudio que acabou de sair.
+    const mensagem = criada as MensagemCrm;
+    if (mensagem.media_path) {
+      const mapa = await enderecosAssinados([mensagem.media_path]);
+      mensagem.media_url = mapa.get(mensagem.media_path) ?? null;
+    }
+
+    const resumo = texto
+      ? texto.slice(0, 140)
+      : ehTipoMidia(guardado?.tipo)
+        ? ROTULO_MIDIA[guardado.tipo]
+        : "Arquivo";
 
     // Responder também significa "eu vi": zera a bolinha de não lidas e tira
     // a conversa do estado fechado.
     await crm("crm_conversations")
       .update({
         last_message_at: new Date().toISOString(),
-        last_message_preview: texto.slice(0, 140),
+        last_message_preview: resumo,
         unread_count: 0,
         status: "pending",
         updated_at: new Date().toISOString(),
@@ -236,7 +297,7 @@ export const enviarMensagem = createServerFn({ method: "POST" })
       .eq("id", conversa.id)
       .eq("tenant_id", tenantId);
 
-    return { mensagem: criada as MensagemCrm };
+    return { mensagem };
   });
 
 /** Abrir a conversa apaga a bolinha de não lidas. */

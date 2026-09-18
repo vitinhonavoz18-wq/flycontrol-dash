@@ -1,6 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { crm } from "@/lib/crm/db";
-import { taxaDoBairro, emReais } from "@/lib/crm/ferramentas";
+import { taxaDoBairro, textoDosBairros, listarBairros, emReais } from "@/lib/crm/ferramentas";
 import { rotaDoCrm, respostaCrm, textoOpcional } from "@/lib/crm/rotaCrm";
 
 /**
@@ -34,32 +34,34 @@ export const Route = createFileRoute("/api/crm/delivery-fee")({
 
         const lista = (zonas ?? []) as Array<{ neighborhood: string | null; fee: unknown }>;
 
+        // SEM BAIRRO, VAI A LISTA INTEIRA. "Vocês entregam aqui?" é pergunta de
+        // todo dia, e antes a atendente ficava muda porque ninguém tinha dito o
+        // nome do bairro primeiro.
         if (!bairro) {
           return respostaCrm({
             success: true,
             encontrado: false,
-            texto:
-              "Nenhum bairro informado. Pergunte ao cliente em qual bairro é a entrega " +
-              (lista.length
-                ? `(atendemos: ${lista
-                    .map((z) => z.neighborhood)
-                    .filter(Boolean)
-                    .slice(0, 15)
-                    .join(", ")}).`
-                : "."),
+            bairros: listarBairros(lista),
+            texto: textoDosBairros(lista),
           });
         }
 
         const achada = taxaDoBairro(lista, bairro);
 
         if (!achada) {
+          // A diferença entre "esse bairro não está na lista" e "a loja não tem
+          // lista nenhuma" é importante: a primeira é um cliente longe demais, a
+          // segunda é cadastro faltando no painel — e só a segunda o dono
+          // resolve.
           return respostaCrm({
             success: true,
             encontrado: false,
             bairro_perguntado: bairro,
-            texto:
-              `Não existe taxa cadastrada para "${bairro}". NÃO invente um valor. ` +
-              "Diga ao cliente que vai confirmar a taxa de entrega e chame um atendente.",
+            bairros: listarBairros(lista),
+            texto: lista.length
+              ? `Não existe taxa cadastrada para "${bairro}". NÃO invente um valor.\n` +
+                textoDosBairros(lista)
+              : textoDosBairros(lista),
           });
         }
 
