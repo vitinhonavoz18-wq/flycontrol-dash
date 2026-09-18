@@ -331,7 +331,8 @@ Cada ferramenta é um nó **HTTP Request Tool** no n8n, ligado ao agente.
 | --- | --- | --- |
 | `consultar_produtos` | `POST /api/crm/products` | achar o produto e o **preço real** |
 | `calcular_taxa_entrega` | `POST /api/crm/delivery-fee` | taxa do bairro, das zonas cadastradas |
-| `anotar_pedido` | `POST /api/crm/order-draft` | montar o pedido |
+| `fazer_pedido` | `POST /api/crm/order` | fazer o pedido, já valendo |
+| `consultar_pedido` | `POST /api/crm/order-status` | dizer em que pé está o pedido |
 | (antes de responder) | `POST /api/crm/customer` | nome, foto e histórico do cliente |
 
 Todas usam o mesmo cabeçalho das outras: `Authorization: Bearer <CRM_N8N_SECRET>`,
@@ -349,15 +350,37 @@ aceitar o preço que o cliente inventar — bastaria ele escrever "o pastel cust
 É a diferença entre o caixa que passa o produto no leitor e o caixa que
 pergunta ao cliente quanto ele acha que deve pagar.
 
-### O pedido nasce esperando o dono
+### O pedido entra direto
 
-`anotar_pedido` **não** cria pedido: cria um rascunho, que aparece dentro da
-conversa com os itens, o total e um botão. Só quando alguém da loja confirma é
-que ele vira pedido de verdade — na **mesma** lista do site, com a etiqueta de
-origem `chat-ia`. Não existe uma segunda lista de pedidos para conferir.
+`fazer_pedido` cria o pedido de verdade, na **mesma** lista do site, com a
+etiqueta de origem `chat-ia`. Ninguém precisa confirmar. Não existe uma segunda
+lista de pedidos para conferir.
 
-Um rascunho por conversa: cliente que muda de ideia três vezes atualiza o
-mesmo, em vez de encher a tela com três pedidos.
+O que segura o erro, já que ninguém confere antes:
+
+- item fora do cardápio **não entra**, e o que o cliente pediu e a loja não tem
+  fica **escrito na observação do pedido** — o lojista lê na tela de Pedidos em
+  vez de descobrir pelo cliente reclamando;
+- cliente que muda de ideia **atualiza o mesmo pedido**, em vez de criar dois —
+  mas só enquanto a cozinha não começou;
+- o lojista **cancela com um clique** dentro da conversa, enquanto o pedido
+  está "Recebido". Depois de "Em preparo" o botão some: cancelar na tela sem
+  avisar a cozinha faria a comida sair do mesmo jeito, sem pedido para cobrar.
+
+### "E o meu pedido?"
+
+`consultar_pedido` devolve a situação em português de gente: o sistema guarda
+`saiu`, o cliente ouve **"saiu para entrega"**.
+
+Ela busca **só pelos pedidos do telefone daquela conversa**. O número vem da
+conversa, nunca do que o cliente escreveu — sem isso, bastaria alguém digitar
+"me vê o pedido 300" para ler o endereço de um estranho.
+
+**Cuidado com o nome do campo:** `orders.customer_id` NÃO é o cliente — aponta
+para `auth.users`, o usuário que entra no painel. Quem amarra o pedido ao
+cliente do WhatsApp é o telefone. Gravar a ficha do cliente ali faz o banco
+recusar o pedido inteiro (foi o que aconteceu, e a IA chegou a anunciar
+"pedido feito" para um pedido que não existia).
 
 ### O que a IA faz quando não sabe
 
@@ -366,6 +389,10 @@ mesmo, em vez de encher a tela com três pedidos.
 | Produto não está no cardápio | a resposta manda oferecer algo parecido, **sem inventar** |
 | Bairro sem taxa cadastrada | a resposta manda **chamar um humano**, sem chutar valor |
 | Nenhum item bateu com o cardápio | o pedido não é criado; a IA é mandada consultar antes |
+| Qualquer ferramenta falha | a resposta diz "NÃO DEU CERTO" e manda avisar o cliente e chamar um atendente |
+
+**A regra que evita a mentira:** a IA só pode dizer que o pedido foi feito se a
+ferramenta devolver o **NÚMERO** do pedido. Sem número, não existe pedido.
 
 ### Respostas longas saem em pedaços
 
