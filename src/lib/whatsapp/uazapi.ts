@@ -264,6 +264,32 @@ export async function enviarTexto(
 }
 
 /**
+ * O SERVIDOR DA UAZAPI NÃO CONHECE MAIS ESTE APARELHO.
+ *
+ * POR QUE ISTO PRECISA EXISTIR
+ *
+ * O token de um aparelho vale só dentro do servidor onde ele foi criado.
+ * Trocar de servidor da UAZAPI — ou apagar o aparelho por lá — deixa a loja
+ * com uma chave na mão e nenhuma porta para abrir.
+ *
+ * É a chave do cadeado antigo depois que o cadeado do depósito foi trocado:
+ * continua no molho, continua parecendo uma chave, e não abre mais nada.
+ *
+ * Quando isso acontece, o certo NÃO é mostrar "o WhatsApp recusou a
+ * autorização" para o dono do restaurante — ele não tem o que fazer com essa
+ * frase. O certo é jogar a chave velha fora e mandar fazer uma nova: apagar o
+ * token morto e criar um aparelho novo, para a tela voltar a oferecer o QR
+ * Code.
+ *
+ * 401 e 403 = "esse token não vale aqui". 404 = "esse aparelho não existe".
+ * Nos três casos, insistir com o mesmo token é bater na porta errada de novo.
+ */
+export function aparelhoDesconhecido<T>(r: RespostaUazapi<T>): boolean {
+  if (r.ok) return false;
+  return r.status === 401 || r.status === 403 || r.status === 404;
+}
+
+/**
  * Traduz o vocabulário da UAZAPI para o nosso.
  *
  * Nenhuma regra daqui de dentro pode depender do nome que o fornecedor deu:

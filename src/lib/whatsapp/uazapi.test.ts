@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { configUazapi, traduzirStatusInstancia, configurarWebhook } from "./uazapi";
+import {
+  configUazapi,
+  traduzirStatusInstancia,
+  configurarWebhook,
+  aparelhoDesconhecido,
+} from "./uazapi";
 
 /**
  * As regras da conexão com o WhatsApp que não podem quebrar em silêncio.
@@ -182,6 +187,57 @@ describe("a conexão pela tela do lojista", () => {
     const codigo = soCodigo("src/lib/whatsapp/conexao.functions.ts");
     expect(codigo).toContain("desconectarInstancia");
     expect(codigo).not.toContain('"/instance"');
-    expect(codigo).not.toContain(".delete(");
+
+    // O ÚNICO apagar deste arquivo é o da chave morta no cofre — a que o
+    // servidor de hoje não reconhece mais. Nenhuma conversa, nenhuma mensagem
+    // e nenhum cliente são apagados: troca-se a fechadura, não a casa.
+    const apagares = codigo.match(/\.delete\(/g) ?? [];
+    expect(apagares).toHaveLength(1);
+    expect(codigo).toMatch(/db\("whatsapp_instance_secrets"\)\s*\.delete\(/);
+  });
+
+  it("antes de pedir o QR Code, confere se a chave ainda vale naquele servidor", () => {
+    // Sem esta conferência, trocar de servidor da UAZAPI deixaria toda loja
+    // que já tinha aparelho presa num erro sem saída: o botão de conectar
+    // usaria a chave velha, o servidor novo diria "não conheço", e não haveria
+    // nada na tela capaz de resolver.
+    const codigo = soCodigo("src/lib/whatsapp/conexao.functions.ts");
+    const posConferencia = codigo.indexOf("aparelhoDesconhecido(conferencia)");
+    const posCriar = codigo.indexOf("criarAparelho(tenantId)");
+    expect(posConferencia).toBeGreaterThan(0);
+    expect(posCriar).toBeGreaterThan(posConferencia);
+  });
+});
+
+describe("a chave que não abre mais nada (troca de servidor da UAZAPI)", () => {
+  it("token recusado ou aparelho inexistente manda jogar a chave fora", () => {
+    // 401/403 = "essa chave não vale aqui". 404 = "esse aparelho não existe".
+    // Nos três, insistir com a mesma chave é bater na porta errada de novo.
+    for (const status of [401, 403, 404]) {
+      expect(aparelhoDesconhecido({ ok: false, erro: "x", status, podeTentarDeNovo: false })).toBe(
+        true,
+      );
+    }
+  });
+
+  it("servidor fora do ar NÃO faz a chave boa ser jogada fora", () => {
+    // Este é o teste que protege o lojista. Um tropeço do fornecedor (fora do
+    // ar, lento, sobrecarregado) não pode apagar a chave de um WhatsApp que
+    // está conectado e funcionando — seria trocar a fechadura da loja porque
+    // o telefone do chaveiro deu ocupado.
+    expect(
+      aparelhoDesconhecido({ ok: false, erro: "500", status: 500, podeTentarDeNovo: true }),
+    ).toBe(false);
+    expect(
+      aparelhoDesconhecido({ ok: false, erro: "429", status: 429, podeTentarDeNovo: true }),
+    ).toBe(false);
+    // Sem resposta nenhuma (demorou demais) também não conta.
+    expect(aparelhoDesconhecido({ ok: false, erro: "timeout", podeTentarDeNovo: true })).toBe(
+      false,
+    );
+  });
+
+  it("resposta boa nunca conta como aparelho desconhecido", () => {
+    expect(aparelhoDesconhecido({ ok: true, dados: {} })).toBe(false);
   });
 });

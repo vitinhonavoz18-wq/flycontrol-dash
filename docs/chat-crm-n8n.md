@@ -300,6 +300,11 @@ A chave de administrador é a do cofre: quem a tiver mexe nos aparelhos de
 nem para o n8n. O que o n8n recebe é só o token do aparelho **daquela** loja,
 e só depois de apresentar as duas senhas.
 
+As duas valem **dentro de um servidor só** — o endereço que está em
+`UAZAPI_BASE_URL`. Trocar de servidor da UAZAPI invalida tudo o que foi ligado
+no anterior, e cada loja precisa ler o QR Code outra vez: o passo a passo está
+em [trocar-servidor-uazapi.md](./trocar-servidor-uazapi.md).
+
 ## Quando der erro 401 (não autorizado)
 
 A resposta agora **diz qual das duas chaves recusou**. Olhe o campo `error`:

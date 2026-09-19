@@ -10,6 +10,7 @@ import {
   desconectarInstancia,
   configurarWebhook,
   traduzirStatusInstancia,
+  aparelhoDesconhecido,
 } from "./uazapi";
 
 /* As tabelas envolvidas ainda não constam do arquivo de tipos gerado. */
@@ -79,6 +80,76 @@ async function enderecoDoFluxo(tenantId: string): Promise<string | null> {
   return url || null;
 }
 
+/** O texto que fica anotado na ficha quando a chave velha é jogada fora. */
+const MOTIVO_APARELHO_SUMIU =
+  "O aparelho não existe mais no servidor do WhatsApp. É preciso ler o QR Code de novo.";
+
+/**
+ * JOGA FORA A CHAVE QUE NÃO ABRE MAIS NADA.
+ *
+ * Acontece quando o servidor da UAZAPI é trocado (ou quando alguém apaga o
+ * aparelho por lá): a chave guardada no cofre continua lá, bonitinha, e não
+ * abre porta nenhuma.
+ *
+ * Deixar a chave morta no cofre é pior do que não ter chave: o Chat entrega
+ * essa chave ao fluxo do n8n, o n8n tenta enviar, e a mensagem do cliente
+ * morre no caminho sem ninguém perceber. É o garçom anotando o pedido num
+ * bloco e entregando numa cozinha que foi desativada.
+ *
+ * O que ISTO apaga: a chave do aparelho e as anotações de conexão. O que ISTO
+ * NÃO apaga: nenhuma conversa, nenhuma mensagem, nenhum cliente. O histórico
+ * do Chat continua inteiro — só a fechadura é trocada.
+ */
+async function esquecerAparelho(tenantId: string, motivo: string) {
+  await db("whatsapp_instance_secrets").delete().eq("tenant_id", tenantId).eq("provider", PROVEDOR);
+
+  await gravarFicha(tenantId, {
+    external_instance_id: null,
+    // Zerado de propósito: no servidor novo o aviso de "chegou mensagem" ainda
+    // não foi apontado para lugar nenhum, e fingir que foi deixaria a loja
+    // conectada e muda.
+    webhook_configured_at: null,
+    status: "disconnected",
+    phone_e164: null,
+    disconnected_at: new Date().toISOString(),
+    status_message: motivo,
+  });
+}
+
+/** Cria o aparelho desta loja na UAZAPI e guarda a chave dele no cofre. */
+async function criarAparelho(tenantId: string): Promise<string> {
+  const { data: loja } = await db("pizzerias")
+    .select("name, slug")
+    .eq("id", tenantId)
+    .maybeSingle();
+  const nome = `flycontrol-${(loja?.slug || tenantId).toString().slice(0, 40)}`;
+
+  const criada = await criarInstancia(nome, tenantId);
+  if (!criada.ok) throw new Error(criada.erro);
+
+  const novoToken = criada.dados.token ?? criada.dados.instance?.token;
+  if (!novoToken) throw new Error("O WhatsApp não devolveu a credencial do aparelho.");
+
+  await db("whatsapp_instance_secrets").upsert(
+    {
+      tenant_id: tenantId,
+      provider: PROVEDOR,
+      instance_token: novoToken,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "tenant_id,provider" },
+  );
+
+  await gravarFicha(tenantId, {
+    external_instance_id: criada.dados.instance?.id ?? null,
+    instance_name: nome,
+    status: "disconnected",
+    status_message: null,
+  });
+
+  return novoToken;
+}
+
 /**
  * Como está a conexão agora.
  *
@@ -120,6 +191,25 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
     }
 
     const r = await statusInstancia(token);
+
+    // A CHAVE NÃO VALE MAIS NESTE SERVIDOR.
+    //
+    // Não adianta mostrar "o WhatsApp recusou a autorização" para o dono do
+    // restaurante: ele não tem o que fazer com isso. A tela precisa voltar a
+    // oferecer o QR Code, que é a única coisa que resolve.
+    if (aparelhoDesconhecido(r)) {
+      await esquecerAparelho(tenantId, MOTIVO_APARELHO_SUMIU);
+      return {
+        configurado: true,
+        status: "disconnected",
+        telefone: null,
+        nomePerfil: null,
+        avisoWebhook: false,
+        ultimaVerificacao: null,
+        mensagem:
+          "O WhatsApp desta loja precisa ser conectado de novo. Clique em conectar e leia o QR Code.",
+      };
+    }
 
     if (!r.ok) {
       return {
@@ -192,12 +282,13 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
 /**
  * Pedir o QR Code (ou o código de pareamento).
  *
- * Faz três coisas numa tacada, na ordem certa:
- *   1. cria o aparelho na UAZAPI, se esta loja ainda não tiver um;
- *   2. aponta o aviso de mensagem nova para o fluxo daquela loja;
- *   3. pede o QR Code.
+ * Faz quatro coisas numa tacada, na ordem certa:
+ *   1. confere se a chave guardada ainda vale no servidor de hoje;
+ *   2. cria o aparelho na UAZAPI, se esta loja ainda não tiver um;
+ *   3. aponta o aviso de mensagem nova para o fluxo daquela loja;
+ *   4. pede o QR Code.
  *
- * O passo 2 vem ANTES do 3 de propósito. Se viesse depois, haveria uma janela
+ * O passo 3 vem ANTES do 4 de propósito. Se viesse depois, haveria uma janela
  * em que o aparelho já está conectado e o aviso ainda não foi apontado — e as
  * mensagens que chegassem nesse intervalo sumiriam sem deixar rastro.
  */
@@ -211,43 +302,31 @@ export const iniciarConexaoWhatsApp = createServerFn({ method: "POST" })
       throw new Error("A integração com o WhatsApp ainda não foi configurada neste ambiente.");
     }
 
-    let { ficha, token } = await fichaDoAparelho(tenantId);
+    let { token } = await fichaDoAparelho(tenantId);
 
-    // 1. O aparelho existe?
-    if (!token) {
-      const { data: loja } = await db("pizzerias")
-        .select("name, slug")
-        .eq("id", tenantId)
-        .maybeSingle();
-      const nome = `flycontrol-${(loja?.slug || tenantId).toString().slice(0, 40)}`;
-
-      const criada = await criarInstancia(nome, tenantId);
-      if (!criada.ok) throw new Error(criada.erro);
-
-      const novoToken = criada.dados.token ?? criada.dados.instance?.token;
-      if (!novoToken) throw new Error("O WhatsApp não devolveu a credencial do aparelho.");
-
-      await db("whatsapp_instance_secrets").upsert(
-        {
-          tenant_id: tenantId,
-          provider: PROVEDOR,
-          instance_token: novoToken,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "tenant_id,provider" },
-      );
-
-      await gravarFicha(tenantId, {
-        external_instance_id: criada.dados.instance?.id ?? null,
-        instance_name: nome,
-        status: "disconnected",
-      });
-
-      token = novoToken;
-      ficha = { ...(ficha ?? {}), instance_name: nome };
+    // 1. A chave que está no cofre ainda abre alguma porta NESTE servidor?
+    //
+    // Esta conferência é o que faz a troca de servidor da UAZAPI se resolver
+    // sozinha. Sem ela, a loja que já tinha aparelho no servidor antigo ficaria
+    // presa para sempre: o botão de conectar tentaria usar a chave velha, o
+    // servidor novo responderia "não conheço", e o lojista veria sempre o mesmo
+    // erro, sem nenhum jeito de sair dali.
+    //
+    // Custa uma pergunta a mais ao fornecedor, feita só quando alguém clica em
+    // conectar. É o porteiro conferindo se a chave é mesmo desta portaria antes
+    // de mandar o morador subir.
+    if (token) {
+      const conferencia = await statusInstancia(token);
+      if (aparelhoDesconhecido(conferencia)) {
+        await esquecerAparelho(tenantId, MOTIVO_APARELHO_SUMIU);
+        token = null;
+      }
     }
 
-    // 2. Para onde vão as mensagens que chegarem.
+    // 2. O aparelho existe?
+    if (!token) token = await criarAparelho(tenantId);
+
+    // 3. Para onde vão as mensagens que chegarem.
     const url = await enderecoDoFluxo(tenantId);
     let avisoSemFluxo = false;
     if (url) {
@@ -261,7 +340,7 @@ export const iniciarConexaoWhatsApp = createServerFn({ method: "POST" })
       avisoSemFluxo = true;
     }
 
-    // 3. O QR Code.
+    // 4. O QR Code.
     const r = await conectarInstancia(token, data.telefone);
     if (!r.ok) throw new Error(r.erro);
 
@@ -300,6 +379,14 @@ export const desconectarWhatsApp = createServerFn({ method: "POST" })
     if (!token) return { ok: true };
 
     const r = await desconectarInstancia(token);
+
+    // Aparelho que o servidor não conhece já está desligado na prática. Jogar
+    // a chave morta fora aqui evita que o próximo clique em "conectar" esbarre
+    // nela — e não custa nada, porque desligado ele já estava.
+    if (aparelhoDesconhecido(r)) {
+      await esquecerAparelho(tenantId, MOTIVO_APARELHO_SUMIU);
+      return { ok: true };
+    }
     // Mesmo que a UAZAPI recuse, anotamos como desconectado: o lojista clicou
     // em desconectar e a tela não pode continuar dizendo "conectado".
     await gravarFicha(tenantId, {
