@@ -4,6 +4,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { assertOwnsTenant } from "@/lib/server/plan-guard";
 import { buscarImagem, MOTIVO_LEGIVEL, paraBase64 } from "./mediaGuard";
 import { montarMensagem, normalizarTelefone, type FlyStatusKind } from "./mensagem";
+import { escolherAparelho, type AparelhoDeEnvio } from "./aparelho";
 
 /**
  * Manda a atualização do pedido para o cliente pelo WhatsApp.
@@ -52,11 +53,36 @@ type LojaRow = {
   status_text_entregue: string | null;
 };
 
-/** Endereço e token do fornecedor. Só existem no servidor, nunca no navegador. */
-function credenciaisDoFornecedor() {
-  const baseUrl = (process.env.UAZAPI_BASE_URL || "").trim().replace(/\/+$/, "");
-  const token = (process.env.UAZAPI_TOKEN || "").trim();
-  return baseUrl && token ? { baseUrl, token } : null;
+/**
+ * O aparelho de WhatsApp desta loja. Só existe no servidor, nunca no navegador.
+ *
+ * Procura nas DUAS gavetas: primeiro o aparelho que o próprio lojista ligou
+ * pelo QR Code do Chat, depois o aparelho geral do FlyControl. Antes olhava só
+ * a segunda — e era por isso que o botão caía sempre no modo manual, com a
+ * arte ficando para trás.
+ */
+async function aparelhoDaLoja(tenantId: string): Promise<AparelhoDeEnvio | null> {
+  const [cofre, marketing] = await Promise.all([
+    supabaseAdmin
+      .from("whatsapp_instance_secrets" as never)
+      .select("instance_token")
+      .eq("tenant_id", tenantId)
+      .eq("provider", "uazapi")
+      .maybeSingle(),
+    supabaseAdmin
+      .from("marketing_whatsapp_instances" as never)
+      .select("external_instance_id")
+      .eq("tenant_id", tenantId)
+      .maybeSingle(),
+  ]);
+
+  return escolherAparelho({
+    baseUrl: process.env.UAZAPI_BASE_URL,
+    tokenDaLoja: (cofre.data as { instance_token?: string } | null)?.instance_token,
+    tokenGeral: process.env.UAZAPI_TOKEN,
+    instanciaGeral: (marketing.data as { external_instance_id?: string } | null)
+      ?.external_instance_id,
+  });
 }
 
 export const enviarAtualizacaoDeStatus = createServerFn({ method: "POST" })
@@ -109,15 +135,15 @@ export const enviarAtualizacaoDeStatus = createServerFn({ method: "POST" })
       pedido.customer_name ?? "",
     );
 
-    const fornecedor = credenciaisDoFornecedor();
+    const aparelho = await aparelhoDaLoja(pedido.tenant_id);
 
-    // ── 3. Sem fornecedor configurado, diz a verdade ──────────────────────
+    // ── 3. Sem aparelho nenhum, diz a verdade ─────────────────────────────
     //
     // O caminho antigo abre a conversa do WhatsApp com o texto pronto. Ele
     // NÃO consegue anexar imagem — o endereço `wa.me` só aceita texto. Era
     // exatamente isso que fazia o cliente receber o link da arte no lugar da
     // arte. Aqui o texto vai sem o link, e a tela avisa o que falta.
-    if (!fornecedor) {
+    if (!aparelho) {
       return { ok: false, motivo: AGORA_INDISPONIVEL, texto, telefone };
     }
 
@@ -136,15 +162,6 @@ export const enviarAtualizacaoDeStatus = createServerFn({ method: "POST" })
     }
 
     // ── 5. Envio de verdade ───────────────────────────────────────────────
-    const instanciaId = await instanciaDoEstabelecimento(pedido.tenant_id);
-    if (!instanciaId) {
-      return {
-        ok: false,
-        motivo: "erro",
-        mensagem: "Esta loja ainda não tem um WhatsApp conectado no Marketing.",
-      };
-    }
-
     const rota = imagem ? "/send/media" : "/send/text";
     const corpo = imagem
       ? {
@@ -159,12 +176,14 @@ export const enviarAtualizacaoDeStatus = createServerFn({ method: "POST" })
       : { number: telefone, text: texto };
 
     try {
-      const resposta = await fetch(`${fornecedor.baseUrl}${rota}`, {
+      const resposta = await fetch(`${aparelho.baseUrl}${rota}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          token: fornecedor.token,
-          instance: instanciaId,
+          token: aparelho.token,
+          // Só o aparelho geral precisa dizer por qual número fala. O token da
+          // própria loja já aponta para o aparelho dela.
+          ...(aparelho.instancia ? { instance: aparelho.instancia } : {}),
         },
         body: JSON.stringify(corpo),
         signal: AbortSignal.timeout(30_000),
@@ -174,7 +193,7 @@ export const enviarAtualizacaoDeStatus = createServerFn({ method: "POST" })
       console.log(
         `[flystatus] envio pedido=${pedido.id} tenant=${pedido.tenant_id} etapa=${data.kind} ` +
           `midia=${imagem ? imagem.tipo : "nenhuma"} bytes=${imagem?.tamanho ?? 0} ` +
-          `provedor=uazapi http=${resposta.status} ms=${Date.now() - inicio}`,
+          `aparelho=${aparelho.origem} provedor=uazapi http=${resposta.status} ms=${Date.now() - inicio}`,
       );
 
       if (!resposta.ok) {
@@ -205,14 +224,3 @@ export const enviarAtualizacaoDeStatus = createServerFn({ method: "POST" })
       };
     }
   });
-
-/** Qual aparelho de WhatsApp é desta loja. Nunca vem do navegador. */
-async function instanciaDoEstabelecimento(tenantId: string): Promise<string | null> {
-  const { data } = await supabaseAdmin
-    .from("marketing_whatsapp_instances" as never)
-    .select("external_instance_id")
-    .eq("tenant_id", tenantId)
-    .maybeSingle();
-  const id = (data as { external_instance_id?: string } | null)?.external_instance_id;
-  return id?.trim() ? id.trim() : null;
-}

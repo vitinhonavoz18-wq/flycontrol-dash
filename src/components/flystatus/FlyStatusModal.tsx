@@ -213,8 +213,9 @@ export function FlyStatusModal({
                 <p className="mt-0.5 text-muted-foreground">
                   Dá para abrir a conversa com o texto pronto e enviar à mão — mas{" "}
                   <strong className="text-foreground">a arte não vai junto</strong>. O WhatsApp só
-                  aceita imagem quando o envio é automático. Para ligar, conecte o WhatsApp em
-                  Marketing → Configurações.
+                  aceita imagem quando o envio é automático. Para ligar, conecte o WhatsApp da loja
+                  pelo QR Code na aba <strong className="text-foreground">Chat</strong> (ou em
+                  Marketing → Configurações).
                 </p>
               </div>
             </div>
