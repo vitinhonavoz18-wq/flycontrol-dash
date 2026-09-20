@@ -6,7 +6,10 @@ import reactRefresh from "eslint-plugin-react-refresh";
 import tseslint from "typescript-eslint";
 
 export default tseslint.config(
-  { ignores: ["dist", ".output", ".vinxi"] },
+  // `docs` guarda material de leitura e modelos de fluxo do n8n — texto para
+  // pessoa ler e copiar, não código que o site executa. Passar o formatador
+  // neles seria como corrigir a ortografia de um bilhete colado na geladeira.
+  { ignores: ["dist", ".output", ".vinxi", "docs"] },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ["**/*.{ts,tsx}"],
