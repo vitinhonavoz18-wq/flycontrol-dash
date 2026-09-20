@@ -174,6 +174,38 @@ describe("o que a UAZAPI recusa, escrito em português", () => {
     expect(r.erro).not.toContain("Maximum number");
   });
 
+  it("chave recusada aponta para as DUAS variáveis, não só para a chave", async () => {
+    // O caso real: o endereço do servidor foi trocado e a chave de
+    // administrador não salvou junto. O servidor novo recebeu a chave velha e
+    // respondeu só "Unauthorized" — a carta endereçada à casa nova com a
+    // chave da casa antiga. Sem esta dica ninguém desconfia da metade que
+    // ficou para trás.
+    vi.stubGlobal("fetch", async () => {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+    });
+
+    const r = await conectarInstancia("token-do-aparelho");
+
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erro).toContain("UAZAPI_BASE_URL");
+    expect(r.erro).toContain("UAZAPI_ADMIN_TOKEN");
+    expect(r.erro).toContain("MESMO servidor");
+    expect(r.erro).not.toBe("Unauthorized");
+  });
+
+  it("401 sem explicação nenhuma no corpo também vira o mesmo recado", async () => {
+    // Alguns servidores recusam com o corpo vazio. O lojista não pode ficar
+    // com uma tela em branco por causa disso.
+    vi.stubGlobal("fetch", async () => new Response("", { status: 403 }));
+
+    const r = await conectarInstancia("token-do-aparelho");
+
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erro).toContain("UAZAPI_ADMIN_TOKEN");
+  });
+
   it("recusa que a gente não conhece continua aparecendo como veio", async () => {
     // Traduzir só o que se entende. Engolir o resto e mostrar "erro
     // desconhecido" esconderia do suporte a única pista que existe.

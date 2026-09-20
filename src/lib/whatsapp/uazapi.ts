@@ -138,6 +138,22 @@ async function chamar<T>(
  * continua aparecendo como veio: melhor um recado em inglês do que esconder
  * do lojista o motivo real.
  */
+/**
+ * O recado de chave recusada.
+ *
+ * O caso que mais acontece na prática não é chave errada: é chave TROCADA PELA
+ * METADE. Alguém muda o endereço do servidor e a chave de administrador não
+ * salva junto (ou o contrário), e aí o endereço novo recebe a chave velha —
+ * que é exatamente a carta endereçada à casa nova com a chave da casa antiga.
+ * A recusa é a mesma de uma chave digitada errado, e sem esta dica ninguém
+ * desconfia de que o problema é a METADE que ficou para trás.
+ */
+const RECUSA_DE_CHAVE =
+  "O servidor do WhatsApp recusou a chave (não autorizado). Confira, nas variáveis " +
+  "do Cloudflare, se UAZAPI_BASE_URL e UAZAPI_ADMIN_TOKEN são do MESMO servidor: " +
+  "endereço novo com chave antiga dá exatamente esta recusa. Depois de salvar, " +
+  "publique o site de novo — variável salva e não publicada não vale.";
+
 const RECUSAS_CONHECIDAS: Array<{ pedaco: string; recado: string }> = [
   {
     pedaco: "maximum number of instances",
@@ -164,6 +180,10 @@ const RECUSAS_CONHECIDAS: Array<{ pedaco: string; recado: string }> = [
       "O WhatsApp recusou por limite do plano. Libere uma vaga desligando o aparelho " +
       "de outra loja, ou avise o suporte para aumentar o plano.",
   },
+  {
+    pedaco: "unauthorized",
+    recado: RECUSA_DE_CHAVE,
+  },
 ];
 
 function mensagemDeErro(json: unknown, status: number): string {
@@ -177,7 +197,7 @@ function mensagemDeErro(json: unknown, status: number): string {
     return bruto.slice(0, 200);
   }
 
-  if (status === 401 || status === 403) return "O WhatsApp recusou a autorização.";
+  if (status === 401 || status === 403) return RECUSA_DE_CHAVE;
   if (status === 404) return "Aparelho não encontrado no WhatsApp.";
   return `O WhatsApp respondeu ${status}.`;
 }

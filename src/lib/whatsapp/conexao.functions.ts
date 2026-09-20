@@ -276,7 +276,21 @@ export const iniciarConexaoWhatsApp = createServerFn({ method: "POST" })
       const nome = `flycontrol-${(loja?.slug || tenantId).toString().slice(0, 40)}`;
 
       const criada = await criarInstancia(nome, tenantId);
-      if (!criada.ok) throw new Error(criada.erro);
+      if (!criada.ok) {
+        // Criar aparelho é a ÚNICA operação que usa a chave de administrador
+        // da plataforma. Se a recusa vier daqui, o problema não é da loja: é
+        // do endereço ou da chave gravados no servidor. Dizer isso muda o que
+        // o lojista faz — em vez de ficar clicando em Conectar achando que é
+        // com ele, ele avisa o suporte.
+        const recusaDeChave = [401, 403].includes(criada.status ?? 0);
+        throw new Error(
+          recusaDeChave
+            ? "O servidor do WhatsApp recusou a chave de administrador desta plataforma. " +
+                "Isso é configuração do sistema, não da sua loja — avise o suporte para " +
+                "conferir o endereço e a chave da UAZAPI, que precisam ser do mesmo servidor."
+            : criada.erro,
+        );
+      }
 
       const novoToken = criada.dados.token ?? criada.dados.instance?.token;
       if (!novoToken) throw new Error("O WhatsApp não devolveu a credencial do aparelho.");
