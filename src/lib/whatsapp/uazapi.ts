@@ -124,10 +124,59 @@ async function chamar<T>(
   }
 }
 
+/**
+ * As recusas da UAZAPI que o dono da loja precisa ENTENDER, escritas em
+ * português e com a saída junto.
+ *
+ * A UAZAPI responde em inglês, no vocabulário dela. "Maximum number of
+ * instances connected reached" jogado na tela é o aviso de porta trancada sem
+ * dizer onde está a chave: o lojista lê, não entende, e conclui que o sistema
+ * quebrou — quando na verdade basta desligar o aparelho de outra loja.
+ *
+ * A comparação é por PEDAÇO do texto, e não pelo texto inteiro, porque o
+ * fornecedor muda a pontuação de vez em quando. O que não for reconhecido
+ * continua aparecendo como veio: melhor um recado em inglês do que esconder
+ * do lojista o motivo real.
+ */
+const RECUSAS_CONHECIDAS: Array<{ pedaco: string; recado: string }> = [
+  {
+    pedaco: "maximum number of instances",
+    recado:
+      "O limite de aparelhos de WhatsApp do plano já está todo ocupado. " +
+      "Para liberar uma vaga, entre na loja que está usando um aparelho que você " +
+      "não precisa agora e clique em Desligar este aparelho — depois volte aqui e " +
+      "conecte. Se todas as lojas precisam ficar ligadas ao mesmo tempo, o plano " +
+      "do WhatsApp precisa ser aumentado; avise o suporte.",
+  },
+  {
+    pedaco: "already connected",
+    recado: "Este aparelho já está conectado. Clique em Atualizar para a tela se acertar.",
+  },
+  {
+    pedaco: "instance not found",
+    recado:
+      "O aparelho desta loja não existe mais do lado do WhatsApp. " +
+      "Clique em Conectar WhatsApp para criar um novo.",
+  },
+  {
+    pedaco: "limit",
+    recado:
+      "O WhatsApp recusou por limite do plano. Libere uma vaga desligando o aparelho " +
+      "de outra loja, ou avise o suporte para aumentar o plano.",
+  },
+];
+
 function mensagemDeErro(json: unknown, status: number): string {
   const c = (json ?? {}) as Record<string, unknown>;
   const bruto = [c.error, c.message, c.response].find((v) => typeof v === "string" && v.trim());
-  if (typeof bruto === "string") return bruto.slice(0, 200);
+
+  if (typeof bruto === "string") {
+    const normalizado = bruto.toLowerCase();
+    const conhecida = RECUSAS_CONHECIDAS.find((r) => normalizado.includes(r.pedaco));
+    if (conhecida) return conhecida.recado;
+    return bruto.slice(0, 200);
+  }
+
   if (status === 401 || status === 403) return "O WhatsApp recusou a autorização.";
   if (status === 404) return "Aparelho não encontrado no WhatsApp.";
   return `O WhatsApp respondeu ${status}.`;

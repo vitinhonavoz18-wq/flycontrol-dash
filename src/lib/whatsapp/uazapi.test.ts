@@ -1,7 +1,12 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { configUazapi, traduzirStatusInstancia, configurarWebhook } from "./uazapi";
+import {
+  configUazapi,
+  traduzirStatusInstancia,
+  configurarWebhook,
+  conectarInstancia,
+} from "./uazapi";
 
 /**
  * As regras da conexão com o WhatsApp que não podem quebrar em silêncio.
@@ -129,6 +134,58 @@ describe("o aviso de mensagem nova (webhook na UAZAPI)", () => {
       expect(cabecalhos.token).toBe("token-do-aparelho");
       expect(cabecalhos.admintoken).toBeUndefined();
     });
+  });
+});
+
+describe("o que a UAZAPI recusa, escrito em português", () => {
+  const original = { ...process.env };
+
+  beforeEach(() => {
+    process.env.UAZAPI_BASE_URL = "https://api.uazapi.test";
+    process.env.UAZAPI_ADMIN_TOKEN = "chave-de-admin";
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    process.env.UAZAPI_BASE_URL = original.UAZAPI_BASE_URL;
+    process.env.UAZAPI_ADMIN_TOKEN = original.UAZAPI_ADMIN_TOKEN;
+  });
+
+  it("limite de aparelhos vira recado com a saída junto, não inglês na tela", async () => {
+    // Aconteceu de verdade: o lojista clicou em Conectar e recebeu
+    // "Maximum number of instances connected reached". Ele leu, não entendeu
+    // e achou que o sistema tinha quebrado — quando bastava desligar o
+    // aparelho de outra loja para abrir a vaga.
+    vi.stubGlobal("fetch", async () => {
+      return new Response(
+        JSON.stringify({ error: "Maximum number of instances connected reached" }),
+        {
+          status: 400,
+        },
+      );
+    });
+
+    const r = await conectarInstancia("token-do-aparelho");
+
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erro).toContain("limite de aparelhos");
+    expect(r.erro).toContain("Desligar este aparelho");
+    expect(r.erro).not.toContain("Maximum number");
+  });
+
+  it("recusa que a gente não conhece continua aparecendo como veio", async () => {
+    // Traduzir só o que se entende. Engolir o resto e mostrar "erro
+    // desconhecido" esconderia do suporte a única pista que existe.
+    vi.stubGlobal("fetch", async () => {
+      return new Response(JSON.stringify({ error: "Something nobody predicted" }), { status: 400 });
+    });
+
+    const r = await conectarInstancia("token-do-aparelho");
+
+    expect(r.ok).toBe(false);
+    if (r.ok) return;
+    expect(r.erro).toBe("Something nobody predicted");
   });
 });
 

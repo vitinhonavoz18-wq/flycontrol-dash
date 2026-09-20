@@ -43,6 +43,18 @@ export type EstadoConexao = {
   avisoWebhook: boolean;
   ultimaVerificacao: string | null;
   mensagem: string | null;
+  /**
+   * Esta loja JÁ TEM um aparelho criado lá na UAZAPI — mesmo que ele esteja
+   * desligado agora.
+   *
+   * Existe por um beco sem saída real: o botão de desligar só aparecia para
+   * quem a tela achava que estava conectado. Só que o plano do WhatsApp tem um
+   * número limitado de aparelhos, e um aparelho parado continua ocupando a
+   * vaga. Quem batia no limite ficava sem poder conectar E sem poder desligar
+   * nada para abrir espaço — como a vaga da garagem ocupada por um carro cuja
+   * chave ninguém encontra.
+   */
+  temAparelho: boolean;
 };
 
 /** A ficha do aparelho + o token guardado no cofre. */
@@ -102,6 +114,7 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
         avisoWebhook: false,
         ultimaVerificacao: null,
         mensagem: "A integração com o WhatsApp ainda não foi configurada neste ambiente.",
+        temAparelho: false,
       };
     }
 
@@ -116,6 +129,7 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
         avisoWebhook: false,
         ultimaVerificacao: null,
         mensagem: null,
+        temAparelho: false,
       };
     }
 
@@ -130,6 +144,7 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
         avisoWebhook: !ficha?.webhook_configured_at,
         ultimaVerificacao: null,
         mensagem: r.erro,
+        temAparelho: true,
       };
     }
 
@@ -186,6 +201,7 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
       avisoWebhook: avisoPendente,
       ultimaVerificacao: agora,
       mensagem: null,
+      temAparelho: true,
     };
   });
 

@@ -167,7 +167,11 @@ export function ConexaoWhatsApp({ tenantId }: { tenantId: string }) {
     setDesconectando(true);
     try {
       await desconectar({ data: { tenantId } });
-      toast.success("WhatsApp desconectado. Suas conversas continuam guardadas.");
+      toast.success(
+        estado?.status === "connected"
+          ? "WhatsApp desconectado. Suas conversas continuam guardadas."
+          : "Aparelho desligado. A vaga do plano foi liberada para outra loja conectar.",
+      );
       setQrcode(null);
       setPaircode(null);
       await conferir(true);
@@ -316,7 +320,14 @@ export function ConexaoWhatsApp({ tenantId }: { tenantId: string }) {
               </>
             )}
 
-            {conectado && (
+            {/* O botão de desligar aparece também com o aparelho parado — e
+                isso conserta um beco sem saída. O plano do WhatsApp tem um
+                número limitado de aparelhos, e aparelho parado continua
+                ocupando a vaga. Antes, quem batia no limite não conseguia
+                conectar NEM liberar espaço, porque o botão só existia para
+                quem já estava conectado: a vaga da garagem ocupada por um
+                carro cuja chave ninguém encontra. */}
+            {(conectado || estado?.temAparelho) && (
               <Button
                 variant="outline"
                 onClick={() => void aoDesconectar()}
@@ -327,10 +338,18 @@ export function ConexaoWhatsApp({ tenantId }: { tenantId: string }) {
                 ) : (
                   <Power className="mr-2 h-4 w-4" />
                 )}
-                Desconectar
+                {conectado ? "Desconectar" : "Desligar este aparelho"}
               </Button>
             )}
           </div>
+
+          {!conectado && estado?.temAparelho && (
+            <p className="text-xs text-muted-foreground">
+              Desligar o aparelho não apaga nada: as conversas continuam guardadas e o mesmo número
+              volta na próxima leitura do QR Code. Serve para liberar a vaga do plano quando outra
+              loja precisa conectar.
+            </p>
+          )}
 
           {/* O caminho para quem usa o painel pelo próprio celular: não dá para
               apontar a câmera do aparelho para a tela dele mesmo. */}
