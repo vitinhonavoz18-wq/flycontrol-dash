@@ -8,6 +8,13 @@ import { Switch } from "@/components/ui/switch";
 import { Card, CardContent } from "@/components/ui/card";
 import { Plus, Pencil, Trash2, Loader2 } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
+import { SeletorDeCategorias } from "@/components/menu/SeletorDeCategorias";
+import {
+  codigosParaOCardapioPublico,
+  diferencaDeVinculos,
+  type CadernoDeVinculos,
+  type VinculoDeCategoria,
+} from "@/lib/menu/vinculosDeAdicional";
 
 import {
   Dialog,
@@ -24,6 +31,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { VocabularioDoCardapio } from "@/lib/menu/vocabulario";
+
+const caderno = supabase as unknown as CadernoDeVinculos;
 
 interface ExtraListProps {
   pizzeriaId: string;
@@ -53,9 +62,60 @@ export function ExtraList({
   const [price, setPrice] = useState("");
   const [extraType, setExtraType] = useState("borda");
 
+  // "Exibir este adicional em": as categorias do cardápio e as que estão
+  // marcadas no complemento aberto. Lista vazia = aparece em todas.
+  const [categorias, setCategorias] = useState<VinculoDeCategoria[]>([]);
+  const [categoriasEscolhidas, setCategoriasEscolhidas] = useState<string[]>([]);
+  const [carregandoVinculos, setCarregandoVinculos] = useState(false);
+
   useEffect(() => {
     loadExtras();
+    loadCategorias();
   }, [pizzeriaId]);
+
+  async function loadCategorias() {
+    const { data } = await supabase
+      .from("menu_categories")
+      .select("id, name, external_id")
+      .eq("pizzeria_id", pizzeriaId)
+      .order("order_index", { ascending: true })
+      .order("name", { ascending: true });
+    setCategorias((data ?? []) as VinculoDeCategoria[]);
+  }
+
+  async function lerVinculos(extraId: string): Promise<string[]> {
+    const { data } = await caderno
+      .from("menu_extra_categories")
+      .select("category_id")
+      .eq("extra_id", extraId);
+    return (data ?? []).map((v) => v.category_id);
+  }
+
+  /**
+   * Grava as categorias escolhidas.
+   *
+   * Apaga só o que saiu e grava só o que entrou. Apagar tudo e regravar
+   * funcionaria, mas escreveria de novo linhas que já estavam certas — é
+   * refazer o cardápio inteiro porque mudou um item.
+   */
+  async function salvarVinculos(extraId: string, escolhidas: string[]) {
+    const atuais = await lerVinculos(extraId);
+    const { inserir, remover } = diferencaDeVinculos(atuais, escolhidas);
+
+    if (remover.length > 0) {
+      await caderno
+        .from("menu_extra_categories")
+        .delete()
+        .eq("extra_id", extraId)
+        .in("category_id", remover);
+    }
+
+    if (inserir.length > 0) {
+      await caderno
+        .from("menu_extra_categories")
+        .insert(inserir.map((category_id) => ({ extra_id: extraId, category_id })));
+    }
+  }
 
   async function loadExtras() {
     setLoading(true);
@@ -79,15 +139,28 @@ export function ExtraList({
     setName("");
     setPrice("");
     setExtraType("borda");
+    // Complemento novo nasce sem vínculo, ou seja, valendo em todo o cardápio.
+    // É o padrão menos surpreendente: quem não mexer nesta parte recebe o
+    // comportamento que o sistema sempre teve.
+    setCategoriasEscolhidas([]);
     setIsDialogOpen(true);
   }
 
-  function openEdit(ext: any) {
+  async function openEdit(ext: any) {
     setEditingExtra(ext);
     setName(ext.name);
     setPrice(ext.price.toString());
     setExtraType(ext.extra_type);
+    // Abre já mostrando onde ele aparece hoje — editar às cegas é o que faz
+    // alguém desmarcar sem querer o que estava certo.
+    setCategoriasEscolhidas([]);
+    setCarregandoVinculos(true);
     setIsDialogOpen(true);
+    try {
+      setCategoriasEscolhidas(await lerVinculos(ext.id));
+    } finally {
+      setCarregandoVinculos(false);
+    }
   }
 
   async function handleSave() {
@@ -106,6 +179,13 @@ export function ExtraList({
       active: editingExtra ? editingExtra.active : true,
     };
 
+    // As categorias viajam para o cardápio público pelo código que o SITE usa,
+    // não pelo daqui — cada lado guarda a mesma categoria com um número
+    // diferente. Categoria que nunca foi sincronizada não tem esse código, e o
+    // vínculo dela não tem como atravessar: em vez de sumir em silêncio, o
+    // lojista é avisado por nome de quem ficou de fora.
+    const { codigos, semCodigo } = codigosParaOCardapioPublico(categoriasEscolhidas, categorias);
+
     try {
       let externalId = editingExtra?.external_id;
 
@@ -115,7 +195,11 @@ export function ExtraList({
           action: editingExtra ? "update" : "create",
           id: editingExtra?.id,
           externalId: editingExtra?.external_id,
-          data: payload,
+          // `category_ids` vai SEMPRE, inclusive vazio: lista vazia é o que
+          // manda o site liberar o adicional para o cardápio inteiro de novo.
+          // Omitir faria o site manter os vínculos antigos, e desmarcar tudo
+          // aqui não teria efeito nenhum lá.
+          data: { ...payload, category_ids: codigos },
           pizzeriaSlug,
           pizzeriaApiKey,
           syncEndpoint,
@@ -153,6 +237,7 @@ export function ExtraList({
       };
 
       let error;
+      let extraId: string | undefined = editingExtra?.id;
       if (editingExtra) {
         const { error: err } = await supabase
           .from("menu_extras")
@@ -160,14 +245,28 @@ export function ExtraList({
           .eq("id", editingExtra.id);
         error = err;
       } else {
-        const { error: err } = await supabase.from("menu_extras").insert(finalPayload);
+        // `select("id")` não é enfeite: sem o número do complemento recém
+        // criado não há onde pendurar as categorias escolhidas.
+        const { data: criado, error: err } = await supabase
+          .from("menu_extras")
+          .insert(finalPayload)
+          .select("id")
+          .single();
         error = err;
+        extraId = (criado as { id: string } | null)?.id;
       }
 
       if (error) {
         toast.error("Erro ao salvar complemento: " + error.message);
       } else {
+        if (extraId) await salvarVinculos(extraId, categoriasEscolhidas);
+
         toast.success("Cardápio atualizado no site com sucesso.");
+        if (semCodigo.length > 0) {
+          toast.warning(
+            `Estas categorias ainda não foram sincronizadas, então o vínculo delas só vale aqui no painel por enquanto: ${semCodigo.join(", ")}. Use "Sincronizar Cardápio" para publicá-las.`,
+          );
+        }
         setIsDialogOpen(false);
         if (onRefresh) onRefresh();
         else loadExtras();
@@ -334,7 +433,7 @@ export function ExtraList({
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingExtra ? "Editar Complemento" : "Novo Complemento"}</DialogTitle>
           </DialogHeader>
@@ -367,6 +466,20 @@ export function ExtraList({
                 value={price}
                 onChange={(e) => setPrice(e.target.value)}
                 placeholder="0,00"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Exibir este complemento em</Label>
+              <p className="text-xs text-muted-foreground">
+                Marque as categorias em que ele deve ser oferecido. Sem nenhuma marcada, ele aparece
+                no cardápio inteiro.
+              </p>
+              <SeletorDeCategorias
+                categorias={categorias}
+                escolhidas={categoriasEscolhidas}
+                onMudar={setCategoriasEscolhidas}
+                carregando={carregandoVinculos}
               />
             </div>
           </div>

@@ -413,6 +413,17 @@ function prepareDataForExternal(type: MenuType, data: any) {
       name: data.name,
       price: data.price,
       active: data.active !== undefined ? data.active : true,
+      // Em quais categorias este complemento aparece, pelos códigos que o
+      // SITE usa (cada lado guarda a mesma categoria com um número diferente).
+      //
+      // Vai SEMPRE que a tela informar, inclusive vazio: lista vazia é o que
+      // manda o site liberar o complemento para o cardápio inteiro de novo.
+      // `undefined` (nenhuma informação) some do pacote e o site mantém o que
+      // já tinha — que é o certo para quem chama isto sem mexer em vínculo,
+      // como a sincronização em massa do cardápio.
+      category_ids: Array.isArray(data.category_ids)
+        ? data.category_ids.map(normalizeExternalId)
+        : undefined,
     };
   }
 
