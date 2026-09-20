@@ -288,6 +288,36 @@ Ou seja: **você não precisa configurar webhook na UAZAPI na mão.** Se alguém
 mexer nisso por fora e tirar os filtros, o FlyControl ainda descarta o eco e
 os grupos por conta própria — são duas redes debaixo do trapezista.
 
+### A IA se cala quando uma pessoa da equipe responde
+
+Cliente falando com duas pessoas ao mesmo tempo recebe duas versões da mesma
+história. Por isso, quando um humano assume a conversa, a atendente de IA fica
+**uma hora calada naquela conversa** — e depois volta sozinha.
+
+Um humano responde por **dois caminhos**, e os dois precisam travar:
+
+| Caminho | O que acontece | Quem tranca |
+|---|---|---|
+| O dono digita **no celular** dele | a mensagem passa pelo WhatsApp e volta para o fluxo | `/api/crm/inbox`, ao ver `from_me` |
+| O atendente responde **pelo painel** | a mensagem sai do FlyControl direto para o WhatsApp e **nunca volta** | o próprio painel, ao enfileirar a resposta |
+
+O segundo caminho era o furo, e justamente o mais usado. A resposta do painel
+é filtrada na volta de propósito — senão ela mesma voltaria como se fosse
+pergunta nova —, então o fluxo **não tem como descobrir sozinho** que alguém
+assumiu. Quem anota é o FlyControl.
+
+A trava fica em `crm_conversations.ia_pausada_ate`: guarda a HORA em que a IA
+pode voltar a falar, e não um sim/não. Assim ela se solta sozinha, como a
+moeda do parquímetro — ninguém precisa lembrar de destravar, e uma conversa
+não fica muda para sempre porque alguém respondeu uma vez num domingo.
+
+O fluxo recebe a resposta pronta: `/api/crm/inbox` devolve `ia_pausada` na
+mesma chamada em que o fluxo entrega a mensagem. O nó **Pode responder?**
+confere isso além da trava antiga do Redis — duas redes debaixo do trapezista.
+
+**A resposta da própria IA não tranca a IA.** Se trancasse, ela se calaria
+depois da primeira frase e a conversa morreria no meio.
+
 ### Trocar a conta ou o servidor da UAZAPI
 
 O endereço e a chave de administrador da UAZAPI moram em **duas variáveis no

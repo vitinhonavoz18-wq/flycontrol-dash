@@ -6,6 +6,7 @@ import { normalizePhone } from "@/lib/marketing/phone";
 import { podeSerAlteradoPelaIa } from "./pedidoStatus";
 import { enderecosAssinados, guardarArquivoDoPainel } from "./midiaServidor";
 import { ROTULO_MIDIA, ehTipoMidia } from "./midia";
+import { horaDeVoltarAFalar } from "./pausaDaIa";
 
 /* As tabelas do CRM ainda não constam do arquivo de tipos gerado (ver
    `db.ts`), então as linhas chegam sem tipo. Depois de regerar os tipos,
@@ -286,12 +287,21 @@ export const enviarMensagem = createServerFn({ method: "POST" })
 
     // Responder também significa "eu vi": zera a bolinha de não lidas e tira
     // a conversa do estado fechado.
+    //
+    // E significa mais uma coisa: A IA SE CALA. Esta mensagem sai do
+    // FlyControl direto para o WhatsApp e nunca volta para o fluxo do n8n —
+    // ela é filtrada na volta de propósito, senão a própria resposta voltaria
+    // como se fosse pergunta nova. Ou seja, o fluxo NÃO tem como descobrir
+    // sozinho que uma pessoa assumiu a conversa; quem precisa anotar isso é
+    // aqui. Sem esta linha, a IA respondia por cima do atendente e o cliente
+    // ficava com dois atendimentos ao mesmo tempo.
     await crm("crm_conversations")
       .update({
         last_message_at: new Date().toISOString(),
         last_message_preview: resumo,
         unread_count: 0,
         status: "pending",
+        ia_pausada_ate: horaDeVoltarAFalar(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", conversa.id)

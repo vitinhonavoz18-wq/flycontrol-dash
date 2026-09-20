@@ -5,6 +5,7 @@ import { crm, crmRpc } from "@/lib/crm/db";
 import { configUazapi } from "@/lib/whatsapp/uazapi";
 import { extrairDaUazapi } from "@/lib/crm/uazapiEvento";
 import { tipoPeloWhatsApp } from "@/lib/crm/midia";
+import { horaDeVoltarAFalar, iaEstaPausada } from "@/lib/crm/pausaDaIa";
 
 /**
  * O n8n entregando uma mensagem que o CLIENTE mandou no WhatsApp da loja.
@@ -134,6 +135,47 @@ export const Route = createFileRoute("/api/crm/inbox")({
         const linha = (Array.isArray(data) ? data[0] : data) as
           { message_id: string; conversation_id: string; duplicada: boolean } | undefined;
 
+        // ── A IA SE CALA QUANDO UM HUMANO ASSUME ────────────────────────
+        //
+        // Duas coisas acontecem aqui, e as duas precisam da conversa em mãos:
+        //
+        // 1. Se quem digitou foi o DONO, no celular dele, a trava é ligada
+        //    agora. Ele está atendendo; a IA respondendo por cima dele deixa
+        //    o cliente com duas versões da mesma conversa.
+        //
+        // 2. O fluxo do n8n recebe a resposta PRONTA, em `ia_pausada`, na
+        //    mesma chamada em que entregou a mensagem. Uma viagem só, e quem
+        //    responde é quem sabe — o painel também tranca por aqui quando o
+        //    atendente responde pela tela, e disso o WhatsApp nunca fica
+        //    sabendo.
+        //
+        // Se a conversa não puder ser lida por algum motivo, a resposta é
+        // "pode falar". Uma loja muda por dúvida é pior do que uma frase a
+        // mais da IA.
+        let ia_pausada = false;
+
+        if (linha?.conversation_id) {
+          if (doRestaurante) {
+            await crm("crm_conversations")
+              .update({
+                ia_pausada_ate: horaDeVoltarAFalar(),
+                updated_at: new Date().toISOString(),
+              })
+              .eq("id", linha.conversation_id)
+              .eq("tenant_id", loja.tenantId);
+            ia_pausada = true;
+          } else {
+            const { data: conversa } = await crm("crm_conversations")
+              .select("ia_pausada_ate")
+              .eq("id", linha.conversation_id)
+              .eq("tenant_id", loja.tenantId)
+              .maybeSingle();
+            ia_pausada = iaEstaPausada(
+              (conversa as { ia_pausada_ate?: string | null } | null)?.ia_pausada_ate,
+            );
+          }
+        }
+
         // A CHAVE DO ARMÁRIO, junto com o recado.
         //
         // Quando o cliente manda um áudio, o WhatsApp não entrega o som: ele
@@ -159,6 +201,9 @@ export const Route = createFileRoute("/api/crm/inbox")({
             message_id: linha?.message_id ?? null,
             conversation_id: linha?.conversation_id ?? null,
             duplicada: Boolean(linha?.duplicada),
+            // "Posso responder?" respondido de uma vez, sem o fluxo precisar
+            // perguntar de novo em outro lugar.
+            ia_pausada,
             external_id: uaz?.externalId ?? (corpo.external_id ? String(corpo.external_id) : null),
             uazapi,
           }),

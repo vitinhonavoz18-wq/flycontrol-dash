@@ -121,10 +121,14 @@ const podeResponder = ifElse({
   config: {
     name: 'Pode responder?',
     position: [1120, 192],
+    notes: 'Duas travas. A do Redis pega o dono digitando no celular. A do FlyControl pega o atendente respondendo PELO PAINEL — essa o WhatsApp nunca conta ao fluxo.',
     parameters: {
       conditions: {
         options: { caseSensitive: true, leftValue: '', typeValidation: 'loose', version: 1 },
-        conditions: [{ leftValue: expr('{{ $json.pausada }}'), operator: { type: 'string', operation: 'notEquals' }, rightValue: 'true' }],
+        conditions: [
+          { leftValue: expr('{{ $json.pausada }}'), operator: { type: 'string', operation: 'notEquals' }, rightValue: 'true' },
+          { leftValue: expr('{{ $("Registrar no FlyControl").first().json.ia_pausada }}'), operator: { type: 'string', operation: 'notEquals' }, rightValue: 'true' }
+        ],
         combinator: 'and'
       },
       looseTypeValidation: true,
