@@ -288,6 +288,38 @@ Ou seja: **você não precisa configurar webhook na UAZAPI na mão.** Se alguém
 mexer nisso por fora e tirar os filtros, o FlyControl ainda descarta o eco e
 os grupos por conta própria — são duas redes debaixo do trapezista.
 
+### Trocar a conta ou o servidor da UAZAPI
+
+O endereço e a chave de administrador da UAZAPI moram em **duas variáveis no
+Cloudflare**, e em mais lugar nenhum:
+
+| Variável | O que é |
+| --- | --- |
+| `UAZAPI_BASE_URL` | o endereço do servidor, como `https://flycontrol.uazapi.com` |
+| `UAZAPI_ADMIN_TOKEN` | o *Admin Token* daquele servidor |
+
+Trocar de conta ou de servidor é mudar essas duas e publicar. O n8n **não
+precisa ser mexido**: ele pergunta o endereço ao FlyControl a cada mensagem.
+
+**O QUE ACONTECE COM OS APARELHOS ANTIGOS.** O token de cada aparelho só vale
+no servidor onde ele nasceu. Depois da troca, os tokens guardados viram chave
+de uma porta que foi demolida — continuam bonitinhos no cofre e não abrem mais
+nada.
+
+O sistema resolve isso sozinho: antes de reaproveitar um aparelho, ele
+pergunta ao servidor se aquele aparelho existe. Se a resposta for "não
+conheço" (401, 403 ou 404), ele cria um aparelho novo e segue. O lojista só
+precisa ler o QR Code de novo.
+
+Servidor fora do ar **não** conta como "não conheço". Jogar fora um aparelho
+bom por causa de uma instabilidade de dez segundos seria trocar a fechadura da
+casa porque a chave emperrou uma vez.
+
+**O limite de aparelhos do plano é por servidor.** Aparelho parado continua
+ocupando a vaga. Quando o limite enche, a tela avisa em português e o lojista
+pode abrir espaço com o botão **Desligar este aparelho**, na loja que não
+precisa estar ligada agora.
+
 ### As duas chaves da UAZAPI, e a diferença entre elas
 
 | Chave | Para que serve | Onde mora |

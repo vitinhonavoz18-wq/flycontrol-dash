@@ -229,6 +229,44 @@ export const iniciarConexaoWhatsApp = createServerFn({ method: "POST" })
 
     let { ficha, token } = await fichaDoAparelho(tenantId);
 
+    // 0. O APARELHO GUARDADO AINDA EXISTE LÁ?
+    //
+    // O token do aparelho só vale no servidor da UAZAPI onde ele nasceu.
+    // Quando a conta muda de servidor — plano novo, conta nova, mudança de
+    // fornecedor — os tokens antigos viram chave de uma porta que foi
+    // demolida: continuam bonitinhos no cofre e não abrem mais nada.
+    //
+    // Sem esta conferência o sistema ficava preso num círculo: via que havia
+    // token, pulava a criação do aparelho, tentava conectar com a chave morta
+    // e falhava para sempre. O lojista clicava em Conectar o dia inteiro sem
+    // nunca ver um QR Code.
+    //
+    // SÓ a recusa de identidade (401/403/404) condena o aparelho. Servidor
+    // fora do ar ou internet ruim NÃO: jogar fora um aparelho bom por causa
+    // de uma instabilidade de dez segundos seria trocar a fechadura da casa
+    // porque a chave emperrou uma vez.
+    if (token) {
+      const conferencia = await statusInstancia(token);
+      const naoConhecem = !conferencia.ok && [401, 403, 404].includes(conferencia.status ?? 0);
+
+      if (naoConhecem) {
+        await gravarFicha(tenantId, {
+          external_instance_id: null,
+          status: "disconnected",
+          // O aviso de mensagem nova era do aparelho velho. O novo começa sem
+          // nenhum, e é apontado logo abaixo, no passo 2.
+          webhook_configured_at: null,
+          status_message: "O aparelho antigo não existe mais. Um novo será criado.",
+        });
+
+        // A chave morta NÃO é apagada aqui: ela é SUBSTITUÍDA logo abaixo,
+        // quando o aparelho novo nascer. A diferença importa. Apagar primeiro
+        // e falhar na criação deixaria a loja sem chave nenhuma; substituir só
+        // quando a nova existe é trocar a fechadura com a chave nova na mão.
+        token = null;
+      }
+    }
+
     // 1. O aparelho existe?
     if (!token) {
       const { data: loja } = await db("pizzerias")

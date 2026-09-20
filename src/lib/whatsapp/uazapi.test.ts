@@ -233,6 +233,28 @@ describe("a conexão pela tela do lojista", () => {
     expect(conferencias.length).toBe(operacoes.length);
   });
 
+  it("chave de aparelho recusada vira aparelho novo, e só quando é recusa de identidade", () => {
+    // O token do aparelho só vale no servidor da UAZAPI onde ele nasceu.
+    // Trocando de servidor, as chaves guardadas viram chave de porta
+    // demolida: o sistema via que havia chave, pulava a criação do aparelho,
+    // tentava conectar com ela e falhava para sempre. O lojista clicava em
+    // Conectar o dia inteiro sem nunca ver um QR Code.
+    const codigo = soCodigo("src/lib/whatsapp/conexao.functions.ts");
+
+    // A conferência acontece ANTES de decidir se cria o aparelho.
+    const posConferencia = codigo.indexOf("statusInstancia(token)");
+    const posCriacao = codigo.indexOf("criarInstancia(");
+    expect(posConferencia).toBeGreaterThan(0);
+    expect(posCriacao).toBeGreaterThan(posConferencia);
+
+    // Só a recusa de IDENTIDADE condena o aparelho. Servidor fora do ar e
+    // internet ruim não: jogar fora um aparelho bom por causa de uma
+    // instabilidade de dez segundos seria trocar a fechadura porque a chave
+    // emperrou uma vez.
+    expect(codigo).toContain("[401, 403, 404]");
+    expect(codigo).toContain("conferencia.status");
+  });
+
   it("desconectar não apaga o aparelho nem o histórico", () => {
     // Apagar a instância obrigaria a recriar tudo e perderia o número. O
     // lojista clicou em "desconectar", não em "jogar fora".
