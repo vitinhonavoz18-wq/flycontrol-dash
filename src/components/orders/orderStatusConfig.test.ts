@@ -72,10 +72,24 @@ describe("regras de movimentação", () => {
     expect(canMoveOrder("novo", "saiu")).toEqual({ allowed: true });
   });
 
-  it("permite finalizar direto de qualquer coluna do quadro", () => {
-    expect(canMoveOrder("novo", "entregue")).toEqual({ allowed: true });
+  it("finaliza a partir de 'Em preparo' e de 'Saiu para entrega'", () => {
+    // "Em preparo" entra porque balcão e mesa não têm entregador: exigir a
+    // passagem por "Saiu para entrega" obrigaria o lojista a mentir no
+    // quadro para fechar uma retirada no balcão.
     expect(canMoveOrder("preparando", "entregue")).toEqual({ allowed: true });
     expect(canMoveOrder("saiu", "entregue")).toEqual({ allowed: true });
+  });
+
+  it("NÃO finaliza um pedido recém-chegado", () => {
+    // Regra nova, e de propósito: até aqui o quadro aceitava
+    // "novo → entregue". Um pedido que acabou de entrar não foi aceito,
+    // ninguém preparou e ninguém entregou — finalizar dali é sempre engano,
+    // e engano caro, porque o pedido some do quadro como se tivesse sido
+    // cumprido. É a comanda que chega na cozinha e alguém carimba
+    // "entregue" sem ninguém ter cozinhado nada.
+    const r = canMoveOrder("novo", "entregue");
+    expect(r.allowed).toBe(false);
+    expect(r.allowed === false && r.reason).toMatch(/Aceite o pedido antes de finalizar/);
   });
 
   it("recusa soltar o card na coluna em que ele já está", () => {
