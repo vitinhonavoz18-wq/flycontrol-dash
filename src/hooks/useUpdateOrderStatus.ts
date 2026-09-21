@@ -101,6 +101,14 @@ export function useUpdateOrderStatus({
         return { ok: false };
       }
 
+      // Finalizar é a única transição que TIRA o pedido do quadro. Ela
+      // merece aviso próprio nos dois desfechos: quem some com um pedido da
+      // tela precisa saber se sumiu porque deu certo ou porque deu errado.
+      const finalizando = toStatus === "entregue";
+      const erroGenerico = finalizando
+        ? "Não foi possível finalizar o pedido. Tente novamente."
+        : "Não foi possível atualizar o pedido. Tente novamente.";
+
       markPending(order.id, true);
       setOrders((prev) =>
         prev.map((o) => (o.id === order.id ? { ...o, status: toStatus, is_seen: true } : o)),
@@ -122,7 +130,7 @@ export function useUpdateOrderStatus({
         if (error) {
           rollback();
           console.error("[order-status] falha ao atualizar pedido:", error);
-          toast.error("Não foi possível atualizar o pedido. Tente novamente.");
+          toast.error(erroGenerico);
           return { ok: false };
         }
 
@@ -163,12 +171,14 @@ export function useUpdateOrderStatus({
           note: null,
         });
 
+        if (finalizando) toast.success("Pedido finalizado com sucesso.");
+
         onStatusApplied?.({ ...order, status: toStatus }, toStatus);
         return { ok: true };
       } catch (err) {
         rollback();
         console.error("[order-status] erro inesperado ao mover pedido:", err);
-        toast.error("Não foi possível atualizar o pedido. Verifique sua conexão.");
+        toast.error(erroGenerico);
         return { ok: false };
       } finally {
         markPending(order.id, false);

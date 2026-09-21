@@ -22,6 +22,7 @@ import { OrdersKanbanColumn } from "./OrdersKanbanColumn";
 import {
   ELAPSED_TICK_MS,
   ORDER_COLUMNS,
+  canFinalizeFrom,
   getStatusLabel,
   isKanbanStatus,
   type KanbanStatus,
@@ -247,7 +248,11 @@ export function OrdersKanban({
           {activeOrder ? <OrderCardOverlay order={activeOrder} now={now} /> : null}
         </DragOverlay>
 
-        <FinalizeDropZone visible={activeOrder !== null} />
+        {/* A faixa só existe para quem pode ser finalizado de onde está.
+            Aparecer para um pedido recém-chegado seria oferecer uma porta
+            que não abre — e convidar ao engano que some com o pedido do
+            quadro sem ninguém ter preparado nada. */}
+        <FinalizeDropZone active={canFinalizeFrom(draggingFromStatus)} />
       </DndContext>
 
       <OrderDetailsDrawer

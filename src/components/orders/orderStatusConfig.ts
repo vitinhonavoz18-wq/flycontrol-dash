@@ -141,13 +141,51 @@ export type MoveCheck = { allowed: true } | { allowed: false; reason: string };
 export type MoveTarget = KanbanStatus | "entregue";
 
 /**
- * Regra de movimentação. O fluxo natural é
- * `novo → preparando → saiu → entregue`, mas voltar uma etapa é permitido —
- * um pedido devolvido pela cozinha precisa voltar para "Em preparo", e um
- * pedido saiu para entrega errado pode ser finalizado direto.
+ * Para onde cada etapa pode ir. Esta tabela é a ÚNICA fonte da regra — a
+ * tela, o quadro e a gravação no banco perguntam todos aqui.
  *
- * Só é bloqueado o que não faz sentido: soltar o card na coluna em que ele
- * já está, ou mover um pedido já finalizado/cancelado.
+ * O fluxo natural é `novo → preparando → saiu → entregue`, e voltar uma
+ * etapa continua permitido: pedido devolvido pela cozinha precisa voltar
+ * para "Em preparo", e pedido marcado como saído por engano precisa voltar.
+ *
+ * ═══════════════════════════════════════════════════════════════════════
+ * POR QUE "NOVO" NÃO FINALIZA
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Um pedido que acabou de entrar não pode ir direto para "entregue". Ele
+ * nem foi aceito ainda: ninguém preparou, ninguém entregou. Finalizar dali
+ * é sempre engano — e engano caro, porque o pedido some do quadro e vai
+ * para o histórico como se tivesse sido cumprido.
+ *
+ * É a comanda que chega na cozinha e alguém carimba "entregue" sem ninguém
+ * ter cozinhado nada.
+ *
+ * POR QUE "EM PREPARO" FINALIZA
+ *
+ * Nem todo pedido passa por "Saiu para entrega": balcão e mesa não têm
+ * entregador. Exigir a passagem por essa etapa obrigaria o lojista a mentir
+ * no quadro para conseguir fechar uma retirada no balcão.
+ */
+export const ALLOWED_TRANSITIONS: Readonly<Record<KanbanStatus, readonly MoveTarget[]>> = {
+  novo: ["preparando", "saiu"],
+  preparando: ["novo", "saiu", "entregue"],
+  saiu: ["novo", "preparando", "entregue"],
+} as const;
+
+/**
+ * Este pedido pode ser finalizado a partir de onde está?
+ *
+ * É esta pergunta que decide se a faixa verde de "Finalizar pedido" aparece
+ * durante o arraste. Mostrar a faixa para um pedido que não pode ser
+ * finalizado é oferecer uma porta que não abre.
+ */
+export function canFinalizeFrom(status: string | null | undefined): boolean {
+  return isKanbanStatus(status) && ALLOWED_TRANSITIONS[status].includes("entregue");
+}
+
+/**
+ * Regra de movimentação, consultada tanto pelo arraste quanto pela tela de
+ * detalhes. Devolve o motivo quando recusa, para a tela poder explicar.
  */
 export function canMoveOrder(from: string, to: MoveTarget): MoveCheck {
   if (from === to) {
@@ -157,6 +195,18 @@ export function canMoveOrder(from: string, to: MoveTarget): MoveCheck {
     return {
       allowed: false,
       reason: `Pedidos com status "${getStatusLabel(from)}" não podem ser movidos pelo quadro.`,
+    };
+  }
+  if (!ALLOWED_TRANSITIONS[from].includes(to)) {
+    if (to === "entregue") {
+      return {
+        allowed: false,
+        reason: "Aceite o pedido antes de finalizar: um pedido novo ainda não foi preparado.",
+      };
+    }
+    return {
+      allowed: false,
+      reason: `Não dá para ir de "${getStatusLabel(from)}" direto para "${getStatusLabel(to)}".`,
     };
   }
   return { allowed: true };
