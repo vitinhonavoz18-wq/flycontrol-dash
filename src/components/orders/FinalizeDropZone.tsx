@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { CheckCircle2 } from "lucide-react";
+import { FINALIZE_TARGET_ID } from "./orderStatusConfig";
 
 export type FinalizeDropZoneProps = {
   /**
@@ -17,23 +18,31 @@ const DURACAO_MS = 200;
  * A faixa verde de "Finalizar pedido".
  *
  * ═══════════════════════════════════════════════════════════════════════
- * POR QUE UMA FAIXA INTEIRA E NÃO UM BOTÃO
+ * POR QUE ELA FICA EMBAIXO, E NÃO NA LATERAL
  * ═══════════════════════════════════════════════════════════════════════
  *
- * Antes isto era uma pastilha pequena flutuando embaixo. Acertar um alvo
- * pequeno com o pedido na mão, no celular, no meio do movimento da loja, é
- * difícil — e errar significa o pedido voltar para a coluna, dando a
- * impressão de que o sistema "não funcionou".
+ * Ela já foi uma faixa na lateral direita — e cobria justamente a coluna
+ * "Saiu para entrega", que é de onde o pedido sai para ser finalizado. O
+ * lojista pegava o card e a coluna de origem desaparecia atrás do verde: é
+ * como puxar a toalha da mesa para poder alcançar o prato.
  *
- * Agora a lateral direita inteira vira o alvo. É a diferença entre ter que
- * acertar a boca do cesto de lixo e ter a parede inteira do fundo valendo:
- * com o pedido na mão, o lojista só precisa levar para o lado.
+ * Embaixo, atravessada, ela fica no caminho natural do polegar e não disputa
+ * espaço com nenhuma coluna. E o quadro abre uma folga embaixo enquanto ela
+ * está no ar, para os últimos cards continuarem alcançáveis.
  *
  * SÓ APARECE PARA QUEM PODE FINALIZAR
  *
  * Um pedido que acabou de entrar não pode ir direto para "entregue" — nem
  * foi aceito ainda. Mostrar a faixa nesse caso seria oferecer uma porta que
  * não abre, e convidar ao engano que some com o pedido do quadro.
+ *
+ * ONDE ELA PARA
+ *
+ * No celular ela encosta LOGO ACIMA da barra de navegação de baixo, nunca
+ * atrás dela; no computador, onde essa barra não existe, ela desce até o pé
+ * da tela e começa depois do menu lateral. Essa conta mora em `styles.css`,
+ * na classe `faixa-finalizar`, porque depende de medidas que já são tokens
+ * de lá.
  *
  * A SAÍDA TAMBÉM É ANIMADA
  *
@@ -42,7 +51,7 @@ const DURACAO_MS = 200;
  * defeito.
  */
 export function FinalizeDropZone({ active }: FinalizeDropZoneProps) {
-  const { setNodeRef, isOver } = useDroppable({ id: "entregue", disabled: !active });
+  const { setNodeRef, isOver } = useDroppable({ id: FINALIZE_TARGET_ID, disabled: !active });
 
   // `montado` segura o elemento no ar durante a saída; `dentro` é o que
   // realmente anima (de fora da tela para dentro e vice-versa).
@@ -73,12 +82,11 @@ export function FinalizeDropZone({ active }: FinalizeDropZoneProps) {
       // Este elemento — o que o dnd-kit conhece como alvo (`setNodeRef`) —
       // nasce já no lugar final e NUNCA se move.
       //
-      // Foi aqui que o "finalizar" quebrou. O dnd-kit mede onde cada alvo
-      // está no instante em que ele nasce, e guarda essa medida. A faixa
-      // nascia fora da tela, à direita, esperando a animação de entrada — e
-      // era essa posição, fora da tela, que ficava gravada. Depois, mesmo
-      // com a faixa à vista, o ponteiro nunca "entrava" nela: para o
-      // dnd-kit ela continuava do lado de fora do monitor.
+      // Foi aqui que o "finalizar" quebrou uma vez. O dnd-kit mede onde cada
+      // alvo está no instante em que ele nasce, e guarda essa medida. A faixa
+      // nascia fora da tela, esperando a animação de entrada — e era essa
+      // posição, fora da tela, que ficava gravada. Depois, mesmo com a faixa
+      // à vista, o ponteiro nunca "entrava" nela.
       //
       // É o porteiro que anota o número da vaga quando o carro ainda está na
       // rua. Depois o carro estaciona, mas a ficha continua dizendo "lá
@@ -88,7 +96,7 @@ export function FinalizeDropZone({ active }: FinalizeDropZoneProps) {
       // Durante a animação de SAÍDA a faixa ainda está montada. Aí ela
       // devolve o toque para a tela: senão engoliria o primeiro clique do
       // lojista logo depois de soltar o pedido.
-      className={`fixed inset-y-0 right-0 z-[var(--z-overlay)] flex w-[44%] min-w-[8.5rem] max-w-[22rem] items-stretch overflow-hidden sm:w-[32%] md:w-[26%] ${
+      className={`faixa-finalizar z-[var(--z-overlay)] flex items-stretch overflow-hidden ${
         active ? "pointer-events-auto" : "pointer-events-none"
       }`}
       ref={setNodeRef}
@@ -98,31 +106,38 @@ export function FinalizeDropZone({ active }: FinalizeDropZoneProps) {
     >
       <div
         style={{ transitionDuration: `${DURACAO_MS}ms` }}
-        className={`flex flex-1 flex-col items-center justify-center gap-3 rounded-l-3xl border-y-2 border-l-2 px-3 text-center shadow-2xl transition-[transform,background-color,border-color] ease-out will-change-transform ${
-          dentro ? "translate-x-0" : "translate-x-full"
+        className={`flex flex-1 flex-col items-center justify-center gap-1.5 rounded-2xl border-2 px-4 text-center shadow-2xl transition-[transform,opacity,background-color,border-color] ease-out will-change-transform ${
+          dentro ? "translate-y-0 opacity-100" : "translate-y-full opacity-0"
         } ${
           isOver
             ? "border-emerald-300 bg-emerald-500 text-white"
-            : "border-emerald-500/60 border-dashed bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+            : "border-dashed border-emerald-500/60 bg-emerald-50 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300"
         }`}
       >
-        {/* O ícone e o texto carregam o significado sozinhos: quem não
+        {/* O FUNDO É OPACO DE PROPÓSITO.
+            Com verde transparente, no celular os cards apareciam por trás da
+            faixa e o texto ficava ilegível — letra verde em cima de letra
+            branca em cima de card. É a placa de trânsito pintada em vidro.
+
+            O ícone e o texto carregam o significado sozinhos: quem não
             distingue verde precisa entender igual. */}
         <CheckCircle2
-          className={`h-10 w-10 shrink-0 transition-transform sm:h-14 sm:w-14 ${
+          className={`h-8 w-8 shrink-0 transition-transform md:h-10 md:w-10 ${
             isOver ? "scale-110" : ""
           }`}
           aria-hidden="true"
         />
-        <span className="text-sm font-black uppercase leading-tight tracking-wide sm:text-base">
-          {isOver ? "Solte para finalizar" : "Finalizar pedido"}
+        <span className="text-sm font-black uppercase leading-tight tracking-wide md:text-lg">
+          {isOver ? "Solte para finalizar" : "Arraste aqui para finalizar"}
         </span>
         <span
-          className={`text-[11px] font-semibold leading-snug transition-opacity ${
+          className={`text-[11px] font-semibold leading-snug transition-opacity md:text-xs ${
             isOver ? "opacity-90" : "opacity-70"
           }`}
         >
-          {isOver ? "Vai para o histórico" : "Arraste até aqui"}
+          {/* Frase curta de propósito: numa tela de 390px, a explicação longa
+              quebrava em duas linhas e empurrava o texto principal. */}
+          Vai para o histórico
         </span>
       </div>
     </div>

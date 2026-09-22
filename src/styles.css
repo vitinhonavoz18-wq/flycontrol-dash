@@ -360,6 +360,23 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   /* Modo paisagem compacto (celular deitado). */
   --landscape-rail-width: 4.5rem; /* 72px — trilho de ícones no lugar da sidebar */
   --landscape-header-height: 3rem;
+
+  /* Largura da barra lateral do computador.
+
+     PRECISA CONTINUAR IGUAL ao `w-72` do <aside> em `routes/_app.tsx`. Existe
+     porque a faixa de "Finalizar pedido" é fixa na tela e precisa começar
+     DEPOIS da barra lateral — senão ela passaria por cima do menu. Há teste
+     conferindo que os dois valores não se soltem um do outro. */
+  --sidebar-width: 18rem; /* 288px = w-72 */
+
+  /* Altura da faixa de "Finalizar pedido". É alvo de dedo no meio do serviço:
+     grande o bastante para acertar sem olhar. O computador ganha mais porque
+     lá sobra altura. */
+  --faixa-finalizar-altura: 6rem; /* 96px */
+}
+
+@media (min-width: 768px) {
+  :root { --faixa-finalizar-altura: 8rem; } /* 128px */
 }
 
 /* Em paisagem de celular a sidebar vira um trilho, então o conteúdo não
@@ -384,6 +401,55 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 }
 @media (min-width: 768px) {
   .pb-bottom-nav { padding-bottom: 0; }
+}
+
+/* === A FAIXA DE "FINALIZAR PEDIDO" =========================================
+   Ela aparece só enquanto um pedido está sendo arrastado, encostada na parte
+   de baixo da tela.
+
+   POR QUE O POSICIONAMENTO MORA AQUI, E NÃO NO COMPONENTE
+
+   A conta muda em três situações (celular, computador e celular deitado) e
+   depende de duas medidas que já são tokens deste arquivo: a altura da barra
+   de navegação de baixo e a largura da barra lateral. Escrever isso solto
+   dentro do componente faria com que mexer na barra de baixo escondesse a
+   faixa atrás dela sem ninguém perceber.
+
+   NO CELULAR ela para LOGO ACIMA da barra de navegação — nunca por trás dela.
+   `--bottom-nav-offset` já soma a área de segurança do aparelho (a tarja do
+   iPhone, o gesto do Android).
+
+   NO COMPUTADOR não existe barra de navegação embaixo (o <nav> é `md:hidden`),
+   então a faixa desce até o pé da tela; quem ocupa a lateral é o menu, e a
+   faixa começa depois dele para não cobrir o menu.
+   ========================================================================= */
+.faixa-finalizar {
+  position: fixed;
+  bottom: calc(var(--bottom-nav-offset) + 0.5rem);
+  left: calc(env(safe-area-inset-left, 0px) + 0.75rem);
+  right: calc(env(safe-area-inset-right, 0px) + 0.75rem);
+  height: var(--faixa-finalizar-altura);
+}
+
+@media (min-width: 768px) {
+  .faixa-finalizar {
+    bottom: calc(env(safe-area-inset-bottom, 0px) + 1rem);
+    left: calc(var(--sidebar-width) + env(safe-area-inset-left, 0px) + 1rem);
+    right: calc(env(safe-area-inset-right, 0px) + 1rem);
+  }
+}
+
+/* Celular deitado: o menu lateral vira um trilho de ícones estreito. */
+@media (min-width: 768px) and (orientation: landscape) and (max-height: 600px) {
+  .faixa-finalizar {
+    left: calc(var(--landscape-rail-width) + env(safe-area-inset-left, 0px) + 0.5rem);
+  }
+}
+
+/* A folga que o quadro abre embaixo enquanto a faixa está no ar, para os
+   últimos cards continuarem alcançáveis em vez de ficarem embaixo dela. */
+.reserva-da-faixa-finalizar {
+  padding-bottom: calc(var(--faixa-finalizar-altura) + 1.5rem);
 }
 
 /* === A TELA DO CHAT É TRAVADA ==============================================

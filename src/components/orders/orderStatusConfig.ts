@@ -141,6 +141,17 @@ export type MoveCheck = { allowed: true } | { allowed: false; reason: string };
 export type MoveTarget = KanbanStatus | "entregue";
 
 /**
+ * O identificador do alvo de soltar da faixa "Finalizar pedido".
+ *
+ * Existe como constante porque três lugares precisam concordar sobre ele: a
+ * faixa que se registra como alvo, o quadro que dá prioridade a ela na hora
+ * de decidir onde o dedo está, e a gravação que recebe o destino. Escrito à
+ * mão nos três, bastava um erro de digitação para o soltar virar um nada
+ * silencioso.
+ */
+export const FINALIZE_TARGET_ID = "entregue" as const;
+
+/**
  * Para onde cada etapa pode ir. Esta tabela é a ÚNICA fonte da regra — a
  * tela, o quadro e a gravação no banco perguntam todos aqui.
  *

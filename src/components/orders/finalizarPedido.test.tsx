@@ -89,24 +89,25 @@ describe("a faixa de finalizar", () => {
     renderZona(true);
     const zona = screen.getByRole("button", { name: /finalizar pedido/i });
     expect(zona).toBeTruthy();
-    expect(zona.textContent).toContain("Finalizar pedido");
+    expect(zona.textContent).toContain("Arraste aqui para finalizar");
     expect(zona.querySelector("svg")).toBeTruthy();
   });
 
-  it("ocupa a lateral direita inteira, não uma pastilha", () => {
+  it("é uma faixa deitada embaixo, não uma pastilha nem uma coluna lateral", () => {
     // Acertar um alvo pequeno com o pedido na mão, no celular, no meio do
-    // movimento da loja, é justamente o que fazia o lojista achar que o
-    // sistema não funcionava.
+    // movimento da loja, é o que fazia o lojista achar que o sistema não
+    // funcionava. E a lateral direita cobria justamente "Saiu para entrega",
+    // que é de onde o pedido sai para ser finalizado.
     const { container } = renderZona(true);
-    const moldura = container.querySelector(".fixed") as HTMLElement;
-    expect(moldura.className).toContain("inset-y-0");
-    expect(moldura.className).toContain("right-0");
-    expect(moldura.className).not.toContain("inset-x-0");
+    const moldura = container.querySelector(".faixa-finalizar") as HTMLElement;
+    expect(moldura).toBeTruthy();
+    expect(moldura.className).not.toContain("inset-y-0");
+    expect(moldura.className).not.toContain("right-0");
   });
 
   it("fica acima da barra inferior, nunca atrás dela", () => {
     const { container } = renderZona(true);
-    const moldura = container.querySelector(".fixed") as HTMLElement;
+    const moldura = container.querySelector(".faixa-finalizar") as HTMLElement;
     expect(moldura.className).toContain("z-[var(--z-overlay)]");
   });
 
@@ -116,11 +117,58 @@ describe("a faixa de finalizar", () => {
     // devolver o toque, senão engole o primeiro clique do lojista logo
     // depois de soltar o pedido.
     const { container } = renderZona(true);
-    const alvo = container.querySelector(".fixed") as HTMLElement;
+    const alvo = container.querySelector(".faixa-finalizar") as HTMLElement;
     expect(alvo.className).toContain("pointer-events-auto");
 
     const fonte = readFileSync("src/components/orders/FinalizeDropZone.tsx", "utf8");
     expect(fonte).toMatch(/active \? "pointer-events-auto" : "pointer-events-none"/);
+  });
+
+  it("muda o texto quando o pedido entra nela", () => {
+    const fonte = readFileSync("src/components/orders/FinalizeDropZone.tsx", "utf8");
+    expect(fonte).toContain('isOver ? "Solte para finalizar" : "Arraste aqui para finalizar"');
+  });
+});
+
+describe("onde a faixa para na tela", () => {
+  const css = readFileSync("src/styles.css", "utf8");
+  const regra = css.slice(css.indexOf(".faixa-finalizar {"));
+
+  it("no celular ela encosta ACIMA da barra de navegação", () => {
+    // `bottom: 0` a jogaria atrás da barra de baixo, e o lojista soltaria o
+    // pedido em cima de "Início" ou "Cardápio" sem querer. O token já soma a
+    // área de segurança do aparelho — a tarja do iPhone, o gesto do Android.
+    expect(regra).toMatch(/bottom: calc\(var\(--bottom-nav-offset\) \+ [^)]*\);/);
+  });
+
+  it("no computador ela começa depois do menu lateral", () => {
+    // Lá não existe barra de baixo (o <nav> é `md:hidden`); quem ocupa a
+    // lateral é o menu, e passar por cima dele esconderia a navegação.
+    expect(regra).toContain("left: calc(var(--sidebar-width)");
+    expect(regra).toContain("env(safe-area-inset-bottom");
+  });
+
+  it("no celular deitado ela respeita o trilho estreito de ícones", () => {
+    expect(regra).toContain("var(--landscape-rail-width)");
+  });
+
+  it("a largura do menu lateral do CSS e a do layout continuam iguais", () => {
+    // `--sidebar-width` existe só para a faixa saber onde o menu termina. Se
+    // alguém trocar o `w-72` do <aside> e esquecer do token, a faixa passa a
+    // cobrir o menu — ou a deixar uma tira branca do lado.
+    expect(css).toContain("--sidebar-width: 18rem"); // 18rem = w-72
+    const layout = readFileSync("src/routes/_app.tsx", "utf8");
+    const aside = layout.slice(
+      layout.indexOf("<aside"),
+      layout.indexOf(">", layout.indexOf("<aside")),
+    );
+    expect(aside).toContain("w-72");
+  });
+
+  it("a altura é grande o bastante para o dedo, e maior no computador", () => {
+    expect(css).toContain("--faixa-finalizar-altura: 6rem"); // 96px no celular
+    expect(css).toContain("--faixa-finalizar-altura: 8rem"); // 128px daí para cima
+    expect(regra).toContain("height: var(--faixa-finalizar-altura)");
   });
 });
 
@@ -129,12 +177,14 @@ describe("o código que sustenta o comportamento", () => {
   const quadro = readFileSync("src/components/orders/OrdersKanban.tsx", "utf8");
   const hook = readFileSync("src/hooks/useUpdateOrderStatus.ts", "utf8");
 
-  it("a faixa entra e sai deslizando, sem piscar", () => {
+  it("a faixa entra e sai deslizando POR BAIXO, sem piscar", () => {
     // Sumir de uma vez faz a tela piscar no fim de todo arraste, e o olho lê
-    // isso como defeito.
-    expect(zona).toContain("translate-x-full");
-    expect(zona).toContain("translate-x-0");
+    // isso como defeito. Ela entra de baixo para cima, que é de onde ela vem.
+    expect(zona).toContain("translate-y-full");
+    expect(zona).toContain("translate-y-0");
+    expect(zona).toContain("opacity-0");
     expect(zona).toContain("transition-[transform");
+    expect(zona).toContain("DURACAO_MS = 200");
     // Continua montada durante a saída.
     expect(zona).toMatch(/setTimeout\(\(\) => setMontado\(false\), DURACAO_MS\)/);
   });
@@ -157,14 +207,46 @@ describe("o código que sustenta o comportamento", () => {
     const inicio = zona.indexOf("<div");
     const alvo = zona.slice(inicio, zona.indexOf(">", zona.indexOf("ref={setNodeRef}")));
     expect(alvo).toContain("ref={setNodeRef}");
+    expect(alvo).not.toContain("translate-y");
     expect(alvo).not.toContain("translate-x");
   });
 
-  it("a animação é de transform, não de largura", () => {
-    // Animar largura obriga o navegador a recalcular o layout a cada quadro,
+  it("a animação é de transform, não de altura", () => {
+    // Animar altura obriga o navegador a recalcular o layout a cada quadro,
     // justamente enquanto o dedo está arrastando.
     expect(zona).toContain("will-change-transform");
+    expect(zona).not.toMatch(/transition-\[.*height/);
     expect(zona).not.toMatch(/transition-\[.*width/);
+  });
+
+  it("existe UMA faixa só, registrada com o id compartilhado", () => {
+    // Duas zonas de finalizar ao mesmo tempo dariam dois alvos disputando o
+    // mesmo drop — e o id escrito à mão em cada lugar transformaria um erro
+    // de digitação em um soltar que não faz nada, em silêncio.
+    expect(zona).toContain("useDroppable({ id: FINALIZE_TARGET_ID");
+    expect(zona.match(/useDroppable\(/g)?.length).toBe(1);
+    expect(quadro.match(/<FinalizeDropZone/g)?.length).toBe(1);
+  });
+
+  it("quando o dedo está na faixa, a faixa ganha da coluna embaixo dela", () => {
+    // O desempate de fábrica é pela distância até o centro de cada alvo, e a
+    // faixa é larga: soltar perto da ponta fazia a coluna ganhar, e o pedido
+    // voltava para a fila em vez de ser finalizado.
+    expect(quadro).toContain("collisionDetection={detectarColisao}");
+    expect(quadro).toMatch(/colisoes\.find\(\(c\) => c\.id === FINALIZE_TARGET_ID\)/);
+    expect(quadro).toContain("return naFaixa ? [naFaixa] : colisoes;");
+  });
+
+  it("a tela não corre sozinha debaixo do dedo parado na faixa", () => {
+    expect(quadro).toContain("canScroll: () => !sobreAFaixa.current");
+    expect(quadro).toContain("autoScroll={autoScroll}");
+  });
+
+  it("o quadro abre folga embaixo enquanto a faixa está no ar", () => {
+    // Sem isso o último card de uma coluna comprida fica debaixo da faixa,
+    // sem jeito de alcançar.
+    expect(quadro).toContain("useFolgaDaFaixa(faixaAtiva, trilhoRef)");
+    expect(quadro).toContain("reserva-da-faixa-finalizar");
   });
 
   it("o quadro pergunta a regra em vez de repetir a lista de status", () => {
