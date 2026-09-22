@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useRouterState } from "@tanstack/react-router";
+import { abaDoEndereco } from "@/lib/rotas/abaDoEndereco";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -63,9 +64,9 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   // Sem `?aba=`, abre em "Categorias", como sempre abriu.
   const navegar = useNavigate();
   const buscaDaRota = useRouterState({ select: (e) => e.location.search });
-  const activeTab =
-    new URLSearchParams(typeof buscaDaRota === "string" ? buscaDaRota : "").get("aba") ||
-    "categories";
+  // Ver o comentário em `lib/rotas/abaDoEndereco`: a busca do roteador é um
+  // objeto, não texto, e ler errado fazia a aba nunca trocar.
+  const activeTab = abaDoEndereco(buscaDaRota, "categories");
   const setActiveTab = (nova: string) => {
     // Preserva `?pizzeriaId=` — ver o mesmo cuidado em `my-store.tsx`.
     void navegar({ to: "/menu", search: (antes) => ({ ...antes, aba: nova }), replace: true });

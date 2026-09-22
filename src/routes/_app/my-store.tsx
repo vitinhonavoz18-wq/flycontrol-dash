@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
+import { abaDoEndereco } from "@/lib/rotas/abaDoEndereco";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -131,7 +132,10 @@ function StoreEditor({
   // em vez de voltar uma aba.
   const nav = useNavigate();
   const busca = useRouterState({ select: (e) => e.location.search });
-  const aba = new URLSearchParams(typeof busca === "string" ? busca : "").get("aba") || "identity";
+  // A leitura mora em `lib/rotas/abaDoEndereco`: o roteador entrega a busca
+  // como OBJETO, e a conta feita à mão aqui tratava como texto — o endereço
+  // dizia `?aba=delivery` e o conteúdo nunca trocava.
+  const aba = abaDoEndereco(busca, "identity");
   const trocarAba = (nova: string) => {
     // O QUE JÁ ESTAVA NO ENDEREÇO CONTINUA LÁ.
     //

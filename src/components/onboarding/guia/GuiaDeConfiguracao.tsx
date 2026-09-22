@@ -16,6 +16,7 @@ import {
   type EstadoDoGuia,
 } from "@/lib/onboarding/guia/guia.functions";
 import { registrarEvento } from "@/lib/onboarding/guia/eventos";
+import { abaDoEndereco } from "@/lib/rotas/abaDoEndereco";
 import { NARRACAO_DO_TREINO } from "@/lib/onboarding/guia/pedidoDeDemonstracao";
 import { publicarPedidoDeTreino, usePedidoDeTreino } from "@/lib/onboarding/guia/treinoNoQuadro";
 import { usePedidoDeDemonstracao } from "./usePedidoDeDemonstracao";
@@ -77,6 +78,16 @@ export function GuiaDeConfiguracao({ habilitado, tenantId = null }: GuiaDeConfig
   const router = useRouter();
   const rota = useRouterState({ select: (s) => s.location.pathname });
   const busca = useRouterState({ select: (s) => s.location.search });
+  /**
+   * O endereço cru (`"?pizzeriaId=abc&aba=service"`).
+   *
+   * `location.search` é o objeto já desmontado; `searchStr` é o texto. São
+   * coisas diferentes com nomes parecidos, e trocar um pelo outro foi
+   * exatamente o que fez as abas pararem de trocar. Aqui o TEXTO é o certo:
+   * ele é remontado no endereço da próxima etapa, preservando o que já
+   * estava lá (a loja escolhida, por exemplo).
+   */
+  const buscaCrua = useRouterState({ select: (s) => s.location.searchStr });
   const perguntar = useServerFn(lerEstadoDoGuia);
   const pedirParaSair = useServerFn(sairDoGuia);
   const gravarDecisao = useServerFn(registrarDecisao);
@@ -185,8 +196,15 @@ export function GuiaDeConfiguracao({ habilitado, tenantId = null }: GuiaDeConfig
   // Bloquear o clique não basta: nada impede alguém de digitar /finance na
   // barra de endereços. É trancar a porta da frente e deixar a lateral
   // encostada.
-  /** A aba aberta agora, quando a tela tem abas. */
-  const abaAberta = new URLSearchParams(typeof busca === "string" ? busca : "").get("aba");
+  /**
+   * A aba aberta agora, quando a tela tem abas.
+   *
+   * Lida errado, esta linha era pior do que uma aba que não troca: o guia
+   * comparava a aba aberta com a da etapa, nunca batia, e mandava navegar de
+   * novo a cada volta — o porteiro que empurra a pessoa para a mesma sala
+   * sem parar.
+   */
+  const abaAberta = abaDoEndereco(busca, "");
 
   const irParaAEtapa = useCallback(
     (destino: EtapaDoGuia) => {
@@ -194,9 +212,9 @@ export function GuiaDeConfiguracao({ habilitado, tenantId = null }: GuiaDeConfig
       // a partir do roteiro (texto comum) e não é uma das rotas literais que
       // o roteador sabe conferir em tempo de compilação. `enderecoDaEtapa` já
       // monta o endereço com a aba.
-      router.history.push(enderecoDaEtapa(destino, typeof busca === "string" ? busca : ""));
+      router.history.push(enderecoDaEtapa(destino, buscaCrua));
     },
-    [router, busca],
+    [router, buscaCrua],
   );
 
   useEffect(() => {
