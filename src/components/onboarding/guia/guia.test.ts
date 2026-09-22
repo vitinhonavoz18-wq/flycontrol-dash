@@ -176,3 +176,132 @@ describe("o guia bloqueia sem trancar", () => {
     expect(i).toBeGreaterThan(j);
   });
 });
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FASES 4, 5 E 6 — o que o servidor vai olhar
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("as fases novas leem o dado REAL do FlyControl", () => {
+  it("pagamento vem de `payment_methods`, a mesma lista da tela", () => {
+    // A tela Minha Loja grava uma lista de textos ("Pix", "Dinheiro"...).
+    // Inventar uma tabela nova de pagamentos deixaria a loja com duas
+    // verdades sobre como o cliente paga.
+    expect(servidor).toContain("payment_methods");
+    expect(servidor).toContain("formasDePagamento: formas.length");
+  });
+
+  it("complemento desligado não conta como 'a loja tem adicionais'", () => {
+    // Um complemento desativado não aparece para o cliente. Contá-lo fecharia
+    // a etapa com a loja oferecendo nada.
+    expect(servidor).toContain('.from("menu_extras")');
+    expect(servidor).toContain('.or("active.is.null,active.eq.true")');
+  });
+
+  it("o canal de pedidos usa o MESMO validador de telefone do cadastro", () => {
+    // Duas regras de telefone no mesmo sistema é como ter duas balanças no
+    // açougue: uma hora discordam e ninguém sabe qual está certa.
+    expect(servidor).toContain("validateBrazilianPhone");
+    expect(servidor).toContain("numeroDePedidosValido(p?.phone)");
+  });
+
+  it("a decisão que vem da tela é conferida ANTES de gravar", () => {
+    // Sem isso bastaria uma requisição inventada para gravar
+    // "pagamentos: dispensado" e pular uma etapa que exige dado de verdade.
+    expect(servidor).toMatch(/if \(!decisaoValida\(data\.chave, data\.valor\)\)/);
+    // E o que já está no banco passa pelo mesmo crivo: lixo de uma versão
+    // antiga não pode virar etapa concluída em silêncio.
+    expect(servidor).toContain("decisaoValida(chave, valor)");
+  });
+
+  it("decisão em loja sem caderno, ou com guia encerrado, é recusada", () => {
+    expect(servidor).toMatch(
+      /if \(!atual \|\| atual\.guide_status === "completed"\) return \{ ok: false \}/,
+    );
+  });
+});
+
+describe("o toque repetido no botão", () => {
+  it("a trava é síncrona, não um estado de tela", () => {
+    // `useState` só reflete no render seguinte, e dois toques rápidos
+    // acontecem antes disso — é a campainha tocada três vezes antes de
+    // alguém chegar na porta.
+    expect(guia).toContain("gravando = useRef(false)");
+    expect(guia).toMatch(/if \(gravando\.current\) return;/);
+  });
+
+  it("depois de escolher, o guia relê o servidor em vez de se marcar sozinho", () => {
+    expect(guia).toContain("setEstado(await perguntar({ data: undefined }))");
+  });
+});
+
+describe("o resumo de prontidão", () => {
+  const checklist = soCodigo("src/components/onboarding/guia/ChecklistDeProntidao.tsx");
+
+  it("mostra as etapas que ainda faltam, não só as feitas", () => {
+    // Dizer "tudo pronto" com Plano Cents e Pedido teste faltando seria o
+    // boletim que dá nota para matéria que ninguém deu.
+    expect(checklist).toContain("ETAPAS_DO_GUIA");
+    expect(checklist).toContain("em breve");
+  });
+
+  it("o estado de cada linha também vai em texto", () => {
+    // Quem usa leitor de tela não vê ícone; quem não distingue verde não vê
+    // a cor.
+    expect(checklist).toContain("sr-only");
+  });
+});
+
+describe("as duas respostas da etapa de adicionais", () => {
+  it("têm o mesmo peso visual", () => {
+    // Fazer a segunda parecer um link escondido é empurrar o lojista para a
+    // resposta que o sistema prefere, e não para a verdade do negócio dele.
+    const personagem = soCodigo("src/components/onboarding/guia/PersonagemDoGuia.tsx");
+    expect(personagem).toContain("alternativa");
+    expect(personagem).toMatch(/alternativa[\s\S]*?min-h-11 flex-1/);
+  });
+
+  it("a pergunta fica amarrada aos botões para o leitor de tela", () => {
+    const personagem = soCodigo("src/components/onboarding/guia/PersonagemDoGuia.tsx");
+    expect(personagem).toContain('aria-labelledby={pergunta ? "pergunta-do-guia" : undefined}');
+  });
+
+  it("todo botão do balão mostra onde está o foco do teclado", () => {
+    const personagem = soCodigo("src/components/onboarding/guia/PersonagemDoGuia.tsx");
+    expect(personagem.match(/focus-visible:ring-2/g)?.length).toBeGreaterThanOrEqual(3);
+  });
+});
+
+describe("trocar de aba não apaga a loja escolhida", () => {
+  it("as telas com abas preservam o resto do endereço", () => {
+    // Quem tem mais de uma loja chega com `?pizzeriaId=...`. Escrever só
+    // `?aba=` apagaria esse pedaço, e no primeiro F5 a tela voltaria para
+    // outra loja — o dono editando o endereço da loja errada sem perceber.
+    const loja = soCodigo("src/routes/_app/my-store.tsx");
+    const cardapio = soCodigo("src/components/menu/MenuManager.tsx");
+    expect(loja).toContain("search: (antes) => ({ ...antes, aba: nova })");
+    expect(cardapio).toContain("search: (antes) => ({ ...antes, aba: nova })");
+  });
+
+  it("o guia também preserva", () => {
+    expect(guia).toContain("enderecoDaEtapa(destino,");
+  });
+});
+
+describe("ninguém que já está trabalhando é preso", () => {
+  it("loja que já recebeu pedido encerra o guia sozinha", () => {
+    // Segunda trava, independente de "sem caderno não há guia". Se um caderno
+    // em aberto sobrar por engano numa loja que já vende — um script, uma
+    // restauração, um cadastro refeito — o guia se encerra em vez de
+    // escurecer o painel de quem tem pedido chegando.
+    expect(servidor).toContain("async function jaEstaVendendo");
+    expect(servidor).toMatch(/if \(await jaEstaVendendo\(loja\.id\)\) \{/);
+    expect(servidor).toContain('.from("orders")');
+  });
+
+  it("há um só jeito de encerrar o guia no código", () => {
+    // Duas versões do mesmo encerramento é como ter duas chaves da mesma
+    // porta com segredos diferentes: uma hora uma delas deixa de fechar.
+    expect(servidor).toContain("async function encerrarGuia");
+    expect(servidor.match(/guide_status: "completed"/g)?.length).toBe(1);
+  });
+});

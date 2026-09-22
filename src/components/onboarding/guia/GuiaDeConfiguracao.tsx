@@ -10,9 +10,11 @@ import {
 } from "@/lib/onboarding/guia/etapas";
 import {
   estadoDoGuia as lerEstadoDoGuia,
+  registrarDecisao,
   sairDoGuia,
   type EstadoDoGuia,
 } from "@/lib/onboarding/guia/guia.functions";
+import { ChecklistDeProntidao } from "./ChecklistDeProntidao";
 import { Holofote } from "./Holofote";
 import { PersonagemDoGuia } from "./PersonagemDoGuia";
 import { ProgressoDoGuia } from "./ProgressoDoGuia";
@@ -69,9 +71,20 @@ export function GuiaDeConfiguracao({ habilitado }: GuiaDeConfiguracaoProps) {
   const busca = useRouterState({ select: (s) => s.location.search });
   const perguntar = useServerFn(lerEstadoDoGuia);
   const pedirParaSair = useServerFn(sairDoGuia);
+  const gravarDecisao = useServerFn(registrarDecisao);
 
   const [estado, setEstado] = useState<EstadoDoGuia | null>(null);
   const [saindo, setSaindo] = useState(false);
+  /**
+   * Trava síncrona contra o toque repetido.
+   *
+   * `useState` só reflete no render seguinte, e dois toques rápidos acontecem
+   * antes disso — é a campainha tocada três vezes antes de alguém chegar na
+   * porta. Gravar a mesma decisão duas vezes não estraga nada (o valor é o
+   * mesmo), mas manda duas requisições e pisca o botão.
+   */
+  const gravando = useRef(false);
+  const [aguardando, setAguardando] = useState(false);
   /** A última etapa vista, para comemorar quando ela muda. */
   const etapaAnterior = useRef<string | null>(null);
   const [comemorando, setComemorando] = useState(false);
@@ -138,9 +151,9 @@ export function GuiaDeConfiguracao({ habilitado }: GuiaDeConfiguracaoProps) {
       // a partir do roteiro (texto comum) e não é uma das rotas literais que
       // o roteador sabe conferir em tempo de compilação. `enderecoDaEtapa` já
       // monta o endereço com a aba.
-      router.history.push(enderecoDaEtapa(destino));
+      router.history.push(enderecoDaEtapa(destino, typeof busca === "string" ? busca : ""));
     },
-    [router],
+    [router, busca],
   );
 
   useEffect(() => {
@@ -159,10 +172,60 @@ export function GuiaDeConfiguracao({ habilitado }: GuiaDeConfiguracaoProps) {
     }
   }, [etapa, estado?.ativo, rota, abaAberta, irParaAEtapa]);
 
+  /** Estamos na tela (e na aba) onde esta etapa acontece? */
+  const naTelaDaEtapa = !!etapa && rota === etapa.rota && (!etapa.aba || abaAberta === etapa.aba);
+
+  /**
+   * A escolha "configurar ou dispensar" fica visível até o lojista decidir.
+   *
+   * Quem clica em "Configurar adicionais" está dizendo "vou cadastrar" — e a
+   * partir daí a pergunta some e fica só o holofote em cima do botão de
+   * cadastrar. Deixar "Não utilizo adicionais" na tela enquanto ele já está
+   * cadastrando é continuar oferecendo a saída para quem já entrou.
+   *
+   * Volta a aparecer se a etapa mudar: cada etapa faz a sua pergunta do zero.
+   */
+  const [mostrarEscolha, setMostrarEscolha] = useState(true);
+  useEffect(() => {
+    setMostrarEscolha(true);
+  }, [etapa?.id]);
+
   const recorte = useRecorteDoAlvo(
     // Fora da rota da etapa não há alvo para iluminar — a tela inteira escurece
     // enquanto o redirecionamento acontece.
-    etapa && rota === etapa.rota ? etapa.alvo : undefined,
+    // Sem alvo enquanto a pergunta da escolha está na tela: acender o botão
+    // de cadastrar antes de o lojista dizer que USA adicionais seria apontar
+    // o caminho antes de perguntar se ele quer ir.
+    naTelaDaEtapa && !(etapa?.escolha && mostrarEscolha) ? etapa?.alvo : undefined,
+  );
+
+  /**
+   * Grava uma escolha do lojista e relê o estado na hora.
+   *
+   * Reler logo em seguida (em vez de esperar o relógio de 2 segundos) é o que
+   * faz o guia responder na hora do clique. Mas quem decide se a etapa fechou
+   * continua sendo o servidor: a tela não marca nada por conta própria.
+   */
+  const escolher = useCallback(
+    async (chave: string, valor: string) => {
+      if (gravando.current) return;
+      gravando.current = true;
+      setAguardando(true);
+      try {
+        const r = await gravarDecisao({ data: { chave, valor } });
+        if (!r?.ok) {
+          toast.error("Não conseguimos salvar sua escolha. Tente de novo.");
+          return;
+        }
+        setEstado(await perguntar({ data: undefined }));
+      } catch {
+        toast.error("Não conseguimos salvar sua escolha. Tente de novo.");
+      } finally {
+        gravando.current = false;
+        setAguardando(false);
+      }
+    },
+    [gravarDecisao, perguntar],
   );
 
   const sair = useCallback(async () => {
@@ -202,27 +265,66 @@ export function GuiaDeConfiguracao({ habilitado }: GuiaDeConfiguracaoProps) {
             titulo={comemorando ? "Boa! Etapa concluída." : etapa.titulo}
             descricao={comemorando ? "Vamos para a próxima." : etapa.descricao}
             aponta="baixo"
+            pergunta={etapa.escolha?.pergunta}
             cta={
-              rota === etapa.rota
-                ? undefined
-                : { rotulo: "Ir para essa etapa", onClick: () => irParaAEtapa(etapa) }
+              // Três casos, nesta ordem:
+              //   1. a etapa oferece escolha e já estamos na tela dela:
+              //      o botão é a própria escolha;
+              //   2. estamos noutra tela: o botão leva até a etapa;
+              //   3. a etapa só aponta um campo: nenhum botão principal — o
+              //      que fecha a etapa é o lojista salvar o formulário.
+              etapa.escolha && naTelaDaEtapa
+                ? {
+                    rotulo: aguardando ? "Salvando..." : etapa.escolha.configurar,
+                    onClick: () => {
+                      if (etapa.id === "prontidao") {
+                        void escolher(etapa.escolha!.chave, etapa.escolha!.valor);
+                      } else {
+                        // "Configurar adicionais" não grava decisão nenhuma:
+                        // ele só leva o lojista até a tela. Quem fecha a
+                        // etapa é o complemento aparecendo no banco.
+                        setMostrarEscolha(false);
+                      }
+                    },
+                  }
+                : naTelaDaEtapa
+                  ? undefined
+                  : { rotulo: "Ir para essa etapa", onClick: () => irParaAEtapa(etapa) }
             }
-            acaoSecundaria={{
-              rotulo: saindo ? "Saindo..." : "Terminar depois",
-              onClick: () => void sair(),
-            }}
+            alternativa={
+              etapa.escolha?.dispensar && naTelaDaEtapa && mostrarEscolha
+                ? {
+                    rotulo: etapa.escolha.dispensar,
+                    onClick: () => void escolher(etapa.escolha!.chave, etapa.escolha!.valor),
+                  }
+                : undefined
+            }
+            acaoSecundaria={
+              etapa.id === "prontidao"
+                ? undefined
+                : {
+                    rotulo: saindo ? "Saindo..." : "Terminar depois",
+                    onClick: () => void sair(),
+                  }
+            }
           >
-            {/* O que falta, dito em uma linha. A pessoa não deve precisar
-                adivinhar qual campo está faltando para a etapa fechar. */}
-            <p className="mt-2 rounded-lg bg-muted/60 px-3 py-2 text-xs font-semibold text-foreground">
-              {etapa.comoConcluir}
-            </p>
+            {etapa.id === "prontidao" ? (
+              <ChecklistDeProntidao concluidas={estado.concluidas} />
+            ) : (
+              <>
+                {/* O que falta, dito em uma linha. A pessoa não deve precisar
+                    adivinhar qual campo está faltando para a etapa fechar. */}
+                <p className="mt-2 rounded-lg bg-muted/60 px-3 py-2 text-xs font-semibold text-foreground">
+                  {etapa.comoConcluir}
+                </p>
 
-            <ProgressoDoGuia
-              concluidas={estado.concluidas}
-              etapaAtual={etapa.id}
-              progresso={estado.progresso}
-            />
+                <ProgressoDoGuia
+                  concluidas={estado.concluidas}
+                  etapaAtual={etapa.id}
+                  progresso={estado.progresso}
+                />
+              </>
+            )}
           </PersonagemDoGuia>
         </div>
       </div>

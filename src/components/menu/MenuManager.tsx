@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
@@ -53,7 +54,22 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   // Continua à mão para quem administra a plataforma, que é quem conserta uma
   // loja que perdeu a conexão.
   const { isSuperAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState("categories");
+  // A ABA VEM DO ENDEREÇO (`?aba=extras`).
+  //
+  // Guardá-la só aqui dentro fazia o guia de configuração não conseguir abrir
+  // a aba certa: ele mandava o lojista para o Cardápio e acendia um botão que
+  // está escondido atrás de outra aba — o holofote apontado para a coxia.
+  //
+  // Sem `?aba=`, abre em "Categorias", como sempre abriu.
+  const navegar = useNavigate();
+  const buscaDaRota = useRouterState({ select: (e) => e.location.search });
+  const activeTab =
+    new URLSearchParams(typeof buscaDaRota === "string" ? buscaDaRota : "").get("aba") ||
+    "categories";
+  const setActiveTab = (nova: string) => {
+    // Preserva `?pizzeriaId=` — ver o mesmo cuidado em `my-store.tsx`.
+    void navegar({ to: "/menu", search: (antes) => ({ ...antes, aba: nova }), replace: true });
+  };
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);

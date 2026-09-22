@@ -23,11 +23,14 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { validateBrazilianPhone } from "@/lib/signup/validation";
 import {
+  decisaoValida,
   etapasConcluidas,
   ehIdDeEtapaDoGuia,
   progressoDoGuia,
   proximaEtapaDoGuia,
+  type DecisoesDoGuia,
   type IdDaEtapaDoGuia,
   type SinaisDaConfiguracao,
 } from "./etapas";
@@ -42,6 +45,7 @@ type LinhaDoGuia = {
   guide_status: string | null;
   guide_current_step: string | null;
   guide_completed_steps: unknown;
+  guide_decisions: unknown;
 };
 
 type CadernoDoGuia = {
@@ -65,6 +69,8 @@ export type EstadoDoGuia = {
   progresso: number;
   /** A rota onde a etapa atual acontece. `null` quando o guia terminou. */
   rota: string | null;
+  /** As escolhas já gravadas — a tela usa para não reoferecer o que foi dito. */
+  decisoes: DecisoesDoGuia;
 };
 
 const GUIA_DESLIGADO: EstadoDoGuia = {
@@ -73,6 +79,7 @@ const GUIA_DESLIGADO: EstadoDoGuia = {
   concluidas: [],
   progresso: 100,
   rota: null,
+  decisoes: {},
 };
 
 async function lojaDoUsuario(userId: string): Promise<{ id: string } | null> {
@@ -106,26 +113,80 @@ function temConteudo(v: unknown): boolean {
   return false;
 }
 
+/**
+ * O número que recebe os pedidos é um celular brasileiro de verdade?
+ *
+ * Usa o MESMO validador do cadastro (`validateBrazilianPhone`): DDD entre 11 e
+ * 99, 10 ou 11 dígitos, e celular começando com 9. Duas regras de telefone no
+ * mesmo sistema é como ter duas balanças no açougue — uma hora elas discordam
+ * e ninguém sabe qual está certa.
+ *
+ * Conferido contra as 35 lojas reais: todas gravam de 10 a 11 dígitos, sem o
+ * 55 do país na frente.
+ */
+function numeroDePedidosValido(bruto: unknown): boolean {
+  if (typeof bruto !== "string") return false;
+  return validateBrazilianPhone(bruto).valid;
+}
+
+/**
+ * A loja já recebeu pedido de verdade?
+ *
+ * Um único pedido basta: quem já vendeu está operando, e operação não se
+ * interrompe para preencher formulário.
+ */
+async function jaEstaVendendo(companyId: string): Promise<boolean> {
+  const { count } = await supabaseAdmin
+    .from("orders")
+    .select("id", { count: "exact", head: true })
+    .eq("tenant_id", companyId)
+    .limit(1);
+  return (count ?? 0) > 0;
+}
+
+/** Fecha o caderno do guia, sem apagar o que já foi confirmado. */
+async function encerrarGuia(companyId: string, motivo: string): Promise<void> {
+  const agora = new Date().toISOString();
+  const { error } = await caderno
+    .from("onboarding_answers")
+    .update({
+      guide_status: "completed",
+      guide_current_step: null,
+      guide_completed_at: agora,
+    })
+    .eq("company_id", companyId);
+  if (error) console.error(`[guia] falha ao encerrar (${motivo}):`, error.message);
+}
+
 /** A fotografia da loja neste instante. */
 async function lerSinais(companyId: string): Promise<SinaisDaConfiguracao> {
-  const [{ data: loja }, { count: categorias }, { count: produtos }] = await Promise.all([
-    supabaseAdmin
-      .from("pizzerias")
-      .select(
-        "name, phone, whatsapp, address, street, number, opening_hours, delivery_enabled, pickup_enabled",
-      )
-      .eq("id", companyId)
-      .maybeSingle(),
-    supabaseAdmin
-      .from("menu_categories")
-      .select("id", { count: "exact", head: true })
-      .eq("pizzeria_id", companyId),
-    supabaseAdmin
-      .from("menu_products")
-      .select("id", { count: "exact", head: true })
-      .eq("pizzeria_id", companyId)
-      .gt("price", 0),
-  ]);
+  const [{ data: loja }, { count: categorias }, { count: produtos }, { count: adicionais }] =
+    await Promise.all([
+      supabaseAdmin
+        .from("pizzerias")
+        .select(
+          "name, phone, whatsapp, address, street, number, opening_hours, delivery_enabled, pickup_enabled, payment_methods",
+        )
+        .eq("id", companyId)
+        .maybeSingle(),
+      supabaseAdmin
+        .from("menu_categories")
+        .select("id", { count: "exact", head: true })
+        .eq("pizzeria_id", companyId),
+      supabaseAdmin
+        .from("menu_products")
+        .select("id", { count: "exact", head: true })
+        .eq("pizzeria_id", companyId)
+        .gt("price", 0),
+      // Complemento desligado não aparece para o cliente, então não conta como
+      // "a loja tem adicionais". `active` nulo é tratado como ligado: é assim
+      // que as linhas antigas ficaram.
+      supabaseAdmin
+        .from("menu_extras")
+        .select("id", { count: "exact", head: true })
+        .eq("pizzeria_id", companyId)
+        .or("active.is.null,active.eq.true"),
+    ]);
 
   const p = loja as {
     name: string | null;
@@ -137,7 +198,14 @@ async function lerSinais(companyId: string): Promise<SinaisDaConfiguracao> {
     opening_hours: unknown;
     delivery_enabled: boolean | null;
     pickup_enabled: boolean | null;
+    payment_methods: unknown;
   } | null;
+
+  // As formas que o lojista marcou. A tela grava uma lista de textos
+  // ("Pix", "Dinheiro"...); qualquer outra coisa é tratada como nenhuma.
+  const formas = Array.isArray(p?.payment_methods)
+    ? p.payment_methods.filter((f) => typeof f === "string" && f.trim().length > 0)
+    : [];
 
   return {
     temNome: texto(p?.name),
@@ -149,11 +217,34 @@ async function lerSinais(companyId: string): Promise<SinaisDaConfiguracao> {
     temFormaDeAtendimento: !!p?.delivery_enabled || !!p?.pickup_enabled,
     categorias: categorias ?? 0,
     produtos: produtos ?? 0,
+    adicionais: adicionais ?? 0,
+    formasDePagamento: formas.length,
+    // O campo "WhatsApp de Pedidos" da tela Minha Loja grava em `phone` — foi
+    // conferido no código da tela e nas 35 lojas do banco. A coluna `whatsapp`
+    // existe e está vazia em todas elas; ela é lida como reserva, para o dia
+    // em que alguém passe a preenchê-la.
+    whatsappValido: numeroDePedidosValido(p?.phone) || numeroDePedidosValido(p?.whatsapp),
   };
 }
 
 function listaDeEtapas(v: unknown): string[] {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === "string") : [];
+}
+
+/**
+ * As decisões gravadas, passadas pelo mesmo crivo de sempre.
+ *
+ * O que veio do banco também é conferido contra o catálogo — não só o que vem
+ * da tela. Uma linha com lixo (de uma versão antiga, de um script, de um
+ * engano) não pode virar etapa dada por concluída em silêncio.
+ */
+function decisoesDe(v: unknown): DecisoesDoGuia {
+  if (!v || typeof v !== "object" || Array.isArray(v)) return {};
+  const limpo: Record<string, string> = {};
+  for (const [chave, valor] of Object.entries(v as Record<string, unknown>)) {
+    if (typeof valor === "string" && decisaoValida(chave, valor)) limpo[chave] = valor;
+  }
+  return limpo as DecisoesDoGuia;
 }
 
 /**
@@ -173,7 +264,7 @@ export const estadoDoGuia = createServerFn({ method: "POST" })
 
     const { data } = await caderno
       .from("onboarding_answers")
-      .select("guide_status, guide_current_step, guide_completed_steps")
+      .select("guide_status, guide_current_step, guide_completed_steps, guide_decisions")
       .eq("company_id", loja.id)
       .maybeSingle();
 
@@ -190,9 +281,26 @@ export const estadoDoGuia = createServerFn({ method: "POST" })
     // voltava a cada login para quem nunca tinha sido convidado.
     if (!data || data.guide_status === "completed") return GUIA_DESLIGADO;
 
+    // ═══════════════════════════════════════════════════════════════════
+    // LOJA QUE JÁ ESTÁ VENDENDO NÃO É PARADA
+    // ═══════════════════════════════════════════════════════════════════
+    //
+    // Segunda trava, independente da primeira. Se um caderno em aberto
+    // sobrar por engano numa loja que já recebe pedidos — um script, uma
+    // restauração, um cadastro refeito — o guia se encerra sozinho em vez de
+    // escurecer o painel de quem tem pedido chegando.
+    //
+    // É a catraca no meio do salão durante o almoço: quem já está sentado
+    // não pode ser obrigado a passar por ela para continuar comendo.
+    if (await jaEstaVendendo(loja.id)) {
+      await encerrarGuia(loja.id, "loja já opera");
+      return GUIA_DESLIGADO;
+    }
+
     const sinais = await lerSinais(loja.id);
+    const decisoes = decisoesDe(data.guide_decisions);
     const jaConfirmadas = listaDeEtapas(data.guide_completed_steps);
-    const concluidas = etapasConcluidas(sinais, jaConfirmadas);
+    const concluidas = etapasConcluidas(sinais, jaConfirmadas, decisoes);
     const proxima = proximaEtapaDoGuia(concluidas);
 
     // O que mudou desde a última visita é gravado agora. Sem isso, a etapa
@@ -220,7 +328,7 @@ export const estadoDoGuia = createServerFn({ method: "POST" })
       if (error) console.error("[guia] falha ao gravar progresso:", error.message);
     }
 
-    if (!proxima) return { ...GUIA_DESLIGADO, concluidas, progresso: 100 };
+    if (!proxima) return { ...GUIA_DESLIGADO, concluidas, progresso: 100, decisoes };
 
     return {
       ativo: true,
@@ -228,7 +336,67 @@ export const estadoDoGuia = createServerFn({ method: "POST" })
       concluidas,
       progresso: progressoDoGuia(concluidas),
       rota: proxima.rota,
+      decisoes,
     };
+  });
+
+/**
+ * Grava uma escolha do lojista — as poucas que o banco não sabe responder.
+ *
+ * ═══════════════════════════════════════════════════════════════════════
+ * O QUE CHEGA DA TELA NÃO É ACEITO COMO VEIO
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * A chave e o valor são conferidos contra o catálogo `DECISOES_ACEITAS`
+ * antes de qualquer coisa. Sem isso, bastaria uma requisição inventada para
+ * gravar "pagamentos: dispensado" e pular uma etapa que exige dado de
+ * verdade — a porta dos fundos do guia inteiro.
+ *
+ * É o porteiro conferindo o nome na lista em vez de aceitar quem diz "pode
+ * deixar, eu sou convidado".
+ *
+ * GRAVAR A MESMA COISA DUAS VEZES NÃO FAZ MAL
+ *
+ * O lojista com internet lenta toca o botão três vezes. As três chegam, as
+ * três gravam o mesmo valor, e o resultado é idêntico ao de uma só — não
+ * existe "dispensado duas vezes".
+ */
+export const registrarDecisao = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .validator((entrada: { chave?: string; valor?: string }) => ({
+    chave: typeof entrada?.chave === "string" ? entrada.chave : "",
+    valor: typeof entrada?.valor === "string" ? entrada.valor : "",
+  }))
+  .handler(async ({ context, data }): Promise<{ ok: boolean }> => {
+    if (!decisaoValida(data.chave, data.valor)) {
+      console.warn("[guia] decisão recusada:", data.chave, data.valor);
+      return { ok: false };
+    }
+
+    const loja = await lojaDoUsuario(context.userId);
+    if (!loja) return { ok: false };
+
+    const { data: atual } = await caderno
+      .from("onboarding_answers")
+      .select("guide_status, guide_current_step, guide_completed_steps, guide_decisions")
+      .eq("company_id", loja.id)
+      .maybeSingle();
+
+    // Sem caderno não há guia, e sem guia não há decisão a gravar.
+    if (!atual || atual.guide_status === "completed") return { ok: false };
+
+    const decisoes = { ...decisoesDe(atual.guide_decisions), [data.chave]: data.valor };
+
+    const { error } = await caderno
+      .from("onboarding_answers")
+      .update({ guide_decisions: decisoes })
+      .eq("company_id", loja.id);
+
+    if (error) {
+      console.error("[guia] falha ao gravar decisão:", error.message);
+      return { ok: false };
+    }
+    return { ok: true };
   });
 
 /**
@@ -251,20 +419,7 @@ export const sairDoGuia = createServerFn({ method: "POST" })
     const loja = await lojaDoUsuario(context.userId);
     if (!loja) return { ok: true };
 
-    const agora = new Date().toISOString();
-    const { error } = await caderno
-      .from("onboarding_answers")
-      .update({
-        guide_status: "completed",
-        guide_current_step: null,
-        guide_completed_at: agora,
-      })
-      .eq("company_id", loja.id);
-
-    if (error) {
-      console.error("[guia] falha ao sair:", error.message);
-      return { ok: false };
-    }
+    await encerrarGuia(loja.id, "o lojista pediu para sair");
     return { ok: true };
   });
 

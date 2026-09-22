@@ -36,7 +36,8 @@ export type IdDaEtapaDoGuia =
   | "pagamentos"
   | "whatsapp"
   | "plano_cents"
-  | "pedido_teste";
+  | "pedido_teste"
+  | "prontidao";
 
 /**
  * Os sinais REAIS da loja. Cada campo aqui existe no banco — nenhum é
@@ -57,7 +58,65 @@ export type SinaisDaConfiguracao = {
   categorias: number;
   /** Quantos produtos com preço acima de zero existem. */
   produtos: number;
+  /** Quantos complementos (`menu_extras`) ativos existem. */
+  adicionais: number;
+  /** Quantas formas de pagamento estão ligadas em `pizzerias.payment_methods`. */
+  formasDePagamento: number;
+  /**
+   * O número que recebe os pedidos é um celular brasileiro válido.
+   *
+   * Diferente de `temContato`, que só olha se tem ALGUMA COISA escrita: aqui
+   * a pergunta é se dá para mandar mensagem naquele número. Telefone fixo e
+   * número pela metade passam no primeiro e reprovam aqui — e é justamente
+   * o número pela metade que faz o pedido do cliente cair no vazio.
+   */
+  whatsappValido: boolean;
 };
+
+/**
+ * As escolhas do lojista que NÃO dá para deduzir olhando o banco.
+ *
+ * Loja sem nenhum adicional cadastrado e loja que NÃO USA adicionais são
+ * idênticas nos dados. Sem guardar a resposta, o guia perguntaria a mesma
+ * coisa para sempre — o garçom que volta de cinco em cinco minutos oferecendo
+ * sobremesa depois de o cliente já ter dito que não.
+ *
+ * Só entra aqui o que o banco não sabe responder sozinho.
+ */
+export type DecisoesDoGuia = {
+  /** "dispensado" = o lojista disse que não usa adicionais. */
+  adicionais?: "dispensado";
+  /** O lojista viu e reconheceu o resumo de prontidão. */
+  prontidao?: "visto";
+};
+
+/**
+ * As decisões que o servidor aceita gravar. Nada fora desta lista entra.
+ *
+ * É um `Map`, e não um objeto comum, por um motivo concreto: num objeto,
+ * perguntar por `__proto__`, `constructor` ou `toString` NÃO devolve
+ * "não existe" — devolve algo herdado. Numa versão anterior deste código
+ * `DECISOES_ACEITAS["__proto__"]` derrubava a validação inteira com um erro,
+ * e uma requisição com essa chave travava a gravação do guia.
+ *
+ * É o caderno de reservas que, perguntado por um nome que não está na lista,
+ * em vez de dizer "não tem" responde com o nome do dono do caderno.
+ *
+ * O `Map` só conhece o que foi colocado dentro dele.
+ */
+const DECISOES_ACEITAS = new Map<string, readonly string[]>([
+  ["adicionais", ["dispensado"]],
+  ["prontidao", ["visto"]],
+]);
+
+export function decisaoValida(chave: string, valor: string): boolean {
+  return DECISOES_ACEITAS.get(chave)?.includes(valor) ?? false;
+}
+
+/** As chaves aceitas, para quem precisar listar (telas, testes). */
+export function chavesDeDecisao(): string[] {
+  return [...DECISOES_ACEITAS.keys()];
+}
 
 export type EtapaDoGuia = {
   id: IdDaEtapaDoGuia;
@@ -85,8 +144,29 @@ export type EtapaDoGuia = {
   /**
    * A pergunta que o BANCO responde. Devolver `true` é a única coisa que
    * conclui a etapa.
+   *
+   * `d` são as escolhas que o banco não sabe responder sozinho (ver
+   * `DecisoesDoGuia`). A esmagadora maioria das etapas ignora esse segundo
+   * parâmetro de propósito: quanto menos etapa depender de uma resposta em
+   * vez de um dado, menos chance de alguém terminar o guia sem a loja pronta.
    */
-  concluida: (s: SinaisDaConfiguracao) => boolean;
+  concluida: (s: SinaisDaConfiguracao, d: DecisoesDoGuia) => boolean;
+  /**
+   * Quando a etapa oferece uma escolha em vez de só apontar um campo.
+   * Usado na de adicionais: nem todo negócio usa complementos, e obrigar uma
+   * hamburgueria sem adicionais a inventar um só para destravar o guia seria
+   * pedir para ela sujar o próprio cardápio.
+   */
+  escolha?: {
+    pergunta: string;
+    /** O botão que leva à tela de configurar. */
+    configurar: string;
+    /** O botão que dispensa, gravando a decisão. */
+    dispensar: string;
+    /** A decisão gravada ao dispensar. */
+    chave: keyof DecisoesDoGuia;
+    valor: string;
+  };
   /**
    * Etapa que ainda não faz parte do guia — aparece na lista de progresso
    * como "em breve", para o lojista ver o caminho inteiro, mas não prende
@@ -154,40 +234,79 @@ export const ETAPAS_DO_GUIA: readonly EtapaDoGuia[] = [
     concluida: (s) => s.produtos > 0,
   },
 
-  // ── Ainda não conduzidas pelo guia ──────────────────────────────────────
   {
     id: "adicionais",
     rotulo: "Adicionais",
     rota: "/menu",
-    emocao: "neutro",
-    titulo: "Adicionais",
-    descricao: "Bacon, borda recheada, tamanho maior — o que o cliente soma ao pedido.",
-    comoConcluir: "Em breve.",
-    concluida: () => false,
-    emBreve: true,
+    aba: "extras",
+    alvo: "novo-adicional",
+    emocao: "orientando",
+    titulo: "Seus produtos têm complementos?",
+    descricao:
+      "Bacon, queijo extra, borda recheada, cobertura de açaí. São os itens que o cliente soma ao pedido — e que aumentam o valor da comanda sem você vender nada a mais.",
+    comoConcluir: "Cadastre um complemento, ou diga que sua loja não usa.",
+    // Duas portas fecham esta etapa: um complemento cadastrado DE VERDADE, ou
+    // a resposta de que a loja não usa complementos. Obrigar uma hamburgueria
+    // sem adicionais a inventar um só para destravar o guia seria pedir para
+    // ela sujar o próprio cardápio.
+    concluida: (s, d) => s.adicionais > 0 || d.adicionais === "dispensado",
+    escolha: {
+      pergunta: "Seu estabelecimento utiliza adicionais ou complementos nos produtos?",
+      configurar: "Configurar adicionais",
+      dispensar: "Não utilizo adicionais",
+      chave: "adicionais",
+      valor: "dispensado",
+    },
   },
   {
     id: "pagamentos",
     rotulo: "Pagamentos",
     rota: "/my-store",
-    emocao: "neutro",
-    titulo: "Pagamentos",
-    descricao: "Como o cliente paga: Pix, cartão, dinheiro.",
-    comoConcluir: "Em breve.",
-    concluida: () => false,
-    emBreve: true,
+    aba: "delivery",
+    alvo: "formas-de-pagamento",
+    emocao: "trabalhando",
+    titulo: "Como seus clientes vão pagar",
+    descricao:
+      "Marque as formas que você aceita de verdade. O que não estiver marcado aqui não aparece para o cliente na hora de fechar o pedido.",
+    comoConcluir: "Ligue pelo menos uma forma de pagamento.",
+    concluida: (s) => s.formasDePagamento > 0,
   },
   {
     id: "whatsapp",
-    rotulo: "WhatsApp",
-    rota: "/chat",
-    emocao: "neutro",
-    titulo: "WhatsApp",
-    descricao: "O número que recebe e responde os pedidos.",
-    comoConcluir: "Em breve.",
-    concluida: () => false,
-    emBreve: true,
+    rotulo: "Canal de pedidos",
+    rota: "/my-store",
+    aba: "service",
+    alvo: "whatsapp-de-pedidos",
+    emocao: "atencao",
+    titulo: "Onde você recebe os pedidos",
+    descricao:
+      "O WhatsApp de pedidos é para onde o cliente é levado quando fecha a compra. Com DDD e os 9 dígitos — um número pela metade faz o pedido cair no vazio, e você nunca fica sabendo.",
+    comoConcluir: "Informe o WhatsApp de pedidos com DDD e 9 dígitos.",
+    concluida: (s) => s.whatsappValido,
   },
+  {
+    id: "prontidao",
+    rotulo: "Sua loja está pronta",
+    rota: "/dashboard",
+    emocao: "comemorando",
+    titulo: "Pronto! Sua loja está de pé.",
+    descricao:
+      "Esse é o resumo do que você configurou. Confira, e se algo estiver faltando dá para voltar depois por Minha Loja e pelo Cardápio.",
+    comoConcluir: "Confira o resumo e siga para o painel.",
+    // A ÚNICA etapa que fecha por clique, e ela é assim de propósito: não
+    // existe dado no banco que responda "o lojista viu o resumo". Todas as
+    // outras continuam fechando só com dado.
+    concluida: (_s, d) => d.prontidao === "visto",
+    escolha: {
+      pergunta: "Tudo certo até aqui?",
+      configurar: "Entendi, quero começar",
+      dispensar: "",
+      chave: "prontidao",
+      valor: "visto",
+    },
+  },
+
+  // ── Ainda não conduzidas pelo guia ──────────────────────────────────────
   {
     id: "plano_cents",
     rotulo: "Plano Cents",
@@ -215,9 +334,20 @@ export const ETAPAS_DO_GUIA: readonly EtapaDoGuia[] = [
 /** Só as etapas que o guia realmente conduz hoje. */
 export const ETAPAS_ATIVAS: readonly EtapaDoGuia[] = ETAPAS_DO_GUIA.filter((e) => !e.emBreve);
 
-/** O endereço completo da etapa, já com a aba quando ela existe. */
-export function enderecoDaEtapa(etapa: EtapaDoGuia): string {
-  return etapa.aba ? `${etapa.rota}?aba=${encodeURIComponent(etapa.aba)}` : etapa.rota;
+/**
+ * O endereço completo da etapa, já com a aba quando ela existe.
+ *
+ * `buscaAtual` é o que já estava no endereço (`?pizzeriaId=...`). Ele é
+ * mantido: quem tem mais de uma loja chega nas telas com a loja escolhida no
+ * endereço, e jogar isso fora levaria o guia a configurar a loja errada.
+ */
+export function enderecoDaEtapa(etapa: EtapaDoGuia, buscaAtual = ""): string {
+  const params = new URLSearchParams(buscaAtual);
+  // `aba` é sempre reescrita; o resto do bilhete fica.
+  params.delete("aba");
+  if (etapa.aba) params.set("aba", etapa.aba);
+  const cauda = params.toString();
+  return cauda ? `${etapa.rota}?${cauda}` : etapa.rota;
 }
 
 export function etapaDoGuiaPorId(id: string): EtapaDoGuia | undefined {
@@ -235,8 +365,11 @@ export function ehIdDeEtapaDoGuia(id: string | null | undefined): id is IdDaEtap
  * instante. Quem junta com o que já foi confirmado antes é
  * `etapasConcluidas`.
  */
-export function etapasAtendidas(s: SinaisDaConfiguracao): IdDaEtapaDoGuia[] {
-  return ETAPAS_ATIVAS.filter((e) => e.concluida(s)).map((e) => e.id);
+export function etapasAtendidas(
+  s: SinaisDaConfiguracao,
+  d: DecisoesDoGuia = {},
+): IdDaEtapaDoGuia[] {
+  return ETAPAS_ATIVAS.filter((e) => e.concluida(s, d)).map((e) => e.id);
 }
 
 /**
@@ -253,8 +386,9 @@ export function etapasAtendidas(s: SinaisDaConfiguracao): IdDaEtapaDoGuia[] {
 export function etapasConcluidas(
   s: SinaisDaConfiguracao,
   jaConfirmadas: readonly string[],
+  d: DecisoesDoGuia = {},
 ): IdDaEtapaDoGuia[] {
-  const conjunto = new Set<IdDaEtapaDoGuia>(etapasAtendidas(s));
+  const conjunto = new Set<IdDaEtapaDoGuia>(etapasAtendidas(s, d));
   for (const id of jaConfirmadas) {
     if (ehIdDeEtapaDoGuia(id)) conjunto.add(id);
   }

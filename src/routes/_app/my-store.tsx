@@ -133,7 +133,13 @@ function StoreEditor({
   const busca = useRouterState({ select: (e) => e.location.search });
   const aba = new URLSearchParams(typeof busca === "string" ? busca : "").get("aba") || "identity";
   const trocarAba = (nova: string) => {
-    void nav({ to: "/my-store", search: { aba: nova }, replace: true });
+    // O QUE JÁ ESTAVA NO ENDEREÇO CONTINUA LÁ.
+    //
+    // Quem tem mais de uma loja chega aqui com `?pizzeriaId=...`. Trocar de
+    // aba escrevendo só `?aba=` apagaria esse pedaço, e no primeiro F5 a tela
+    // voltaria para outra loja — o dono editando o endereço da loja errada
+    // sem perceber. É apagar o resto do bilhete para anotar um recado.
+    void nav({ to: "/my-store", search: (antes) => ({ ...antes, aba: nova }), replace: true });
   };
 
   const loadData = async () => {
@@ -534,7 +540,9 @@ function StoreEditor({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+                {/* Alvo do guia de configuração. Este campo grava em
+                    `pizzerias.phone` — é ele o canal que recebe os pedidos. */}
+                <div className="space-y-2" data-guia="whatsapp-de-pedidos">
                   <Label htmlFor="whatsapp">WhatsApp de Pedidos (com DDD)</Label>
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
@@ -709,7 +717,8 @@ function StoreEditor({
                   />
                 </div>
               </div>
-              <div className="space-y-2">
+              {/* Alvo do guia de configuração — ver `lib/onboarding/guia/etapas.ts`. */}
+              <div className="space-y-2" data-guia="formas-de-pagamento">
                 <Label>Formas de Pagamento Aceitas</Label>
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   {[
