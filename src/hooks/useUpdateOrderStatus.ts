@@ -2,6 +2,7 @@ import { useCallback, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import type { Order } from "@/types/order";
+import { ehPedidoDeDemonstracao } from "@/lib/onboarding/guia/pedidoDeDemonstracao";
 import {
   canMoveOrder,
   getStatusLabel,
@@ -99,6 +100,24 @@ export function useUpdateOrderStatus({
         // Soltar o card na própria coluna é gesto acidental, não erro.
         if (fromStatus !== toStatus) toast.error(check.reason);
         return { ok: false };
+      }
+
+      // ═══════════════════════════════════════════════════════════════
+      // O PEDIDO DE TREINO NÃO ENCOSTA NO BANCO
+      // ═══════════════════════════════════════════════════════════════
+      //
+      // Ele é o pedido de mentira da última etapa do guia. Gravar a mudança
+      // de status dele dispararia os gatilhos da tabela `orders`: cobrança no
+      // plano CENTS, baixa de estoque, ponto de fidelidade e cliente novo na
+      // lista de marketing — tudo por causa de um treino.
+      //
+      // É o treinamento de incêndio feito com fogo de verdade dentro do
+      // prédio. Aqui a regra de transição é a mesma (ele não pula etapa), o
+      // card anda no quadro igual, e nada sai da tela.
+      if (ehPedidoDeDemonstracao(order.id)) {
+        setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: toStatus } : o)));
+        if (toStatus === "entregue") toast.success("Pedido finalizado com sucesso.");
+        return { ok: true };
       }
 
       // Finalizar é a única transição que TIRA o pedido do quadro. Ela

@@ -42,6 +42,7 @@ import { ClubCentsCard } from "@/components/club/ClubCentsCard";
 import { PrimeirosPassosCard } from "@/components/onboarding/PrimeirosPassosCard";
 import { HallOfFameStrip } from "@/components/club/HallOfFameStrip";
 import { OrdersKanban } from "@/components/orders/OrdersKanban";
+import { comPedidoDeTreino, usePedidoDeTreino } from "@/lib/onboarding/guia/treinoNoQuadro";
 import { TERMINAL_STATUSES, isKanbanStatus } from "@/components/orders/orderStatusConfig";
 import { claimOrderAlert } from "@/lib/orderAlertClaim";
 
@@ -130,6 +131,7 @@ function Dashboard() {
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [orders, setOrders] = useState<Order[]>([]);
+  const pedidoDeTreino = usePedidoDeTreino();
   const [filter, setFilter] = useState<string>("ativos");
   const [soundOn, setSoundOn] = useState(() => {
     const saved = localStorage.getItem("flycontrol_sound_on");
@@ -845,15 +847,24 @@ function Dashboard() {
       )}
 
       {showKanban ? (
-        <OrdersKanban
-          orders={filtered}
-          setOrders={setOrders}
-          tenantId={activeId}
-          recentNewIds={recentNewOrderIds}
-          canDelete={isHardcodedAdmin}
-          onDelete={deleteOrder}
-          onStatusApplied={openStatusArtModal}
-        />
+        // `data-guia` é o alvo do guia de configuração: a etapa do pedido de
+        // teste acende o quadro inteiro, porque o que ela ensina é o caminho
+        // entre as colunas, não um botão.
+        <div data-guia="quadro-de-pedidos">
+          <OrdersKanban
+            // O pedido de TREINO do guia entra aqui junto com os de verdade.
+            // Ele existe só nesta tela aberta: nunca foi gravado, e a gravação
+            // de status o reconhece pelo id e não encosta no banco. Ver
+            // `lib/onboarding/guia/pedidoDeDemonstracao.ts`.
+            orders={comPedidoDeTreino(filtered, pedidoDeTreino)}
+            setOrders={setOrders}
+            tenantId={activeId}
+            recentNewIds={recentNewOrderIds}
+            canDelete={isHardcodedAdmin}
+            onDelete={deleteOrder}
+            onStatusApplied={openStatusArtModal}
+          />
+        </div>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           {filtered.map((o) => (

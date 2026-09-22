@@ -166,7 +166,7 @@ describe("o guia bloqueia sem trancar", () => {
   });
 
   it("administrador da plataforma nunca vê o guia", () => {
-    expect(painel).toContain("<GuiaDeConfiguracao habilitado={!isSuperAdmin} />");
+    expect(painel).toMatch(/<GuiaDeConfiguracao\s+habilitado=\{!isSuperAdmin\}/);
   });
 
   it("o guia vive fora do <main>, para alcançar o menu e a barra de baixo", () => {
@@ -303,5 +303,143 @@ describe("ninguém que já está trabalhando é preso", () => {
     // porta com segredos diferentes: uma hora uma delas deixa de fechar.
     expect(servidor).toContain("async function encerrarGuia");
     expect(servidor.match(/guide_status: "completed"/g)?.length).toBe(1);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FASES 7 E 8, CONCLUSÃO, AJUDA E REVISÃO
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("a ativação do plano", () => {
+  it("não existe um segundo sistema de assinatura", () => {
+    // Uma segunda chave da mesma porta, com segredo diferente: um dia uma
+    // delas deixa de fechar.
+    expect(servidor).toContain("garantirContagemCents");
+    expect(servidor).not.toMatch(/from\("subscriptions"\)[\s\S]{0,200}\.insert/);
+  });
+
+  it("abrir a tela não ativa nada — quem ativa é o botão, e quem confirma é o servidor", () => {
+    expect(guia).toContain("ativarPlanoPeloGuia");
+    expect(guia).toContain("Ativar meu plano");
+    expect(guia).toContain("Estamos confirmando sua ativação...");
+  });
+
+  it('"já estava contando" conta como sucesso', () => {
+    // Senão o lojista que tocou o botão duas vezes veria erro na segunda.
+    expect(servidor).toMatch(/r\.motivo === "ja_contando"/);
+  });
+
+  it("a trava do toque repetido vale também para a ativação", () => {
+    const trecho = guia.slice(guia.indexOf("const ativarPlano"));
+    expect(trecho).toMatch(/if \(gravando\.current\) return;/);
+  });
+
+  it("o motivo técnico da falha não vai para a tela do lojista", () => {
+    // Ele cita nome de tabela e de estado interno. O lojista lê uma frase que
+    // diz o que fazer; o motivo vai para o log do servidor.
+    expect(guia).toContain("Não conseguimos confirmar a ativação do seu plano");
+    expect(servidor).toContain("console.warn");
+  });
+});
+
+describe("o pedido de treino no quadro de verdade", () => {
+  it("o guia entrega o pedido pelo balcão de recados", () => {
+    // O guia mora fora do <main> e o quadro mora dentro: um não é pai do
+    // outro. Passar de mão em mão furaria cinco componentes que não têm nada
+    // a ver com o assunto.
+    expect(guia).toContain("publicarPedidoDeTreino");
+    const painelPedidos = soCodigo("src/routes/_app/dashboard.tsx");
+    expect(painelPedidos).toContain("comPedidoDeTreino(filtered, pedidoDeTreino)");
+  });
+
+  it("o personagem narra conforme a coluna em que o card está", () => {
+    expect(guia).toContain("NARRACAO_DO_TREINO[treinoNoQuadro.status]");
+  });
+
+  it("a etapa fecha quando o card chega em 'entregue', uma vez só", () => {
+    expect(guia).toContain('treinoNoQuadro?.status === "entregue"');
+    expect(guia).toContain("treinoJaGravado");
+  });
+});
+
+describe("a tela final", () => {
+  it("comemora, lista tudo e entrega o painel", () => {
+    expect(guia).toContain('etapa.id === "prontidao" || etapa.id === "conclusao"');
+    const etapas = readFileSync("src/lib/onboarding/guia/etapas.ts", "utf8");
+    expect(etapas).toContain("Entrar no FlyControl");
+    expect(etapas).toMatch(/id: "conclusao"[\s\S]*?emocao: "comemorando"/);
+  });
+
+  it("não há saída lateral na tela final — ela é o fim", () => {
+    expect(guia).toMatch(
+      /etapa\.id === "prontidao" \|\| etapa\.id === "conclusao"\s*\?\s*undefined/,
+    );
+  });
+});
+
+describe("falha nunca avança em silêncio", () => {
+  it("a mensagem de erro aparece no balão e é anunciada", () => {
+    expect(guia).toContain("falhaDaEtapa");
+    expect(guia).toContain('role="alert"');
+  });
+
+  it("errar não fecha a etapa", () => {
+    // Só a releitura do servidor muda o estado; no ramo de falha ela não
+    // acontece.
+    const trecho = guia.slice(guia.indexOf("const ativarPlano"), guia.indexOf("const sair"));
+    const ondeFalha = trecho.indexOf("setFalhaDaEtapa");
+    const ondeRele = trecho.indexOf("setEstado(await perguntar");
+    expect(ondeFalha).toBeGreaterThan(0);
+    expect(ondeFalha).toBeLessThan(ondeRele);
+  });
+});
+
+describe("os eventos do guia", () => {
+  const eventos = soCodigo("src/lib/onboarding/guia/eventos.ts");
+
+  it("os seis eventos pedidos existem", () => {
+    for (const e of [
+      "onboarding_started",
+      "onboarding_step_started",
+      "onboarding_step_completed",
+      "onboarding_step_error",
+      "onboarding_abandoned",
+      "onboarding_completed",
+    ]) {
+      expect(eventos, `falta ${e}`).toContain(e);
+    }
+  });
+
+  it("nada que identifique o lojista ou o cliente entra no evento", () => {
+    expect(eventos).not.toMatch(/\bnome\b|telefone|endereco|email/i);
+  });
+});
+
+describe("depois do guia: ajuda e revisão", () => {
+  const ajuda = soCodigo("src/components/onboarding/guia/CentralDeAjuda.tsx");
+  const revisao = soCodigo("src/components/onboarding/guia/RevisaoDoTutorial.tsx");
+
+  it("a central de ajuda só aparece com o guia encerrado", () => {
+    // Dois flutuantes no mesmo canto, um deles oferecendo saída do que o
+    // outro está pedindo, é convite a errar.
+    expect(guia).toMatch(/if \(!estado\?\.ativo \|\| !etapa\) return <CentralDeAjuda \/>;/);
+  });
+
+  it("ela não promete conversa que não existe", () => {
+    // Um campo de digitar pergunta promete resposta; o que existe são atalhos.
+    expect(ajuda).not.toMatch(/<(input|textarea)/i);
+    expect(ajuda).toContain("Precisa de ajuda?");
+  });
+
+  it('"rever tutorial" NÃO mexe em configuração nenhuma', () => {
+    // Um botão "rever" que zerasse a configuração seria o manual que desmonta
+    // o móvel para explicar como montar.
+    expect(revisao).not.toMatch(/update|insert|delete|registrarDecisao|sairDoGuia/i);
+    expect(revisao).toContain("ETAPAS_DO_GUIA");
+  });
+
+  it("e fica em Configurações, separado do guia obrigatório", () => {
+    const config = soCodigo("src/routes/_app/settings.tsx");
+    expect(config).toContain("<RevisaoDoTutorial />");
   });
 });

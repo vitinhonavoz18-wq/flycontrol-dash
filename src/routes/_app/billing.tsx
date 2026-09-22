@@ -369,7 +369,8 @@ function BillingPage() {
   ).filter((f) => !includedFeatures.includes(f));
 
   return (
-    <div className="space-y-6 p-4 sm:p-6 md:p-8">
+    // `data-guia` é o alvo do guia de configuração de loja nova.
+    <div className="space-y-6 p-4 sm:p-6 md:p-8" data-guia="plano-da-loja">
       <SectionHeader title="Plano e cobrança" description={snapshot.companyName} />
 
       {/* A progressão do CENTS. Some sozinha para quem não está no CENTS ou

@@ -23,6 +23,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
+import { garantirContagemCents } from "@/lib/billing/ativarContagemCents.functions";
 import { validateBrazilianPhone } from "@/lib/signup/validation";
 import {
   decisaoValida,
@@ -158,9 +159,68 @@ async function encerrarGuia(companyId: string, motivo: string): Promise<void> {
   if (error) console.error(`[guia] falha ao encerrar (${motivo}):`, error.message);
 }
 
+/**
+ * O plano da loja está em condição de operar?
+ *
+ * ═══════════════════════════════════════════════════════════════════════
+ * "PLANO ATIVO" NÃO É "PLANO CENTS"
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Das 35 lojas do banco, 20 são PREMIUM e 15 são CENTS. Exigir CENTS para
+ * fechar a etapa prenderia cada loja PREMIUM no guia para sempre, esperando
+ * ativar um plano que não é o dela — a catraca que só aceita um tipo de
+ * crachá num prédio onde metade das pessoas tem o outro.
+ *
+ * Então a pergunta é: existe assinatura funcionando? `active` e `free_trial`
+ * são os dois estados em que a loja pode trabalhar; os outros
+ * (`pending_payment`, `suspended`, `canceled`...) não são.
+ *
+ * O SEGUNDO SINAL, SÓ PARA O CENTS
+ *
+ * No CENTS não basta a assinatura: é preciso um CICLO ABERTO, que é onde os
+ * pedidos são contados. Sem ciclo, o lojista vende e nada é registrado —
+ * a comanda aberta que nunca chega ao caixa. Quem abre o ciclo é
+ * `garantirContagemCents`, que já existe e é a mesma usada pelo painel.
+ */
+async function lerPlano(
+  companyId: string,
+): Promise<{ planoAtivo: boolean; centsPrecisaAtivar: boolean }> {
+  const [{ data: loja }, { data: assinatura }] = await Promise.all([
+    supabaseAdmin.from("pizzerias").select("plan_type").eq("id", companyId).maybeSingle(),
+    (
+      supabaseAdmin as unknown as {
+        from: (t: string) => {
+          select: (c: string) => {
+            eq: (
+              k: string,
+              v: string,
+            ) => {
+              maybeSingle: () => Promise<{
+                data: { status: string; current_cycle_id: string | null } | null;
+              }>;
+            };
+          };
+        };
+      }
+    )
+      .from("subscriptions")
+      .select("status, current_cycle_id")
+      .eq("company_id", companyId)
+      .maybeSingle(),
+  ]);
+
+  const tipo = (loja as { plan_type: string | null } | null)?.plan_type ?? null;
+  const planoAtivo = !!assinatura && ["active", "free_trial"].includes(assinatura.status);
+
+  return {
+    planoAtivo,
+    centsPrecisaAtivar: tipo === "cents" && !assinatura?.current_cycle_id,
+  };
+}
+
 /** A fotografia da loja neste instante. */
 async function lerSinais(companyId: string): Promise<SinaisDaConfiguracao> {
-  const [{ data: loja }, { count: categorias }, { count: produtos }, { count: adicionais }] =
+  const [{ data: loja }, { count: categorias }, { count: produtos }, { count: adicionais }, plano] =
     await Promise.all([
       supabaseAdmin
         .from("pizzerias")
@@ -186,6 +246,7 @@ async function lerSinais(companyId: string): Promise<SinaisDaConfiguracao> {
         .select("id", { count: "exact", head: true })
         .eq("pizzeria_id", companyId)
         .or("active.is.null,active.eq.true"),
+      lerPlano(companyId),
     ]);
 
   const p = loja as {
@@ -224,6 +285,8 @@ async function lerSinais(companyId: string): Promise<SinaisDaConfiguracao> {
     // existe e está vazia em todas elas; ela é lida como reserva, para o dia
     // em que alguém passe a preenchê-la.
     whatsappValido: numeroDePedidosValido(p?.phone) || numeroDePedidosValido(p?.whatsapp),
+    planoAtivo: plano.planoAtivo,
+    centsPrecisaAtivar: plano.centsPrecisaAtivar,
   };
 }
 
@@ -338,6 +401,45 @@ export const estadoDoGuia = createServerFn({ method: "POST" })
       rota: proxima.rota,
       decisoes,
     };
+  });
+
+/**
+ * Liga a contagem do plano CENTS para este lojista.
+ *
+ * ═══════════════════════════════════════════════════════════════════════
+ * NÃO EXISTE SEGUNDO SISTEMA DE ASSINATURA AQUI
+ * ═══════════════════════════════════════════════════════════════════════
+ *
+ * Quem faz o trabalho é `garantirContagemCents`, que já existe e é a MESMA
+ * que o painel usa. Este envelope só descobre qual é a loja do usuário e
+ * chama. Um segundo caminho de ativação seria uma segunda chave da mesma
+ * porta, com segredo diferente: um dia uma delas deixa de fechar.
+ *
+ * CHAMAR DUAS VEZES NÃO ABRE DOIS CICLOS
+ *
+ * A função de origem sai no primeiro `if` quando já existe ciclo aberto —
+ * dois ciclos fariam o mesmo pedido ser contado duas vezes. Então o toque
+ * repetido do lojista impaciente é inofensivo.
+ */
+export const ativarPlanoPeloGuia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }): Promise<{ ok: boolean; motivo?: string }> => {
+    const loja = await lojaDoUsuario(context.userId);
+    if (!loja) return { ok: false, motivo: "loja_nao_encontrada" };
+
+    try {
+      const r = await garantirContagemCents({ data: { tenantId: loja.id } });
+      // `ativouAgora: false` com motivo "ja_contando" é sucesso: alguém (ou
+      // um toque anterior) já ligou. Só os outros motivos são falha.
+      if (r.ativouAgora || r.motivo === "ja_contando") return { ok: true };
+      console.warn("[guia] ativação do plano não concluída:", r.motivo);
+      return { ok: false, motivo: r.motivo };
+    } catch (erro) {
+      // O motivo vai para o log do servidor, nunca para a tela: ele cita
+      // nomes internos de tabela e de estado que não dizem nada ao lojista.
+      console.error("[guia] falha ao ativar o plano:", erro);
+      return { ok: false, motivo: "erro_inesperado" };
+    }
   });
 
 /**

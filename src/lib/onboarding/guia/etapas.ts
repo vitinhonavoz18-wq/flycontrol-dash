@@ -37,7 +37,8 @@ export type IdDaEtapaDoGuia =
   | "whatsapp"
   | "plano_cents"
   | "pedido_teste"
-  | "prontidao";
+  | "prontidao"
+  | "conclusao";
 
 /**
  * Os sinais REAIS da loja. Cada campo aqui existe no banco — nenhum é
@@ -71,6 +72,17 @@ export type SinaisDaConfiguracao = {
    * o número pela metade que faz o pedido do cliente cair no vazio.
    */
   whatsappValido: boolean;
+  /**
+   * A assinatura da loja está em um estado que permite operar
+   * (`active` ou `free_trial`).
+   *
+   * NÃO é "plano CENTS ativo". Das 35 lojas do banco, 20 são PREMIUM: exigir
+   * CENTS prenderia cada uma delas no guia para sempre, esperando ativar um
+   * plano que não é o delas.
+   */
+  planoAtivo: boolean;
+  /** A loja é do plano CENTS e ainda não tem ciclo de contagem aberto. */
+  centsPrecisaAtivar: boolean;
 };
 
 /**
@@ -88,6 +100,10 @@ export type DecisoesDoGuia = {
   adicionais?: "dispensado";
   /** O lojista viu e reconheceu o resumo de prontidão. */
   prontidao?: "visto";
+  /** O pedido de treino foi levado até o fim do quadro. */
+  pedido_teste?: "feito";
+  /** O lojista viu a tela final e entrou no painel. */
+  concluido?: "visto";
 };
 
 /**
@@ -107,6 +123,8 @@ export type DecisoesDoGuia = {
 const DECISOES_ACEITAS = new Map<string, readonly string[]>([
   ["adicionais", ["dispensado"]],
   ["prontidao", ["visto"]],
+  ["pedido_teste", ["feito"]],
+  ["concluido", ["visto"]],
 ]);
 
 export function decisaoValida(chave: string, valor: string): boolean {
@@ -306,28 +324,50 @@ export const ETAPAS_DO_GUIA: readonly EtapaDoGuia[] = [
     },
   },
 
-  // ── Ainda não conduzidas pelo guia ──────────────────────────────────────
   {
     id: "plano_cents",
-    rotulo: "Plano Cents",
+    rotulo: "Plano ativo",
     rota: "/billing",
-    emocao: "neutro",
-    titulo: "Plano Cents",
-    descricao: "O plano que libera os recursos da sua loja.",
-    comoConcluir: "Em breve.",
-    concluida: () => false,
-    emBreve: true,
+    alvo: "plano-da-loja",
+    emocao: "trabalhando",
+    titulo: "Estamos quase terminando!",
+    descricao:
+      "Falta deixar seu plano ativo para a loja poder operar. No CENTS você só paga pelos pedidos que receber — a contagem começa agora, nunca para trás.",
+    comoConcluir: "Deixe seu plano ativo.",
+    concluida: (s) => s.planoAtivo && !s.centsPrecisaAtivar,
   },
   {
     id: "pedido_teste",
-    rotulo: "Pedido teste",
+    rotulo: "Pedido de teste",
+    rota: "/dashboard",
+    alvo: "quadro-de-pedidos",
+    emocao: "orientando",
+    titulo: "Vamos fazer um pedido de teste",
+    descricao:
+      "Sua loja está praticamente pronta. Agora um pedido de mentira, só para você aprender o caminho — ele não é cobrado, não mexe no seu estoque e não aparece em relatório nenhum.",
+    comoConcluir: "Leve o pedido de teste até o fim do quadro.",
+    // Não existe dado no banco: o pedido de treino nunca é gravado, de
+    // propósito (ver `pedidoDeDemonstracao.ts`). A decisão é gravada quando
+    // ele chega em "entregue" no quadro de verdade.
+    concluida: (_s, d) => d.pedido_teste === "feito",
+  },
+  {
+    id: "conclusao",
+    rotulo: "Tudo pronto",
     rota: "/dashboard",
     emocao: "comemorando",
-    titulo: "Pedido teste",
-    descricao: "Um pedido de mentira para você ver tudo funcionando antes do primeiro de verdade.",
-    comoConcluir: "Em breve.",
-    concluida: () => false,
-    emBreve: true,
+    titulo: "Pronto! Seu FlyControl está preparado para receber pedidos.",
+    descricao:
+      "Configuração terminada. A partir de agora o painel é todo seu — e o que faltar dá para ajustar quando quiser.",
+    comoConcluir: "Entre no FlyControl.",
+    concluida: (_s, d) => d.concluido === "visto",
+    escolha: {
+      pergunta: "",
+      configurar: "Entrar no FlyControl",
+      dispensar: "",
+      chave: "concluido",
+      valor: "visto",
+    },
   },
 ] as const;
 

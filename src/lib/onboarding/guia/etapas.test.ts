@@ -36,6 +36,8 @@ const ZERADA: SinaisDaConfiguracao = {
   adicionais: 0,
   formasDePagamento: 0,
   whatsappValido: false,
+  planoAtivo: false,
+  centsPrecisaAtivar: false,
 };
 
 const loja = (p: Partial<SinaisDaConfiguracao>): SinaisDaConfiguracao => ({ ...ZERADA, ...p });
@@ -163,12 +165,12 @@ describe("o roteiro em si", () => {
     expect(new Set(ids).size).toBe(ids.length);
   });
 
-  it("as etapas 'em breve' ficam fora da conta do progresso", () => {
-    // Elas aparecem na lista para o lojista ver o caminho inteiro, mas
-    // contá-las deixaria a barra travada abaixo de 50% para sempre — e uma
-    // barra que não chega ao fim é a que faz a pessoa desistir.
+  it("a marca 'em breve' continua existindo, e ninguém usa", () => {
+    // Ela serve para encenar uma etapa futura na lista sem conduzir até lá.
+    // Hoje as nove estão prontas, então nenhuma a usa — se alguém marcar uma,
+    // ela sai da conta do progresso e a barra volta a poder chegar em 100%.
     expect(ETAPAS_ATIVAS.every((e) => !e.emBreve)).toBe(true);
-    expect(ETAPAS_ATIVAS.length).toBeLessThan(ETAPAS_DO_GUIA.length);
+    expect(ETAPAS_ATIVAS.length).toBe(ETAPAS_DO_GUIA.length);
   });
 
   it("nenhuma etapa ativa se conclui sozinha com a loja zerada", () => {
@@ -270,14 +272,16 @@ describe("o resumo de prontidão", () => {
     expect(proximaEtapaDoGuia(tudoMenosProntidao)).not.toBeNull();
   });
 
-  it("depois de visto, o guia acaba", () => {
+  it("depois de visto, o guia segue para o plano — não acaba", () => {
+    // O resumo é uma parada de conferência, não a linha de chegada: ainda
+    // faltam o plano e o pedido de treino.
     const concluidas = etapasConcluidas(
       loja({ whatsappValido: true, formasDePagamento: 1, adicionais: 1 }),
       tudoMenosProntidao,
       { prontidao: "visto" },
     );
-    expect(proximaEtapaDoGuia(concluidas)).toBeNull();
-    expect(progressoDoGuia(concluidas)).toBe(100);
+    expect(proximaEtapaDoGuia(concluidas)?.id).toBe("plano_cents");
+    expect(progressoDoGuia(concluidas)).toBeLessThan(100);
   });
 });
 
@@ -328,8 +332,103 @@ describe("retomar de onde parou", () => {
       adicionais: 5,
       formasDePagamento: 2,
       whatsappValido: true,
+      planoAtivo: true,
     });
+    // Ela cai direto no resumo de conferência: as sete etapas de dados já
+    // estão fechadas pelo que existe no banco dela.
     expect(proximaEtapaDoGuia(etapasConcluidas(pronta, []))?.id).toBe("prontidao");
-    expect(progressoDoGuia(etapasConcluidas(pronta, []))).toBeGreaterThanOrEqual(87);
+    expect(progressoDoGuia(etapasConcluidas(pronta, []))).toBeGreaterThanOrEqual(66);
+  });
+});
+
+// ═══════════════════════════════════════════════════════════════════════════
+// FASES 7 E 8, E A CONCLUSÃO
+// ═══════════════════════════════════════════════════════════════════════════
+
+describe("o plano da loja", () => {
+  it("loja PREMIUM com assinatura funcionando fecha a etapa", () => {
+    // 20 das 35 lojas do banco são PREMIUM. Exigir CENTS prenderia cada uma
+    // delas no guia para sempre, esperando ativar um plano que não é a dela.
+    expect(etapasAtendidas(loja({ planoAtivo: true }))).toContain("plano_cents");
+  });
+
+  it("loja CENTS sem ciclo aberto NÃO fecha", () => {
+    // No CENTS, sem ciclo o lojista vende e nada é contado — a comanda aberta
+    // que nunca chega ao caixa.
+    expect(etapasAtendidas(loja({ planoAtivo: true, centsPrecisaAtivar: true }))).not.toContain(
+      "plano_cents",
+    );
+  });
+
+  it("sem assinatura nenhuma, não fecha", () => {
+    expect(etapasAtendidas(loja({ planoAtivo: false }))).not.toContain("plano_cents");
+  });
+
+  it("abrir a tela do plano não fecha a etapa", () => {
+    const etapa = ETAPAS_DO_GUIA.find((e) => e.id === "plano_cents")!;
+    expect(etapa.concluida(ZERADA, {})).toBe(false);
+    expect(etapa.escolha).toBeUndefined();
+  });
+});
+
+describe("o pedido de teste", () => {
+  it("só fecha quando o pedido chega ao fim do quadro", () => {
+    expect(etapasAtendidas(loja({ planoAtivo: true }))).not.toContain("pedido_teste");
+    expect(etapasAtendidas(ZERADA, { pedido_teste: "feito" })).toContain("pedido_teste");
+  });
+
+  it("acontece no painel, em cima do quadro de verdade", () => {
+    const etapa = ETAPAS_DO_GUIA.find((e) => e.id === "pedido_teste")!;
+    expect(etapa.rota).toBe("/dashboard");
+    expect(etapa.alvo).toBe("quadro-de-pedidos");
+  });
+});
+
+describe("a conclusão do guia", () => {
+  const tudoMenosFim: IdDaEtapaDoGuia[] = [
+    "estabelecimento",
+    "funcionamento",
+    "categoria",
+    "produto",
+    "adicionais",
+    "pagamentos",
+    "whatsapp",
+    "prontidao",
+    "plano_cents",
+    "pedido_teste",
+  ];
+
+  it("a última palavra é do lojista, no botão 'Entrar no FlyControl'", () => {
+    expect(proximaEtapaDoGuia(tudoMenosFim)?.id).toBe("conclusao");
+    const etapa = ETAPAS_DO_GUIA.find((e) => e.id === "conclusao")!;
+    expect(etapa.escolha?.configurar).toBe("Entrar no FlyControl");
+  });
+
+  it("o guia só acaba com TODAS as nove etapas fechadas", () => {
+    // Uma etapa faltando e o painel continua guiado. É o que impede o guia de
+    // liberar a plataforma com a loja meio configurada.
+    for (const pular of tudoMenosFim) {
+      const parciais = tudoMenosFim.filter((e) => e !== pular);
+      expect(proximaEtapaDoGuia([...parciais, "conclusao"]), `faltando ${pular}`).not.toBeNull();
+    }
+  });
+
+  it("com tudo fechado, o guia termina e o progresso é 100%", () => {
+    const todas = ETAPAS_ATIVAS.map((e) => e.id);
+    expect(proximaEtapaDoGuia(todas)).toBeNull();
+    expect(progressoDoGuia(todas)).toBe(100);
+  });
+
+  it("as nove fases do roteiro estão todas ativas", () => {
+    // Nenhuma ficou marcada "em breve" depois desta entrega.
+    expect(ETAPAS_ATIVAS.length).toBe(ETAPAS_DO_GUIA.length);
+    expect(ETAPAS_DO_GUIA.some((e) => e.emBreve)).toBe(false);
+  });
+
+  it("as decisões novas entraram no catálogo, e nada além delas", () => {
+    expect(decisaoValida("pedido_teste", "feito")).toBe(true);
+    expect(decisaoValida("concluido", "visto")).toBe(true);
+    expect(decisaoValida("plano_cents", "visto")).toBe(false);
+    expect(decisaoValida("pedido_teste", "pulado")).toBe(false);
   });
 });

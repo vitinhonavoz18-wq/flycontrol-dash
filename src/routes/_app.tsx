@@ -57,6 +57,9 @@ function AppLayoutInner() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pizzeriaStatus, setPizzeriaStatus] = useState<{
+    // O `id` entrou junto porque o guia de configuração precisa saber QUAL
+    // loja é, para montar o pedido de treino com um produto do cardápio dela.
+    id: string;
     is_active: boolean;
     subscription_status: string;
   } | null>(null);
@@ -76,7 +79,7 @@ function AppLayoutInner() {
       const params = new URLSearchParams(window.location.search);
       const pizzeriaId = params.get("pizzeriaId");
 
-      let query = supabase.from("pizzerias").select("is_active, subscription_status");
+      let query = supabase.from("pizzerias").select("id, is_active, subscription_status");
 
       if (pizzeriaId) {
         query = query.eq("id", pizzeriaId);
@@ -94,6 +97,7 @@ function AppLayoutInner() {
 
       if (!error && data) {
         setPizzeriaStatus({
+          id: data.id,
           is_active: data.is_active ?? true,
           subscription_status: data.subscription_status ?? "active",
         });
@@ -450,7 +454,7 @@ function AppLayoutInner() {
           Quem decide se ele aparece é o servidor, a cada leitura, olhando a
           loja de verdade. Administrador da plataforma não tem loja para
           configurar e nunca vê o guia. */}
-      <GuiaDeConfiguracao habilitado={!isSuperAdmin} />
+      <GuiaDeConfiguracao habilitado={!isSuperAdmin} tenantId={pizzeriaStatus?.id ?? null} />
     </div>
   );
 }
