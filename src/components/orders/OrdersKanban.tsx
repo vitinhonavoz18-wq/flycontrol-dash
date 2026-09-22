@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragOverlay,
@@ -9,18 +9,22 @@ import {
   useSensor,
   useSensors,
   type Announcements,
+  type CollisionDetection,
   type DragEndEvent,
+  type DragOverEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { supabase } from "@/integrations/supabase/client";
 import type { Order } from "@/types/order";
 import { useUpdateOrderStatus } from "@/hooks/useUpdateOrderStatus";
 import { FinalizeDropZone } from "./FinalizeDropZone";
+import { useFolgaDaFaixa } from "./folgaDaFaixa";
 import { OrderCardOverlay } from "./OrderCardOverlay";
 import { OrderDetailsDrawer } from "./OrderDetailsDrawer";
 import { OrdersKanbanColumn } from "./OrdersKanbanColumn";
 import {
   ELAPSED_TICK_MS,
+  FINALIZE_TARGET_ID,
   ORDER_COLUMNS,
   canFinalizeFrom,
   getStatusLabel,
@@ -112,6 +116,18 @@ export function OrdersKanban({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [detailsId, setDetailsId] = useState<string | null>(null);
 
+  /** O trilho das colunas — é nele que a folga da faixa é aberta. */
+  const trilhoRef = useRef<HTMLDivElement>(null);
+
+  /**
+   * O dedo está em cima da faixa de finalizar neste instante?
+   *
+   * Fica em `ref` e não em estado de propósito: ele muda a cada movimento do
+   * dedo, e um estado aqui redesenharia o quadro inteiro dezenas de vezes por
+   * segundo no meio do arraste.
+   */
+  const sobreAFaixa = useRef(false);
+
   const sensors = useSensors(
     // Mouse e caneta: um pequeno deslocamento separa clique de arraste.
     useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
@@ -140,10 +156,47 @@ export function OrdersKanban({
   );
 
   const handleDragStart = useCallback((event: DragStartEvent) => {
+    sobreAFaixa.current = false;
     setActiveId(String(event.active.id));
   }, []);
 
-  const handleDragCancel = useCallback(() => setActiveId(null), []);
+  const handleDragOver = useCallback((event: DragOverEvent) => {
+    sobreAFaixa.current = event.over?.id === FINALIZE_TARGET_ID;
+  }, []);
+
+  const handleDragCancel = useCallback(() => {
+    sobreAFaixa.current = false;
+    setActiveId(null);
+  }, []);
+
+  /**
+   * ═══════════════════════════════════════════════════════════════════════
+   * QUANDO O DEDO ESTÁ NA FAIXA, É A FAIXA QUE VALE
+   * ═══════════════════════════════════════════════════════════════════════
+   *
+   * A faixa fica por cima da parte de baixo do quadro, então em boa parte
+   * dela o dedo está dentro da faixa E dentro de uma coluna ao mesmo tempo.
+   * O desempate de fábrica é pela distância até o CENTRO de cada alvo — e a
+   * faixa é larga, então soltar perto da ponta dela fazia a coluna ganhar: o
+   * lojista soltava em cima do verde e o pedido voltava para a fila.
+   *
+   * É o caixa e o balcão de retirada colados: sem uma placa dizendo qual é
+   * qual, o cliente entrega o dinheiro para quem está mais perto.
+   *
+   * A placa é esta: se o dedo está dentro da faixa, o destino é a faixa.
+   */
+  const detectarColisao = useCallback<CollisionDetection>((args) => {
+    const colisoes = pointerWithin(args);
+    const naFaixa = colisoes.find((c) => c.id === FINALIZE_TARGET_ID);
+    return naFaixa ? [naFaixa] : colisoes;
+  }, []);
+
+  /**
+   * Rolagem automática: útil para alcançar um card lá embaixo no meio do
+   * arraste, atrapalho quando o dedo já chegou no destino. Parada em cima da
+   * faixa, a tela continuaria correndo sozinha debaixo do dedo.
+   */
+  const autoScroll = useMemo(() => ({ canScroll: () => !sobreAFaixa.current }), []);
 
   // Estável entre renders de propósito: os cards são memoizados (`memo` em
   // OrderKanbanCard), e uma função nova a cada render aqui derrubaria essa
@@ -153,6 +206,7 @@ export function OrdersKanban({
   const handleDragEnd = useCallback(
     (event: DragEndEvent) => {
       const { active, over } = event;
+      sobreAFaixa.current = false;
       setActiveId(null);
       if (!over) return;
 
@@ -200,14 +254,18 @@ export function OrdersKanban({
   );
 
   const draggingFromStatus = activeOrder?.status ?? null;
+  const faixaAtiva = canFinalizeFrom(draggingFromStatus);
+  const comFolga = useFolgaDaFaixa(faixaAtiva, trilhoRef);
 
   return (
     <>
       <DndContext
         sensors={sensors}
-        collisionDetection={pointerWithin}
+        collisionDetection={detectarColisao}
         accessibility={{ announcements }}
+        autoScroll={autoScroll}
         onDragStart={handleDragStart}
+        onDragOver={handleDragOver}
         onDragEnd={handleDragEnd}
         onDragCancel={handleDragCancel}
       >
@@ -228,7 +286,15 @@ export function OrdersKanban({
             No celular, cada coluna encaixa sozinha na tela ao deslizar
             (`snap`), em vez de parar no meio de duas. Da tela de 640px para
             cima o encaixe some, porque aí as três já estão visíveis juntas. */}
-        <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 sm:snap-none">
+        <div
+          ref={trilhoRef}
+          // A folga embaixo só existe enquanto a faixa está no ar, e é
+          // recolhida sem puxar o tapete de quem rolou até o fim — a conta
+          // está em `folgaDaFaixa`.
+          className={`-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-2 sm:snap-none ${
+            comFolga ? "reserva-da-faixa-finalizar" : ""
+          }`}
+        >
           {ORDER_COLUMNS.map((config) => (
             <OrdersKanbanColumn
               key={config.id}
@@ -252,7 +318,7 @@ export function OrdersKanban({
             Aparecer para um pedido recém-chegado seria oferecer uma porta
             que não abre — e convidar ao engano que some com o pedido do
             quadro sem ninguém ter preparado nada. */}
-        <FinalizeDropZone active={canFinalizeFrom(draggingFromStatus)} />
+        <FinalizeDropZone active={faixaAtiva} />
       </DndContext>
 
       <OrderDetailsDrawer
