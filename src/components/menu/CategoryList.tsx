@@ -251,7 +251,8 @@ export function CategoryList({
       <SectionHeader
         title="Categorias"
         action={
-          <Button onClick={openCreate} className="h-11 gap-2">
+          // `data-guia` é o alvo do guia de configuração de loja nova.
+          <Button onClick={openCreate} className="h-11 gap-2" data-guia="nova-categoria">
             <Plus className="h-4 w-4" aria-hidden="true" /> Nova Categoria
           </Button>
         }

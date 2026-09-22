@@ -35,6 +35,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/mobile/BottomNav";
+import { GuiaDeConfiguracao } from "@/components/onboarding/guia/GuiaDeConfiguracao";
 import { PlanProvider, usePlan } from "@/lib/plan-context";
 import type { Feature } from "@/lib/planPermissions";
 
@@ -439,6 +440,17 @@ function AppLayoutInner() {
         </main>
         <BottomNav />
       </div>
+
+      {/* ── O GUIA DE CONFIGURAÇÃO ──────────────────────────────────────────
+          Fica aqui fora, no nível do painel inteiro, porque ele escurece e
+          bloqueia TODAS as telas — não só a que está aberta. Dentro do
+          <main> ele não alcançaria o menu lateral nem a barra de baixo, e o
+          lojista escaparia do guia pelo próprio menu.
+
+          Quem decide se ele aparece é o servidor, a cada leitura, olhando a
+          loja de verdade. Administrador da plataforma não tem loja para
+          configurar e nunca vê o guia. */}
+      <GuiaDeConfiguracao habilitado={!isSuperAdmin} />
     </div>
   );
 }

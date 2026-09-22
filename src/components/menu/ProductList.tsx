@@ -449,7 +449,8 @@ export function ProductList({
     <div className="space-y-4">
       <div className="flex justify-between items-center gap-3">
         <h3 className="text-lg font-semibold">{title}</h3>
-        <Button onClick={() => openCreate()} className="gap-2">
+        {/* Alvo do guia de configuração de loja nova. */}
+        <Button onClick={() => openCreate()} className="gap-2" data-guia="novo-produto">
           <Plus className="h-4 w-4" /> Novo Item
         </Button>
       </div>

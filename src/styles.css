@@ -347,6 +347,15 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   --z-sticky-header: 20;
   --z-bottom-nav: 30;
   --z-dropdown: 40;
+
+  /* O guia de configuração. Os dois ficam ABAIXO de 50 de propósito: diálogos,
+     seletores e menus do Radix são todos `z-50`, e o guia precisa deixar
+     passar justamente o formulário que ele está pedindo para preencher. Acima
+     deles, o holofote viraria um vidro por cima da porta que ele mandou
+     abrir. */
+  --z-guia-holofote: 45;
+  --z-guia-balao: 46;
+
   --z-overlay: 50;
   --z-drawer: 60;
   --z-modal: 80;
