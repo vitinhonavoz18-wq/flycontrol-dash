@@ -455,3 +455,44 @@ describe("tabela financeira conferível na mão", () => {
     expect(soma).toBe(48500);
   });
 });
+
+describe("passar um ciclo da tabela antiga para a nova nunca encarece", () => {
+  /**
+   * A CONTA QUE AUTORIZOU UMA MUDANÇA NO BANCO.
+   *
+   * Em 22/09/2026 os ciclos abertos que ainda carregavam `cents_v1` foram
+   * recarimbados para `cents_v2`, para as lojas passarem a ver a escada de
+   * desconto no painel.
+   *
+   * Recarimbar um ciclo muda como ele VAI SER COBRADO — a fatura sai da
+   * tabela carimbada nele. Isso só é aceitável porque a tabela nova nunca
+   * cobra mais que a antiga: ela começa no MESMO preço (R$ 0,70) e só desce.
+   *
+   * É trocar o cardápio no meio da refeição só quando o prato ficou mais
+   * barato. Se um dia alguém criar uma `cents_v3` mais cara e repetir essa
+   * manobra, este teste acusa antes de a fatura sair errada.
+   */
+  it("para qualquer quantidade de pedidos, a tabela nova custa igual ou menos", () => {
+    for (const pedidos of [0, 1, 50, 99, 100, 101, 250, 251, 500, 501, 1000, 5000]) {
+      const antiga = custoTotalCents(POLITICA_CENTS_V1, pedidos);
+      const nova = custoTotalCents(POLITICA_CENTS_V2, pedidos);
+      expect(nova, `com ${pedidos} pedidos a tabela nova ficou mais cara`).toBeLessThanOrEqual(
+        antiga,
+      );
+    }
+  });
+
+  it("até 100 pedidos as duas dão exatamente o mesmo valor", () => {
+    // É isto que torna a troca invisível para quem está no começo do ciclo:
+    // ninguém vê o próprio valor mudar.
+    for (const pedidos of [1, 10, 100]) {
+      expect(custoTotalCents(POLITICA_CENTS_V2, pedidos)).toBe(
+        custoTotalCents(POLITICA_CENTS_V1, pedidos),
+      );
+    }
+  });
+
+  it("as duas tabelas começam no mesmo preço de entrada", () => {
+    expect(POLITICA_CENTS_V2.faixas[0].precoCents).toBe(POLITICA_CENTS_V1.faixas[0].precoCents);
+  });
+});
