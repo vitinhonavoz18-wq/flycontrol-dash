@@ -45,7 +45,10 @@ describe("o questionário só aparece para quem tem convite", () => {
     // para ninguém — inclusive para quem acabou de se cadastrar, que é
     // justamente quem deve vê-lo.
     expect(cadastro).toContain('.from("onboarding_answers" as never)');
-    expect(cadastro).toContain('status: "not_started"');
+    // O questionário nasce APOSENTADO: a linha existe para carregar o guia
+    // de configuração, e o questionário já vem fechado.
+    expect(cadastro).toContain('status: "completed"');
+    expect(cadastro).toContain('guide_status: "not_started"');
   });
 
   it("o convite é aberto depois que a loja existe", () => {
@@ -61,7 +64,7 @@ describe("o questionário só aparece para quem tem convite", () => {
     // A conta e a loja valem mais do que o questionário. Se o caderno não
     // for gravado, o cliente entra direto no painel — não fica sem conta.
     const posConvite = cadastro.indexOf('.from("onboarding_answers" as never)');
-    const trecho = cadastro.slice(posConvite, posConvite + 900);
+    const trecho = cadastro.slice(posConvite, posConvite + 1600);
     expect(trecho).toContain("erroConvite");
     expect(trecho).toContain("console.error");
     // Nada de `throw` nem de rollback por causa do convite.

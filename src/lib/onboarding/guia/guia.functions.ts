@@ -47,6 +47,7 @@ type LinhaDoGuia = {
   guide_current_step: string | null;
   guide_completed_steps: unknown;
   guide_decisions: unknown;
+  guide_test_mode: boolean | null;
 };
 
 type CadernoDoGuia = {
@@ -72,6 +73,15 @@ export type EstadoDoGuia = {
   rota: string | null;
   /** As escolhas já gravadas — a tela usa para não reoferecer o que foi dito. */
   decisoes: DecisoesDoGuia;
+  /**
+   * O lojista consegue ligar o próprio plano daqui?
+   *
+   * Só no CENTS, que não tem valor de entrada nem pagamento a esperar: ali
+   * ativar é abrir a contagem, e o botão resolve. No PREMIUM a ativação passa
+   * por cobrança, e oferecer um botão que não pode funcionar é pendurar uma
+   * maçaneta numa parede.
+   */
+  podeAtivarSozinho: boolean;
 };
 
 const GUIA_DESLIGADO: EstadoDoGuia = {
@@ -81,6 +91,7 @@ const GUIA_DESLIGADO: EstadoDoGuia = {
   progresso: 100,
   rota: null,
   decisoes: {},
+  podeAtivarSozinho: false,
 };
 
 async function lojaDoUsuario(userId: string): Promise<{ id: string } | null> {
@@ -327,7 +338,9 @@ export const estadoDoGuia = createServerFn({ method: "POST" })
 
     const { data } = await caderno
       .from("onboarding_answers")
-      .select("guide_status, guide_current_step, guide_completed_steps, guide_decisions")
+      .select(
+        "guide_status, guide_current_step, guide_completed_steps, guide_decisions, guide_test_mode",
+      )
       .eq("company_id", loja.id)
       .maybeSingle();
 
@@ -355,7 +368,11 @@ export const estadoDoGuia = createServerFn({ method: "POST" })
     //
     // É a catraca no meio do salão durante o almoço: quem já está sentado
     // não pode ser obrigado a passar por ela para continuar comendo.
-    if (await jaEstaVendendo(loja.id)) {
+    //
+    // A exceção é a loja de ENSAIO (`guide_test_mode`), ligada à mão no banco
+    // para o dono da plataforma poder ver o guia rodando. É o alarme de
+    // incêndio que precisa deixar o bombeiro testar se ele toca.
+    if (!data.guide_test_mode && (await jaEstaVendendo(loja.id))) {
       await encerrarGuia(loja.id, "loja já opera");
       return GUIA_DESLIGADO;
     }
@@ -400,6 +417,7 @@ export const estadoDoGuia = createServerFn({ method: "POST" })
       progresso: progressoDoGuia(concluidas),
       rota: proxima.rota,
       decisoes,
+      podeAtivarSozinho: sinais.centsPrecisaAtivar,
     };
   });
 
@@ -480,7 +498,9 @@ export const registrarDecisao = createServerFn({ method: "POST" })
 
     const { data: atual } = await caderno
       .from("onboarding_answers")
-      .select("guide_status, guide_current_step, guide_completed_steps, guide_decisions")
+      .select(
+        "guide_status, guide_current_step, guide_completed_steps, guide_decisions, guide_test_mode",
+      )
       .eq("company_id", loja.id)
       .maybeSingle();
 

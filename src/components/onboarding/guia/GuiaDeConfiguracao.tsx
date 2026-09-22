@@ -373,7 +373,7 @@ export function GuiaDeConfiguracao({ habilitado, tenantId = null }: GuiaDeConfig
               //   2. estamos noutra tela: o botão leva até a etapa;
               //   3. a etapa só aponta um campo: nenhum botão principal — o
               //      que fecha a etapa é o lojista salvar o formulário.
-              etapa.id === "plano_cents" && naTelaDaEtapa
+              etapa.id === "plano_cents" && naTelaDaEtapa && estado.podeAtivarSozinho
                 ? {
                     rotulo: ativando ? "Estamos confirmando sua ativação..." : "Ativar meu plano",
                     onClick: () => void ativarPlano(),
@@ -431,7 +431,12 @@ export function GuiaDeConfiguracao({ habilitado, tenantId = null }: GuiaDeConfig
                 {/* O que falta, dito em uma linha. A pessoa não deve precisar
                     adivinhar qual campo está faltando para a etapa fechar. */}
                 <p className="mt-2 rounded-lg bg-muted/60 px-3 py-2 text-xs font-semibold text-foreground">
-                  {etapa.comoConcluir}
+                  {/* No PREMIUM a ativação passa por cobrança e não se resolve
+                      num botão. Dizer isso é melhor do que pendurar uma
+                      maçaneta numa parede. */}
+                  {etapa.id === "plano_cents" && !estado.podeAtivarSozinho
+                    ? "Confira seu plano nesta tela. Se ele ainda não estiver ativo, fale com a gente para liberar."
+                    : etapa.comoConcluir}
                 </p>
 
                 <ProgressoDoGuia

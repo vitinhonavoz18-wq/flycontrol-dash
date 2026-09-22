@@ -14,6 +14,12 @@
  */
 
 export type SinaisDaLoja = {
+  /**
+   * Continua sendo lido do banco, mas já não vira passo desta lista: o
+   * questionário que ele representava foi aposentado, e quem cuida da
+   * primeira configuração agora é o guia. Mantido porque outras telas ainda
+   * perguntam por ele.
+   */
   onboardingConcluido: boolean;
   produtos: number;
   /** Nome, telefone e endereço preenchidos. */
@@ -35,16 +41,6 @@ export type Passo = {
 
 export function primeirosPassos(s: SinaisDaLoja): Passo[] {
   return [
-    {
-      id: "conhecemos",
-      rotulo: "Conhecemos seu estabelecimento",
-      feito: s.onboardingConcluido,
-      // Sem destino, este era o único passo que não levava a lugar nenhum:
-      // o dono clicava, nada acontecia, e não havia como descobrir o que
-      // fazer para completá-lo. É a porta do corredor sem maçaneta — dá para
-      // ver que existe e não dá para abrir.
-      para: "/preparar",
-    },
     {
       id: "produtos",
       rotulo: "Adicione seus produtos",

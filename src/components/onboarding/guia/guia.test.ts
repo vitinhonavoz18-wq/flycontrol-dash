@@ -294,7 +294,9 @@ describe("ninguém que já está trabalhando é preso", () => {
     // restauração, um cadastro refeito — o guia se encerra em vez de
     // escurecer o painel de quem tem pedido chegando.
     expect(servidor).toContain("async function jaEstaVendendo");
-    expect(servidor).toMatch(/if \(await jaEstaVendendo\(loja\.id\)\) \{/);
+    expect(servidor).toMatch(
+      /if \(!data\.guide_test_mode && \(await jaEstaVendendo\(loja\.id\)\)\) \{/,
+    );
     expect(servidor).toContain('.from("orders")');
   });
 
@@ -441,5 +443,40 @@ describe("depois do guia: ajuda e revisão", () => {
   it("e fica em Configurações, separado do guia obrigatório", () => {
     const config = soCodigo("src/routes/_app/settings.tsx");
     expect(config).toContain("<RevisaoDoTutorial />");
+  });
+});
+
+describe("a loja de ensaio", () => {
+  it("o modo de teste fura a trava de 'já está vendendo'", () => {
+    // A trava protege quem está no meio do expediente. Mas ela também
+    // impediria o dono da plataforma de ABRIR o guia de propósito numa loja
+    // sua para conferir — o alarme de incêndio que não deixa nem o bombeiro
+    // testar se ele toca.
+    expect(servidor).toContain("guide_test_mode");
+    expect(servidor).toMatch(
+      /if \(!data\.guide_test_mode && \(await jaEstaVendendo\(loja\.id\)\)\)/,
+    );
+  });
+
+  it("nenhum cadastro e nenhuma tela ligam o modo de teste", () => {
+    // Ele é a chave do bombeiro: ligada à mão no banco, e só assim.
+    const cadastro = soCodigo("src/lib/signup/signup.functions.ts");
+    expect(cadastro).not.toContain("guide_test_mode");
+    expect(guia).not.toContain("guide_test_mode");
+    expect(servidor).not.toMatch(/guide_test_mode:\s*true/);
+  });
+});
+
+describe("o botão de ativar plano só aparece onde funciona", () => {
+  it("no PREMIUM não há botão — a ativação passa por cobrança", () => {
+    // Oferecer um botão que não pode funcionar é pendurar uma maçaneta numa
+    // parede. A loja BOTECO VT, PREMIUM e sem assinatura, foi o caso que
+    // revelou isso.
+    expect(guia).toContain("estado.podeAtivarSozinho");
+    expect(servidor).toContain("podeAtivarSozinho: sinais.centsPrecisaAtivar");
+  });
+
+  it("e a etapa explica o que fazer em vez de ficar muda", () => {
+    expect(guia).toContain("fale com a gente para liberar");
   });
 });
