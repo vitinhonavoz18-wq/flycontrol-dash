@@ -35,10 +35,15 @@ const coluna = readFileSync(join(RAIZ, "src/components/orders/OrdersKanbanColumn
  * cartaz que ensina o que fazer quando ele apita.
  */
 function soCodigo(conteudo: string): string {
-  return conteudo
-    .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, "") // comentários de JSX: {/* ... */}
-    .replace(/\/\*[\s\S]*?\*\//g, "") // comentários de bloco: /* ... */
-    .replace(/^\s*\/\/.*$/gm, ""); // comentários de linha: // ...
+  return (
+    conteudo
+      // O comentário de bloco sai PRIMEIRO. Fazer o contrário — começar pelo
+      // `{/* ... */}` do JSX — é o que quebrava: esse padrão termina em `*/}`,
+      // e quando o `*/` encontrado não é seguido de `}`, a busca continua até
+      // um `*/` mais adiante e leva o CÓDIGO do meio junto.
+      .replace(/\/\*[\s\S]*?\*\//g, "") // comentários de bloco: /* ... */
+      .replace(/^\s*\/\/.*$/gm, "")
+  ); // comentários de linha: // ...
 }
 
 describe("quadro de pedidos em qualquer largura", () => {

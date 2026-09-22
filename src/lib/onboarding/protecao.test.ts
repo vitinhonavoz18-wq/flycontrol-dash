@@ -21,34 +21,59 @@ import { primeirosPassos, quantosFeitos, tudoFeito } from "./primeirosPassos";
 const RAIZ = process.cwd();
 
 function soCodigo(caminho: string): string {
-  return readFileSync(join(RAIZ, caminho), "utf8")
-    .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+  return (
+    readFileSync(join(RAIZ, caminho), "utf8")
+      // O comentário de bloco sai PRIMEIRO. Fazer o contrário — começar pelo
+      // `{/* ... */}` do JSX — é o que quebrava: esse padrão termina em
+      // `*/}`, e quando o `*/` encontrado não é seguido de `}`, a busca
+      // continua até um `*/` mais adiante e leva o CÓDIGO do meio junto.
+      // Medido: um arquivo de 2.464 letras virava 334, e os testes passavam a
+      // conferir o vazio — o detector de fumaça com a bateria tirada.
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "")
+  );
 }
 
 const painel = soCodigo("src/routes/_app.tsx");
 const servidor = soCodigo("src/lib/onboarding/onboarding.functions.ts");
 const tela = soCodigo("src/routes/preparar.tsx");
 
-describe("a porta do painel", () => {
-  it("o painel pergunta ao servidor se falta preparar", () => {
-    expect(painel).toContain("precisaDeOnboarding");
+describe("o questionário foi aposentado", () => {
+  it("o painel não manda mais ninguém para o questionário", () => {
+    // Existia aqui uma porta que parava todo lojista novo em `/preparar`
+    // antes de ele ver o painel. Quem faz esse trabalho agora é o guia de
+    // configuração, e faz melhor: em vez de PERGUNTAR que negócio a pessoa
+    // tem, ele leva até a tela e confere no banco se ficou configurado.
+    //
+    // Manter os dois era o formulário na portaria e a mesma pergunta de novo
+    // na recepção.
+    expect(painel).not.toContain("precisaDeOnboarding");
+    expect(painel).not.toMatch(/nav\(\{\s*to:\s*"\/preparar"/);
   });
 
-  it("quem ainda não preparou é mandado para a preparação", () => {
-    expect(painel).toMatch(/onboardingPendente\)\s*nav\(\{\s*to:\s*"\/preparar"/);
+  it("quem entra no painel vê o painel, sem espera extra", () => {
+    // Sem a porta, não há resposta de servidor para esperar antes de
+    // desenhar: a tela de "Carregando..." volta a depender só do login.
+    expect(painel).toMatch(/if \(loading \|\| !user\) \{/);
+    expect(painel).not.toContain("onboardingPendente");
   });
 
-  it("o painel NÃO é desenhado enquanto a resposta não chega", () => {
-    // É isso que evita o dashboard piscar por meio segundo antes de sumir.
-    expect(painel).toContain("onboardingPendente !== false");
+  it("a tela do questionário continua de pé para quem tiver o endereço", () => {
+    // Aposentar é tirar de serviço, não demolir: quem já respondeu tem as
+    // respostas guardadas, e a tela sozinha manda para o painel quando não
+    // há nada pendente.
+    expect(tela.length).toBeGreaterThan(100);
   });
 
-  it("a decisão não vem do navegador", () => {
-    // Nem localStorage, nem sessionStorage: a verdade é do servidor.
+  it("quem manda continua sendo o servidor, não o navegador", () => {
     expect(painel).not.toMatch(/localStorage[^\n]*onboard/i);
     expect(tela).not.toMatch(/localStorage[^\n]*(onboard|respost)/i);
+  });
+});
+
+describe("o guia é a porta agora", () => {
+  it("é ele que fica no painel, e não o questionário", () => {
+    expect(painel).toMatch(/<GuiaDeConfiguracao\s+habilitado=\{!isSuperAdmin\}/);
   });
 });
 
@@ -148,11 +173,27 @@ describe('a lista "Prepare sua loja"', () => {
     expect(semDestino).toEqual([]);
   });
 
-  it("o passo do onboarding leva para o questionário", () => {
+  it("o passo do questionário saiu da lista", () => {
+    // Ele marcava "Conhecemos seu estabelecimento" a partir do questionário
+    // aposentado. Deixá-lo ali seria um item de boletim de uma matéria que
+    // não existe mais na grade.
     const passo = primeirosPassos({ ...cheio, onboardingConcluido: false }).find(
       (p) => p.id === "conhecemos",
     );
-    expect(passo?.para).toBe("/preparar");
-    expect(passo?.feito).toBe(false);
+    expect(passo).toBeUndefined();
+  });
+
+  it("todo passo que sobrou continua vindo de um dado real", () => {
+    // A regra da lista não mudou: nada se marca sozinho.
+    const vazio = primeirosPassos({
+      ...cheio,
+      produtos: 0,
+      lojaIdentificada: false,
+      temPagamento: false,
+      cardapioPublicado: false,
+      pedidos: 0,
+    });
+    expect(vazio.every((p) => !p.feito)).toBe(true);
+    expect(vazio.length).toBeGreaterThan(0);
   });
 });

@@ -1,6 +1,5 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
-import { precisaDeOnboarding } from "@/lib/onboarding/onboarding.functions";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/components/theme-provider";
@@ -35,6 +34,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/mobile/BottomNav";
+import { GuiaDeConfiguracao } from "@/components/onboarding/guia/GuiaDeConfiguracao";
 import { PlanProvider, usePlan } from "@/lib/plan-context";
 import type { Feature } from "@/lib/planPermissions";
 
@@ -56,6 +56,9 @@ function AppLayoutInner() {
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [pizzeriaStatus, setPizzeriaStatus] = useState<{
+    // O `id` entrou junto porque o guia de configuração precisa saber QUAL
+    // loja é, para montar o pedido de treino com um produto do cardápio dela.
+    id: string;
     is_active: boolean;
     subscription_status: string;
   } | null>(null);
@@ -75,7 +78,7 @@ function AppLayoutInner() {
       const params = new URLSearchParams(window.location.search);
       const pizzeriaId = params.get("pizzeriaId");
 
-      let query = supabase.from("pizzerias").select("is_active, subscription_status");
+      let query = supabase.from("pizzerias").select("id, is_active, subscription_status");
 
       if (pizzeriaId) {
         query = query.eq("id", pizzeriaId);
@@ -93,6 +96,7 @@ function AppLayoutInner() {
 
       if (!error && data) {
         setPizzeriaStatus({
+          id: data.id,
           is_active: data.is_active ?? true,
           subscription_status: data.subscription_status ?? "active",
         });
@@ -105,50 +109,23 @@ function AppLayoutInner() {
     };
   }, [user, isSuperAdmin, loading]);
 
-  // ── A PORTA DO ONBOARDING ────────────────────────────────────────────────
+  // ── O QUESTIONÁRIO ANTIGO FOI APOSENTADO ─────────────────────────────────
   //
-  // Quem acabou de se cadastrar passa primeiro pela preparação, mesmo que
-  // digite /dashboard direto na barra de endereços. Confiar só no botão da
-  // tela seria como trancar a porta da frente e deixar a lateral encostada.
+  // Aqui existia uma porta que mandava todo lojista novo para `/preparar`
+  // antes de ver o painel: um questionário de sete perguntas sobre o negócio.
   //
-  // Quem decide é o SERVIDOR: a tela só pergunta. E `null` significa "ainda
-  // não sei" — enquanto for null, o painel não é desenhado. É isso que evita o
-  // dashboard piscar por meio segundo antes de sumir.
+  // Quem faz esse trabalho agora é o GUIA DE CONFIGURAÇÃO, e ele faz melhor:
+  // em vez de perguntar "que tipo de negócio você tem?", ele leva o lojista
+  // até a tela e confere no banco se a loja ficou configurada de verdade.
   //
-  // Administrador da plataforma não entra nessa fila: ele não tem loja para
-  // preparar.
-  const perguntarOnboarding = useServerFn(precisaDeOnboarding);
-  const [onboardingPendente, setOnboardingPendente] = useState<boolean | null>(null);
+  // Manter os dois era pedir a mesma coisa duas vezes de jeitos diferentes —
+  // o formulário na portaria e a mesma pergunta de novo na recepção.
+  //
+  // O que sumiu foi a PORTA, não a tela: `/preparar` continua de pé para quem
+  // tiver o endereço, e sozinha manda para o painel quando não há nada
+  // pendente. E as respostas de quem já respondeu continuam guardadas.
 
-  useEffect(() => {
-    if (loading || !user) return;
-    if (isSuperAdmin) {
-      setOnboardingPendente(false);
-      return;
-    }
-    let cancelado = false;
-    void (async () => {
-      try {
-        const r = await perguntarOnboarding({ data: undefined });
-        if (!cancelado) setOnboardingPendente(!!r?.pendente);
-      } catch {
-        // Não conseguimos perguntar: deixa entrar. Trancar o lojista fora do
-        // próprio painel por causa de uma falha de rede seria pior do que
-        // deixá-lo pular a preparação — ele volta a ver a preparação na
-        // próxima vez que a pergunta funcionar.
-        if (!cancelado) setOnboardingPendente(false);
-      }
-    })();
-    return () => {
-      cancelado = true;
-    };
-  }, [loading, user, isSuperAdmin, perguntarOnboarding]);
-
-  useEffect(() => {
-    if (onboardingPendente) nav({ to: "/preparar" });
-  }, [onboardingPendente, nav]);
-
-  if (loading || !user || onboardingPendente !== false) {
+  if (loading || !user) {
     return (
       <div className="grid min-h-screen place-items-center text-muted-foreground">
         Carregando...
@@ -439,6 +416,17 @@ function AppLayoutInner() {
         </main>
         <BottomNav />
       </div>
+
+      {/* ── O GUIA DE CONFIGURAÇÃO ──────────────────────────────────────────
+          Fica aqui fora, no nível do painel inteiro, porque ele escurece e
+          bloqueia TODAS as telas — não só a que está aberta. Dentro do
+          <main> ele não alcançaria o menu lateral nem a barra de baixo, e o
+          lojista escaparia do guia pelo próprio menu.
+
+          Quem decide se ele aparece é o servidor, a cada leitura, olhando a
+          loja de verdade. Administrador da plataforma não tem loja para
+          configurar e nunca vê o guia. */}
+      <GuiaDeConfiguracao habilitado={!isSuperAdmin} tenantId={pizzeriaStatus?.id ?? null} />
     </div>
   );
 }

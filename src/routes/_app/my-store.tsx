@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
@@ -124,6 +124,23 @@ function StoreEditor({
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [pizzeria, setPizzeria] = useState<any>(null);
+
+  // A aba vem do endereço (`?aba=service`) e volta para ele quando muda.
+  // Guardá-la só aqui dentro faria o guia de configuração não conseguir abrir
+  // a aba certa, e faria o botão "voltar" do navegador sair da página inteira
+  // em vez de voltar uma aba.
+  const nav = useNavigate();
+  const busca = useRouterState({ select: (e) => e.location.search });
+  const aba = new URLSearchParams(typeof busca === "string" ? busca : "").get("aba") || "identity";
+  const trocarAba = (nova: string) => {
+    // O QUE JÁ ESTAVA NO ENDEREÇO CONTINUA LÁ.
+    //
+    // Quem tem mais de uma loja chega aqui com `?pizzeriaId=...`. Trocar de
+    // aba escrevendo só `?aba=` apagaria esse pedaço, e no primeiro F5 a tela
+    // voltaria para outra loja — o dono editando o endereço da loja errada
+    // sem perceber. É apagar o resto do bilhete para anotar um recado.
+    void nav({ to: "/my-store", search: (antes) => ({ ...antes, aba: nova }), replace: true });
+  };
 
   const loadData = async () => {
     setLoading(true);
@@ -369,7 +386,14 @@ function StoreEditor({
         </p>
       </div>
 
-      <Tabs defaultValue="identity" className="w-full">
+      {/* AS ABAS SÃO ENDEREÇÁVEIS.
+          `?aba=service` abre direto "Atendimento". Isso existe porque o guia
+          de configuração precisa levar o lojista até a aba certa — mandar
+          para a página e deixá-lo procurando entre sete abas é dar o endereço
+          sem dizer o andar. De quebra, o endereço de uma aba agora pode ser
+          guardado nos favoritos. Sem `?aba=`, abre em "Identidade", como
+          sempre abriu. */}
+      <Tabs value={aba} onValueChange={trocarAba} className="w-full">
         <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 mb-8 h-auto">
           <TabsTrigger value="identity" className="gap-2">
             <Store className="h-4 w-4" /> Identidade
@@ -395,7 +419,11 @@ function StoreEditor({
         </TabsList>
 
         <TabsContent value="identity" className="space-y-6">
-          <Card>
+          {/* `data-guia` é a marca que o guia de configuração procura para
+              iluminar esta área. Ver `lib/onboarding/guia/etapas.ts`. Não é
+              estilo nem identificador de teste: tirar isto faz o holofote do
+              guia não achar o alvo e escurecer a tela inteira. */}
+          <Card data-guia="identidade-da-loja">
             <CardHeader>
               <CardTitle>Identidade da Loja</CardTitle>
               <CardDescription>Dados visuais e de marca do seu delivery.</CardDescription>
@@ -502,7 +530,8 @@ function StoreEditor({
         </TabsContent>
 
         <TabsContent value="service" className="space-y-6">
-          <Card>
+          {/* Alvo do guia de configuração — ver comentário na aba acima. */}
+          <Card data-guia="atendimento-da-loja">
             <CardHeader>
               <CardTitle>Dados de Atendimento</CardTitle>
               <CardDescription>
@@ -511,7 +540,9 @@ function StoreEditor({
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
+                {/* Alvo do guia de configuração. Este campo grava em
+                    `pizzerias.phone` — é ele o canal que recebe os pedidos. */}
+                <div className="space-y-2" data-guia="whatsapp-de-pedidos">
                   <Label htmlFor="whatsapp">WhatsApp de Pedidos (com DDD)</Label>
                   <div className="flex items-center gap-2">
                     <Phone className="h-4 w-4 text-muted-foreground" />
@@ -686,7 +717,8 @@ function StoreEditor({
                   />
                 </div>
               </div>
-              <div className="space-y-2">
+              {/* Alvo do guia de configuração — ver `lib/onboarding/guia/etapas.ts`. */}
+              <div className="space-y-2" data-guia="formas-de-pagamento">
                 <Label>Formas de Pagamento Aceitas</Label>
                 <div className="grid grid-cols-2 gap-2 mt-2">
                   {[

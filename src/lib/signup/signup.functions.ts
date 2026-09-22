@@ -487,9 +487,20 @@ export const createAccount = createServerFn({ method: "POST" })
         .from("onboarding_answers" as never)
         .insert({
           company_id: companyId,
-          status: "not_started",
+          // O QUESTIONÁRIO NASCE APOSENTADO.
+          //
+          // `completed` de saída: a linha existe só para carregar o guia de
+          // configuração, que é quem conduz o lojista novo agora. Abrir o
+          // questionário junto seria fazer a mesma pergunta duas vezes, de
+          // dois jeitos, antes de a pessoa ver o painel uma vez.
+          status: "completed",
           respostas: {},
           started_at: new Date().toISOString(),
+          // O guia de configuração começa junto. Escrito aqui de propósito,
+          // e não deixado por conta do padrão da coluna: é ESTA linha que faz
+          // a loja nova ser guiada, e quem ler o cadastro precisa ver isso
+          // sem ir caçar a definição da tabela.
+          guide_status: "not_started",
         } as never);
 
       if (erroConvite) {

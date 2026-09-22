@@ -33,10 +33,17 @@ import { describe, expect, it } from "vitest";
 const arquivo = readFileSync(join(process.cwd(), "src/components/cents/CentsTrilha.tsx"), "utf8");
 
 function soCodigo(conteudo: string): string {
-  return conteudo
-    .replace(/\{\s*\/\*[\s\S]*?\*\/\s*\}/g, "")
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "");
+  return (
+    conteudo
+      // O comentário de bloco sai PRIMEIRO. Fazer o contrário — começar pelo
+      // `{/* ... */}` do JSX — é o que quebrava: esse padrão termina em
+      // `*/}`, e quando o `*/` encontrado não é seguido de `}`, a busca
+      // continua até um `*/` mais adiante e leva o CÓDIGO do meio junto.
+      // Medido: um arquivo de 2.464 letras virava 334, e os testes passavam a
+      // conferir o vazio — o detector de fumaça com a bateria tirada.
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .replace(/^\s*\/\/.*$/gm, "")
+  );
 }
 
 describe("espaço embaixo da trilha do CENTS", () => {

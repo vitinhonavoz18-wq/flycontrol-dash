@@ -387,7 +387,8 @@ export function ExtraList({
     <div className="space-y-8">
       <div className="flex justify-between items-center">
         <h3 className="text-lg font-semibold">{vocabulario.tituloExtras}</h3>
-        <Button onClick={openCreate} className="gap-2">
+        {/* Alvo do guia de configuração de loja nova. */}
+        <Button onClick={openCreate} className="gap-2" data-guia="novo-adicional">
           <Plus className="h-4 w-4" /> Novo Complemento
         </Button>
       </div>
