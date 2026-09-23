@@ -2740,6 +2740,57 @@ export type Database = {
         };
         Relationships: [];
       };
+      flydelivery_showcase_products: {
+        Row: {
+          created_at: string;
+          created_by: string | null;
+          display_order: number;
+          id: string;
+          moderation_note: string | null;
+          moderation_status: string;
+          pizzeria_id: string;
+          product_id: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by?: string | null;
+          display_order: number;
+          id?: string;
+          moderation_note?: string | null;
+          moderation_status?: string;
+          pizzeria_id: string;
+          product_id: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string | null;
+          display_order?: number;
+          id?: string;
+          moderation_note?: string | null;
+          moderation_status?: string;
+          pizzeria_id?: string;
+          product_id?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "flydelivery_showcase_products_pizzeria_id_fkey";
+            columns: ["pizzeria_id"];
+            isOneToOne: false;
+            referencedRelation: "pizzerias";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "flydelivery_showcase_products_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: true;
+            referencedRelation: "menu_products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       menu_products: {
         Row: {
           active: boolean | null;
@@ -2749,6 +2800,7 @@ export type Database = {
           description: string | null;
           external_id: string | null;
           external_source: string | null;
+          flydelivery_promo_price: number | null;
           id: string;
           image_url: string | null;
           last_synced_at: string | null;
@@ -2766,6 +2818,7 @@ export type Database = {
           description?: string | null;
           external_id?: string | null;
           external_source?: string | null;
+          flydelivery_promo_price?: number | null;
           id?: string;
           image_url?: string | null;
           last_synced_at?: string | null;
@@ -2783,6 +2836,7 @@ export type Database = {
           description?: string | null;
           external_id?: string | null;
           external_source?: string | null;
+          flydelivery_promo_price?: number | null;
           id?: string;
           image_url?: string | null;
           last_synced_at?: string | null;
@@ -4845,6 +4899,46 @@ export type Database = {
       flydelivery_infer_category: {
         Args: { store_name: string };
         Returns: string;
+      };
+      flydelivery_showcase_admin_overview: {
+        Args: never;
+        Returns: {
+          display_order: number;
+          image_url: string;
+          issues: string[];
+          moderation_status: string;
+          pizzeria_id: string;
+          price: number;
+          product_id: string;
+          product_name: string;
+          promo_price: number;
+          publicly_visible: boolean;
+          showcase_id: string;
+          store_name: string;
+          updated_at: string;
+        }[];
+      };
+      flydelivery_showcase_candidates: {
+        Args: { p_pizzeria_id: string };
+        Returns: {
+          active: boolean;
+          available: boolean;
+          category_name: string;
+          display_order: number;
+          image_url: string;
+          issues: string[];
+          moderation_status: string;
+          name: string;
+          price: number;
+          product_id: string;
+          product_type: string;
+          promo_price: number;
+          showcase_id: string;
+        }[];
+      };
+      flydelivery_showcase_issues: {
+        Args: { p_product_id: string };
+        Returns: string[];
       };
       flydelivery_nearby_stores: {
         Args: {
