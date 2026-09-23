@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/select";
 import { Loader2, MapPin, Plus, Smartphone, Trash2, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
+import { VitrineManager } from "@/components/flydelivery/VitrineManager";
+import { VitrineAdminOverview } from "@/components/flydelivery/VitrineAdminOverview";
 
 export const Route = createFileRoute("/_app/flydelivery")({ component: FlyDeliveryPage });
 
@@ -203,10 +205,11 @@ function FlyDeliveryPage() {
       </div>
 
       <Tabs defaultValue="presenca">
-        <TabsList>
+        <TabsList className="h-auto w-full flex-wrap justify-start sm:w-auto">
           <TabsTrigger value="presenca">Presença</TabsTrigger>
           <TabsTrigger value="entrega">Entrega</TabsTrigger>
           <TabsTrigger value="areas">Áreas e taxas</TabsTrigger>
+          <TabsTrigger value="vitrine">Produtos em Vitrine</TabsTrigger>
           <TabsTrigger value="desempenho">Desempenho</TabsTrigger>
         </TabsList>
 
@@ -349,6 +352,12 @@ function FlyDeliveryPage() {
         </TabsContent>
 
         {/* ---------------- DESEMPENHO ---------------- */}
+        {/* ---------------- PRODUTOS EM VITRINE ---------------- */}
+        <TabsContent value="vitrine" className="space-y-4 pt-4">
+          <VitrineManager pizzeriaId={active.id} storeName={active.name} />
+          {isSuperAdmin ? <VitrineAdminOverview /> : null}
+        </TabsContent>
+
         <TabsContent value="desempenho" className="pt-4">
           <AnalyticsPanel storeId={active.id} />
         </TabsContent>

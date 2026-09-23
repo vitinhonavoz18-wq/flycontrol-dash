@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,7 @@ import {
   Search,
 } from "lucide-react";
 import { syncToExternal } from "@/utils/menuSync";
+import { lerPrecoPromocional } from "@/lib/flydelivery/vitrine";
 import { ImageUpload } from "@/components/ui/image-upload";
 
 import {
@@ -68,6 +69,9 @@ export function ProductList({
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
+  // Preço promocional que vale SÓ no FlyDelivery. Não vai para o site de
+  // pedidos nem para o balcão — ver `lib/flydelivery/vitrine.ts`.
+  const [promoPrice, setPromoPrice] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [productType, setProductType] = useState(type);
@@ -95,8 +99,24 @@ export function ProductList({
       toast.error("Erro ao carregar produtos: " + error.message);
     } else {
       setProducts(data || []);
+      abrirProdutoDoEndereco(data || []);
     }
     setLoading(false);
+  }
+
+  // "Editar produto" da aba Produtos em Vitrine chega aqui com
+  // `?produto=<id>`: abre direto a edição daquele item, sem o lojista ter de
+  // procurar no cardápio. Só uma vez por visita — fechar e reabrir a lista
+  // não pode ficar reabrindo o mesmo produto.
+  const produtoDoEnderecoAberto = useRef(false);
+  function abrirProdutoDoEndereco(lista: any[]) {
+    if (produtoDoEnderecoAberto.current || typeof window === "undefined") return;
+    const alvo = new URLSearchParams(window.location.search).get("produto");
+    const prod = alvo ? lista.find((p) => p.id === alvo) : null;
+    if (prod) {
+      produtoDoEnderecoAberto.current = true;
+      openEdit(prod);
+    }
   }
 
   function openCreate(preselectCategoryId?: string) {
@@ -104,6 +124,7 @@ export function ProductList({
     setName("");
     setDescription("");
     setPrice("");
+    setPromoPrice("");
     setCategoryId(preselectCategoryId ?? (categories.length > 0 ? categories[0].id : ""));
     setImageUrl("");
     setProductType(type === "beverage" ? "beverage" : "standard");
@@ -143,6 +164,11 @@ export function ProductList({
     setName(prod.name);
     setDescription(prod.description || "");
     setPrice(prod.price.toString());
+    setPromoPrice(
+      prod.flydelivery_promo_price != null
+        ? String(prod.flydelivery_promo_price).replace(".", ",")
+        : "",
+    );
     setCategoryId(prod.category_id || "");
     setImageUrl(prod.image_url || "");
     setProductType(prod.product_type);
@@ -155,8 +181,14 @@ export function ProductList({
       return;
     }
 
-    setSaving(true);
     const numericPrice = parseFloat(price.replace(",", "."));
+    const promo = lerPrecoPromocional(promoPrice, numericPrice);
+    if (!promo.ok) {
+      toast.error(promo.erro);
+      return;
+    }
+
+    setSaving(true);
     const payload = {
       name,
       description,
@@ -233,8 +265,11 @@ export function ProductList({
         }
       }
 
+      // A promoção entra só aqui, DEPOIS da sincronização com o site: ela vale
+      // apenas no FlyDelivery e não pode viajar para o cardápio público.
       const finalPayload = {
         ...payload,
+        flydelivery_promo_price: promo.valor,
         external_id: externalId,
         external_source: externalId ? "sitecreatorfly" : null,
         updated_at: new Date().toISOString(),
@@ -406,7 +441,14 @@ export function ProductList({
               {prod.menu_categories?.name || "Sem categoria"}
             </p>
           </div>
-          <p className="font-bold text-primary">R$ {prod.price.toFixed(2)}</p>
+          <div className="text-right">
+            <p className="font-bold text-primary">R$ {prod.price.toFixed(2)}</p>
+            {prod.flydelivery_promo_price != null && prod.flydelivery_promo_price < prod.price ? (
+              <p className="text-[10px] font-semibold text-success">
+                App: R$ {Number(prod.flydelivery_promo_price).toFixed(2)}
+              </p>
+            ) : null}
+          </div>
         </div>
         <div className="flex flex-wrap gap-2">
           <div className="flex items-center gap-1.5 bg-muted/50 px-2 py-1 rounded-md text-[10px] font-medium">
@@ -565,6 +607,21 @@ export function ProductList({
                   placeholder="0,00"
                 />
               </div>
+              <div className="space-y-2">
+                <Label htmlFor="prod-promo">Promoção no app (R$)</Label>
+                <Input
+                  id="prod-promo"
+                  value={promoPrice}
+                  onChange={(e) => setPromoPrice(e.target.value)}
+                  placeholder="Opcional"
+                  aria-describedby="prod-promo-ajuda"
+                />
+              </div>
+              <p id="prod-promo-ajuda" className="col-span-2 -mt-2 text-xs text-muted-foreground">
+                Preço promocional que vale <strong>só no FlyDelivery</strong>. Precisa ser menor que
+                o preço normal. No site de pedidos e no balcão continua o preço normal. Deixe vazio
+                para não ter promoção.
+              </p>
               {productType !== "beverage" && (
                 <div className="space-y-2">
                   <Label htmlFor="prod-cat">Categoria</Label>
