@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useRouterState } from "@tanstack/react-router";
 import { Download, X, Share } from "lucide-react";
 
 type BIPEvent = Event & {
@@ -47,6 +48,7 @@ export function InstallBanner() {
   const [hasPrompt, setHasPrompt] = useState(false);
   const [dismissed, setDismissed] = useState(false);
   const [env, setEnv] = useState({ isStandalone: false, isMobile: false, isIOS: false });
+  const caminho = useRouterState({ select: (s) => s.location.pathname });
 
   useEffect(() => {
     setMounted(true);
@@ -71,6 +73,10 @@ export function InstallBanner() {
   }, []);
 
   if (!mounted || dismissed) return null;
+  // O portal de parceiros não oferece o app: instalar dali abriria o painel
+  // do RESTAURANTE, que o parceiro não usa — e o aviso cobriria o menu de
+  // baixo do portal.
+  if (caminho.startsWith("/affiliates")) return null;
   const { isStandalone, isMobile, isIOS } = env;
   if (isStandalone || !isMobile) return null;
 

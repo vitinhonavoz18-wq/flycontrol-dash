@@ -39,6 +39,7 @@ import { TRIAL_DENIAL_MESSAGES, grantFreeTrial } from "@/lib/billing/trial.serve
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { isSignupDebugEnabled, withDiagnostics } from "./diagnostics";
 import { checkAndRecordSignupAttempt, currentRequestIp } from "./rateLimit.server";
+import { converterIndicacaoDoCadastro } from "@/lib/afiliados/conversao.server";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
   hasErrors,
@@ -467,6 +468,25 @@ export const createAccount = createServerFn({ method: "POST" })
       }
 
       companyId = company.id;
+      const lojaCriada = companyId;
+
+      /**
+       * Programa de afiliados: se a pessoa chegou por um link `?ref=`, a
+       * loja fica ligada àquele afiliado para sempre.
+       *
+       * Roda só na SAÍDA de sucesso, depois de tudo que pode desfazer o
+       * cadastro — ligar a indicação a uma loja que o próprio cadastro vai
+       * apagar logo em seguida gastaria a ficha à toa, e a pessoa perderia a
+       * indicação ao tentar de novo. Nunca derruba o cadastro.
+       */
+      const concluir = async <T>(resultado: T): Promise<T> => {
+        await converterIndicacaoDoCadastro({
+          companyId: lojaCriada,
+          ownerUserId: userId,
+          ownerEmail: email,
+        });
+        return resultado;
+      };
 
       // ---- 2b. Convite para a preparação ----------------------------------
       //
@@ -526,7 +546,7 @@ export const createAccount = createServerFn({ method: "POST" })
           "[signup] assinatura não criada: tabelas de cobrança ausentes ou plano inativo. " +
             `Empresa ${companyId} precisa de assinatura manual.`,
         );
-        return {
+        return await concluir({
           companyId,
           companyName: company.name,
           planCode,
@@ -536,7 +556,7 @@ export const createAccount = createServerFn({ method: "POST" })
           checkout: await createCheckoutIntent(planCode, companyId, null),
           trial: null,
           trialDenied: TRIAL_DENIAL_MESSAGES.billing_not_installed,
-        };
+        });
       }
 
       const typedPlan = plan as { id: string; billing_model: string };
@@ -550,7 +570,7 @@ export const createAccount = createServerFn({ method: "POST" })
 
       if (!priceVersion) {
         console.warn(`[signup] plano ${planCode} sem versão de preço ativa.`);
-        return {
+        return await concluir({
           companyId,
           companyName: company.name,
           planCode,
@@ -558,7 +578,7 @@ export const createAccount = createServerFn({ method: "POST" })
           checkout: await createCheckoutIntent(planCode, companyId, null),
           trial: null,
           trialDenied: TRIAL_DENIAL_MESSAGES.billing_not_installed,
-        };
+        });
       }
 
       const { data: subscription, error: subError } = await db
@@ -623,7 +643,7 @@ export const createAccount = createServerFn({ method: "POST" })
         // do que não prometer nada.
         await provisionAndForget(companyId);
 
-        return {
+        return await concluir({
           companyId,
           companyName: company.name,
           planCode,
@@ -632,7 +652,7 @@ export const createAccount = createServerFn({ method: "POST" })
           checkout: null,
           trial: { startsAt: trial.trialStartedAt, endsAt: trial.trialEndsAt },
           trialDenied: null,
-        };
+        });
       }
 
       // Sem período gratuito (já usado antes, ou migration ainda não aplicada).
@@ -648,7 +668,7 @@ export const createAccount = createServerFn({ method: "POST" })
         const ativou = await activateWithoutPayment(db, companyId, subscriptionId, planCode);
         if (ativou) {
           await provisionAndForget(companyId);
-          return {
+          return await concluir({
             companyId,
             companyName: company.name,
             planCode,
@@ -656,13 +676,13 @@ export const createAccount = createServerFn({ method: "POST" })
             checkout: null,
             trial: null,
             trialDenied: TRIAL_DENIAL_MESSAGES[trial.reason],
-          };
+          });
         }
         // Ativação falhou: melhor devolver "aguardando ativação" e deixar a
         // equipe concluir à mão do que dizer que está pronto sem estar.
       }
 
-      return {
+      return await concluir({
         companyId,
         companyName: company.name,
         planCode,
@@ -670,7 +690,7 @@ export const createAccount = createServerFn({ method: "POST" })
         checkout: await createCheckoutIntent(planCode, companyId, subscriptionId),
         trial: null,
         trialDenied: TRIAL_DENIAL_MESSAGES[trial.reason],
-      };
+      });
     } catch (err) {
       // Erro já tratado acima relança com mensagem própria; qualquer outro
       // ainda precisa desfazer o que foi criado.

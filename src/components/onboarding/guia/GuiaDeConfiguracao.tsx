@@ -122,7 +122,12 @@ export function GuiaDeConfiguracao({ habilitado, tenantId = null }: GuiaDeConfig
     const conferir = async () => {
       try {
         const r = await perguntar({ data: undefined });
-        if (!cancelado) setEstado(r);
+        // Resposta sem o formato esperado (ex.: o servidor recusou a sessão
+        // vencida e devolveu um aviso de erro no lugar do estado) é tratada
+        // como "não deu para perguntar". Sem isto, a leitura de
+        // `concluidas.length` derrubava o painel inteiro em "Algo deu errado".
+        const valido = r && typeof r === "object" && Array.isArray((r as EstadoDoGuia).concluidas);
+        if (!cancelado) setEstado(valido ? r : null);
       } catch {
         // Não conseguimos perguntar: o guia some em vez de prender. Uma falha
         // de rede não pode trancar o lojista fora do próprio painel — ele
