@@ -194,19 +194,24 @@ sabendo que um humano respondeu pelo painel, o Redis nunca era gravado, e a IA
 respondia junto com o atendente. Resposta pelo celular funcionava; pelo
 painel, não.
 
-**O que mudar em cada fluxo:** logo depois do nó **Entregar ao FlyControl**
-(o que chama `/api/crm/inbox`), coloque um nó **IF**:
+**Nos fluxos de hoje, a trava continua no Redis — agora ligada nos dois caminhos:**
 
-```
-{{ $json.ia_pausada }}   is true   →  para aqui (não liga nada no ramo true)
-                          is false  →  segue para a IA
-```
+| Quem falou | Onde a trava é ligada |
+|---|---|
+| Dono pelo celular | nó **Pausar a IA por 1 hora** (entrada, `fromMe`) |
+| Atendente pelo painel | nó **Pausar a IA (resposta do painel)**, logo depois de **Enviar resposta do painel** |
 
-E **tire do caminho** a checagem de Redis que decidia se a IA respondia (o
-nó que lia a chave de "humano assumiu"). Se quiser manter o Redis para outra
-coisa (juntar mensagens seguidas, por exemplo), pode — só não é mais ele quem
-decide a trava. Manter as duas travas ao mesmo tempo faz a IA ficar calada
-quando o painel diz que pode falar, e aí ninguém entende por quê.
+O nó **Pode responder?** confere as duas coisas: a chave do Redis **e** o
+`ia_pausada` que o `/api/crm/inbox` devolve. Qualquer uma travada, a IA fica
+quieta.
+
+**A chave usa o telefone normalizado:** sem o `55` e sem o `9` extra do
+celular (`5571992025595`, `557192025595` e `71992025595` viram todos
+`7192025595`). Sem isso, a trava gravada com o número de um jeito não era
+achada pela conferência que usava o número de outro jeito — e o WhatsApp
+escreve o mesmo telefone de formas diferentes dependendo de onde vem.
+
+Chave: `fly_<tenant_id>_<telefone normalizado>_pausa`, validade de 1 hora.
 
 **A mensagem precisa passar pelo FlyControl ANTES de chegar na IA.** Se o
 fluxo chama a IA primeiro e só depois registra a mensagem, a trava chega
