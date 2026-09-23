@@ -5,8 +5,10 @@ import {
   apagarCookieDepoisDoCadastro,
   codigoDoEndereco,
   normalizarCodigoDeAfiliado,
+  LIMITE_DO_COOKIE_SEGUNDOS,
   opcoesDoCookie,
   segundosAteVencer,
+  segundosDoCookie,
   tokenDoCookie,
 } from "./codigo";
 
@@ -59,6 +61,16 @@ describe("cookie da indicação", () => {
     expect(segundosAteVencer("2026-10-23T12:00:00Z", agora)).toBe(30 * 24 * 60 * 60);
     expect(segundosAteVencer("2026-09-23T11:59:59Z", agora)).toBe(0);
     expect(segundosAteVencer("data inválida", agora)).toBe(0);
+  });
+
+  it("link sem prazo: o cookie pede o máximo que o navegador aceita (400 dias)", () => {
+    const agora = new Date("2026-09-23T12:00:00Z");
+    // O banco marca "sem prazo" como daqui a 100 anos.
+    expect(segundosDoCookie("2126-09-23T12:00:00Z", agora)).toBe(LIMITE_DO_COOKIE_SEGUNDOS);
+    expect(LIMITE_DO_COOKIE_SEGUNDOS).toBe(400 * 24 * 60 * 60);
+    // Janela curta continua valendo só até o fim dela.
+    expect(segundosDoCookie("2026-10-23T12:00:00Z", agora)).toBe(30 * 24 * 60 * 60);
+    expect(segundosDoCookie("2026-09-23T11:00:00Z", agora)).toBe(0);
   });
 
   it("a página não consegue ler nem trocar o cookie", () => {

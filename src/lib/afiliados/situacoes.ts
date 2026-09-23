@@ -43,18 +43,19 @@ export const SITUACAO_DA_LOJA: Record<
 export const SITUACAO_DA_COMISSAO: Record<SituacaoDaComissao, { rotulo: string; tom: Tom }> = {
   pending: { rotulo: "Pendente", tom: "laranja" },
   available: { rotulo: "Disponível", tom: "verde" },
-  requested: { rotulo: "Solicitada", tom: "azul" },
+  requested: { rotulo: "No repasse", tom: "azul" },
   paid: { rotulo: "Paga", tom: "cinza" },
   reversed: { rotulo: "Estornada", tom: "vermelho" },
 };
 
 /**
- * O saque tem quatro situações no banco; a pessoa vê cinco etapas. "Pedido"
- * é o momento do clique; "em análise" é o tempo em que a equipe confere.
- * No banco os dois são o mesmo `requested` — a diferença é só de leitura.
+ * O repasse tem quatro situações no banco; a pessoa vê quatro etapas.
+ * "Montado" é quando o robô separa o saldo no dia 10 ou 20; "em
+ * conferência" é o tempo em que a equipe confere antes de mandar o Pix. No
+ * banco os dois são o mesmo `requested` — a diferença é só de leitura.
  */
 export const SITUACAO_DO_SAQUE: Record<SituacaoDoSaque, { rotulo: string; tom: Tom }> = {
-  requested: { rotulo: "Em análise", tom: "laranja" },
+  requested: { rotulo: "Em conferência", tom: "laranja" },
   approved: { rotulo: "Aprovado", tom: "azul" },
   paid: { rotulo: "Pago", tom: "verde" },
   rejected: { rotulo: "Recusado", tom: "vermelho" },
@@ -75,8 +76,8 @@ export function etapasDoSaque(s: {
   recusado_em: string | null;
 }): EtapaDoSaque[] {
   const etapas: EtapaDoSaque[] = [
-    { rotulo: "Solicitado", quando: s.pedido_em, feita: true },
-    { rotulo: "Em análise", quando: null, feita: true },
+    { rotulo: "Montado", quando: s.pedido_em, feita: true },
+    { rotulo: "Conferência", quando: null, feita: true },
   ];
   if (s.situacao === "rejected") {
     etapas.push({ rotulo: "Recusado", quando: s.recusado_em, feita: true, erro: true });

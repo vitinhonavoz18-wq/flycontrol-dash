@@ -26,7 +26,7 @@ const SECOES = [
   { to: "/admin/affiliates/partners", rotulo: "Afiliados", icone: Users },
   { to: "/admin/affiliates/referrals", rotulo: "Indicações", icone: Store },
   { to: "/admin/affiliates/commissions", rotulo: "Comissões", icone: BadgeDollarSign },
-  { to: "/admin/affiliates/withdrawals", rotulo: "Saques", icone: ArrowDownToLine },
+  { to: "/admin/affiliates/withdrawals", rotulo: "Repasses", icone: ArrowDownToLine },
   { to: "/admin/affiliates/settings", rotulo: "Configurações", icone: Settings },
   { to: "/admin/affiliates/audit", rotulo: "Auditoria", icone: ScrollText },
 ] as const;
@@ -42,7 +42,7 @@ function AfiliadosAdmin() {
           Afiliados
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Parceiros que indicam o FlyControl: aprovação, comissões, saques e auditoria.
+          Parceiros que indicam o FlyControl: aprovação, comissões, repasses e auditoria.
         </p>
       </div>
 

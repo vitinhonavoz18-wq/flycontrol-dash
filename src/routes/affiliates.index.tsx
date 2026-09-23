@@ -3,13 +3,13 @@ import { ArrowRight, Link2, Repeat, Wallet } from "lucide-react";
 import { TopoPublico } from "@/components/afiliados/portal/Casca";
 import { useAuth } from "@/lib/auth";
 import { useRegrasPublicas } from "@/lib/afiliados/portal";
-import { porcentagemDeBps, reais } from "@/lib/afiliados/validacao";
+import { nosDias, porcentagemDeBps, reais } from "@/lib/afiliados/validacao";
 
 export const Route = createFileRoute("/affiliates/")({ component: Apresentacao });
 
 /**
- * A porta de entrada do programa. Os números (porcentagem, prazo, saque
- * mínimo) vêm do banco — se a equipe mudar a regra, a página muda junto.
+ * A porta de entrada do programa. Os números (porcentagem, prazo, dias de
+ * repasse, mínimo) vêm do banco — se a equipe mudar a regra, a página muda junto.
  * Enquanto carregam, os números simplesmente não aparecem: melhor um texto
  * sem número do que um número errado.
  */
@@ -92,16 +92,17 @@ function Apresentacao() {
             {
               icone: <Repeat className="size-5" />,
               titulo: "2. Indique restaurantes",
-              texto: regras
-                ? `Quem clicar no seu link e criar a conta em até ${regras.dias_do_link} dias fica ligado a você.`
-                : "Quem clicar no seu link e criar a conta fica ligado a você.",
+              texto:
+                regras && regras.dias_do_link
+                  ? `Quem clicar no seu link e criar a conta em até ${regras.dias_do_link} dias fica ligado a você.`
+                  : "Quem clicar no seu link e criar a conta fica ligado a você, sem prazo para expirar.",
             },
             {
               icone: <Wallet className="size-5" />,
               titulo: "3. Receba por Pix",
               texto: regras
-                ? `A comissão libera ${regras.dias_para_liberar} dias depois do pagamento do cliente. Saque a partir de ${reais(regras.saque_minimo_cents)}.`
-                : "A comissão libera alguns dias depois do pagamento do cliente, e você saca por Pix.",
+                ? `Pagamento automático por Pix ${nosDias(regras.dias_de_repasse)} de cada mês, a partir de ${reais(regras.saque_minimo_cents)}. Você não precisa pedir.`
+                : "Pagamento automático por Pix, em dias fixos do mês. Você não precisa pedir.",
             },
           ].map((passo) => (
             <div
@@ -129,11 +130,12 @@ function Apresentacao() {
               não gera comissão.
             </li>
             <li>
-              • Pagamento devolvido ao cliente (estorno) cancela a comissão daquele pagamento.
+              • Pagamento devolvido ao cliente (estorno) cancela a comissão daquele pagamento. Se
+              ela já tinha sido repassada, o valor é descontado dos próximos repasses.
             </li>
             <li>
-              • Cada restaurante tem um parceiro só: vale o primeiro link válido que a pessoa
-              clicou.
+              • Cada restaurante tem um parceiro só: vale o primeiro link válido que a pessoa clicou
+              {regras && !regras.dias_do_link ? ", sem prazo para expirar" : ""}.
             </li>
             <li>• Não vale indicar a si mesmo nem uma loja que você mesmo administra.</li>
             {regras?.aprovacao_manual ? (
@@ -141,7 +143,17 @@ function Apresentacao() {
                 • Todo cadastro de parceiro passa por uma análise da equipe antes de liberar o link.
               </li>
             ) : null}
-            <li>• O saque é feito por Pix, na chave cadastrada no seu painel.</li>
+            <li>
+              • Conta de parceiro suspensa não gera comissão nem recebe repasse enquanto estiver
+              suspensa.
+            </li>
+            <li>
+              • O repasse é automático
+              {regras ? ` ${nosDias(regras.dias_de_repasse)} de cada mês` : ""}, por Pix, na chave
+              cadastrada no seu painel. Saldo abaixo de{" "}
+              {regras ? reais(regras.saque_minimo_cents) : "o mínimo"} fica guardado e soma no
+              repasse seguinte.
+            </li>
           </ul>
         </section>
       </main>

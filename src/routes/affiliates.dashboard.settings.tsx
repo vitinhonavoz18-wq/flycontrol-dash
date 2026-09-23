@@ -128,7 +128,7 @@ function Configuracoes() {
                 id="cfg-pix"
                 rotulo="Chave Pix"
                 erro={erros.pix}
-                ajuda="Os saques são pagos nesta chave."
+                ajuda="Os repasses dos dias de pagamento são enviados para esta chave."
               >
                 <input
                   id="cfg-pix"

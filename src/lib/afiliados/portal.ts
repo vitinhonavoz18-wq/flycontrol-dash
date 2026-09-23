@@ -27,6 +27,8 @@ export type PerfilDoAfiliado = {
   dias_para_liberar: number;
   saque_minimo_cents: number;
   programa_ativo: boolean;
+  /** Dias do mês em que o repasse é montado, ex.: [10, 20]. */
+  dias_de_repasse: number[];
 };
 
 export type ResumoDoAfiliado = {
@@ -276,15 +278,5 @@ export function atualizarMeusDados(d: {
     p_telefone: d.telefone,
     p_pix_tipo: d.pixTipo,
     p_pix_chave: d.pixChave,
-  });
-}
-
-/**
- * Pede o saque do saldo disponível. O valor enviado é só a CONFERÊNCIA do
- * que a pessoa viu na tela — o banco recalcula e recusa se não bater.
- */
-export function solicitarSaque(valorVistoNaTelaCents: number) {
-  return chamar<string>("afiliado_solicitar_saque", {
-    p_valor_confirmado_cents: valorVistoNaTelaCents,
   });
 }

@@ -8,8 +8,8 @@ import {
 } from "@/components/ui/sheet";
 import { useInspecaoDeComissao } from "@/lib/afiliados/admin";
 import { NOME_DA_BASE, NOME_DO_EVENTO, resumoDoEvento } from "@/lib/afiliados/adminRotulos";
-import { SITUACAO_DA_COMISSAO } from "@/lib/afiliados/situacoes";
-import type { SituacaoDaComissao } from "@/lib/afiliados/portal";
+import { SITUACAO_DA_COMISSAO, SITUACAO_DO_SAQUE } from "@/lib/afiliados/situacoes";
+import type { SituacaoDaComissao, SituacaoDoSaque } from "@/lib/afiliados/portal";
 import { dataCurta, mensagemDeErro, porcentagemDeBps, reais } from "@/lib/afiliados/validacao";
 import { Carregando, Erro, SeloAdmin } from "./PecasAdmin";
 
@@ -35,7 +35,7 @@ const NOME_DO_ITEM: Record<string, string> = {
 
 /**
  * A lupa: de onde saiu uma comissão, passo a passo — a fatura que o cliente
- * pagou, o que dela contou para a comissão, o pagamento confirmado, o saque
+ * pagou, o que dela contou para a comissão, o pagamento confirmado, o repasse
  * em que ela entrou e cada evento da trilha. Só leitura.
  */
 export function InspecaoDeComissao({ id, aoFechar }: { id: string | null; aoFechar: () => void }) {
@@ -52,7 +52,7 @@ export function InspecaoDeComissao({ id, aoFechar }: { id: string | null; aoFech
         <SheetHeader>
           <SheetTitle>Inspeção da comissão</SheetTitle>
           <SheetDescription>
-            De onde veio este valor, do pagamento do cliente até o saque.
+            De onde veio este valor, do pagamento do cliente até o repasse.
           </SheetDescription>
         </SheetHeader>
 
@@ -198,10 +198,12 @@ export function InspecaoDeComissao({ id, aoFechar }: { id: string | null; aoFech
 
             {d.saque ? (
               <section>
-                <h3 className="text-sm font-semibold">Saque</h3>
+                <h3 className="text-sm font-semibold">Repasse</h3>
                 <p className="text-sm">
-                  {reais(d.saque.valor_cents)} · {d.saque.situacao} · pedido em{" "}
-                  {quando(d.saque.pedido_em)}
+                  {reais(d.saque.valor_cents)} ·{" "}
+                  {SITUACAO_DO_SAQUE[d.saque.situacao as SituacaoDoSaque]?.rotulo ??
+                    d.saque.situacao}{" "}
+                  · montado em {quando(d.saque.pedido_em)}
                   {d.saque.pago_em ? ` · pago em ${quando(d.saque.pago_em)}` : ""}
                 </p>
               </section>

@@ -24,10 +24,12 @@ import {
   NOME_DA_BASE,
   bpsParaCampo,
   centavosParaCampo,
+  diasDoTexto,
+  diasParaCampo,
   porcentagemParaBps,
   reaisParaCentavos,
 } from "@/lib/afiliados/adminRotulos";
-import { mensagemDeErro, porcentagemDeBps, reais } from "@/lib/afiliados/validacao";
+import { listaDeDias, mensagemDeErro, porcentagemDeBps, reais } from "@/lib/afiliados/validacao";
 
 export const Route = createFileRoute("/_app/admin/affiliates/settings")({
   component: ConfiguracoesDoPrograma,
@@ -40,7 +42,9 @@ type Formulario = {
   meses: string;
   diasParaLiberar: string;
   saqueMinimo: string;
+  linkSemPrazo: boolean;
   diasDoLink: string;
+  diasDeRepasse: string;
   base: BaseDaComissao;
   aprovacaoManual: boolean;
 };
@@ -53,7 +57,9 @@ function doBanco(c: ConfiguracoesAdmin): Formulario {
     meses: c.duracao_meses === null ? "12" : String(c.duracao_meses),
     diasParaLiberar: String(c.dias_para_liberar),
     saqueMinimo: centavosParaCampo(c.saque_minimo_cents),
-    diasDoLink: String(c.dias_do_link),
+    linkSemPrazo: c.dias_do_link === null,
+    diasDoLink: c.dias_do_link === null ? "30" : String(c.dias_do_link),
+    diasDeRepasse: diasParaCampo(c.dias_de_repasse ?? []),
     base: c.base,
     aprovacaoManual: c.aprovacao_manual,
   };
@@ -92,14 +98,17 @@ function ConfiguracoesDoPrograma() {
   const meses = f.vitalicia ? null : inteiro(f.meses, 1, 120);
   const dias = inteiro(f.diasParaLiberar, 0, 365);
   const saque = reaisParaCentavos(f.saqueMinimo);
-  const janela = inteiro(f.diasDoLink, 1, 365);
+  const janela = f.linkSemPrazo ? null : inteiro(f.diasDoLink, 1, 365);
+  const diasDeRepasse = diasDoTexto(f.diasDeRepasse);
 
   const erros = {
     comissao: comissaoBps === null ? "De 0 a 100, com até duas casas (ex.: 15 ou 12,5)." : null,
     meses: !f.vitalicia && meses === null ? "De 1 a 120 meses." : null,
     dias: dias === null ? "De 0 a 365 dias." : null,
     saque: saque === null || saque > 10000000 ? "Valor em reais, ex.: 100,00." : null,
-    janela: janela === null ? "De 1 a 365 dias." : null,
+    janela: !f.linkSemPrazo && janela === null ? "De 1 a 365 dias." : null,
+    repasse:
+      diasDeRepasse === null ? "De 1 a 4 dias do mês, cada um de 1 a 28 (ex.: 10, 20)." : null,
   };
   const valido = Object.values(erros).every((e) => e === null);
 
@@ -109,10 +118,12 @@ function ConfiguracoesDoPrograma() {
     duracaoMeses: meses,
     diasParaLiberar: dias ?? 0,
     saqueMinimoCents: saque ?? 0,
-    diasDoLink: janela ?? 1,
+    diasDoLink: janela,
     base: f.base,
     aprovacaoManual: f.aprovacaoManual,
+    diasDeRepasse: diasDeRepasse ?? [],
   };
+  const textoDaJanela = (d: number | null) => (d === null ? "sem prazo" : `${d} dias`);
 
   const mudancas: string[] = [];
   if (valido) {
@@ -134,10 +145,16 @@ function ConfiguracoesDoPrograma() {
       mudancas.push(`Liberação: ${atual.dias_para_liberar} → ${novo.diasParaLiberar} dias`);
     if (novo.saqueMinimoCents !== atual.saque_minimo_cents)
       mudancas.push(
-        `Saque mínimo: ${reais(atual.saque_minimo_cents)} → ${reais(novo.saqueMinimoCents)}`,
+        `Repasse mínimo: ${reais(atual.saque_minimo_cents)} → ${reais(novo.saqueMinimoCents)}`,
       );
     if (novo.diasDoLink !== atual.dias_do_link)
-      mudancas.push(`Janela do link: ${atual.dias_do_link} → ${novo.diasDoLink} dias`);
+      mudancas.push(
+        `Janela do link: ${textoDaJanela(atual.dias_do_link)} → ${textoDaJanela(novo.diasDoLink)}`,
+      );
+    if (diasParaCampo(novo.diasDeRepasse) !== diasParaCampo(atual.dias_de_repasse ?? []))
+      mudancas.push(
+        `Dias de repasse: ${listaDeDias(atual.dias_de_repasse)} → ${listaDeDias(novo.diasDeRepasse)}`,
+      );
     if (novo.base !== atual.base)
       mudancas.push(`Base: ${NOME_DA_BASE[atual.base]} → ${NOME_DA_BASE[novo.base]}`);
     if (novo.aprovacaoManual !== atual.aprovacao_manual)
@@ -161,8 +178,8 @@ function ConfiguracoesDoPrograma() {
               <Label htmlFor="cfg-ativo">Programa de afiliados ativo</Label>
               <p className="text-xs text-muted-foreground">
                 Desligado: links param de registrar indicações, novos cadastros ficam fechados e
-                faturas pagas não geram comissão nova. Saques de saldo já liberado continuam
-                possíveis.
+                faturas pagas não geram comissão nova. O saldo que já foi ganho continua sendo
+                repassado nos dias de repasse.
               </p>
             </div>
             <Switch
@@ -270,9 +287,36 @@ function ConfiguracoesDoPrograma() {
 
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base">Prazos e saque</CardTitle>
+          <CardTitle className="text-base">Repasses</CardTitle>
         </CardHeader>
         <CardContent className="grid gap-4 sm:grid-cols-3">
+          <div className="space-y-1.5">
+            <Label htmlFor="cfg-repasse">Dias de repasse</Label>
+            <Input
+              id="cfg-repasse"
+              inputMode="numeric"
+              value={f.diasDeRepasse}
+              onChange={(e) => mudar({ diasDeRepasse: e.target.value })}
+            />
+            <Erro1 texto={erros.repasse} />
+            <p className="text-xs text-muted-foreground">
+              Dias do mês (1 a 28, até 4) em que o sistema separa, sozinho, o saldo de cada
+              parceiro. Ex.: 10, 20.
+            </p>
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="cfg-saque">Repasse mínimo (R$)</Label>
+            <Input
+              id="cfg-saque"
+              inputMode="decimal"
+              value={f.saqueMinimo}
+              onChange={(e) => mudar({ saqueMinimo: e.target.value })}
+            />
+            <Erro1 texto={erros.saque} />
+            <p className="text-xs text-muted-foreground">
+              Saldo menor fica guardado e soma no repasse seguinte.
+            </p>
+          </div>
           <div className="space-y-1.5">
             <Label htmlFor="cfg-dias">Liberação da comissão (dias)</Label>
             <Input
@@ -283,32 +327,56 @@ function ConfiguracoesDoPrograma() {
             />
             <Erro1 texto={erros.dias} />
             <p className="text-xs text-muted-foreground">
-              Janela para um estorno aparecer antes do saque.
+              0 = entra no próximo repasse assim que o cliente paga. Estorno depois do repasse vira
+              desconto no repasse seguinte.
             </p>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cfg-saque">Saque mínimo (R$)</Label>
-            <Input
-              id="cfg-saque"
-              inputMode="decimal"
-              value={f.saqueMinimo}
-              onChange={(e) => mudar({ saqueMinimo: e.target.value })}
-            />
-            <Erro1 texto={erros.saque} />
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Link de indicação</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          <Label>Quanto tempo o clique no link continua valendo</Label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="janela"
+                checked={f.linkSemPrazo}
+                onChange={() => mudar({ linkSemPrazo: true })}
+                className="h-4 w-4 accent-[var(--primary)]"
+              />
+              Sem prazo (o primeiro link clicado vale para sempre)
+            </label>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="radio"
+                name="janela"
+                checked={!f.linkSemPrazo}
+                onChange={() => mudar({ linkSemPrazo: false })}
+                className="h-4 w-4 accent-[var(--primary)]"
+              />
+              Por
+              <Input
+                aria-label="Dias de validade do clique"
+                inputMode="numeric"
+                value={f.diasDoLink}
+                disabled={f.linkSemPrazo}
+                onChange={(e) => mudar({ diasDoLink: e.target.value })}
+                className="h-8 w-20"
+              />
+              dias
+            </label>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="cfg-janela">Janela de atribuição (dias)</Label>
-            <Input
-              id="cfg-janela"
-              inputMode="numeric"
-              value={f.diasDoLink}
-              onChange={(e) => mudar({ diasDoLink: e.target.value })}
-            />
-            <Erro1 texto={erros.janela} />
-            <p className="text-xs text-muted-foreground">
-              Quanto tempo o clique no link continua valendo.
-            </p>
-          </div>
+          <Erro1 texto={erros.janela} />
+          <p className="text-xs text-muted-foreground">
+            O clique fica guardado no navegador da pessoa. Se ela limpar o navegador ou se cadastrar
+            por outro aparelho, o clique se perde — nesses casos a equipe pode atribuir o cliente à
+            mão em Indicações.
+          </p>
         </CardContent>
       </Card>
 

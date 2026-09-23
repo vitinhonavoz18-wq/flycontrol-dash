@@ -51,6 +51,9 @@ export type ResumoAdmin = {
   saques_a_pagar: number;
   saques_a_pagar_cents: number;
   alertas_30_dias: number;
+  /** Parceiros ativos com saldo para repasse e SEM chave Pix — ficam de fora. */
+  com_saldo_sem_pix: number;
+  dias_de_repasse: number[];
 };
 
 export type SerieAdmin = {
@@ -77,6 +80,9 @@ export type AfiliadoNaLista = {
   comissao_propria: boolean;
   disponivel_cents: number;
   criado_em: string;
+  telefone: string | null;
+  /** Sem chave Pix, o repasse dele não é montado. */
+  sem_pix: boolean;
 };
 
 export type FichaDoAfiliado = {
@@ -211,6 +217,10 @@ export type SaqueAdmin = {
   afiliado: string;
   codigo: string;
   afiliado_status: SituacaoDoAfiliado;
+  /** Celular do parceiro — a equipe fala com ele na hora do Pix. */
+  telefone: string | null;
+  /** Dia do repasse automático que montou este saque (nulo nos antigos, pedidos à mão). */
+  ciclo: string | null;
   valor_cents: number;
   elegivel_cents: number;
   pix: string;
@@ -250,9 +260,11 @@ export type ConfiguracoesAdmin = {
   duracao_meses: number | null;
   dias_para_liberar: number;
   saque_minimo_cents: number;
-  dias_do_link: number;
+  /** `null` = sem prazo: o primeiro clique vale para sempre. */
+  dias_do_link: number | null;
   base: BaseDaComissao;
   aprovacao_manual: boolean;
+  dias_de_repasse: number[];
   atualizado_em: string;
   atualizado_por: string | null;
 };
@@ -470,9 +482,10 @@ export function salvarConfiguracoes(c: {
   duracaoMeses: number | null;
   diasParaLiberar: number;
   saqueMinimoCents: number;
-  diasDoLink: number;
+  diasDoLink: number | null;
   base: BaseDaComissao;
   aprovacaoManual: boolean;
+  diasDeRepasse: number[];
 }) {
   return chamar<null>("afiliado_atualizar_configuracoes", {
     p_programa_ativo: c.programaAtivo,
@@ -483,5 +496,26 @@ export function salvarConfiguracoes(c: {
     p_dias_do_link: c.diasDoLink,
     p_base: c.base,
     p_aprovacao_manual: c.aprovacaoManual,
+    p_dias_de_repasse: c.diasDeRepasse,
   });
+}
+
+export type ResultadoDosRepasses = {
+  executado: boolean;
+  data: string;
+  repasses: number;
+  valor_cents: number;
+  abaixo_do_minimo: number;
+  sem_pix: number;
+  com_repasse_em_aberto: number;
+  falhas: number;
+};
+
+/**
+ * Monta os repasses de hoje na hora, sem esperar o robô. Serve para o dia em
+ * que o robô falhar. Não duplica: um repasse por parceiro por dia, e quem já
+ * tem repasse em aberto fica para depois.
+ */
+export function gerarRepassesAgora() {
+  return chamar<ResultadoDosRepasses>("afiliado_admin_gerar_repasses");
 }

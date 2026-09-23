@@ -1,7 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertTriangle, Search as Lupa } from "lucide-react";
+import { AlertTriangle, MessageCircle, Search as Lupa } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import {
@@ -26,16 +26,18 @@ import {
   type IndicacaoAdmin,
   type SaqueAdmin,
 } from "@/lib/afiliados/admin";
-import { NOME_DO_EVENTO, resumoDoEvento } from "@/lib/afiliados/adminRotulos";
+import { NOME_DO_EVENTO, linkDoWhatsApp, resumoDoEvento } from "@/lib/afiliados/adminRotulos";
 import type { SituacaoDaComissao, SituacaoDaLoja, SituacaoDoSaque } from "@/lib/afiliados/portal";
 import {
   SITUACAO_DA_COMISSAO,
   SITUACAO_DA_LOJA,
   SITUACAO_DO_SAQUE,
 } from "@/lib/afiliados/situacoes";
+import { formatPhone } from "@/lib/signup/validation";
 import {
   TIPOS_DE_PIX,
   dataCurta,
+  dataDoDia,
   mensagemDeErro,
   porcentagemDeBps,
   reais,
@@ -269,7 +271,7 @@ export function TabelaDeComissoes({
               </p>
               <p>
                 {estornar.situacao === "paid" || estornar.situacao === "requested"
-                  ? "Ela já foi sacada ou está em saque: nada é apagado, e nasce um ajuste negativo do mesmo valor, descontado das próximas comissões do afiliado."
+                  ? "Ela já foi repassada ou está num repasse: nada é apagado, e nasce um ajuste negativo do mesmo valor, descontado do próximo repasse do afiliado."
                   : "Ela ainda não foi sacada: passa a valer zero e sai do saldo do afiliado. O registro continua no histórico."}
               </p>
             </>
@@ -368,12 +370,13 @@ export function TabelaDeSaques({
       ) : null}
       {s.pix_mudou && (s.situacao === "requested" || s.situacao === "approved") ? (
         <p className="mt-1 flex items-center gap-1 text-xs text-amber-700 dark:text-amber-400">
-          <AlertTriangle className="h-3.5 w-3.5" /> O afiliado trocou o Pix depois do pedido
+          <AlertTriangle className="h-3.5 w-3.5" /> O afiliado trocou o Pix depois que o repasse foi
+          montado
         </p>
       ) : null}
       {s.alertas > 0 ? (
         <p className="mt-1 flex items-center gap-1 text-xs text-destructive">
-          <AlertTriangle className="h-3.5 w-3.5" /> Pedido logo depois de trocar a chave Pix
+          <AlertTriangle className="h-3.5 w-3.5" /> Chave Pix trocada pouco antes do repasse
         </p>
       ) : null}
       {s.afiliado_status !== "active" ? (
@@ -381,6 +384,37 @@ export function TabelaDeSaques({
       ) : null}
     </>
   );
+
+  const Contato = ({ s }: { s: SaqueAdmin }) => {
+    if (!s.telefone) return <p className="text-xs text-muted-foreground">Sem celular</p>;
+    const zap = linkDoWhatsApp(s.telefone);
+    return zap ? (
+      <a
+        href={zap}
+        target="_blank"
+        rel="noreferrer"
+        className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-primary hover:underline"
+      >
+        <MessageCircle className="h-3.5 w-3.5 shrink-0" /> {formatPhone(s.telefone)}
+      </a>
+    ) : (
+      <p className="text-xs">{s.telefone}</p>
+    );
+  };
+
+  /** O dia do repasse automático; saques antigos, pedidos à mão, mostram a hora do pedido. */
+  const Ciclo = ({ s }: { s: SaqueAdmin }) =>
+    s.ciclo ? (
+      <>
+        <div>Repasse de {dataDoDia(s.ciclo)}</div>
+        <div className="text-muted-foreground">montado {quando(s.pedido_em)}</div>
+      </>
+    ) : (
+      <>
+        <div>{quando(s.pedido_em)}</div>
+        <div className="text-muted-foreground">pedido manual</div>
+      </>
+    );
 
   const Historico = ({ s }: { s: SaqueAdmin }) => (
     <div className="text-xs text-muted-foreground">
@@ -414,9 +448,11 @@ export function TabelaDeSaques({
       ) : itens.length === 0 ? (
         <Vazio
           titulo={
-            status === "open" || status === "requested" ? "Nenhum saque aguardando" : "Nenhum saque"
+            status === "open" || status === "requested"
+              ? "Nenhum repasse aguardando"
+              : "Nenhum repasse"
           }
-          texto="Pedidos de saque dos afiliados aparecem aqui."
+          texto="Os repasses montados nos dias de repasse aparecem aqui."
         />
       ) : (
         <>
@@ -427,7 +463,7 @@ export function TabelaDeSaques({
                   {esconderAfiliado ? null : <TableHead>Afiliado</TableHead>}
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Pix</TableHead>
-                  <TableHead>Pedido</TableHead>
+                  <TableHead>Repasse</TableHead>
                   <TableHead className="text-right">Saldo elegível</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -439,12 +475,13 @@ export function TabelaDeSaques({
                   return (
                     <TableRow key={s.id} className="align-top">
                       {esconderAfiliado ? null : (
-                        <TableCell>
+                        <TableCell className="min-w-[160px]">
                           <LinkDoAfiliado id={s.afiliado_id} nome={s.afiliado} />
                           <div className="font-mono text-xs text-muted-foreground">{s.codigo}</div>
+                          <Contato s={s} />
                         </TableCell>
                       )}
-                      <TableCell className="text-right font-semibold tabular-nums">
+                      <TableCell className="whitespace-nowrap text-right font-semibold tabular-nums">
                         {reais(s.valor_cents)}
                       </TableCell>
                       <TableCell>
@@ -453,9 +490,9 @@ export function TabelaDeSaques({
                         <Avisos s={s} />
                       </TableCell>
                       <TableCell className="whitespace-nowrap text-xs">
-                        {quando(s.pedido_em)}
+                        <Ciclo s={s} />
                       </TableCell>
-                      <TableCell className="text-right tabular-nums">
+                      <TableCell className="whitespace-nowrap text-right tabular-nums">
                         {reais(s.elegivel_cents)}
                       </TableCell>
                       <TableCell>
@@ -481,7 +518,12 @@ export function TabelaDeSaques({
                     <div className="min-w-0">
                       <p className="text-lg font-semibold tabular-nums">{reais(s.valor_cents)}</p>
                       {esconderAfiliado ? null : <p className="truncate text-sm">{s.afiliado}</p>}
-                      <p className="text-xs text-muted-foreground">Pedido {quando(s.pedido_em)}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {s.ciclo
+                          ? `Repasse de ${dataDoDia(s.ciclo)}`
+                          : `Pedido ${quando(s.pedido_em)}`}
+                      </p>
+                      <Contato s={s} />
                     </div>
                     <SeloAdmin tom={st.tom}>{st.rotulo}</SeloAdmin>
                   </div>
@@ -515,10 +557,10 @@ export function TabelaDeSaques({
         aoFechar={() => setDecisao(null)}
         titulo={
           d?.acao === "approve"
-            ? "Aprovar saque"
+            ? "Aprovar repasse"
             : d?.acao === "pay"
-              ? "Marcar saque como pago"
-              : "Recusar saque"
+              ? "Marcar repasse como pago"
+              : "Recusar repasse"
         }
         perigosa={d?.acao === "reject"}
         rotuloDoBotao={
@@ -534,17 +576,19 @@ export function TabelaDeSaques({
               </p>
               {d.acao === "approve" ? (
                 <p>
-                  Aprovar diz que o pedido foi conferido. O dinheiro ainda não sai: o próximo passo
-                  é pagar.
+                  Aprovar diz que o repasse foi conferido. O dinheiro ainda não sai: o próximo passo
+                  é fazer o Pix e marcar como pago.
                 </p>
               ) : d.acao === "pay" ? (
                 <p>
-                  Confirme só depois de fazer a transferência no banco. Um saque pago não pode ser
+                  Confirme só depois de fazer a transferência no banco. Um repasse pago não pode ser
                   pago de novo nem desfeito.
                 </p>
               ) : (
                 <p>
-                  O valor volta a ficar disponível para o afiliado, e ele vê o motivo no portal.
+                  O valor volta para o saldo do afiliado e entra de novo no próximo dia de repasse.
+                  Ele vê o motivo no portal. Se o motivo for suspeita de fraude, suspenda o afiliado
+                  também — afiliado suspenso não recebe repasse.
                 </p>
               )}
             </>
@@ -571,10 +615,10 @@ export function TabelaDeSaques({
             await decidirSaque(d.saque.id, d.acao, motivo || null, extra || null);
             toast.success(
               d.acao === "approve"
-                ? "Saque aprovado."
+                ? "Repasse aprovado."
                 : d.acao === "pay"
-                  ? "Saque marcado como pago."
-                  : "Saque recusado.",
+                  ? "Repasse marcado como pago."
+                  : "Repasse recusado.",
             );
             await recarregar();
           } catch (e) {

@@ -38,8 +38,11 @@ export type RegrasPublicas = {
   comissao_meses: number | null;
   dias_para_liberar: number;
   saque_minimo_cents: number;
-  dias_do_link: number;
+  /** `null` = sem prazo: o primeiro clique vale para sempre. */
+  dias_do_link: number | null;
   aprovacao_manual: boolean;
+  /** Dias do mês em que o repasse é montado, ex.: [10, 20]. */
+  dias_de_repasse: number[];
 };
 
 export function validarCadastroDeAfiliado(
@@ -143,6 +146,82 @@ export function dataCurta(iso: string | null | undefined): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "—";
   return d.toLocaleDateString("pt-BR", { timeZone: "America/Sao_Paulo" });
+}
+
+// ───────────────────────────────────────────────────────────────────────
+// Repasses (dias 10 e 20)
+// ───────────────────────────────────────────────────────────────────────
+
+/**
+ * O robô do banco monta os repasses às 4h da manhã (horário de Brasília,
+ * 7h no relógio mundial) dos dias de repasse. O Brasil não tem mais horário
+ * de verão, então a diferença é sempre de 3 horas.
+ */
+const HORA_DO_REPASSE_UTC = 7;
+
+/**
+ * Quando é o próximo repasse. No próprio dia 10, depois das 4h, o repasse
+ * daquele dia já foi montado — então o próximo passa a ser o dia 20.
+ *
+ * Devolve a data/hora em texto ISO, ou `null` se a lista de dias vier vazia
+ * ou estragada.
+ */
+export function proximoRepasse(
+  dias: readonly number[] | null | undefined,
+  agora: Date = new Date(),
+): string | null {
+  const lista = Array.isArray(dias) ? dias : [];
+  const validos = [...new Set(lista.filter((d) => Number.isInteger(d) && d >= 1 && d <= 28))].sort(
+    (a, b) => a - b,
+  );
+  if (validos.length === 0) return null;
+  // O mês "de Brasília" de agora: 3 horas atrás no relógio mundial.
+  const brasilia = new Date(agora.getTime() - 3 * 60 * 60 * 1000);
+  const ano = brasilia.getUTCFullYear();
+  const mes = brasilia.getUTCMonth();
+  for (let passo = 0; passo < 3; passo++) {
+    for (const dia of validos) {
+      const quando = new Date(Date.UTC(ano, mes + passo, dia, HORA_DO_REPASSE_UTC));
+      if (quando.getTime() > agora.getTime()) return quando.toISOString();
+    }
+  }
+  return null;
+}
+
+/** [10, 20] → "10 e 20"; [5, 15, 25] → "5, 15 e 25"; [10] → "10". */
+export function listaDeDias(dias: readonly number[] | null | undefined): string {
+  const lista = [...(Array.isArray(dias) ? dias : [])].sort((a, b) => a - b).map(String);
+  if (lista.length <= 1) return lista.join("");
+  return `${lista.slice(0, -1).join(", ")} e ${lista[lista.length - 1]}`;
+}
+
+/** "nos dias 10 e 20" / "no dia 10" — para encaixar no meio de uma frase. */
+export function nosDias(dias: readonly number[] | null | undefined): string {
+  const lista = listaDeDias(dias);
+  if (!lista) return "nos dias de repasse";
+  return `${lista.includes(" ") ? "nos dias" : "no dia"} ${lista}`;
+}
+
+/** "Dias 10 e 20 de cada mês" / "Dia 10 de cada mês". */
+export function textoDosDiasDeRepasse(dias: readonly number[] | null | undefined): string {
+  const lista = listaDeDias(dias);
+  if (!lista) return "—";
+  return `${lista.includes(" ") ? "Dias" : "Dia"} ${lista} de cada mês`;
+}
+
+/** Quando a comissão vira saldo disponível, em palavras. */
+export function textoDaLiberacao(dias: number | null | undefined): string {
+  if (!dias) return "Libera assim que o pagamento do cliente é confirmado";
+  return `Libera ${dias} ${dias === 1 ? "dia" : "dias"} após o pagamento do cliente`;
+}
+
+/**
+ * "2026-10-10" → "10/10/2026". Para datas sem horário (o dia do repasse):
+ * converter para horário de Brasília faria meia-noite virar o dia anterior.
+ */
+export function dataDoDia(ymd: string | null | undefined): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(ymd ?? "");
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : "—";
 }
 
 /** Link público de divulgação do afiliado. */

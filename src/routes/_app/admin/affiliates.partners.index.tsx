@@ -112,6 +112,7 @@ function ListaDeAfiliados() {
                     <TableCell className="font-mono text-xs">{a.codigo}</TableCell>
                     <TableCell>
                       <SeloDoAfiliado status={a.status} />
+                      {a.sem_pix ? <SemPix /> : null}
                     </TableCell>
                     <TableCell className="text-right tabular-nums">{a.indicacoes}</TableCell>
                     <TableCell className="text-right tabular-nums">{a.clientes_ativos}</TableCell>
@@ -151,7 +152,10 @@ function ListaDeAfiliados() {
                       <p className="truncate font-medium">{a.nome}</p>
                       <p className="font-mono text-xs text-muted-foreground">{a.codigo}</p>
                     </div>
-                    <SeloDoAfiliado status={a.status} />
+                    <div className="flex flex-col items-end gap-1">
+                      <SeloDoAfiliado status={a.status} />
+                      {a.sem_pix ? <SemPix /> : null}
+                    </div>
                   </div>
                   <dl className="mt-2 grid grid-cols-3 gap-2 text-xs">
                     <div>
@@ -183,5 +187,17 @@ function ListaDeAfiliados() {
         </>
       )}
     </div>
+  );
+}
+
+/** Sem chave Pix, o repasse dos dias 10 e 20 pula este afiliado. */
+function SemPix() {
+  return (
+    <span
+      className="mt-1 inline-block rounded-full border border-amber-500/40 bg-amber-500/10 px-2 py-0.5 text-[11px] text-amber-700 dark:text-amber-400"
+      title="Sem chave Pix: fica fora do repasse até cadastrar"
+    >
+      Sem Pix
+    </span>
   );
 }

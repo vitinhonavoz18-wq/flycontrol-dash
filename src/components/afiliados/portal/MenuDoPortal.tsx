@@ -43,8 +43,8 @@ const ITENS_DO_MENU: Item[] = [
   },
   {
     to: "/affiliates/dashboard/withdrawals",
-    rotulo: "Saques",
-    curto: "Saques",
+    rotulo: "Repasses",
+    curto: "Repasses",
     icone: ArrowDownToLine,
   },
   {

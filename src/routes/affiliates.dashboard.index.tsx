@@ -20,10 +20,13 @@ import {
 import { usePerfil } from "@/components/afiliados/portal/perfilContexto";
 import { useResumoDoAfiliado } from "@/lib/afiliados/portal";
 import {
+  dataCurta,
   mensagemDeErro,
   porcentagemDeBps,
+  proximoRepasse,
   reais,
   taxaDeConversao,
+  textoDaLiberacao,
 } from "@/lib/afiliados/validacao";
 
 export const Route = createFileRoute("/affiliates/dashboard/")({ component: VisaoGeral });
@@ -32,6 +35,7 @@ function VisaoGeral() {
   const perfil = usePerfil();
   const resumo = useResumoDoAfiliado();
   const primeiroNome = perfil.nome.split(" ")[0];
+  const proximo = proximoRepasse(perfil.dias_de_repasse);
 
   return (
     <div className="space-y-6 sm:space-y-8">
@@ -55,14 +59,16 @@ function VisaoGeral() {
           <CartaoNumero
             rotulo="Saldo disponível"
             valor={reais(resumo.data.disponivel_cents)}
-            detalhe="Pronto para sacar"
+            detalhe={
+              proximo ? `Entra no repasse de ${dataCurta(proximo)}` : "Entra no próximo repasse"
+            }
             icone={<Wallet className="size-4" />}
             tom="verde"
           />
           <CartaoNumero
             rotulo="Saldo pendente"
             valor={reais(resumo.data.pendente_cents)}
-            detalhe={`Libera ${perfil.dias_para_liberar} dias após o pagamento`}
+            detalhe={textoDaLiberacao(perfil.dias_para_liberar)}
             icone={<Clock3 className="size-4" />}
             tom="laranja"
           />
@@ -71,7 +77,7 @@ function VisaoGeral() {
             valor={reais(resumo.data.recebido_cents)}
             detalhe={
               resumo.data.solicitado_cents > 0
-                ? `${reais(resumo.data.solicitado_cents)} em saque`
+                ? `${reais(resumo.data.solicitado_cents)} em repasse`
                 : "Já pago na sua conta"
             }
             icone={<ArrowDownToLine className="size-4" />}

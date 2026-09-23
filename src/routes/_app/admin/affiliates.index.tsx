@@ -3,6 +3,7 @@ import {
   AlertTriangle,
   ArrowDownToLine,
   BadgeDollarSign,
+  CalendarClock,
   CheckCircle2,
   Clock3,
   Store,
@@ -14,7 +15,7 @@ import {
 import { GraficosAdmin } from "@/components/afiliados/admin/GraficosAdmin";
 import { Carregando, Erro, Kpi } from "@/components/afiliados/admin/PecasAdmin";
 import { useResumoAdmin } from "@/lib/afiliados/admin";
-import { mensagemDeErro, reais } from "@/lib/afiliados/validacao";
+import { dataCurta, mensagemDeErro, proximoRepasse, reais } from "@/lib/afiliados/validacao";
 
 export const Route = createFileRoute("/_app/admin/affiliates/")({ component: VisaoGeralAdmin });
 
@@ -26,41 +27,58 @@ function VisaoGeralAdmin() {
     return <Erro mensagem={mensagemDeErro(resumo.error)} tentarDeNovo={() => resumo.refetch()} />;
   }
   const r = resumo.data;
+  const proximo = proximoRepasse(r.dias_de_repasse);
 
   return (
     <div className="space-y-6">
-      {r.saques_em_analise > 0 || r.afiliados_pendentes > 0 || r.alertas_30_dias > 0 ? (
-        <div className="flex flex-wrap gap-2">
-          {r.afiliados_pendentes > 0 ? (
-            <Link
-              to="/admin/affiliates/partners"
-              className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-700 dark:text-amber-400"
-            >
-              {r.afiliados_pendentes}{" "}
-              {r.afiliados_pendentes === 1 ? "cadastro aguardando" : "cadastros aguardando"}{" "}
-              aprovação
-            </Link>
-          ) : null}
-          {r.saques_em_analise > 0 ? (
-            <Link
-              to="/admin/affiliates/withdrawals"
-              className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm text-primary"
-            >
-              {r.saques_em_analise}{" "}
-              {r.saques_em_analise === 1 ? "saque aguardando" : "saques aguardando"} análise
-            </Link>
-          ) : null}
-          {r.alertas_30_dias > 0 ? (
-            <Link
-              to="/admin/affiliates/audit"
-              className="flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm text-red-700 dark:text-red-400"
-            >
-              <AlertTriangle className="h-4 w-4" /> {r.alertas_30_dias}{" "}
-              {r.alertas_30_dias === 1 ? "alerta" : "alertas"} de atividade suspeita (30 dias)
-            </Link>
-          ) : null}
-        </div>
-      ) : null}
+      <div className="flex flex-wrap gap-2">
+        <Link
+          to="/admin/affiliates/withdrawals"
+          className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm text-muted-foreground"
+        >
+          <CalendarClock className="h-4 w-4" /> Próximo repasse automático:{" "}
+          <strong className="text-foreground">{proximo ? dataCurta(proximo) : "—"}</strong>
+        </Link>
+        {r.com_saldo_sem_pix > 0 ? (
+          <Link
+            to="/admin/affiliates/partners"
+            className="flex items-center gap-1.5 rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-700 dark:text-amber-400"
+          >
+            <AlertTriangle className="h-4 w-4" /> {r.com_saldo_sem_pix}{" "}
+            {r.com_saldo_sem_pix === 1
+              ? "afiliado com saldo e sem chave Pix"
+              : "afiliados com saldo e sem chave Pix"}{" "}
+            (fica fora do repasse)
+          </Link>
+        ) : null}
+        {r.afiliados_pendentes > 0 ? (
+          <Link
+            to="/admin/affiliates/partners"
+            className="rounded-full border border-amber-500/40 bg-amber-500/10 px-3 py-1.5 text-sm text-amber-700 dark:text-amber-400"
+          >
+            {r.afiliados_pendentes}{" "}
+            {r.afiliados_pendentes === 1 ? "cadastro aguardando" : "cadastros aguardando"} aprovação
+          </Link>
+        ) : null}
+        {r.saques_em_analise > 0 ? (
+          <Link
+            to="/admin/affiliates/withdrawals"
+            className="rounded-full border border-primary/40 bg-primary/10 px-3 py-1.5 text-sm text-primary"
+          >
+            {r.saques_em_analise}{" "}
+            {r.saques_em_analise === 1 ? "repasse aguardando" : "repasses aguardando"} conferência
+          </Link>
+        ) : null}
+        {r.alertas_30_dias > 0 ? (
+          <Link
+            to="/admin/affiliates/audit"
+            className="flex items-center gap-1.5 rounded-full border border-red-500/40 bg-red-500/10 px-3 py-1.5 text-sm text-red-700 dark:text-red-400"
+          >
+            <AlertTriangle className="h-4 w-4" /> {r.alertas_30_dias}{" "}
+            {r.alertas_30_dias === 1 ? "alerta" : "alertas"} de atividade suspeita (30 dias)
+          </Link>
+        ) : null}
+      </div>
 
       <section
         aria-label="Números do programa"
@@ -91,7 +109,7 @@ function VisaoGeralAdmin() {
           icone={Wallet}
           detalhe={
             r.comissoes_solicitadas_cents > 0
-              ? `+ ${reais(r.comissoes_solicitadas_cents)} em saque`
+              ? `+ ${reais(r.comissoes_solicitadas_cents)} em repasse`
               : undefined
           }
         />
@@ -101,14 +119,14 @@ function VisaoGeralAdmin() {
           icone={BadgeDollarSign}
         />
         <Kpi
-          rotulo="Saques aguardando análise"
+          rotulo="Repasses em conferência"
           valor={r.saques_em_analise}
           detalhe={r.saques_em_analise > 0 ? reais(r.saques_em_analise_cents) : undefined}
           icone={ArrowDownToLine}
           destaque={r.saques_em_analise > 0}
         />
         <Kpi
-          rotulo="Aprovados, aguardando pagamento"
+          rotulo="Aprovados, aguardando o Pix"
           valor={r.saques_a_pagar}
           detalhe={r.saques_a_pagar > 0 ? reais(r.saques_a_pagar_cents) : undefined}
           icone={ArrowDownToLine}

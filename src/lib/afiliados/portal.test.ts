@@ -4,14 +4,19 @@ import { etapasDoSaque, rotuloDoPonto } from "./situacoes";
 import {
   linkDoAfiliado,
   linkParaExibir,
+  listaDeDias,
   mascararPix,
   mensagemDeErro,
+  nosDias,
   porcentagemDeBps,
   preencherTexto,
   problemaNaChavePix,
+  proximoRepasse,
   reais,
   situacaoBloqueante,
   taxaDeConversao,
+  textoDaLiberacao,
+  textoDosDiasDeRepasse,
   validarCadastroDeAfiliado,
 } from "./validacao";
 
@@ -132,7 +137,7 @@ describe("mensagens e situações", () => {
       pago_em: "2026-08-03",
       recusado_em: null,
     });
-    expect(pago.map((e) => e.rotulo)).toEqual(["Solicitado", "Em análise", "Aprovado", "Pago"]);
+    expect(pago.map((e) => e.rotulo)).toEqual(["Montado", "Conferência", "Aprovado", "Pago"]);
     expect(pago.every((e) => e.feita)).toBe(true);
 
     const recusado = etapasDoSaque({
@@ -142,7 +147,7 @@ describe("mensagens e situações", () => {
       pago_em: null,
       recusado_em: "2026-08-02",
     });
-    expect(recusado.map((e) => e.rotulo)).toEqual(["Solicitado", "Em análise", "Recusado"]);
+    expect(recusado.map((e) => e.rotulo)).toEqual(["Montado", "Conferência", "Recusado"]);
   });
 });
 
@@ -238,5 +243,105 @@ describe("migration do portal", () => {
       sql.indexOf("function public.afiliado_minhas_comissoes("),
     );
     expect(corpo).not.toMatch(/owner_id|phone|email|address|document/);
+  });
+});
+
+describe("repasses automáticos (dias 10 e 20)", () => {
+  it("o próximo repasse é o próximo dia 10 ou 20, às 4h de Brasília", () => {
+    // 23/09, meio-dia: próximo é 10/10.
+    expect(proximoRepasse([10, 20], new Date("2026-09-23T15:00:00Z"))).toBe(
+      "2026-10-10T07:00:00.000Z",
+    );
+    // Dia 10, 3h59 de Brasília: o repasse de hoje ainda não saiu.
+    expect(proximoRepasse([10, 20], new Date("2026-10-10T06:59:00Z"))).toBe(
+      "2026-10-10T07:00:00.000Z",
+    );
+    // Dia 10, 4h em ponto: o de hoje já foi montado, o próximo é o dia 20.
+    expect(proximoRepasse([10, 20], new Date("2026-10-10T07:00:00Z"))).toBe(
+      "2026-10-20T07:00:00.000Z",
+    );
+    // Virada de ano.
+    expect(proximoRepasse([10, 20], new Date("2026-12-25T12:00:00Z"))).toBe(
+      "2027-01-10T07:00:00.000Z",
+    );
+    // 30/09 às 23h de Brasília já é 01/10 no relógio mundial: continua sendo setembro aqui.
+    expect(proximoRepasse([10, 20], new Date("2026-10-01T02:00:00Z"))).toBe(
+      "2026-10-10T07:00:00.000Z",
+    );
+  });
+
+  it("lista de dias estragada não inventa data", () => {
+    expect(proximoRepasse([], new Date("2026-09-23T12:00:00Z"))).toBeNull();
+    expect(proximoRepasse(null)).toBeNull();
+    expect(proximoRepasse([0, 29, 31])).toBeNull();
+    // Resposta estranha do banco não derruba a tela.
+    expect(proximoRepasse(0 as unknown as number[])).toBeNull();
+    expect(listaDeDias("10" as unknown as number[])).toBe("");
+    expect(proximoRepasse([20, 10, 10], new Date("2026-09-23T12:00:00Z"))).toBe(
+      proximoRepasse([10, 20], new Date("2026-09-23T12:00:00Z")),
+    );
+  });
+
+  it("os dias e a liberação viram frase", () => {
+    expect(listaDeDias([10, 20])).toBe("10 e 20");
+    expect(listaDeDias([25, 5, 15])).toBe("5, 15 e 25");
+    expect(listaDeDias([10])).toBe("10");
+    expect(listaDeDias([])).toBe("");
+    expect(textoDosDiasDeRepasse([10, 20])).toBe("Dias 10 e 20 de cada mês");
+    expect(textoDosDiasDeRepasse([15])).toBe("Dia 15 de cada mês");
+    expect(nosDias([10, 20])).toBe("nos dias 10 e 20");
+    expect(nosDias([10])).toBe("no dia 10");
+    expect(nosDias(undefined)).toBe("nos dias de repasse");
+    expect(textoDaLiberacao(0)).toBe("Libera assim que o pagamento do cliente é confirmado");
+    expect(textoDaLiberacao(1)).toBe("Libera 1 dia após o pagamento do cliente");
+    expect(textoDaLiberacao(7)).toBe("Libera 7 dias após o pagamento do cliente");
+  });
+
+  it("o parceiro não tem mais como pedir saque", () => {
+    const portal = readFileSync("src/lib/afiliados/portal.ts", "utf8");
+    const tela = readFileSync("src/routes/affiliates.dashboard.withdrawals.tsx", "utf8");
+    expect(portal).not.toContain("afiliado_solicitar_saque");
+    expect(tela).not.toMatch(/Solicitar saque|solicitarSaque/);
+  });
+
+  const sql = readFileSync("supabase/migrations/20260926120000_repasses_automaticos.sql", "utf8")
+    .replace(/--[^\n]*/g, "")
+    .replace(/\s+/g, " ")
+    .toLowerCase();
+
+  it("só o robô monta o repasse; o botão da equipe exige administrador", () => {
+    expect(sql).toContain(
+      "revoke execute on function public.afiliado_solicitar_saque(bigint) from public, anon, authenticated;",
+    );
+    expect(sql).toContain(
+      "grant execute on function public.afiliado_gerar_repasses(boolean) to service_role;",
+    );
+    expect(sql).not.toMatch(/afiliado_gerar_repasses\(boolean\)[^;]*to [^;]*authenticated/);
+    const corpo = sql.slice(sql.indexOf("function public.afiliado_admin_gerar_repasses()"));
+    const primeiro = corpo.slice(corpo.indexOf(" begin ") + 7).trim();
+    expect(primeiro.startsWith("perform public.afiliado_exigir_admin();")).toBe(true);
+  });
+
+  it("um repasse por parceiro por dia, e nunca dois abertos ao mesmo tempo", () => {
+    expect(sql).toContain(
+      "create unique index if not exists affiliate_withdrawals_um_por_ciclo on public.affiliate_withdrawals (affiliate_id, payout_cycle) where payout_cycle is not null",
+    );
+    const corpo = sql.slice(sql.indexOf("function public.afiliado_gerar_repasses("));
+    expect(corpo).toContain("status in ('requested', 'approved')");
+    expect(corpo).toContain("payout_cycle = v_hoje");
+    expect(corpo).toContain("v_total < v_cfg.minimum_withdrawal_cents");
+    expect(corpo).toContain("where a.status = 'active'");
+    expect(corpo).toContain("for update");
+  });
+
+  it("as regras do dono ficam gravadas: 15%, R$ 100, dias 10 e 20, link sem prazo", () => {
+    const regras = sql.slice(sql.lastIndexOf("update public.affiliate_settings set"));
+    expect(regras).toContain("default_commission_bps = 1500");
+    expect(regras).toContain("commission_duration_months = null");
+    expect(regras).toContain("minimum_withdrawal_cents = 10000");
+    expect(regras).toContain("referral_cookie_days = null");
+    expect(regras).toContain("approval_required = true");
+    expect(regras).toContain("payout_days = '{10,20}'");
+    expect(sql).toContain("cron.schedule('afiliados-repasses', '0 7 * * *'");
   });
 });

@@ -84,7 +84,7 @@ function acoesPossiveis(a: FichaDoAfiliado): AcaoDeSituacao[] {
       para: "suspended",
       titulo: "Suspender afiliado",
       texto:
-        "Enquanto suspenso: o link não registra novas indicações, faturas pagas pelos clientes dele não geram comissão, comissões pendentes não liberam e ele não pode pedir saque. Nada do histórico é apagado.",
+        "Enquanto suspenso: o link não registra novas indicações, faturas pagas pelos clientes dele não geram comissão, comissões pendentes não liberam e ele não recebe repasse. Nada do histórico é apagado.",
       perigosa: true,
     });
   }
@@ -229,7 +229,7 @@ function FichaDoAfiliadoAdmin() {
         <Kpi
           rotulo="Disponível"
           valor={reais(a.disponivel_cents)}
-          detalhe={a.solicitado_cents > 0 ? `+ ${reais(a.solicitado_cents)} em saque` : undefined}
+          detalhe={a.solicitado_cents > 0 ? `+ ${reais(a.solicitado_cents)} em repasse` : undefined}
           icone={Wallet}
         />
         <Kpi rotulo="Pago" valor={reais(a.pago_cents)} icone={BadgeDollarSign} />
@@ -285,7 +285,7 @@ function FichaDoAfiliadoAdmin() {
             {(
               [
                 ["comissoes", "Comissões"],
-                ["saques", "Saques"],
+                ["saques", "Repasses"],
                 ["indicacoes", "Indicações"],
                 ["eventos", "Eventos"],
               ] as const

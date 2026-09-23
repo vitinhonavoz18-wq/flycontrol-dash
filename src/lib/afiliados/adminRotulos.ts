@@ -3,7 +3,7 @@
  */
 
 import type { SituacaoDoAfiliado } from "./portal";
-import { porcentagemDeBps, reais } from "./validacao";
+import { listaDeDias, porcentagemDeBps, reais } from "./validacao";
 
 export const SITUACAO_DO_AFILIADO: Record<SituacaoDoAfiliado, { rotulo: string; classe: string }> =
   {
@@ -46,18 +46,19 @@ export const NOME_DO_EVENTO: Record<string, string> = {
   COMMISSION_RELEASED: "Comissão liberada",
   COMMISSION_REVERSED: "Comissão revertida",
   COMMISSION_ADJUSTED: "Estorno manual de comissão",
-  WITHDRAWAL_REQUESTED: "Saque solicitado",
-  WITHDRAWAL_APPROVED: "Saque aprovado",
-  WITHDRAWAL_PAID: "Saque pago",
-  WITHDRAWAL_REJECTED: "Saque recusado",
+  WITHDRAWAL_REQUESTED: "Repasse montado",
+  WITHDRAWAL_APPROVED: "Repasse aprovado",
+  WITHDRAWAL_PAID: "Repasse pago",
+  WITHDRAWAL_REJECTED: "Repasse recusado",
   SETTINGS_CHANGED: "Configurações alteradas",
   SUSPICIOUS_ACTIVITY: "Atividade suspeita",
+  PAYOUT_CYCLE_RUN: "Rodada de repasses",
 };
 
 export const REGRA_SUSPEITA: Record<string, string> = {
   same_phone_as_affiliate: "Loja indicada tem o mesmo celular do afiliado",
   many_conversions_same_device: "Várias lojas criadas pelo mesmo aparelho/rede em 24h",
-  withdrawal_soon_after_pix_change: "Saque pedido logo depois de trocar a chave Pix",
+  withdrawal_soon_after_pix_change: "Repasse montado logo depois de trocar a chave Pix",
 };
 
 const NOME_DO_CAMPO: Record<string, string> = {
@@ -65,10 +66,11 @@ const NOME_DO_CAMPO: Record<string, string> = {
   default_commission_bps: "Comissão padrão",
   commission_duration_months: "Duração",
   commission_release_days: "Dias para liberar",
-  minimum_withdrawal_cents: "Saque mínimo",
+  minimum_withdrawal_cents: "Repasse mínimo",
   referral_cookie_days: "Janela do link",
   commission_base: "Base da comissão",
   approval_required: "Aprovação manual",
+  payout_days: "Dias de repasse",
 };
 
 export const NOME_DA_BASE: Record<string, string> = {
@@ -78,9 +80,13 @@ export const NOME_DA_BASE: Record<string, string> = {
 };
 
 function valorDoCampo(campo: string, v: unknown): string {
-  if (v === null || v === undefined)
-    return campo === "commission_duration_months" ? "sem limite" : "—";
+  if (v === null || v === undefined) {
+    if (campo === "commission_duration_months") return "sem limite";
+    if (campo === "referral_cookie_days") return "sem prazo";
+    return "—";
+  }
   if (typeof v === "boolean") return v ? "sim" : "não";
+  if (campo === "payout_days" && Array.isArray(v)) return `dias ${listaDeDias(v.map(Number))}`;
   if (campo.endsWith("_bps")) return porcentagemDeBps(Number(v));
   if (campo.endsWith("_cents")) return reais(Number(v));
   if (campo === "commission_base") return NOME_DA_BASE[String(v)] ?? String(v);
@@ -130,7 +136,25 @@ export function resumoDoEvento(tipo: string, d: Record<string, unknown>): string
       if (d.adjustment_amount_cents !== undefined)
         partes.push(`ajuste de ${reais(Number(d.adjustment_amount_cents))}`);
       break;
+    case "PAYOUT_CYCLE_RUN": {
+      const n = Number(d.repasses ?? 0);
+      partes.push(
+        `${n} ${n === 1 ? "repasse" : "repasses"} · ${reais(Number(d.valor_cents ?? 0))}`,
+      );
+      const extras: [unknown, string][] = [
+        [d.abaixo_do_minimo, "abaixo do mínimo"],
+        [d.sem_pix, "sem Pix"],
+        [d.com_repasse_em_aberto, "com repasse anterior em aberto"],
+        [d.falhas, "com falha"],
+      ];
+      for (const [qtd, texto] of extras) if (Number(qtd ?? 0) > 0) partes.push(`${qtd} ${texto}`);
+      if (d.forcado) partes.push("acionado pela equipe");
+      break;
+    }
     case "WITHDRAWAL_REQUESTED":
+      if (d.amount_cents !== undefined) partes.push(reais(Number(d.amount_cents)));
+      if (d.origin === "automatic_payout") partes.push("automático");
+      break;
     case "WITHDRAWAL_APPROVED":
     case "WITHDRAWAL_PAID":
     case "WITHDRAWAL_REJECTED":
@@ -186,6 +210,39 @@ export function reaisParaCentavos(texto: string): number | null {
   if (!/^\d{1,7}(\.\d{1,2})?$/.test(t)) return null;
   const [inteiro, fracao = ""] = t.split(".");
   return Number(inteiro) * 100 + Number(fracao.padEnd(2, "0"));
+}
+
+/**
+ * "10, 20" / "10 e 20" / "20 10" → [10, 20]. Cada dia de 1 a 28 (dia 30 não
+ * existe em fevereiro), de 1 a 4 dias, sem repetir. Devolve null se não der.
+ */
+export function diasDoTexto(texto: string): number[] | null {
+  const pedacos = texto
+    .split(/[\s,;e]+/i)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  if (pedacos.length === 0 || pedacos.some((p) => !/^\d{1,2}$/.test(p))) return null;
+  const dias = [...new Set(pedacos.map(Number))].sort((a, b) => a - b);
+  if (dias.length > 4 || dias.some((d) => d < 1 || d > 28)) return null;
+  return dias;
+}
+
+/** [10, 20] → "10, 20" para preencher o campo de edição. */
+export function diasParaCampo(dias: readonly number[]): string {
+  return [...dias].sort((a, b) => a - b).join(", ");
+}
+
+/**
+ * Celular do parceiro → link que abre a conversa no WhatsApp. A equipe
+ * fala com o parceiro na hora de mandar o Pix. `null` se o número não
+ * parece um celular brasileiro.
+ */
+export function linkDoWhatsApp(telefone: string | null | undefined): string | null {
+  const digitos = (telefone ?? "").replace(/\D/g, "");
+  if (digitos.length === 10 || digitos.length === 11) return `https://wa.me/55${digitos}`;
+  if ((digitos.length === 12 || digitos.length === 13) && digitos.startsWith("55"))
+    return `https://wa.me/${digitos}`;
+  return null;
 }
 
 /** Centavos → "100,00" para preencher o campo de edição. */

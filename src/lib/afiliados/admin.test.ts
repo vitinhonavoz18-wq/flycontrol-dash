@@ -3,11 +3,15 @@ import { describe, expect, it } from "vitest";
 import {
   bpsParaCampo,
   centavosParaCampo,
+  diasDoTexto,
+  diasParaCampo,
+  linkDoWhatsApp,
   NOME_DO_EVENTO,
   porcentagemParaBps,
   reaisParaCentavos,
   resumoDoEvento,
 } from "./adminRotulos";
+import { dataDoDia } from "./validacao";
 
 describe("campos de número do painel", () => {
   it("porcentagem digitada vira pontos-base sem arredondar", () => {
@@ -32,6 +36,30 @@ describe("campos de número do painel", () => {
     expect(reaisParaCentavos("dez")).toBeNull();
   });
 
+  it("dias de repasse digitados viram lista organizada", () => {
+    expect(diasDoTexto("10, 20")).toEqual([10, 20]);
+    expect(diasDoTexto("20 e 10")).toEqual([10, 20]);
+    expect(diasDoTexto("5;15;25")).toEqual([5, 15, 25]);
+    expect(diasDoTexto("10, 10")).toEqual([10]);
+    expect(diasDoTexto("29")).toBeNull(); // não existe em fevereiro
+    expect(diasDoTexto("0")).toBeNull();
+    expect(diasDoTexto("1, 2, 3, 4, 5")).toBeNull(); // no máximo 4
+    expect(diasDoTexto("")).toBeNull();
+    expect(diasDoTexto("dez")).toBeNull();
+    expect(diasParaCampo([20, 10])).toBe("10, 20");
+    expect(diasDoTexto(diasParaCampo([10, 20]))).toEqual([10, 20]);
+  });
+
+  it("celular do parceiro abre o WhatsApp; data do repasse não muda de dia", () => {
+    expect(linkDoWhatsApp("11977776666")).toBe("https://wa.me/5511977776666");
+    expect(linkDoWhatsApp("(11) 3333-4444")).toBe("https://wa.me/551133334444");
+    expect(linkDoWhatsApp("+55 11 97777-6666")).toBe("https://wa.me/5511977776666");
+    expect(linkDoWhatsApp("123")).toBeNull();
+    expect(linkDoWhatsApp(null)).toBeNull();
+    expect(dataDoDia("2026-10-10")).toBe("10/10/2026");
+    expect(dataDoDia(null)).toBe("—");
+  });
+
   it("o caminho de volta preenche o campo do jeito que se digita", () => {
     expect(centavosParaCampo(10000)).toBe("100,00");
     expect(centavosParaCampo(10050)).toBe("100,50");
@@ -48,13 +76,12 @@ describe("campos de número do painel", () => {
 
 describe("auditoria legível", () => {
   it("todo evento do banco tem nome em português", () => {
-    const sql = readFileSync(
-      "supabase/migrations/20260925120000_admin_do_programa_de_afiliados.sql",
-      "utf8",
-    );
+    // A lista mais nova de tipos de evento é a da migration dos repasses.
+    const sql = readFileSync("supabase/migrations/20260926120000_repasses_automaticos.sql", "utf8");
     const lista = sql.slice(sql.indexOf("check (event_type in ("), sql.indexOf("));"));
     const tipos = [...lista.matchAll(/'([A-Z_]+)'/g)].map((m) => m[1]);
     expect(tipos.length).toBeGreaterThan(20);
+    expect(tipos).toContain("PAYOUT_CYCLE_RUN");
     for (const t of tipos) expect(NOME_DO_EVENTO[t], t).toBeTruthy();
   });
 
@@ -84,8 +111,43 @@ describe("auditoria legível", () => {
         commission_duration_months: { old: null, new: 12 },
       },
     });
-    expect(r).toContain("Saque mínimo: R$ 100,00 → R$ 50,00");
+    expect(r).toContain("Repasse mínimo: R$ 100,00 → R$ 50,00");
     expect(r).toContain("Duração: sem limite → 12 meses");
+  });
+
+  it("regras do dono na auditoria: link sem prazo e dias de repasse legíveis", () => {
+    const r = resumoDoEvento("SETTINGS_CHANGED", {
+      reason: "Regras definidas pelo dono do programa",
+      changes: {
+        referral_cookie_days: { old: 30, new: null },
+        payout_days: { old: null, new: [10, 20] },
+        commission_release_days: { old: 7, new: 0 },
+      },
+    });
+    expect(r).toContain("Janela do link: 30 dias → sem prazo");
+    expect(r).toContain("Dias de repasse: — → dias 10 e 20");
+    expect(r).toContain("Dias para liberar: 7 dias → 0 dias");
+    expect(r).toContain("motivo: Regras definidas pelo dono do programa");
+  });
+
+  it("rodada de repasses resume quantos, quanto e quem ficou de fora", () => {
+    expect(
+      resumoDoEvento("PAYOUT_CYCLE_RUN", {
+        repasses: 3,
+        valor_cents: 45000,
+        abaixo_do_minimo: 2,
+        sem_pix: 1,
+        com_repasse_em_aberto: 0,
+        falhas: 0,
+        forcado: false,
+      }),
+    ).toBe("3 repasses · R$ 450,00 · 2 abaixo do mínimo · 1 sem Pix");
+    expect(
+      resumoDoEvento("PAYOUT_CYCLE_RUN", { repasses: 1, valor_cents: 12000, forcado: true }),
+    ).toBe("1 repasse · R$ 120,00 · acionado pela equipe");
+    expect(
+      resumoDoEvento("WITHDRAWAL_REQUESTED", { amount_cents: 12000, origin: "automatic_payout" }),
+    ).toBe("R$ 120,00 · automático");
   });
 
   it("saque pago mostra valor e comprovante; suspensão mostra o motivo", () => {

@@ -27,7 +27,7 @@ const TEXTOS: Record<
     icone: <PauseCircle className="size-6" />,
     titulo: "Sua conta de parceiro está suspensa.",
     texto:
-      "Enquanto a suspensão durar, seu link não registra novas indicações e não é possível pedir saque. Fale com a gente para entender o motivo.",
+      "Enquanto a suspensão durar, seu link não registra novas indicações, você não gera comissão e não recebe repasse. Fale com a gente para entender o motivo.",
     podeAjustar: true,
   },
   blocked: {

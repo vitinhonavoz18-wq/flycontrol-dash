@@ -22,6 +22,7 @@ import {
   normalizarCodigoDeAfiliado,
   opcoesDoCookie,
   segundosAteVencer,
+  segundosDoCookie,
   tokenDoCookie,
 } from "./codigo";
 
@@ -67,17 +68,19 @@ async function impressaoDoIp(ip: string): Promise<string | null> {
 
 /**
  * A indicação que o navegador já carrega ainda serve? Serve se o banco
- * conhece a ficha, ela não foi usada e não venceu.
+ * conhece a ficha, ela não foi usada e não venceu. Devolve a data de
+ * vencimento (para renovar o cookie) ou `null` se não serve.
  */
-async function indicacaoGuardadaAindaVale(token: string): Promise<boolean> {
+async function vencimentoDaIndicacaoGuardada(token: string): Promise<string | null> {
   const db = supabaseAdmin as unknown as AfiliadosDb;
   const { data, error } = await db
     .from("affiliate_attributions")
     .select("converted_at, expires_at")
     .eq("token", token)
     .maybeSingle();
-  if (error || !data) return false;
-  return data.converted_at === null && segundosAteVencer(data.expires_at) > 0;
+  if (error || !data) return null;
+  if (data.converted_at !== null || segundosAteVencer(data.expires_at) <= 0) return null;
+  return data.expires_at;
 }
 
 export type RespostaDaVisita = { guardado: boolean };
@@ -100,8 +103,18 @@ export const registrarVisitaDeAfiliado = createServerFn({ method: "POST" })
       // guardada, o segundo link não troca o dono — nem se for de outro
       // afiliado. Se a guardada não serve mais (venceu, foi usada, o
       // afiliado saiu), aí sim a nova ocupa o lugar.
+      //
+      // O navegador só guarda cookie por até 400 dias. Quando o link é "sem
+      // prazo", cada novo clique renova esses 400 dias — sempre com a ficha
+      // do PRIMEIRO afiliado, nunca com a do novo link.
       const guardado = tokenDoCookie(getCookie(COOKIE_DA_INDICACAO));
-      if (guardado && (await indicacaoGuardadaAindaVale(guardado))) {
+      const vencimentoGuardado = guardado ? await vencimentoDaIndicacaoGuardada(guardado) : null;
+      if (guardado && vencimentoGuardado) {
+        setCookie(
+          COOKIE_DA_INDICACAO,
+          guardado,
+          opcoesDoCookie(segundosDoCookie(vencimentoGuardado)),
+        );
         return { guardado: false };
       }
 
@@ -122,7 +135,7 @@ export const registrarVisitaDeAfiliado = createServerFn({ method: "POST" })
       const visita = linhas?.[0];
       if (!visita) return { guardado: false };
 
-      const segundos = segundosAteVencer(visita.expires_at);
+      const segundos = segundosDoCookie(visita.expires_at);
       if (segundos <= 0) return { guardado: false };
 
       setCookie(COOKIE_DA_INDICACAO, visita.token, opcoesDoCookie(segundos));

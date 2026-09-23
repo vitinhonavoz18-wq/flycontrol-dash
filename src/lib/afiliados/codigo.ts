@@ -62,6 +62,21 @@ export function segundosAteVencer(venceEm: string, agora: Date = new Date()): nu
 }
 
 /**
+ * O máximo que um navegador guarda um cookie: 400 dias. Pedir mais não
+ * adianta — o Chrome e os outros cortam em 400 do mesmo jeito. Por isso o
+ * link "sem prazo" é renovado a cada novo clique (veja `rastreio.functions`).
+ */
+export const LIMITE_DO_COOKIE_SEGUNDOS = 400 * 24 * 60 * 60;
+
+/**
+ * Quanto tempo o cookie da indicação vale: até a data que o banco deu, mas
+ * nunca mais que o limite do navegador.
+ */
+export function segundosDoCookie(venceEm: string, agora: Date = new Date()): number {
+  return Math.min(segundosAteVencer(venceEm, agora), LIMITE_DO_COOKIE_SEGUNDOS);
+}
+
+/**
  * Opções do cookie. Cada uma tem motivo:
  *
  * - `httpOnly`: o JavaScript da página não enxerga nem troca o valor. Sem
