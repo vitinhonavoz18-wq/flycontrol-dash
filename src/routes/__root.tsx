@@ -18,6 +18,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { InstallBanner } from "@/components/pwa/InstallBanner";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
+import { CapturaDeIndicacao } from "@/components/afiliados/CapturaDeIndicacao";
 
 /**
  * O endereço oficial do site e a imagem que aparece na prévia do link.
@@ -183,6 +184,8 @@ function RootComponent() {
           <Toaster />
           <InstallBanner />
           <ServiceWorkerRegistration />
+          {/* Link de afiliado (?ref=CODIGO) em qualquer página do site. */}
+          <CapturaDeIndicacao />
         </AuthProvider>
       </ThemeProvider>
     </QueryClientProvider>
