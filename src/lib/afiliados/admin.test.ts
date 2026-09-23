@@ -5,6 +5,7 @@ import {
   centavosParaCampo,
   diasDoTexto,
   diasParaCampo,
+  lembreteDeRepasses,
   linkDoWhatsApp,
   NOME_DO_EVENTO,
   porcentagemParaBps,
@@ -148,6 +149,31 @@ describe("auditoria legível", () => {
     expect(
       resumoDoEvento("WITHDRAWAL_REQUESTED", { amount_cents: 12000, origin: "automatic_payout" }),
     ).toBe("R$ 120,00 · automático");
+  });
+
+  it("lembrete da conta administrativa só aparece quando há repasse esperando", () => {
+    const nada = {
+      saques_em_analise: 0,
+      saques_em_analise_cents: 0,
+      saques_a_pagar: 0,
+      saques_a_pagar_cents: 0,
+    };
+    expect(lembreteDeRepasses(nada)).toBeNull();
+    expect(lembreteDeRepasses(null)).toBeNull();
+    expect(
+      lembreteDeRepasses({ ...nada, saques_em_analise: 2, saques_em_analise_cents: 150000 }),
+    ).toEqual({
+      titulo: "Repasses de afiliados esperando você",
+      detalhe: "2 para conferir (R$ 1.500,00)",
+    });
+    expect(
+      lembreteDeRepasses({
+        saques_em_analise: 1,
+        saques_em_analise_cents: 12000,
+        saques_a_pagar: 1,
+        saques_a_pagar_cents: 74280,
+      })?.detalhe,
+    ).toBe("1 para conferir (R$ 120,00) · 1 aprovado esperando o Pix (R$ 742,80)");
   });
 
   it("saque pago mostra valor e comprovante; suspensão mostra o motivo", () => {

@@ -2,6 +2,7 @@
  * Palavras e contas do Painel Admin → Afiliados. Puro: sem React, sem rede.
  */
 
+import type { ResumoAdmin } from "./admin";
 import type { SituacaoDoAfiliado } from "./portal";
 import { listaDeDias, porcentagemDeBps, reais } from "./validacao";
 
@@ -253,4 +254,32 @@ export function centavosParaCampo(cents: number): string {
 /** Pontos-base → "15" ou "15,5" para preencher o campo de edição. */
 export function bpsParaCampo(bps: number): string {
   return (bps / 100).toLocaleString("pt-BR", { maximumFractionDigits: 2 });
+}
+
+/**
+ * O aviso que a conta administrativa recebe ao abrir o painel quando há
+ * repasse de afiliado esperando alguém. `null` quando não há nada a fazer —
+ * aviso sem motivo ensina a ignorar aviso.
+ */
+export function lembreteDeRepasses(
+  r:
+    | Pick<
+        ResumoAdmin,
+        "saques_em_analise" | "saques_em_analise_cents" | "saques_a_pagar" | "saques_a_pagar_cents"
+      >
+    | null
+    | undefined,
+): { titulo: string; detalhe: string } | null {
+  if (!r) return null;
+  const conferir = Number(r.saques_em_analise ?? 0);
+  const pagar = Number(r.saques_a_pagar ?? 0);
+  if (conferir <= 0 && pagar <= 0) return null;
+  const partes: string[] = [];
+  if (conferir > 0)
+    partes.push(`${conferir} para conferir (${reais(Number(r.saques_em_analise_cents ?? 0))})`);
+  if (pagar > 0)
+    partes.push(
+      `${pagar} ${pagar === 1 ? "aprovado" : "aprovados"} esperando o Pix (${reais(Number(r.saques_a_pagar_cents ?? 0))})`,
+    );
+  return { titulo: "Repasses de afiliados esperando você", detalhe: partes.join(" · ") };
 }

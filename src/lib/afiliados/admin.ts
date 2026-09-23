@@ -276,6 +276,11 @@ export const CHAVE_ADMIN = ["admin-afiliados"] as const;
 const semTentarDeNovo = (falhas: number, erro: Error) =>
   falhas < 2 && !/somente_admin|situacao_invalida|periodo_invalido/.test(erro.message);
 
+/** O mesmo resumo, fora de uma tela (para o lembrete de repasses). */
+export function buscarResumoAdmin() {
+  return chamar<ResumoAdmin>("afiliado_admin_resumo");
+}
+
 export function useResumoAdmin() {
   return useQuery<ResumoAdmin, Error>({
     queryKey: [...CHAVE_ADMIN, "resumo"],

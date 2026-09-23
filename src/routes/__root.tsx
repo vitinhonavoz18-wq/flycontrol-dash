@@ -19,6 +19,7 @@ import { InstallBanner } from "@/components/pwa/InstallBanner";
 import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistration";
 import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 import { CapturaDeIndicacao } from "@/components/afiliados/CapturaDeIndicacao";
+import { LembreteDeRepasses } from "@/components/afiliados/admin/LembreteDeRepasses";
 
 /**
  * O endereço oficial do site e a imagem que aparece na prévia do link.
@@ -181,6 +182,8 @@ function RootComponent() {
           {/* Global mount: self-gates via useAuth() — Waiter Portal has no
               Supabase user, so pizzeriaIds stays null and no channel opens. */}
           <NotificationsProvider />
+          {/* Conta administrativa: aviso de repasse de afiliado esperando. */}
+          <LembreteDeRepasses />
           <Toaster />
           <InstallBanner />
           <ServiceWorkerRegistration />
