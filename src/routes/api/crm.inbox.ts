@@ -5,6 +5,7 @@ import { crm, crmRpc } from "@/lib/crm/db";
 import { configUazapi } from "@/lib/whatsapp/uazapi";
 import { extrairDaUazapi } from "@/lib/crm/uazapiEvento";
 import { tipoPeloWhatsApp } from "@/lib/crm/midia";
+import { iaEstaPausada, pausarAte } from "@/lib/crm/pausaDaIa";
 
 /**
  * O n8n entregando uma mensagem que o CLIENTE mandou no WhatsApp da loja.
@@ -38,6 +39,12 @@ import { tipoPeloWhatsApp } from "@/lib/crm/midia";
  * chegar, para transcrever. Sem isso o fluxo ficava com o recado na mão e sem
  * a chave do armário onde o arquivo estava guardado — e era exatamente esse o
  * defeito: áudio chegava, ninguém ouvia, ninguém respondia.
+ *
+ * A RESPOSTA DIZ SE A IA PODE RESPONDER, em `ia_pausada`. Quando um humano
+ * assumiu a conversa (respondeu pelo painel, pelo celular, ou clicou em
+ * "Pausar IA"), vem `true` e o fluxo NÃO deve chamar a IA. Essa é a trava que
+ * antes vivia só no Redis do n8n — e que falhava justamente quando o humano
+ * respondia pelo painel, porque essa mensagem nunca volta para o n8n.
  */
 
 const cabecalhos = { "Content-Type": "application/json" };
@@ -134,6 +141,31 @@ export const Route = createFileRoute("/api/crm/inbox")({
         const linha = (Array.isArray(data) ? data[0] : data) as
           { message_id: string; conversation_id: string; duplicada: boolean } | undefined;
 
+        // A TRAVA DA IA. O dono respondendo pelo celular liga a trava; o
+        // cliente escrevendo só consulta. O fluxo lê `ia_pausada` e decide.
+        let iaPausadaAte: string | null = null;
+        if (linha?.conversation_id) {
+          if (doRestaurante) {
+            iaPausadaAte = pausarAte();
+            const { error: erroTrava } = await crm("crm_conversations")
+              .update({ ia_pausada_ate: iaPausadaAte })
+              .eq("id", linha.conversation_id)
+              .eq("tenant_id", loja.tenantId);
+            if (erroTrava) console.error("[crm/inbox] falha ao travar a IA:", erroTrava.message);
+          } else {
+            const { data: conversa } = await crm("crm_conversations")
+              .select("ia_pausada_ate")
+              .eq("id", linha.conversation_id)
+              .eq("tenant_id", loja.tenantId)
+              .maybeSingle();
+            iaPausadaAte = (conversa?.ia_pausada_ate as string | null | undefined) ?? null;
+          }
+        }
+        // Mensagem do próprio restaurante nunca é para a IA responder: ou é
+        // o dono falando, ou é eco. Vale `true` mesmo se a gravação da trava
+        // falhar.
+        const iaPausada = doRestaurante || iaEstaPausada(iaPausadaAte);
+
         // A CHAVE DO ARMÁRIO, junto com o recado.
         //
         // Quando o cliente manda um áudio, o WhatsApp não entrega o som: ele
@@ -159,6 +191,9 @@ export const Route = createFileRoute("/api/crm/inbox")({
             message_id: linha?.message_id ?? null,
             conversation_id: linha?.conversation_id ?? null,
             duplicada: Boolean(linha?.duplicada),
+            // `true` = um humano está cuidando desta conversa: NÃO chame a IA.
+            ia_pausada: iaPausada,
+            ia_pausada_ate: iaEstaPausada(iaPausadaAte) ? iaPausadaAte : null,
             external_id: uaz?.externalId ?? (corpo.external_id ? String(corpo.external_id) : null),
             uazapi,
           }),

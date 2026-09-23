@@ -13,6 +13,7 @@ import {
   X,
   Maximize2,
   Minimize2,
+  Hand,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,6 +25,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatPhoneForDisplay } from "@/lib/marketing/phone";
+import { iaEstaPausada } from "@/lib/crm/pausaDaIa";
 import {
   quemFalou,
   ladoDireito,
@@ -164,6 +166,7 @@ export function JanelaConversa({
   meuUserId,
   onEnviar,
   onMudarStatus,
+  onPausarIa,
   onCorrigirNome,
   pedido,
   onCancelarPedido,
@@ -177,6 +180,8 @@ export function JanelaConversa({
   meuUserId: string | null;
   onEnviar: (texto: string, arquivo?: ArquivoParaEnviar | null) => Promise<void>;
   onMudarStatus: (status: "open" | "pending" | "closed") => void;
+  /** Liga (`true`) ou desliga (`false`) a trava da IA nesta conversa. */
+  onPausarIa: (pausar: boolean) => void;
   onCorrigirNome: () => void;
   pedido: PedidoDoChat | null;
   onCancelarPedido: () => Promise<void>;
@@ -242,6 +247,15 @@ export function JanelaConversa({
     style: "currency",
     currency: "BRL",
   });
+
+  // A trava da IA: um humano assumiu, a IA fica quieta até esta hora.
+  const iaPausada = iaEstaPausada(conversa.ia_pausada_ate);
+  const pausadaAte = iaPausada
+    ? new Date(conversa.ia_pausada_ate as string).toLocaleTimeString("pt-BR", {
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : null;
 
   async function enviar() {
     const limpo = texto.trim();
@@ -345,6 +359,36 @@ export function JanelaConversa({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* A TRAVA DA IA, À VISTA. Responder pelo painel já liga sozinho;
+                o botão serve para assumir antes de escrever, ou para devolver
+                a conversa à IA sem esperar a trava vencer. */}
+            <Button
+              type="button"
+              variant={iaPausada ? "default" : "outline"}
+              size="sm"
+              onClick={() => onPausarIa(!iaPausada)}
+              className="h-9 shrink-0 gap-1.5 border-2 px-2.5 text-xs font-semibold"
+              title={
+                iaPausada
+                  ? `A IA está quieta até ${pausadaAte}. Clique para devolver a conversa à IA.`
+                  : "Assumir a conversa: a IA para de responder este cliente."
+              }
+            >
+              {iaPausada ? (
+                <>
+                  <Bot className="h-4 w-4" aria-hidden="true" />
+                  <span>Devolver à IA</span>
+                  <span className="hidden font-normal opacity-80 sm:inline">
+                    (pausada até {pausadaAte})
+                  </span>
+                </>
+              ) : (
+                <>
+                  <Hand className="h-4 w-4" aria-hidden="true" />
+                  <span>Pausar IA</span>
+                </>
+              )}
+            </Button>
             {/* AMPLIAR: a conversa toma a tela inteira.
                 Numa tela de notebook, a coluna da conversa fica com menos de
                 metade da largura e uma mensagem de cinco linhas vira quinze. É

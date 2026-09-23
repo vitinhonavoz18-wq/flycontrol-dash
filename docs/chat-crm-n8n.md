@@ -168,6 +168,50 @@ novo depois de uma queda de internet), a mensagem aparece **uma** vez na
 tela. Sem ele, o cliente parece ter falado duas vezes — e o atendente
 responde duas vezes.
 
+### A trava da IA (intervenção humana)
+
+A resposta do `/api/crm/inbox` traz dois campos novos:
+
+```json
+{ "ia_pausada": true, "ia_pausada_ate": "2026-09-23T15:30:00.000Z" }
+```
+
+**`ia_pausada: true` quer dizer: um humano está cuidando desta conversa, NÃO
+chame a IA.** Ela liga sozinha quando:
+
+- o atendente responde **pelo painel**;
+- o dono responde **pelo celular** (a mensagem chega como `fromMe`);
+- alguém clica em **Pausar IA** na tela da conversa.
+
+Ela desliga sozinha depois de 60 minutos, ou na hora, no botão **Devolver à
+IA**.
+
+**Por que a trava saiu do Redis:** a mensagem que o atendente manda pelo
+painel sai pela UAZAPI como envio do sistema — e o aviso da UAZAPI está
+configurado para **não** devolver ao n8n o que o sistema enviou (`wasSentByApi`),
+senão a resposta da própria IA voltaria como eco. Então o n8n nunca ficava
+sabendo que um humano respondeu pelo painel, o Redis nunca era gravado, e a IA
+respondia junto com o atendente. Resposta pelo celular funcionava; pelo
+painel, não.
+
+**O que mudar em cada fluxo:** logo depois do nó **Entregar ao FlyControl**
+(o que chama `/api/crm/inbox`), coloque um nó **IF**:
+
+```
+{{ $json.ia_pausada }}   is true   →  para aqui (não liga nada no ramo true)
+                          is false  →  segue para a IA
+```
+
+E **tire do caminho** a checagem de Redis que decidia se a IA respondia (o
+nó que lia a chave de "humano assumiu"). Se quiser manter o Redis para outra
+coisa (juntar mensagens seguidas, por exemplo), pode — só não é mais ele quem
+decide a trava. Manter as duas travas ao mesmo tempo faz a IA ficar calada
+quando o painel diz que pode falar, e aí ninguém entende por quê.
+
+**A mensagem precisa passar pelo FlyControl ANTES de chegar na IA.** Se o
+fluxo chama a IA primeiro e só depois registra a mensagem, a trava chega
+atrasada.
+
 ### 2. Buscar o que o restaurante respondeu
 
 ```

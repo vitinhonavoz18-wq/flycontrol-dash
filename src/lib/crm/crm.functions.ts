@@ -6,6 +6,7 @@ import { normalizePhone } from "@/lib/marketing/phone";
 import { podeSerAlteradoPelaIa } from "./pedidoStatus";
 import { enderecosAssinados, guardarArquivoDoPainel } from "./midiaServidor";
 import { ROTULO_MIDIA, ehTipoMidia } from "./midia";
+import { pausarAte } from "./pausaDaIa";
 
 /* As tabelas do CRM ainda não constam do arquivo de tipos gerado (ver
    `db.ts`), então as linhas chegam sem tipo. Depois de regerar os tipos,
@@ -46,6 +47,11 @@ export type ConversaCrm = {
   last_message_at: string | null;
   last_message_preview: string | null;
   unread_count: number;
+  /**
+   * Até quando a IA fica quieta nesta conversa porque um humano assumiu.
+   * Vazio ou no passado = a IA pode responder. Veja `pausaDaIa.ts`.
+   */
+  ia_pausada_ate: string | null;
   /**
    * A ficha do cliente — a MESMA que o Marketing usa.
    *
@@ -93,6 +99,7 @@ export const listarConversas = createServerFn({ method: "POST" })
     let q = crm("crm_conversations")
       .select(
         "id, customer_id, status, assigned_to, last_message_at, last_message_preview, unread_count, " +
+          "ia_pausada_ate, " +
           "contato:marketing_customers!crm_conversations_customer_id_fkey" +
           "(id, name, phone_e164, avatar_url, orders_count, total_spent_cents, last_order_at, marketing_opt_in)",
         { count: "exact" },
@@ -286,12 +293,18 @@ export const enviarMensagem = createServerFn({ method: "POST" })
 
     // Responder também significa "eu vi": zera a bolinha de não lidas e tira
     // a conversa do estado fechado.
+    //
+    // E TRAVA A IA. Um humano respondeu pelo painel: a IA fica quieta nesta
+    // conversa por um tempo. O n8n não tem como perceber isso sozinho — a
+    // mensagem do painel não volta para ele — e sem a trava a IA respondia
+    // junto com o atendente.
     await crm("crm_conversations")
       .update({
         last_message_at: new Date().toISOString(),
         last_message_preview: resumo,
         unread_count: 0,
         status: "pending",
+        ia_pausada_ate: pausarAte(),
         updated_at: new Date().toISOString(),
       })
       .eq("id", conversa.id)
@@ -314,6 +327,29 @@ export const marcarComoLida = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
     return { ok: true };
+  });
+
+/**
+ * O botão "Pausar IA" / "Devolver para a IA".
+ *
+ * Pausar serve para quando o atendente quer assumir ANTES de escrever — por
+ * exemplo, viu uma reclamação chegando e não quer a IA respondendo "que bom
+ * que gostou!". Devolver encerra a trava na hora, sem esperar vencer.
+ */
+export const pausarIaDaConversa = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { tenantId: string; conversationId: string; pausar: boolean }) => d)
+  .handler(async ({ data, context }) => {
+    const { tenantId } = await porteiro(context, data.tenantId);
+
+    const ate = data.pausar ? pausarAte() : null;
+    const { error } = await crm("crm_conversations")
+      .update({ ia_pausada_ate: ate, updated_at: new Date().toISOString() })
+      .eq("id", data.conversationId)
+      .eq("tenant_id", tenantId);
+
+    if (error) throw new Error(error.message);
+    return { ia_pausada_ate: ate };
   });
 
 /** Marcar a conversa como resolvida (ou reabrir). */

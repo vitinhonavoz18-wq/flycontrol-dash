@@ -20,6 +20,7 @@ import {
   enviarMensagem,
   marcarComoLida,
   alterarStatusConversa,
+  pausarIaDaConversa,
   iniciarConversa,
   renomearContato,
   pedidoDaConversa,
@@ -61,6 +62,7 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   const enviar = useServerFn(enviarMensagem);
   const marcarLida = useServerFn(marcarComoLida);
   const mudarStatus = useServerFn(alterarStatusConversa);
+  const pausarIa = useServerFn(pausarIaDaConversa);
   const criarConversa = useServerFn(iniciarConversa);
   const buscarStatus = useServerFn(statusDaIntegracao);
   const renomear = useServerFn(renomearContato);
@@ -292,6 +294,24 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
     }
   }
 
+  async function aoPausarIa(pausar: boolean) {
+    if (!selecionada) return;
+    const conversaId = selecionada;
+    try {
+      const r = await pausarIa({ data: { tenantId, conversationId: conversaId, pausar } });
+      setConversas((atual) =>
+        atual.map((c) => (c.id === conversaId ? { ...c, ia_pausada_ate: r.ia_pausada_ate } : c)),
+      );
+      toast.success(
+        pausar
+          ? "Pronto: a IA não responde mais este cliente por enquanto."
+          : "A IA voltou a atender.",
+      );
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível mudar a IA.");
+    }
+  }
+
   async function aoCancelarPedido() {
     if (!pedido) return;
     try {
@@ -420,6 +440,7 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
               enviando={enviando}
               onEnviar={aoEnviar}
               onMudarStatus={aoMudarStatus}
+              onPausarIa={aoPausarIa}
               onCorrigirNome={abrirCorrecaoDeNome}
               pedido={pedido}
               onCancelarPedido={aoCancelarPedido}
