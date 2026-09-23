@@ -20,6 +20,7 @@ import {
   CreditCard,
   MessageSquare,
   X,
+  Handshake,
 } from "lucide-react";
 import { BottomSheet } from "@/components/mobile/BottomSheet";
 import { useAuth } from "@/lib/auth";
@@ -85,6 +86,12 @@ const MORE_ADMIN: Item[] = [
     label: "Planos",
     icon: CreditCard,
     match: (p) => p.startsWith("/admin/subscriptions"),
+  },
+  {
+    to: "/admin/affiliates",
+    label: "Afiliados",
+    icon: Handshake,
+    match: (p) => p.startsWith("/admin/affiliates"),
   },
 ];
 

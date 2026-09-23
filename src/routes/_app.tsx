@@ -27,6 +27,7 @@ import {
   Megaphone,
   MessageSquare,
   Package,
+  Handshake,
 } from "lucide-react";
 import logo from "@/assets/flycontrol-logo.png";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
@@ -228,6 +229,9 @@ function AppLayoutInner() {
     { to: "/admin/users", label: "Usuários", icon: Users },
     { to: "/admin/subscriptions", label: "Clientes e Planos", icon: CreditCard },
     { to: "/admin/cents", label: "Clube CENTS", icon: Trophy },
+    // Programa de afiliados: aprovação de parceiros, comissões, saques e
+    // auditoria. Só aparece aqui, no bloco do Painel Admin.
+    { to: "/admin/affiliates", label: "Afiliados", icon: Handshake },
   ];
 
   const NavItems = ({ className = "" }: { className?: string }) => (

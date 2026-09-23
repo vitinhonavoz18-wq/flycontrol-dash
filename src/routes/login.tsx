@@ -7,9 +7,36 @@ import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import logo from "@/assets/flycontrol-logo.png";
 
 export const Route = createFileRoute("/login")({ component: Login });
+
+/**
+ * Parceiro do programa de afiliados que não tem loja entra pelo mesmo login
+ * do FlyControl — e, sem esta conferência, cairia num painel de restaurante
+ * vazio. Quem tem loja (inclusive dono de restaurante que também é
+ * parceiro) continua indo para o painel da loja, como sempre.
+ */
+async function destinoDepoisDoLogin(): Promise<"/dashboard" | "/affiliates/dashboard"> {
+  try {
+    const { data: sessao } = await supabase.auth.getUser();
+    const uid = sessao.user?.id;
+    if (!uid) return "/dashboard";
+    const { count } = await supabase
+      .from("pizzerias")
+      .select("id", { count: "exact", head: true })
+      .eq("owner_id", uid);
+    if ((count ?? 0) > 0) return "/dashboard";
+    const rpc = supabase.rpc as unknown as (
+      fn: string,
+    ) => Promise<{ data: unknown; error: unknown }>;
+    const { data: perfil } = await rpc.call(supabase, "afiliado_meu_perfil");
+    return perfil ? "/affiliates/dashboard" : "/dashboard";
+  } catch {
+    return "/dashboard";
+  }
+}
 
 function Login() {
   const { signIn, signInWithGoogle } = useAuth();
@@ -29,7 +56,7 @@ function Login() {
       return;
     }
     toast.success("Bem-vindo!");
-    nav({ to: "/dashboard" });
+    nav({ to: (await destinoDepoisDoLogin()) as "/dashboard" });
   }
 
   async function onGoogleClick() {

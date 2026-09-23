@@ -8,6 +8,12 @@ interface AuthCtx {
   user: User | null;
   session: Session | null;
   loading: boolean;
+  /**
+   * Os papéis (administrador, dono) chegam DEPOIS da sessão, numa consulta à
+   * parte. Enquanto isto for `true`, "não é administrador" ainda não é uma
+   * resposta — é só "ainda não sei".
+   */
+  rolesLoading: boolean;
   roles: Role[];
   isSuperAdmin: boolean;
   signIn: (email: string, password: string) => Promise<{ error?: string }>;
@@ -23,6 +29,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [roles, setRoles] = useState<Role[]>([]);
+  // Dono dos papéis carregados: evita que a resposta atrasada de um login
+  // anterior pareça valer para o atual.
+  const [rolesDe, setRolesDe] = useState<string | null>(null);
 
   useEffect(() => {
     const { data: sub } = supabase.auth.onAuthStateChange((event, s) => {
@@ -61,6 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   async function loadRoles(uid: string) {
     const { data } = await supabase.from("user_roles").select("role").eq("user_id", uid);
     setRoles((data ?? []).map((r: any) => r.role));
+    setRolesDe(uid);
   }
 
   const signIn: AuthCtx["signIn"] = async (email, password) => {
@@ -114,6 +124,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         loading,
+        rolesLoading: Boolean(user) && rolesDe !== user?.id,
         roles,
         isSuperAdmin: roles.includes("super_admin"),
         signIn,

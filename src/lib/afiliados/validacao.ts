@@ -174,6 +174,7 @@ export function linkParaExibir(codigo: string): string {
 
 const MENSAGENS: Record<string, string> = {
   nao_autenticado: "Sua sessão expirou. Entre novamente.",
+  somente_admin: "Acesso restrito a administradores do FlyControl.",
   nao_afiliado: "Esta conta ainda não tem cadastro de parceiro.",
   afiliado_pending: "Seu cadastro está em análise.",
   afiliado_suspended: "Sua conta de parceiro está suspensa.",

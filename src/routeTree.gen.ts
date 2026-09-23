@@ -50,6 +50,7 @@ import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as PagamentoPlanoRouteImport } from './routes/pagamento.$plano'
 import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
+import { Route as AppAdminAffiliatesRouteImport } from './routes/_app/admin/affiliates'
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin/analytics'
 import { Route as AppAdminCentsRouteImport } from './routes/_app/admin/cents'
 import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin/finance'
@@ -95,12 +96,20 @@ import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/pub
 import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
 import { Route as ApiWebhooksInfinitypayRouteImport } from './routes/api/webhooks.infinitypay'
 import { Route as ApiWebhooksWhatsappStatusRouteImport } from './routes/api/webhooks.whatsapp-status'
+import { Route as AppAdminAffiliatesIndexRouteImport } from './routes/_app/admin/affiliates.index'
+import { Route as AppAdminAffiliatesAuditRouteImport } from './routes/_app/admin/affiliates.audit'
+import { Route as AppAdminAffiliatesCommissionsRouteImport } from './routes/_app/admin/affiliates.commissions'
+import { Route as AppAdminAffiliatesReferralsRouteImport } from './routes/_app/admin/affiliates.referrals'
+import { Route as AppAdminAffiliatesSettingsRouteImport } from './routes/_app/admin/affiliates.settings'
+import { Route as AppAdminAffiliatesWithdrawalsRouteImport } from './routes/_app/admin/affiliates.withdrawals'
 import { Route as ApiCrmOutboxResultRouteImport } from './routes/api/crm.outbox.result'
 import { Route as ApiMarketingQueueResultRouteImport } from './routes/api/marketing.queue.result'
 import { Route as ApiPizzeriasIdDeactivateRouteImport } from './routes/api/pizzerias.$id.deactivate'
 import { Route as ApiPizzeriasIdDeleteRouteImport } from './routes/api/pizzerias.$id.delete'
 import { Route as ApiPizzeriasIdProvisionRouteImport } from './routes/api/pizzerias.$id.provision'
 import { Route as ApiPizzeriasIdReactivateRouteImport } from './routes/api/pizzerias.$id.reactivate'
+import { Route as AppAdminAffiliatesPartnersIndexRouteImport } from './routes/_app/admin/affiliates.partners.index'
+import { Route as AppAdminAffiliatesPartnersAffiliateIdRouteImport } from './routes/_app/admin/affiliates.partners.$affiliateId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -304,6 +313,11 @@ const PrintOrderIdRoute = PrintOrderIdRouteImport.update({
 const AppAdminIndexRoute = AppAdminIndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAdminAffiliatesRoute = AppAdminAffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
   getParentRoute: () => AppAdminRoute,
 } as any)
 const AppAdminAnalyticsRoute = AppAdminAnalyticsRouteImport.update({
@@ -541,6 +555,40 @@ const ApiWebhooksWhatsappStatusRoute =
     path: '/api/webhooks/whatsapp-status',
     getParentRoute: () => rootRouteImport,
   } as any)
+const AppAdminAffiliatesIndexRoute = AppAdminAffiliatesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AppAdminAffiliatesRoute,
+} as any)
+const AppAdminAffiliatesAuditRoute = AppAdminAffiliatesAuditRouteImport.update({
+  id: '/audit',
+  path: '/audit',
+  getParentRoute: () => AppAdminAffiliatesRoute,
+} as any)
+const AppAdminAffiliatesCommissionsRoute =
+  AppAdminAffiliatesCommissionsRouteImport.update({
+    id: '/commissions',
+    path: '/commissions',
+    getParentRoute: () => AppAdminAffiliatesRoute,
+  } as any)
+const AppAdminAffiliatesReferralsRoute =
+  AppAdminAffiliatesReferralsRouteImport.update({
+    id: '/referrals',
+    path: '/referrals',
+    getParentRoute: () => AppAdminAffiliatesRoute,
+  } as any)
+const AppAdminAffiliatesSettingsRoute =
+  AppAdminAffiliatesSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AppAdminAffiliatesRoute,
+  } as any)
+const AppAdminAffiliatesWithdrawalsRoute =
+  AppAdminAffiliatesWithdrawalsRouteImport.update({
+    id: '/withdrawals',
+    path: '/withdrawals',
+    getParentRoute: () => AppAdminAffiliatesRoute,
+  } as any)
 const ApiCrmOutboxResultRoute = ApiCrmOutboxResultRouteImport.update({
   id: '/result',
   path: '/result',
@@ -572,6 +620,18 @@ const ApiPizzeriasIdReactivateRoute =
     id: '/api/pizzerias/$id/reactivate',
     path: '/api/pizzerias/$id/reactivate',
     getParentRoute: () => rootRouteImport,
+  } as any)
+const AppAdminAffiliatesPartnersIndexRoute =
+  AppAdminAffiliatesPartnersIndexRouteImport.update({
+    id: '/partners/',
+    path: '/partners/',
+    getParentRoute: () => AppAdminAffiliatesRoute,
+  } as any)
+const AppAdminAffiliatesPartnersAffiliateIdRoute =
+  AppAdminAffiliatesPartnersAffiliateIdRouteImport.update({
+    id: '/partners/$affiliateId',
+    path: '/partners/$affiliateId',
+    getParentRoute: () => AppAdminAffiliatesRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -614,6 +674,7 @@ export interface FileRoutesByFullPath {
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/affiliates/': typeof AffiliatesIndexRoute
+  '/admin/affiliates': typeof AppAdminAffiliatesRouteWithChildren
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/cents': typeof AppAdminCentsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
@@ -660,12 +721,20 @@ export interface FileRoutesByFullPath {
   '/admin/': typeof AppAdminIndexRoute
   '/inventory/': typeof AppInventoryIndexRoute
   '/affiliates/dashboard/': typeof AffiliatesDashboardIndexRoute
+  '/admin/affiliates/audit': typeof AppAdminAffiliatesAuditRoute
+  '/admin/affiliates/commissions': typeof AppAdminAffiliatesCommissionsRoute
+  '/admin/affiliates/referrals': typeof AppAdminAffiliatesReferralsRoute
+  '/admin/affiliates/settings': typeof AppAdminAffiliatesSettingsRoute
+  '/admin/affiliates/withdrawals': typeof AppAdminAffiliatesWithdrawalsRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
   '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
+  '/admin/affiliates/': typeof AppAdminAffiliatesIndexRoute
+  '/admin/affiliates/partners/$affiliateId': typeof AppAdminAffiliatesPartnersAffiliateIdRoute
+  '/admin/affiliates/partners/': typeof AppAdminAffiliatesPartnersIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -749,12 +818,20 @@ export interface FileRoutesByTo {
   '/admin': typeof AppAdminIndexRoute
   '/inventory': typeof AppInventoryIndexRoute
   '/affiliates/dashboard': typeof AffiliatesDashboardIndexRoute
+  '/admin/affiliates/audit': typeof AppAdminAffiliatesAuditRoute
+  '/admin/affiliates/commissions': typeof AppAdminAffiliatesCommissionsRoute
+  '/admin/affiliates/referrals': typeof AppAdminAffiliatesReferralsRoute
+  '/admin/affiliates/settings': typeof AppAdminAffiliatesSettingsRoute
+  '/admin/affiliates/withdrawals': typeof AppAdminAffiliatesWithdrawalsRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
   '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
+  '/admin/affiliates': typeof AppAdminAffiliatesIndexRoute
+  '/admin/affiliates/partners/$affiliateId': typeof AppAdminAffiliatesPartnersAffiliateIdRoute
+  '/admin/affiliates/partners': typeof AppAdminAffiliatesPartnersIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -798,6 +875,7 @@ export interface FileRoutesById {
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/affiliates/': typeof AffiliatesIndexRoute
+  '/_app/admin/affiliates': typeof AppAdminAffiliatesRouteWithChildren
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/cents': typeof AppAdminCentsRoute
   '/_app/admin/finance': typeof AppAdminFinanceRoute
@@ -844,12 +922,20 @@ export interface FileRoutesById {
   '/_app/admin/': typeof AppAdminIndexRoute
   '/_app/inventory/': typeof AppInventoryIndexRoute
   '/affiliates/dashboard/': typeof AffiliatesDashboardIndexRoute
+  '/_app/admin/affiliates/audit': typeof AppAdminAffiliatesAuditRoute
+  '/_app/admin/affiliates/commissions': typeof AppAdminAffiliatesCommissionsRoute
+  '/_app/admin/affiliates/referrals': typeof AppAdminAffiliatesReferralsRoute
+  '/_app/admin/affiliates/settings': typeof AppAdminAffiliatesSettingsRoute
+  '/_app/admin/affiliates/withdrawals': typeof AppAdminAffiliatesWithdrawalsRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
   '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
+  '/_app/admin/affiliates/': typeof AppAdminAffiliatesIndexRoute
+  '/_app/admin/affiliates/partners/$affiliateId': typeof AppAdminAffiliatesPartnersAffiliateIdRoute
+  '/_app/admin/affiliates/partners/': typeof AppAdminAffiliatesPartnersIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -893,6 +979,7 @@ export interface FileRouteTypes {
     | '/pagamento/$plano'
     | '/print/$orderId'
     | '/affiliates/'
+    | '/admin/affiliates'
     | '/admin/analytics'
     | '/admin/cents'
     | '/admin/finance'
@@ -939,12 +1026,20 @@ export interface FileRouteTypes {
     | '/admin/'
     | '/inventory/'
     | '/affiliates/dashboard/'
+    | '/admin/affiliates/audit'
+    | '/admin/affiliates/commissions'
+    | '/admin/affiliates/referrals'
+    | '/admin/affiliates/settings'
+    | '/admin/affiliates/withdrawals'
     | '/api/crm/outbox/result'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
     | '/api/pizzerias/$id/reactivate'
+    | '/admin/affiliates/'
+    | '/admin/affiliates/partners/$affiliateId'
+    | '/admin/affiliates/partners/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -1028,12 +1123,20 @@ export interface FileRouteTypes {
     | '/admin'
     | '/inventory'
     | '/affiliates/dashboard'
+    | '/admin/affiliates/audit'
+    | '/admin/affiliates/commissions'
+    | '/admin/affiliates/referrals'
+    | '/admin/affiliates/settings'
+    | '/admin/affiliates/withdrawals'
     | '/api/crm/outbox/result'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
     | '/api/pizzerias/$id/reactivate'
+    | '/admin/affiliates'
+    | '/admin/affiliates/partners/$affiliateId'
+    | '/admin/affiliates/partners'
   id:
     | '__root__'
     | '/'
@@ -1076,6 +1179,7 @@ export interface FileRouteTypes {
     | '/pagamento/$plano'
     | '/print/$orderId'
     | '/affiliates/'
+    | '/_app/admin/affiliates'
     | '/_app/admin/analytics'
     | '/_app/admin/cents'
     | '/_app/admin/finance'
@@ -1122,12 +1226,20 @@ export interface FileRouteTypes {
     | '/_app/admin/'
     | '/_app/inventory/'
     | '/affiliates/dashboard/'
+    | '/_app/admin/affiliates/audit'
+    | '/_app/admin/affiliates/commissions'
+    | '/_app/admin/affiliates/referrals'
+    | '/_app/admin/affiliates/settings'
+    | '/_app/admin/affiliates/withdrawals'
     | '/api/crm/outbox/result'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
     | '/api/pizzerias/$id/reactivate'
+    | '/_app/admin/affiliates/'
+    | '/_app/admin/affiliates/partners/$affiliateId'
+    | '/_app/admin/affiliates/partners/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -1468,6 +1580,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminIndexRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/_app/admin/affiliates': {
+      id: '/_app/admin/affiliates'
+      path: '/affiliates'
+      fullPath: '/admin/affiliates'
+      preLoaderRoute: typeof AppAdminAffiliatesRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/admin/analytics': {
       id: '/_app/admin/analytics'
       path: '/analytics'
@@ -1783,6 +1902,48 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhooksWhatsappStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/admin/affiliates/': {
+      id: '/_app/admin/affiliates/'
+      path: '/'
+      fullPath: '/admin/affiliates/'
+      preLoaderRoute: typeof AppAdminAffiliatesIndexRouteImport
+      parentRoute: typeof AppAdminAffiliatesRoute
+    }
+    '/_app/admin/affiliates/audit': {
+      id: '/_app/admin/affiliates/audit'
+      path: '/audit'
+      fullPath: '/admin/affiliates/audit'
+      preLoaderRoute: typeof AppAdminAffiliatesAuditRouteImport
+      parentRoute: typeof AppAdminAffiliatesRoute
+    }
+    '/_app/admin/affiliates/commissions': {
+      id: '/_app/admin/affiliates/commissions'
+      path: '/commissions'
+      fullPath: '/admin/affiliates/commissions'
+      preLoaderRoute: typeof AppAdminAffiliatesCommissionsRouteImport
+      parentRoute: typeof AppAdminAffiliatesRoute
+    }
+    '/_app/admin/affiliates/referrals': {
+      id: '/_app/admin/affiliates/referrals'
+      path: '/referrals'
+      fullPath: '/admin/affiliates/referrals'
+      preLoaderRoute: typeof AppAdminAffiliatesReferralsRouteImport
+      parentRoute: typeof AppAdminAffiliatesRoute
+    }
+    '/_app/admin/affiliates/settings': {
+      id: '/_app/admin/affiliates/settings'
+      path: '/settings'
+      fullPath: '/admin/affiliates/settings'
+      preLoaderRoute: typeof AppAdminAffiliatesSettingsRouteImport
+      parentRoute: typeof AppAdminAffiliatesRoute
+    }
+    '/_app/admin/affiliates/withdrawals': {
+      id: '/_app/admin/affiliates/withdrawals'
+      path: '/withdrawals'
+      fullPath: '/admin/affiliates/withdrawals'
+      preLoaderRoute: typeof AppAdminAffiliatesWithdrawalsRouteImport
+      parentRoute: typeof AppAdminAffiliatesRoute
+    }
     '/api/crm/outbox/result': {
       id: '/api/crm/outbox/result'
       path: '/result'
@@ -1825,10 +1986,51 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPizzeriasIdReactivateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/_app/admin/affiliates/partners/': {
+      id: '/_app/admin/affiliates/partners/'
+      path: '/partners'
+      fullPath: '/admin/affiliates/partners/'
+      preLoaderRoute: typeof AppAdminAffiliatesPartnersIndexRouteImport
+      parentRoute: typeof AppAdminAffiliatesRoute
+    }
+    '/_app/admin/affiliates/partners/$affiliateId': {
+      id: '/_app/admin/affiliates/partners/$affiliateId'
+      path: '/partners/$affiliateId'
+      fullPath: '/admin/affiliates/partners/$affiliateId'
+      preLoaderRoute: typeof AppAdminAffiliatesPartnersAffiliateIdRouteImport
+      parentRoute: typeof AppAdminAffiliatesRoute
+    }
   }
 }
 
+interface AppAdminAffiliatesRouteChildren {
+  AppAdminAffiliatesAuditRoute: typeof AppAdminAffiliatesAuditRoute
+  AppAdminAffiliatesCommissionsRoute: typeof AppAdminAffiliatesCommissionsRoute
+  AppAdminAffiliatesReferralsRoute: typeof AppAdminAffiliatesReferralsRoute
+  AppAdminAffiliatesSettingsRoute: typeof AppAdminAffiliatesSettingsRoute
+  AppAdminAffiliatesWithdrawalsRoute: typeof AppAdminAffiliatesWithdrawalsRoute
+  AppAdminAffiliatesIndexRoute: typeof AppAdminAffiliatesIndexRoute
+  AppAdminAffiliatesPartnersAffiliateIdRoute: typeof AppAdminAffiliatesPartnersAffiliateIdRoute
+  AppAdminAffiliatesPartnersIndexRoute: typeof AppAdminAffiliatesPartnersIndexRoute
+}
+
+const AppAdminAffiliatesRouteChildren: AppAdminAffiliatesRouteChildren = {
+  AppAdminAffiliatesAuditRoute: AppAdminAffiliatesAuditRoute,
+  AppAdminAffiliatesCommissionsRoute: AppAdminAffiliatesCommissionsRoute,
+  AppAdminAffiliatesReferralsRoute: AppAdminAffiliatesReferralsRoute,
+  AppAdminAffiliatesSettingsRoute: AppAdminAffiliatesSettingsRoute,
+  AppAdminAffiliatesWithdrawalsRoute: AppAdminAffiliatesWithdrawalsRoute,
+  AppAdminAffiliatesIndexRoute: AppAdminAffiliatesIndexRoute,
+  AppAdminAffiliatesPartnersAffiliateIdRoute:
+    AppAdminAffiliatesPartnersAffiliateIdRoute,
+  AppAdminAffiliatesPartnersIndexRoute: AppAdminAffiliatesPartnersIndexRoute,
+}
+
+const AppAdminAffiliatesRouteWithChildren =
+  AppAdminAffiliatesRoute._addFileChildren(AppAdminAffiliatesRouteChildren)
+
 interface AppAdminRouteChildren {
+  AppAdminAffiliatesRoute: typeof AppAdminAffiliatesRouteWithChildren
   AppAdminAnalyticsRoute: typeof AppAdminAnalyticsRoute
   AppAdminCentsRoute: typeof AppAdminCentsRoute
   AppAdminFinanceRoute: typeof AppAdminFinanceRoute
@@ -1839,6 +2041,7 @@ interface AppAdminRouteChildren {
 }
 
 const AppAdminRouteChildren: AppAdminRouteChildren = {
+  AppAdminAffiliatesRoute: AppAdminAffiliatesRouteWithChildren,
   AppAdminAnalyticsRoute: AppAdminAnalyticsRoute,
   AppAdminCentsRoute: AppAdminCentsRoute,
   AppAdminFinanceRoute: AppAdminFinanceRoute,
