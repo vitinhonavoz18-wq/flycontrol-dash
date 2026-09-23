@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AppRouteImport } from './routes/_app'
+import { Route as AffiliatesRouteImport } from './routes/affiliates'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as PlansRouteImport } from './routes/plans'
 import { Route as PrepararRouteImport } from './routes/preparar'
@@ -37,6 +38,11 @@ import { Route as AppSearchOrdersRouteImport } from './routes/_app/search-orders
 import { Route as AppSettingsRouteImport } from './routes/_app/settings'
 import { Route as AppTablesRouteImport } from './routes/_app/tables'
 import { Route as AppWaitersRouteImport } from './routes/_app/waiters'
+import { Route as AffiliatesIndexRouteImport } from './routes/affiliates.index'
+import { Route as AffiliatesDashboardRouteImport } from './routes/affiliates.dashboard'
+import { Route as AffiliatesLoginRouteImport } from './routes/affiliates.login'
+import { Route as AffiliatesRegisterRouteImport } from './routes/affiliates.register'
+import { Route as AffiliatesResetPasswordRouteImport } from './routes/affiliates.reset-password'
 import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiSyncTableSessionsRouteImport } from './routes/api/sync-table-sessions'
@@ -59,6 +65,12 @@ import { Route as AppInventoryProductsRouteImport } from './routes/_app/inventor
 import { Route as AppInventoryRecipesRouteImport } from './routes/_app/inventory.recipes'
 import { Route as AppInventoryReportsRouteImport } from './routes/_app/inventory.reports'
 import { Route as AppInventorySuppliersRouteImport } from './routes/_app/inventory.suppliers'
+import { Route as AffiliatesDashboardIndexRouteImport } from './routes/affiliates.dashboard.index'
+import { Route as AffiliatesDashboardCommissionsRouteImport } from './routes/affiliates.dashboard.commissions'
+import { Route as AffiliatesDashboardMaterialsRouteImport } from './routes/affiliates.dashboard.materials'
+import { Route as AffiliatesDashboardReferralsRouteImport } from './routes/affiliates.dashboard.referrals'
+import { Route as AffiliatesDashboardSettingsRouteImport } from './routes/affiliates.dashboard.settings'
+import { Route as AffiliatesDashboardWithdrawalsRouteImport } from './routes/affiliates.dashboard.withdrawals'
 import { Route as ApiBillingCloseCyclesRouteImport } from './routes/api/billing.close-cycles'
 import { Route as ApiCrmCatalogRouteImport } from './routes/api/crm.catalog'
 import { Route as ApiCrmCustomerRouteImport } from './routes/api/crm.customer'
@@ -97,6 +109,11 @@ const IndexRoute = IndexRouteImport.update({
 } as any)
 const AppRoute = AppRouteImport.update({
   id: '/_app',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AffiliatesRoute = AffiliatesRouteImport.update({
+  id: '/affiliates',
+  path: '/affiliates',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -229,6 +246,31 @@ const AppWaitersRoute = AppWaitersRouteImport.update({
   path: '/waiters',
   getParentRoute: () => AppRoute,
 } as any)
+const AffiliatesIndexRoute = AffiliatesIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AffiliatesRoute,
+} as any)
+const AffiliatesDashboardRoute = AffiliatesDashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => AffiliatesRoute,
+} as any)
+const AffiliatesLoginRoute = AffiliatesLoginRouteImport.update({
+  id: '/login',
+  path: '/login',
+  getParentRoute: () => AffiliatesRoute,
+} as any)
+const AffiliatesRegisterRoute = AffiliatesRegisterRouteImport.update({
+  id: '/register',
+  path: '/register',
+  getParentRoute: () => AffiliatesRoute,
+} as any)
+const AffiliatesResetPasswordRoute = AffiliatesResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
+  getParentRoute: () => AffiliatesRoute,
+} as any)
 const ApiHealthRoute = ApiHealthRouteImport.update({
   id: '/api/health',
   path: '/api/health',
@@ -339,6 +381,42 @@ const AppInventorySuppliersRoute = AppInventorySuppliersRouteImport.update({
   path: '/suppliers',
   getParentRoute: () => AppInventoryRoute,
 } as any)
+const AffiliatesDashboardIndexRoute =
+  AffiliatesDashboardIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AffiliatesDashboardRoute,
+  } as any)
+const AffiliatesDashboardCommissionsRoute =
+  AffiliatesDashboardCommissionsRouteImport.update({
+    id: '/commissions',
+    path: '/commissions',
+    getParentRoute: () => AffiliatesDashboardRoute,
+  } as any)
+const AffiliatesDashboardMaterialsRoute =
+  AffiliatesDashboardMaterialsRouteImport.update({
+    id: '/materials',
+    path: '/materials',
+    getParentRoute: () => AffiliatesDashboardRoute,
+  } as any)
+const AffiliatesDashboardReferralsRoute =
+  AffiliatesDashboardReferralsRouteImport.update({
+    id: '/referrals',
+    path: '/referrals',
+    getParentRoute: () => AffiliatesDashboardRoute,
+  } as any)
+const AffiliatesDashboardSettingsRoute =
+  AffiliatesDashboardSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AffiliatesDashboardRoute,
+  } as any)
+const AffiliatesDashboardWithdrawalsRoute =
+  AffiliatesDashboardWithdrawalsRouteImport.update({
+    id: '/withdrawals',
+    path: '/withdrawals',
+    getParentRoute: () => AffiliatesDashboardRoute,
+  } as any)
 const ApiBillingCloseCyclesRoute = ApiBillingCloseCyclesRouteImport.update({
   id: '/api/billing/close-cycles',
   path: '/api/billing/close-cycles',
@@ -498,6 +576,7 @@ const ApiPizzeriasIdReactivateRoute =
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/affiliates': typeof AffiliatesRouteWithChildren
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
   '/preparar': typeof PrepararRoute
@@ -524,12 +603,17 @@ export interface FileRoutesByFullPath {
   '/settings': typeof AppSettingsRoute
   '/tables': typeof AppTablesRoute
   '/waiters': typeof AppWaitersRoute
+  '/affiliates/dashboard': typeof AffiliatesDashboardRouteWithChildren
+  '/affiliates/login': typeof AffiliatesLoginRoute
+  '/affiliates/register': typeof AffiliatesRegisterRoute
+  '/affiliates/reset-password': typeof AffiliatesResetPasswordRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
+  '/affiliates/': typeof AffiliatesIndexRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/cents': typeof AppAdminCentsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
@@ -544,6 +628,11 @@ export interface FileRoutesByFullPath {
   '/inventory/recipes': typeof AppInventoryRecipesRoute
   '/inventory/reports': typeof AppInventoryReportsRoute
   '/inventory/suppliers': typeof AppInventorySuppliersRoute
+  '/affiliates/dashboard/commissions': typeof AffiliatesDashboardCommissionsRoute
+  '/affiliates/dashboard/materials': typeof AffiliatesDashboardMaterialsRoute
+  '/affiliates/dashboard/referrals': typeof AffiliatesDashboardReferralsRoute
+  '/affiliates/dashboard/settings': typeof AffiliatesDashboardSettingsRoute
+  '/affiliates/dashboard/withdrawals': typeof AffiliatesDashboardWithdrawalsRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/crm/catalog': typeof ApiCrmCatalogRoute
   '/api/crm/customer': typeof ApiCrmCustomerRoute
@@ -570,6 +659,7 @@ export interface FileRoutesByFullPath {
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/admin/': typeof AppAdminIndexRoute
   '/inventory/': typeof AppInventoryIndexRoute
+  '/affiliates/dashboard/': typeof AffiliatesDashboardIndexRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
@@ -603,12 +693,16 @@ export interface FileRoutesByTo {
   '/settings': typeof AppSettingsRoute
   '/tables': typeof AppTablesRoute
   '/waiters': typeof AppWaitersRoute
+  '/affiliates/login': typeof AffiliatesLoginRoute
+  '/affiliates/register': typeof AffiliatesRegisterRoute
+  '/affiliates/reset-password': typeof AffiliatesResetPasswordRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
+  '/affiliates': typeof AffiliatesIndexRoute
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/cents': typeof AppAdminCentsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
@@ -623,6 +717,11 @@ export interface FileRoutesByTo {
   '/inventory/recipes': typeof AppInventoryRecipesRoute
   '/inventory/reports': typeof AppInventoryReportsRoute
   '/inventory/suppliers': typeof AppInventorySuppliersRoute
+  '/affiliates/dashboard/commissions': typeof AffiliatesDashboardCommissionsRoute
+  '/affiliates/dashboard/materials': typeof AffiliatesDashboardMaterialsRoute
+  '/affiliates/dashboard/referrals': typeof AffiliatesDashboardReferralsRoute
+  '/affiliates/dashboard/settings': typeof AffiliatesDashboardSettingsRoute
+  '/affiliates/dashboard/withdrawals': typeof AffiliatesDashboardWithdrawalsRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/crm/catalog': typeof ApiCrmCatalogRoute
   '/api/crm/customer': typeof ApiCrmCustomerRoute
@@ -649,6 +748,7 @@ export interface FileRoutesByTo {
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/admin': typeof AppAdminIndexRoute
   '/inventory': typeof AppInventoryIndexRoute
+  '/affiliates/dashboard': typeof AffiliatesDashboardIndexRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
@@ -660,6 +760,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_app': typeof AppRouteWithChildren
+  '/affiliates': typeof AffiliatesRouteWithChildren
   '/login': typeof LoginRoute
   '/plans': typeof PlansRoute
   '/preparar': typeof PrepararRoute
@@ -686,12 +787,17 @@ export interface FileRoutesById {
   '/_app/settings': typeof AppSettingsRoute
   '/_app/tables': typeof AppTablesRoute
   '/_app/waiters': typeof AppWaitersRoute
+  '/affiliates/dashboard': typeof AffiliatesDashboardRouteWithChildren
+  '/affiliates/login': typeof AffiliatesLoginRoute
+  '/affiliates/register': typeof AffiliatesRegisterRoute
+  '/affiliates/reset-password': typeof AffiliatesResetPasswordRoute
   '/api/health': typeof ApiHealthRoute
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/auth/callback': typeof AuthCallbackRoute
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
+  '/affiliates/': typeof AffiliatesIndexRoute
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/cents': typeof AppAdminCentsRoute
   '/_app/admin/finance': typeof AppAdminFinanceRoute
@@ -706,6 +812,11 @@ export interface FileRoutesById {
   '/_app/inventory/recipes': typeof AppInventoryRecipesRoute
   '/_app/inventory/reports': typeof AppInventoryReportsRoute
   '/_app/inventory/suppliers': typeof AppInventorySuppliersRoute
+  '/affiliates/dashboard/commissions': typeof AffiliatesDashboardCommissionsRoute
+  '/affiliates/dashboard/materials': typeof AffiliatesDashboardMaterialsRoute
+  '/affiliates/dashboard/referrals': typeof AffiliatesDashboardReferralsRoute
+  '/affiliates/dashboard/settings': typeof AffiliatesDashboardSettingsRoute
+  '/affiliates/dashboard/withdrawals': typeof AffiliatesDashboardWithdrawalsRoute
   '/api/billing/close-cycles': typeof ApiBillingCloseCyclesRoute
   '/api/crm/catalog': typeof ApiCrmCatalogRoute
   '/api/crm/customer': typeof ApiCrmCustomerRoute
@@ -732,6 +843,7 @@ export interface FileRoutesById {
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/_app/admin/': typeof AppAdminIndexRoute
   '/_app/inventory/': typeof AppInventoryIndexRoute
+  '/affiliates/dashboard/': typeof AffiliatesDashboardIndexRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
@@ -743,6 +855,7 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/affiliates'
     | '/login'
     | '/plans'
     | '/preparar'
@@ -769,12 +882,17 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tables'
     | '/waiters'
+    | '/affiliates/dashboard'
+    | '/affiliates/login'
+    | '/affiliates/register'
+    | '/affiliates/reset-password'
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
     | '/auth/callback'
     | '/pagamento/$plano'
     | '/print/$orderId'
+    | '/affiliates/'
     | '/admin/analytics'
     | '/admin/cents'
     | '/admin/finance'
@@ -789,6 +907,11 @@ export interface FileRouteTypes {
     | '/inventory/recipes'
     | '/inventory/reports'
     | '/inventory/suppliers'
+    | '/affiliates/dashboard/commissions'
+    | '/affiliates/dashboard/materials'
+    | '/affiliates/dashboard/referrals'
+    | '/affiliates/dashboard/settings'
+    | '/affiliates/dashboard/withdrawals'
     | '/api/billing/close-cycles'
     | '/api/crm/catalog'
     | '/api/crm/customer'
@@ -815,6 +938,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/whatsapp-status'
     | '/admin/'
     | '/inventory/'
+    | '/affiliates/dashboard/'
     | '/api/crm/outbox/result'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
@@ -848,12 +972,16 @@ export interface FileRouteTypes {
     | '/settings'
     | '/tables'
     | '/waiters'
+    | '/affiliates/login'
+    | '/affiliates/register'
+    | '/affiliates/reset-password'
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
     | '/auth/callback'
     | '/pagamento/$plano'
     | '/print/$orderId'
+    | '/affiliates'
     | '/admin/analytics'
     | '/admin/cents'
     | '/admin/finance'
@@ -868,6 +996,11 @@ export interface FileRouteTypes {
     | '/inventory/recipes'
     | '/inventory/reports'
     | '/inventory/suppliers'
+    | '/affiliates/dashboard/commissions'
+    | '/affiliates/dashboard/materials'
+    | '/affiliates/dashboard/referrals'
+    | '/affiliates/dashboard/settings'
+    | '/affiliates/dashboard/withdrawals'
     | '/api/billing/close-cycles'
     | '/api/crm/catalog'
     | '/api/crm/customer'
@@ -894,6 +1027,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/whatsapp-status'
     | '/admin'
     | '/inventory'
+    | '/affiliates/dashboard'
     | '/api/crm/outbox/result'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
@@ -904,6 +1038,7 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/_app'
+    | '/affiliates'
     | '/login'
     | '/plans'
     | '/preparar'
@@ -930,12 +1065,17 @@ export interface FileRouteTypes {
     | '/_app/settings'
     | '/_app/tables'
     | '/_app/waiters'
+    | '/affiliates/dashboard'
+    | '/affiliates/login'
+    | '/affiliates/register'
+    | '/affiliates/reset-password'
     | '/api/health'
     | '/api/orders'
     | '/api/sync-table-sessions'
     | '/auth/callback'
     | '/pagamento/$plano'
     | '/print/$orderId'
+    | '/affiliates/'
     | '/_app/admin/analytics'
     | '/_app/admin/cents'
     | '/_app/admin/finance'
@@ -950,6 +1090,11 @@ export interface FileRouteTypes {
     | '/_app/inventory/recipes'
     | '/_app/inventory/reports'
     | '/_app/inventory/suppliers'
+    | '/affiliates/dashboard/commissions'
+    | '/affiliates/dashboard/materials'
+    | '/affiliates/dashboard/referrals'
+    | '/affiliates/dashboard/settings'
+    | '/affiliates/dashboard/withdrawals'
     | '/api/billing/close-cycles'
     | '/api/crm/catalog'
     | '/api/crm/customer'
@@ -976,6 +1121,7 @@ export interface FileRouteTypes {
     | '/api/webhooks/whatsapp-status'
     | '/_app/admin/'
     | '/_app/inventory/'
+    | '/affiliates/dashboard/'
     | '/api/crm/outbox/result'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
@@ -987,6 +1133,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AppRoute: typeof AppRouteWithChildren
+  AffiliatesRoute: typeof AffiliatesRouteWithChildren
   LoginRoute: typeof LoginRoute
   PlansRoute: typeof PlansRoute
   PrepararRoute: typeof PrepararRoute
@@ -1046,6 +1193,13 @@ declare module '@tanstack/react-router' {
       path: ''
       fullPath: '/'
       preLoaderRoute: typeof AppRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/affiliates': {
+      id: '/affiliates'
+      path: '/affiliates'
+      fullPath: '/affiliates'
+      preLoaderRoute: typeof AffiliatesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1230,6 +1384,41 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppWaitersRouteImport
       parentRoute: typeof AppRoute
     }
+    '/affiliates/': {
+      id: '/affiliates/'
+      path: '/'
+      fullPath: '/affiliates/'
+      preLoaderRoute: typeof AffiliatesIndexRouteImport
+      parentRoute: typeof AffiliatesRoute
+    }
+    '/affiliates/dashboard': {
+      id: '/affiliates/dashboard'
+      path: '/dashboard'
+      fullPath: '/affiliates/dashboard'
+      preLoaderRoute: typeof AffiliatesDashboardRouteImport
+      parentRoute: typeof AffiliatesRoute
+    }
+    '/affiliates/login': {
+      id: '/affiliates/login'
+      path: '/login'
+      fullPath: '/affiliates/login'
+      preLoaderRoute: typeof AffiliatesLoginRouteImport
+      parentRoute: typeof AffiliatesRoute
+    }
+    '/affiliates/register': {
+      id: '/affiliates/register'
+      path: '/register'
+      fullPath: '/affiliates/register'
+      preLoaderRoute: typeof AffiliatesRegisterRouteImport
+      parentRoute: typeof AffiliatesRoute
+    }
+    '/affiliates/reset-password': {
+      id: '/affiliates/reset-password'
+      path: '/reset-password'
+      fullPath: '/affiliates/reset-password'
+      preLoaderRoute: typeof AffiliatesResetPasswordRouteImport
+      parentRoute: typeof AffiliatesRoute
+    }
     '/api/health': {
       id: '/api/health'
       path: '/api/health'
@@ -1383,6 +1572,48 @@ declare module '@tanstack/react-router' {
       fullPath: '/inventory/suppliers'
       preLoaderRoute: typeof AppInventorySuppliersRouteImport
       parentRoute: typeof AppInventoryRoute
+    }
+    '/affiliates/dashboard/': {
+      id: '/affiliates/dashboard/'
+      path: '/'
+      fullPath: '/affiliates/dashboard/'
+      preLoaderRoute: typeof AffiliatesDashboardIndexRouteImport
+      parentRoute: typeof AffiliatesDashboardRoute
+    }
+    '/affiliates/dashboard/commissions': {
+      id: '/affiliates/dashboard/commissions'
+      path: '/commissions'
+      fullPath: '/affiliates/dashboard/commissions'
+      preLoaderRoute: typeof AffiliatesDashboardCommissionsRouteImport
+      parentRoute: typeof AffiliatesDashboardRoute
+    }
+    '/affiliates/dashboard/materials': {
+      id: '/affiliates/dashboard/materials'
+      path: '/materials'
+      fullPath: '/affiliates/dashboard/materials'
+      preLoaderRoute: typeof AffiliatesDashboardMaterialsRouteImport
+      parentRoute: typeof AffiliatesDashboardRoute
+    }
+    '/affiliates/dashboard/referrals': {
+      id: '/affiliates/dashboard/referrals'
+      path: '/referrals'
+      fullPath: '/affiliates/dashboard/referrals'
+      preLoaderRoute: typeof AffiliatesDashboardReferralsRouteImport
+      parentRoute: typeof AffiliatesDashboardRoute
+    }
+    '/affiliates/dashboard/settings': {
+      id: '/affiliates/dashboard/settings'
+      path: '/settings'
+      fullPath: '/affiliates/dashboard/settings'
+      preLoaderRoute: typeof AffiliatesDashboardSettingsRouteImport
+      parentRoute: typeof AffiliatesDashboardRoute
+    }
+    '/affiliates/dashboard/withdrawals': {
+      id: '/affiliates/dashboard/withdrawals'
+      path: '/withdrawals'
+      fullPath: '/affiliates/dashboard/withdrawals'
+      preLoaderRoute: typeof AffiliatesDashboardWithdrawalsRouteImport
+      parentRoute: typeof AffiliatesDashboardRoute
     }
     '/api/billing/close-cycles': {
       id: '/api/billing/close-cycles'
@@ -1691,6 +1922,47 @@ const AppRouteChildren: AppRouteChildren = {
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
 
+interface AffiliatesDashboardRouteChildren {
+  AffiliatesDashboardCommissionsRoute: typeof AffiliatesDashboardCommissionsRoute
+  AffiliatesDashboardMaterialsRoute: typeof AffiliatesDashboardMaterialsRoute
+  AffiliatesDashboardReferralsRoute: typeof AffiliatesDashboardReferralsRoute
+  AffiliatesDashboardSettingsRoute: typeof AffiliatesDashboardSettingsRoute
+  AffiliatesDashboardWithdrawalsRoute: typeof AffiliatesDashboardWithdrawalsRoute
+  AffiliatesDashboardIndexRoute: typeof AffiliatesDashboardIndexRoute
+}
+
+const AffiliatesDashboardRouteChildren: AffiliatesDashboardRouteChildren = {
+  AffiliatesDashboardCommissionsRoute: AffiliatesDashboardCommissionsRoute,
+  AffiliatesDashboardMaterialsRoute: AffiliatesDashboardMaterialsRoute,
+  AffiliatesDashboardReferralsRoute: AffiliatesDashboardReferralsRoute,
+  AffiliatesDashboardSettingsRoute: AffiliatesDashboardSettingsRoute,
+  AffiliatesDashboardWithdrawalsRoute: AffiliatesDashboardWithdrawalsRoute,
+  AffiliatesDashboardIndexRoute: AffiliatesDashboardIndexRoute,
+}
+
+const AffiliatesDashboardRouteWithChildren =
+  AffiliatesDashboardRoute._addFileChildren(AffiliatesDashboardRouteChildren)
+
+interface AffiliatesRouteChildren {
+  AffiliatesDashboardRoute: typeof AffiliatesDashboardRouteWithChildren
+  AffiliatesLoginRoute: typeof AffiliatesLoginRoute
+  AffiliatesRegisterRoute: typeof AffiliatesRegisterRoute
+  AffiliatesResetPasswordRoute: typeof AffiliatesResetPasswordRoute
+  AffiliatesIndexRoute: typeof AffiliatesIndexRoute
+}
+
+const AffiliatesRouteChildren: AffiliatesRouteChildren = {
+  AffiliatesDashboardRoute: AffiliatesDashboardRouteWithChildren,
+  AffiliatesLoginRoute: AffiliatesLoginRoute,
+  AffiliatesRegisterRoute: AffiliatesRegisterRoute,
+  AffiliatesResetPasswordRoute: AffiliatesResetPasswordRoute,
+  AffiliatesIndexRoute: AffiliatesIndexRoute,
+}
+
+const AffiliatesRouteWithChildren = AffiliatesRoute._addFileChildren(
+  AffiliatesRouteChildren,
+)
+
 interface ApiCrmOutboxRouteChildren {
   ApiCrmOutboxResultRoute: typeof ApiCrmOutboxResultRoute
 }
@@ -1717,6 +1989,7 @@ const ApiMarketingQueueRouteWithChildren =
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AppRoute: AppRouteWithChildren,
+  AffiliatesRoute: AffiliatesRouteWithChildren,
   LoginRoute: LoginRoute,
   PlansRoute: PlansRoute,
   PrepararRoute: PrepararRoute,
