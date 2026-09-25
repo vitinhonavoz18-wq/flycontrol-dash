@@ -2,7 +2,7 @@ import { renderHook } from "@testing-library/react";
 import { act } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { Order } from "@/types/order";
-import { STATUS_CHANGE_SOURCE, useUpdateOrderStatus } from "./useUpdateOrderStatus";
+import { useUpdateOrderStatus } from "./useUpdateOrderStatus";
 
 type SupabaseResult<T> = { data: T; error: { code?: string; message: string } | null };
 
@@ -12,6 +12,8 @@ const mocks = vi.hoisted(() => ({
   /** Resposta da releitura do pedido usada na resolução de conflito. */
   refetchResult: { data: null as unknown, error: null } as SupabaseResult<unknown>,
   historyInsert: vi.fn(),
+  /** Quantas vezes o status foi gravado no banco. */
+  statusUpdate: vi.fn(),
   /** Trava opcional para inspecionar o estado otimista antes da resposta. */
   gate: null as null | Promise<void>,
 }));
@@ -23,16 +25,19 @@ vi.mock("@/integrations/supabase/client", () => ({
         return { insert: mocks.historyInsert };
       }
       return {
-        update: () => ({
-          eq: () => ({
+        update: (values: unknown) => {
+          mocks.statusUpdate(values);
+          return {
             eq: () => ({
-              select: async () => {
-                if (mocks.gate) await mocks.gate;
-                return mocks.updateResult;
-              },
+              eq: () => ({
+                select: async () => {
+                  if (mocks.gate) await mocks.gate;
+                  return mocks.updateResult;
+                },
+              }),
             }),
-          }),
-        }),
+          };
+        },
         select: () => ({
           eq: () => ({
             maybeSingle: async () => mocks.refetchResult,
@@ -153,29 +158,9 @@ describe("gravação bem-sucedida", () => {
     );
   });
 
-  it("registra o histórico com origem, autor e empresa", async () => {
-    const { hook } = setup();
-
-    await act(async () => {
-      await hook.result.current.moveOrder(makeOrder(), "preparando");
-    });
-
-    expect(mocks.historyInsert).toHaveBeenCalledWith({
-      order_id: "order-1",
-      tenant_id: TENANT,
-      from_status: "novo",
-      to_status: "preparando",
-      changed_by: "user-1",
-      source: STATUS_CHANGE_SOURCE,
-      note: null,
-    });
-  });
-
-  it("não derruba a mudança de status quando a tabela de histórico não existe", async () => {
-    mocks.historyInsert.mockResolvedValue({
-      error: { code: "42P01", message: 'relation "order_status_history" does not exist' },
-    });
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+  it("não grava o histórico pelo navegador — o banco grava na mesma operação", async () => {
+    // O gatilho `orders_record_status_history` registra cada mudança de
+    // status junto com ela. Uma segunda gravação daqui duplicaria a linha.
     const { hook, store, onStatusApplied } = setup();
 
     await act(async () => {
@@ -184,8 +169,7 @@ describe("gravação bem-sucedida", () => {
 
     expect(store.orders[0].status).toBe("preparando");
     expect(onStatusApplied).toHaveBeenCalled();
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
+    expect(mocks.historyInsert).not.toHaveBeenCalled();
   });
 });
 
@@ -279,8 +263,9 @@ describe("concorrência", () => {
       expect(result.ok).toBe(true);
     });
 
-    // Uma única gravação de histórico: o segundo arraste não virou escrita.
-    expect(mocks.historyInsert).toHaveBeenCalledTimes(1);
+    // Uma única gravação no banco: o segundo arraste não virou escrita.
+    expect(mocks.statusUpdate).toHaveBeenCalledTimes(1);
+    expect(mocks.statusUpdate).toHaveBeenCalledWith({ status: "preparando" });
   });
 });
 

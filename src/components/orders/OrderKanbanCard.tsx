@@ -18,7 +18,7 @@ import {
   getOrderTypeLabel,
   isPaid,
 } from "./orderDisplay";
-import { getDelayLevel, getStatusLabel } from "./orderStatusConfig";
+import { getDelayLevel, getStatusLabelForOrder } from "./orderStatusConfig";
 
 const TYPE_BADGE_STYLES: Record<string, string> = {
   delivery: "bg-orange-500/10 text-orange-600 border-orange-500/20",
@@ -63,6 +63,14 @@ export function OrderCardContent({
             >
               {getOrderTypeLabel(order).toUpperCase()}
             </Badge>
+            {orderType === "pickup" && order.status === "saiu" && (
+              <Badge
+                variant="outline"
+                className="h-5 border-emerald-500/30 bg-emerald-500/15 py-0 text-[9px] font-black text-emerald-700 dark:text-emerald-400"
+              >
+                PRONTO P/ RETIRADA
+              </Badge>
+            )}
             {order.source === "flydelivery" && (
               <Badge
                 variant="outline"
@@ -204,7 +212,7 @@ function OrderKanbanCardComponent({
         ref={setNodeRef}
         {...attributes}
         {...listeners}
-        aria-label={`Pedido ${order.order_number || order.id.slice(0, 5)} de ${order.customer_name}, etapa ${getStatusLabel(order.status)}`}
+        aria-label={`Pedido ${order.order_number || order.id.slice(0, 5)} de ${order.customer_name}, etapa ${getStatusLabelForOrder(order.status, normalizeOrderType(order))}`}
         aria-busy={isPending}
         // `touch-manipulation` (e não `touch-none`): a rolagem do dedo continua
         // funcionando, e o arraste só começa depois do toque longo configurado
