@@ -1656,6 +1656,7 @@ export type Database = {
       };
       flydelivery_events: {
         Row: {
+          campaign_id: string | null;
           created_at: string;
           event_type: string;
           id: number;
@@ -1666,6 +1667,7 @@ export type Database = {
           user_id: string | null;
         };
         Insert: {
+          campaign_id?: string | null;
           created_at?: string;
           event_type: string;
           id?: number;
@@ -1676,6 +1678,7 @@ export type Database = {
           user_id?: string | null;
         };
         Update: {
+          campaign_id?: string | null;
           created_at?: string;
           event_type?: string;
           id?: number;
@@ -2737,6 +2740,102 @@ export type Database = {
           inventory_product_id?: string;
           quantity_base?: number;
           created_at?: string;
+        };
+        Relationships: [];
+      };
+      flydelivery_campaign_plans: {
+        Row: {
+          active: boolean;
+          created_at: string;
+          duration_days: number;
+          id: string;
+          label: string;
+          price_cents: number;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          active?: boolean;
+          created_at?: string;
+          duration_days: number;
+          id?: string;
+          label: string;
+          price_cents?: number;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          active?: boolean;
+          created_at?: string;
+          duration_days?: number;
+          id?: string;
+          label?: string;
+          price_cents?: number;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      flydelivery_campaigns: {
+        Row: {
+          amount_cents: number;
+          approved_at: string | null;
+          approved_by: string | null;
+          campaign_type: string;
+          created_at: string;
+          created_by: string | null;
+          end_at: string;
+          id: string;
+          payment_status: string;
+          pizzeria_id: string;
+          placements: string[] | null;
+          plan_id: string | null;
+          priority: number;
+          product_id: string;
+          review_note: string | null;
+          start_at: string;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents?: number;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          campaign_type?: string;
+          created_at?: string;
+          created_by?: string | null;
+          end_at: string;
+          id?: string;
+          payment_status?: string;
+          pizzeria_id: string;
+          placements?: string[] | null;
+          plan_id?: string | null;
+          priority?: number;
+          product_id: string;
+          review_note?: string | null;
+          start_at?: string;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          approved_at?: string | null;
+          approved_by?: string | null;
+          campaign_type?: string;
+          created_at?: string;
+          created_by?: string | null;
+          end_at?: string;
+          id?: string;
+          payment_status?: string;
+          pizzeria_id?: string;
+          placements?: string[] | null;
+          plan_id?: string | null;
+          priority?: number;
+          product_id?: string;
+          review_note?: string | null;
+          start_at?: string;
+          status?: string;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -4899,6 +4998,50 @@ export type Database = {
       flydelivery_infer_category: {
         Args: { store_name: string };
         Returns: string;
+      };
+      flydelivery_campaign_admin_list: {
+        Args: never;
+        Returns: {
+          amount_cents: number;
+          campaign_id: string;
+          clicks: number;
+          created_at: string;
+          ctr: number;
+          display_status: string;
+          end_at: string;
+          image_url: string;
+          impressions: number;
+          issues: string[];
+          payment_status: string;
+          pizzeria_id: string;
+          priority: number;
+          product_id: string;
+          product_name: string;
+          review_note: string;
+          start_at: string;
+          status: string;
+          store_name: string;
+        }[];
+      };
+      flydelivery_campaign_stats: {
+        Args: { p_pizzeria_id: string };
+        Returns: {
+          campaign_id: string;
+          clicks: number;
+          created_at: string;
+          ctr: number;
+          display_status: string;
+          duration_days: number;
+          end_at: string;
+          image_url: string;
+          impressions: number;
+          price: number;
+          product_id: string;
+          product_name: string;
+          review_note: string;
+          start_at: string;
+          status: string;
+        }[];
       };
       flydelivery_showcase_admin_overview: {
         Args: never;

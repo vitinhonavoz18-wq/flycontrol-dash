@@ -37,6 +37,8 @@ import { Loader2, MapPin, Plus, Smartphone, Trash2, TrendingUp } from "lucide-re
 import { toast } from "sonner";
 import { VitrineManager } from "@/components/flydelivery/VitrineManager";
 import { VitrineAdminOverview } from "@/components/flydelivery/VitrineAdminOverview";
+import { ImpulsionarProdutos } from "@/components/flydelivery/impulsionar/ImpulsionarProdutos";
+import { CampanhasAdmin } from "@/components/flydelivery/impulsionar/CampanhasAdmin";
 
 export const Route = createFileRoute("/_app/flydelivery")({ component: FlyDeliveryPage });
 
@@ -210,6 +212,7 @@ function FlyDeliveryPage() {
           <TabsTrigger value="entrega">Entrega</TabsTrigger>
           <TabsTrigger value="areas">Áreas e taxas</TabsTrigger>
           <TabsTrigger value="vitrine">Produtos em Vitrine</TabsTrigger>
+          <TabsTrigger value="impulsionar">Impulsionar</TabsTrigger>
           <TabsTrigger value="desempenho">Desempenho</TabsTrigger>
         </TabsList>
 
@@ -356,6 +359,16 @@ function FlyDeliveryPage() {
         <TabsContent value="vitrine" className="space-y-4 pt-4">
           <VitrineManager pizzeriaId={active.id} storeName={active.name} />
           {isSuperAdmin ? <VitrineAdminOverview /> : null}
+        </TabsContent>
+
+        {/* ---------------- IMPULSIONAR ---------------- */}
+        <TabsContent value="impulsionar" className="space-y-4 pt-4">
+          <ImpulsionarProdutos
+            pizzeriaId={active.id}
+            storeName={active.name}
+            lojaNoFlyDelivery={active.flydelivery_enabled}
+          />
+          {isSuperAdmin ? <CampanhasAdmin /> : null}
         </TabsContent>
 
         <TabsContent value="desempenho" className="pt-4">
