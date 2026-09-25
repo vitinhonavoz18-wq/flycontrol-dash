@@ -292,6 +292,11 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
     );
   }
 
+  // Adicionais pós-pagos (impulsionamento no FlyDelivery): cada um entra como
+  // uma linha própria, somando ao plano. Tem que ser AQUI, antes de o robô
+  // gerar o link de pagamento com o total da fatura.
+  const invoiceTotalCents = await attachAddons(db, invoice.id, totals.totalAmountCents);
+
   // Abre o próximo ciclo já com o preço de largada.
   //
   // Nas faixas, o mês novo sempre começa na primeira faixa: o desconto se
@@ -340,11 +345,39 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
   return {
     ok: true,
     invoiceId: invoice.id,
-    totalAmountCents: totals.totalAmountCents,
+    totalAmountCents: invoiceTotalCents,
     nextCycleId,
     alreadyClosed: false,
     freeTrial: false,
   };
+}
+
+/**
+ * Põe na fatura recém-emitida os adicionais pós-pagos que a loja contratou
+ * até o fim do ciclo, e devolve o total que a fatura tem DEPOIS disso.
+ *
+ * Quem faz a conta é o banco (`billing_attach_addons`), numa transação só e
+ * sem repetir: rodar de novo não soma de novo. Se der erro, a fatura sai só
+ * com o plano e os adicionais continuam na fila para a próxima — nada se
+ * perde e nada é cobrado duas vezes.
+ */
+async function attachAddons(
+  db: AdminClient,
+  invoiceId: string,
+  planTotalCents: number,
+): Promise<number> {
+  const { error } = await db.rpc("billing_attach_addons", { p_invoice_id: invoiceId });
+  if (error) {
+    console.error(`[billing] adicionais não entraram na fatura ${invoiceId}: ${error.message}`);
+  }
+
+  // O total que vale é o que ficou gravado — é ele que vira link de pagamento.
+  const { data } = await db
+    .from("invoices")
+    .select("id, total_cents")
+    .eq("id", invoiceId)
+    .maybeSingle();
+  return (data as InvoiceRef | null)?.total_cents ?? planTotalCents;
 }
 
 /**

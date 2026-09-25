@@ -41,6 +41,66 @@ export type Database = {
         };
         Relationships: [];
       };
+      billing_addon_charges: {
+        Row: {
+          amount_cents: number;
+          billing_cycle_id: string | null;
+          company_id: string;
+          created_at: string;
+          created_by: string | null;
+          description: string;
+          id: string;
+          invoice_id: string | null;
+          invoice_item_id: string | null;
+          metadata: Json;
+          quantity: number;
+          source_id: string;
+          source_type: string;
+          status: string;
+          subscription_id: string | null;
+          unit_amount_cents: number;
+          updated_at: string;
+        };
+        Insert: {
+          amount_cents: number;
+          billing_cycle_id?: string | null;
+          company_id: string;
+          created_at?: string;
+          created_by?: string | null;
+          description: string;
+          id?: string;
+          invoice_id?: string | null;
+          invoice_item_id?: string | null;
+          metadata?: Json;
+          quantity?: number;
+          source_id: string;
+          source_type: string;
+          status?: string;
+          subscription_id?: string | null;
+          unit_amount_cents: number;
+          updated_at?: string;
+        };
+        Update: {
+          amount_cents?: number;
+          billing_cycle_id?: string | null;
+          company_id?: string;
+          created_at?: string;
+          created_by?: string | null;
+          description?: string;
+          id?: string;
+          invoice_id?: string | null;
+          invoice_item_id?: string | null;
+          metadata?: Json;
+          quantity?: number;
+          source_id?: string;
+          source_type?: string;
+          status?: string;
+          subscription_id?: string | null;
+          unit_amount_cents?: number;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
       billing_cycles: {
         Row: {
           billable_order_count: number;
@@ -2450,6 +2510,7 @@ export type Database = {
       };
       invoice_items: {
         Row: {
+          addon_charge_id: string | null;
           created_at: string;
           description: string;
           id: string;
@@ -2461,6 +2522,7 @@ export type Database = {
           unit_amount_cents: number;
         };
         Insert: {
+          addon_charge_id?: string | null;
           created_at?: string;
           description: string;
           id?: string;
@@ -2472,6 +2534,7 @@ export type Database = {
           unit_amount_cents: number;
         };
         Update: {
+          addon_charge_id?: string | null;
           created_at?: string;
           description?: string;
           id?: string;
@@ -2743,10 +2806,71 @@ export type Database = {
         };
         Relationships: [];
       };
+      flydelivery_boost_settings: {
+        Row: {
+          allow_during_trial: boolean;
+          id: boolean;
+          max_schedule_days: number;
+          refund_if_not_started: boolean;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          allow_during_trial?: boolean;
+          id?: boolean;
+          max_schedule_days?: number;
+          refund_if_not_started?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          allow_during_trial?: boolean;
+          id?: boolean;
+          max_schedule_days?: number;
+          refund_if_not_started?: boolean;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      flydelivery_campaign_history: {
+        Row: {
+          action: string;
+          actor: string | null;
+          campaign_id: string;
+          created_at: string;
+          details: Json;
+          from_status: string | null;
+          id: number;
+          to_status: string | null;
+        };
+        Insert: {
+          action: string;
+          actor?: string | null;
+          campaign_id: string;
+          created_at?: string;
+          details?: Json;
+          from_status?: string | null;
+          id?: number;
+          to_status?: string | null;
+        };
+        Update: {
+          action?: string;
+          actor?: string | null;
+          campaign_id?: string;
+          created_at?: string;
+          details?: Json;
+          from_status?: string | null;
+          id?: number;
+          to_status?: string | null;
+        };
+        Relationships: [];
+      };
       flydelivery_campaign_plans: {
         Row: {
           active: boolean;
           created_at: string;
+          description: string | null;
           duration_days: number;
           id: string;
           label: string;
@@ -2757,6 +2881,7 @@ export type Database = {
         Insert: {
           active?: boolean;
           created_at?: string;
+          description?: string | null;
           duration_days: number;
           id?: string;
           label: string;
@@ -2767,6 +2892,7 @@ export type Database = {
         Update: {
           active?: boolean;
           created_at?: string;
+          description?: string | null;
           duration_days?: number;
           id?: string;
           label?: string;
@@ -2778,6 +2904,16 @@ export type Database = {
       };
       flydelivery_campaigns: {
         Row: {
+          cancel_reason: string | null;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          contracted_at: string | null;
+          contracted_by: string | null;
+          duration_days_snapshot: number | null;
+          idempotency_key: string | null;
+          package_label_snapshot: string | null;
+          product_name_snapshot: string | null;
+          terms_accepted_at: string | null;
           amount_cents: number;
           approved_at: string | null;
           approved_by: string | null;
@@ -2798,6 +2934,16 @@ export type Database = {
           updated_at: string;
         };
         Insert: {
+          cancel_reason?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          contracted_at?: string | null;
+          contracted_by?: string | null;
+          duration_days_snapshot?: number | null;
+          idempotency_key?: string | null;
+          package_label_snapshot?: string | null;
+          product_name_snapshot?: string | null;
+          terms_accepted_at?: string | null;
           amount_cents?: number;
           approved_at?: string | null;
           approved_by?: string | null;
@@ -2818,6 +2964,16 @@ export type Database = {
           updated_at?: string;
         };
         Update: {
+          cancel_reason?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          contracted_at?: string | null;
+          contracted_by?: string | null;
+          duration_days_snapshot?: number | null;
+          idempotency_key?: string | null;
+          package_label_snapshot?: string | null;
+          product_name_snapshot?: string | null;
+          terms_accepted_at?: string | null;
           amount_cents?: number;
           approved_at?: string | null;
           approved_by?: string | null;
@@ -4998,6 +5154,70 @@ export type Database = {
       flydelivery_infer_category: {
         Args: { store_name: string };
         Returns: string;
+      };
+      flydelivery_boost_admin_list: {
+        Args: never;
+        Returns: {
+          amount_cents: number;
+          campaign_id: string;
+          charge_id: string | null;
+          charge_status: string | null;
+          clicks: number;
+          contracted_at: string;
+          display_status: string;
+          duration_days: number | null;
+          end_at: string;
+          image_url: string | null;
+          impressions: number;
+          invoice_number: string | null;
+          issues: string[];
+          package_label: string | null;
+          pizzeria_id: string;
+          priority: number;
+          product_name: string;
+          review_note: string | null;
+          start_at: string;
+          status: string;
+          store_name: string;
+        }[];
+      };
+      flydelivery_boost_list: {
+        Args: { p_pizzeria_id: string };
+        Returns: {
+          amount_cents: number;
+          campaign_id: string;
+          cancelled_at: string | null;
+          charge_status: string | null;
+          clicks: number;
+          contracted_at: string;
+          days_remaining: number;
+          display_status: string;
+          duration_days: number | null;
+          end_at: string;
+          image_url: string | null;
+          impressions: number;
+          invoice_number: string | null;
+          package_label: string | null;
+          product_id: string;
+          product_name: string;
+          review_note: string | null;
+          start_at: string;
+          status: string;
+        }[];
+      };
+      flydelivery_boost_overview: {
+        Args: { p_pizzeria_id: string };
+        Returns: Json;
+      };
+      flydelivery_contract_boost: {
+        Args: {
+          p_idempotency_key: string;
+          p_plan_id: string;
+          p_product_id: string;
+          p_start_at?: string | null;
+          p_terms_accepted: boolean;
+        };
+        Returns: Json;
       };
       flydelivery_campaign_admin_list: {
         Args: never;

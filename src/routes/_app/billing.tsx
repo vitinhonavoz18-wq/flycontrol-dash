@@ -7,6 +7,7 @@ import {
   ExternalLink,
   Gift,
   Loader2,
+  Megaphone,
   Receipt,
   ShieldCheck,
 } from "lucide-react";
@@ -28,6 +29,7 @@ import {
 } from "@/lib/billing/subscriptionStatus";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
 import { getPendingCharge } from "@/lib/billing/getPendingCharge.functions";
+import { separarItensDaFatura, type ItemDaFatura } from "@/lib/billing/invoiceSections";
 import {
   SUBSCRIPTION_PHASE_LABELS,
   TRIAL_DURATION_DAYS,
@@ -59,6 +61,14 @@ type Snapshot = {
   trial: TrialProgress | null;
   progress: CycleProgress | null;
   invoices: InvoiceRow[];
+  /**
+   * Adicionais contratados neste ciclo que ainda vão entrar na próxima fatura
+   * (impulsionamento no FlyDelivery). Cada um vira uma linha própria.
+   */
+  publicidade: {
+    totalCents: number;
+    itens: { id: string; description: string; amountCents: number }[];
+  };
 };
 
 type InvoiceRow = {
@@ -74,6 +84,8 @@ type InvoiceRow = {
   competencia: string | null;
   /** Como foi (ou será) paga. Só aparece quando o sistema sabe. */
   formaDePagamento: string | null;
+  /** As linhas da fatura: plano, pedidos, adicionais. */
+  itens: ItemDaFatura[];
 };
 
 const INVOICE_STATUS: Record<string, { label: string; className: string }> = {
@@ -232,13 +244,36 @@ function BillingPage() {
       .from("invoices")
       .select(
         "id, invoice_number, status, total_cents, created_at, due_at, paid_at, payment_provider, " +
-          "billing_cycles(cycle_start, cycle_end)",
+          "billing_cycles(cycle_start, cycle_end), " +
+          "invoice_items!invoice_items_invoice_id_fkey(item_type, description, quantity, total_amount_cents, created_at)",
       )
       .eq("subscription_id", row.id);
+
+    // O que já foi contratado de publicidade e ainda vai para a próxima fatura.
+    const { data: adicionaisRows } = await db
+      .from("billing_addon_charges")
+      .select("id, description, amount_cents, created_at")
+      .eq("company_id", company.id)
+      .eq("status", "pending_invoice");
+    const adicionais = ((adicionaisRows ?? []) as Array<Record<string, unknown>>)
+      .map((a) => ({
+        id: String(a.id),
+        description: String(a.description),
+        amountCents: Number(a.amount_cents ?? 0),
+        createdAt: String(a.created_at),
+      }))
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt));
 
     const invoices = ((invoiceRows ?? []) as Array<Record<string, unknown>>)
       .map((i) => {
         const ciclo = i.billing_cycles as { cycle_start?: string; cycle_end?: string } | null;
+        const linhas = (i.invoice_items ?? []) as Array<{
+          item_type: string;
+          description: string;
+          quantity: number;
+          total_amount_cents: number;
+          created_at: string;
+        }>;
         return {
           id: String(i.id),
           number: String(i.invoice_number),
@@ -249,6 +284,14 @@ function BillingPage() {
           paidAt: i.paid_at ? String(i.paid_at) : null,
           competencia: formatCompetencia(ciclo?.cycle_start ?? null),
           formaDePagamento: formatarFormaDePagamento(i.payment_provider),
+          itens: [...linhas]
+            .sort((a, b) => a.created_at.localeCompare(b.created_at))
+            .map((l) => ({
+              itemType: l.item_type,
+              description: l.description,
+              quantity: Number(l.quantity ?? 1),
+              totalCents: Number(l.total_amount_cents ?? 0),
+            })),
         };
       })
       .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
@@ -297,6 +340,10 @@ function BillingPage() {
           )
         : null,
       invoices,
+      publicidade: {
+        totalCents: adicionais.reduce((t, a) => t + a.amountCents, 0),
+        itens: adicionais,
+      },
     });
     setUnavailable(null);
     setLoading(false);
@@ -655,6 +702,34 @@ function BillingPage() {
         </Card>
       )}
 
+      {snapshot.publicidade.totalCents > 0 && (
+        <Card className="border-amber-500/30">
+          <CardContent className="space-y-3 p-4">
+            <div className="flex flex-wrap items-end justify-between gap-2">
+              <div>
+                <h2 className="flex items-center gap-2 text-sm font-bold">
+                  <Megaphone className="h-4 w-4" aria-hidden="true" /> Publicidade deste ciclo
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Esse valor será adicionado à sua próxima fatura.
+                </p>
+              </div>
+              <p className="text-2xl font-black">{formatCents(snapshot.publicidade.totalCents)}</p>
+            </div>
+            <ul className="divide-y divide-border border-t border-border text-sm">
+              {snapshot.publicidade.itens.map((a) => (
+                <li key={a.id} className="flex justify-between gap-3 py-2">
+                  <span className="min-w-0">{a.description}</span>
+                  <span className="shrink-0 font-medium tabular-nums">
+                    {formatCents(a.amountCents)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      )}
+
       <Card>
         <CardContent className="space-y-3 p-4">
           <h2 className="text-sm font-bold">Funcionalidades do seu plano</h2>
@@ -773,6 +848,8 @@ function BillingPage() {
               )}
             </dl>
 
+            <ItensDaFatura itens={faturaAtual.itens} totalCents={faturaAtual.totalCents} />
+
             {/* O botão só existe quando há um link de pagamento de verdade.
                 Botão bonito que não faz nada é pior que botão nenhum: o
                 cliente clica, não acontece nada, e ele acha que o sistema
@@ -833,6 +910,16 @@ function BillingPage() {
                         `${invoice.dueAt ? " · " : ""}Paga em ${formatDate(invoice.paidAt)}`}
                       {invoice.formaDePagamento && ` · ${invoice.formaDePagamento}`}
                     </p>
+                    {invoice.itens.length > 0 && (
+                      <details className="mt-1">
+                        <summary className="cursor-pointer text-xs font-medium text-primary">
+                          Ver itens
+                        </summary>
+                        <div className="pt-2">
+                          <ItensDaFatura itens={invoice.itens} totalCents={invoice.totalCents} />
+                        </div>
+                      </details>
+                    )}
                   </li>
                 );
               })}
@@ -840,6 +927,43 @@ function BillingPage() {
           )}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+/**
+ * A fatura por dentro: ASSINATURA (o plano) separada de ADICIONAIS (cada
+ * impulsionamento numa linha), e o TOTAL. Sem adicionais, fica só o plano —
+ * como sempre foi.
+ */
+function ItensDaFatura({ itens, totalCents }: { itens: ItemDaFatura[]; totalCents: number }) {
+  const s = separarItensDaFatura(itens, totalCents);
+  return (
+    <div className="space-y-3 rounded-lg border border-border p-3 text-sm">
+      <SecaoDaFatura titulo="Assinatura" itens={s.assinatura} />
+      {s.adicionais.length > 0 && <SecaoDaFatura titulo="Adicionais" itens={s.adicionais} />}
+      <div className="flex justify-between border-t border-border pt-2 font-bold">
+        <span>TOTAL</span>
+        <span className="tabular-nums">{formatCents(s.totalCents)}</span>
+      </div>
+    </div>
+  );
+}
+
+function SecaoDaFatura({ titulo, itens }: { titulo: string; itens: ItemDaFatura[] }) {
+  return (
+    <div>
+      <p className="text-[11px] font-bold uppercase tracking-wide text-muted-foreground">
+        {titulo}
+      </p>
+      <ul className="mt-1 space-y-1">
+        {itens.map((item, i) => (
+          <li key={`${item.description}-${i}`} className="flex justify-between gap-3">
+            <span className="min-w-0">{item.description}</span>
+            <span className="shrink-0 tabular-nums">{formatCents(item.totalCents)}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
