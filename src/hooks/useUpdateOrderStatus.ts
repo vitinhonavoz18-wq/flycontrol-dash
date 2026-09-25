@@ -9,46 +9,31 @@ import {
   type MoveTarget,
 } from "@/components/orders/orderStatusConfig";
 
-/**
- * Origem registrada no histórico para alterações feitas pelo quadro.
- * Alterações feitas pelo seletor antigo continuam sem origem própria.
- */
-export const STATUS_CHANGE_SOURCE = "dashboard_kanban";
-
 type UseUpdateOrderStatusParams = {
   /** Aplica uma alteração à lista de pedidos do dashboard. */
   setOrders: React.Dispatch<React.SetStateAction<Order[]>>;
-  /** Empresa dona dos pedidos — usada no histórico e como trava extra. */
-  tenantId: string | null;
+  /**
+   * Empresa dona dos pedidos. Não é mais usada aqui (o histórico é gravado
+   * pelo banco), mas continua aceita para não mudar quem chama.
+   */
+  tenantId?: string | null;
   /** Chamado após a gravação confirmada, para as automações já existentes. */
   onStatusApplied?: (order: Order, status: string) => void;
 };
 
 type MoveResult = { ok: boolean };
 
-/**
- * Linha do histórico de status. A tabela é criada pela migration
- * `order_status_history`; enquanto ela não for aplicada, a gravação falha e é
- * apenas registrada no console — nunca derruba a mudança de status.
+/*
+ * HISTÓRICO: quem grava é o banco, não esta tela.
+ *
+ * Toda mudança de `orders.status` vira uma linha em `order_status_history`
+ * pelo gatilho `orders_record_status_history`, na MESMA operação da mudança
+ * (migração `20260927120000_pedido_ao_vivo.sql`). Antes, esta tela gravava o
+ * histórico numa segunda chamada: se a internet caísse entre as duas, o
+ * status mudava e o histórico não. E o seletor da lista, o cancelamento e as
+ * automações não gravavam nada.
  */
-type OrderStatusHistoryInsert = {
-  order_id: string;
-  tenant_id: string;
-  from_status: string;
-  to_status: string;
-  changed_by: string | null;
-  source: string;
-  note: string | null;
-};
-
-/** Postgres: relação inexistente. A migration ainda não foi aplicada. */
-const UNDEFINED_TABLE = "42P01";
-
-export function useUpdateOrderStatus({
-  setOrders,
-  tenantId,
-  onStatusApplied,
-}: UseUpdateOrderStatusParams) {
+export function useUpdateOrderStatus({ setOrders, onStatusApplied }: UseUpdateOrderStatusParams) {
   const [pendingIds, setPendingIds] = useState<ReadonlySet<string>>(new Set());
   // Espelho síncrono: `pendingIds` só reflete no próximo render, e dois drops
   // rápidos no mesmo card aconteceriam antes disso.
@@ -58,28 +43,6 @@ export function useUpdateOrderStatus({
     if (pending) inFlight.current.add(id);
     else inFlight.current.delete(id);
     setPendingIds(new Set(inFlight.current));
-  }, []);
-
-  const recordHistory = useCallback(async (entry: OrderStatusHistoryInsert) => {
-    // A tabela não está em `types.ts` porque a migration ainda não foi aplicada
-    // ao projeto Supabase. O cast some quando os tipos forem regerados.
-    const client = supabase as unknown as {
-      from: (table: string) => {
-        insert: (
-          values: OrderStatusHistoryInsert,
-        ) => Promise<{ error: { code?: string; message: string } | null }>;
-      };
-    };
-    const { error } = await client.from("order_status_history").insert(entry);
-    if (!error) return;
-    if (error.code === UNDEFINED_TABLE) {
-      console.warn(
-        "[order-status] histórico não gravado: tabela order_status_history ainda não existe. " +
-          "Aplique a migration correspondente.",
-      );
-      return;
-    }
-    console.error("[order-status] falha ao gravar histórico:", error.message);
   }, []);
 
   /**
@@ -179,17 +142,6 @@ export function useUpdateOrderStatus({
           return { ok: false };
         }
 
-        const { data: session } = await supabase.auth.getSession();
-        await recordHistory({
-          order_id: order.id,
-          tenant_id: tenantId ?? order.tenant_id,
-          from_status: fromStatus,
-          to_status: toStatus,
-          changed_by: session?.session?.user?.id ?? null,
-          source: STATUS_CHANGE_SOURCE,
-          note: null,
-        });
-
         if (finalizando) toast.success("Pedido finalizado com sucesso.");
 
         onStatusApplied?.({ ...order, status: toStatus }, toStatus);
@@ -203,7 +155,7 @@ export function useUpdateOrderStatus({
         markPending(order.id, false);
       }
     },
-    [markPending, onStatusApplied, recordHistory, setOrders, tenantId],
+    [markPending, onStatusApplied, setOrders],
   );
 
   return { moveOrder, pendingIds };

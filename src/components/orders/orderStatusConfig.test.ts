@@ -9,6 +9,7 @@ import {
   getDelayLevel,
   getElapsedMinutes,
   getStatusLabel,
+  getStatusLabelForOrder,
   isKanbanStatus,
 } from "./orderStatusConfig";
 
@@ -137,5 +138,16 @@ describe("tempo decorrido e atraso", () => {
     expect(formatElapsed(minutesAgo(61), NOW)).toBe("Há 1 hora e 1 minuto");
     expect(formatElapsed(minutesAgo(125), NOW)).toBe("Há 2 horas e 5 minutos");
     expect(formatElapsed(minutesAgo(120), NOW)).toBe("Há 2 horas");
+  });
+});
+
+describe("rótulo do status para o pedido", () => {
+  it("na retirada, 'saiu' quer dizer pronto para retirada", () => {
+    expect(getStatusLabelForOrder("saiu", "pickup")).toBe("Pronto para retirada");
+  });
+  it("na entrega e nas outras etapas, o rótulo de sempre", () => {
+    expect(getStatusLabelForOrder("saiu", "delivery")).toBe("Saiu para entrega");
+    expect(getStatusLabelForOrder("preparando", "pickup")).toBe("Em preparo");
+    expect(getStatusLabelForOrder("entregue", "pickup")).toBe("Entregue");
   });
 });

@@ -55,7 +55,8 @@ export const ORDER_COLUMNS: readonly OrderColumnConfig[] = [
   {
     id: "saiu",
     label: "Saiu para entrega",
-    description: "Pedidos que já saíram com o entregador",
+    description:
+      "Pedidos que já saíram com o entregador — ou, na retirada, prontos esperando o cliente",
     accentBar: "bg-emerald-500",
     accentBadge: "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30",
     accentDropRing: "ring-emerald-500/60 bg-emerald-500/5",
@@ -78,6 +79,20 @@ export function getStatusLabel(status: string): string {
   if (status === "entregue") return "Entregue";
   if (status === "cancelado") return "Cancelado";
   return status;
+}
+
+/**
+ * O rótulo do status para ESTE pedido.
+ *
+ * O banco tem um status só para "saiu da cozinha": `saiu`. Na entrega ele
+ * quer dizer "saiu para entrega"; na retirada, "pronto para retirada" — o
+ * mesmo movimento do card, dito do jeito certo. O aplicativo do cliente faz a
+ * mesma tradução (FlyDelivery, `src/lib/orderStatus.ts`), então o painel e o
+ * cliente leem a mesma coisa sem precisar de um status novo no banco.
+ */
+export function getStatusLabelForOrder(status: string, orderType: string): string {
+  if (status === "saiu" && orderType === "pickup") return "Pronto para retirada";
+  return getStatusLabel(status);
 }
 
 // ---------------------------------------------------------------------------
