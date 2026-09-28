@@ -265,7 +265,10 @@ function Print() {
           alt="FlyControl"
           className="flycontrol-footer-logo mx-auto mb-1 max-h-6 object-contain opacity-80"
         />
-        <div>FlyControl · Sistema de Gestão para Pizzarias</div>
+        {/* "Delivery" em vez de "Pizzarias": o FlyControl atende vários tipos
+            de negócio, não só pizzaria — a logo acima já diz "FlyControl",
+            então aqui só precisa da linha que serve pra qualquer nicho. */}
+        <div>Sistema de Gestão para Delivery</div>
         <div>Impressão em {new Date().toLocaleString("pt-BR")}</div>
       </div>
 
