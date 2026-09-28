@@ -75,6 +75,9 @@ export function ProductList({
   const [categoryId, setCategoryId] = useState("");
   const [imageUrl, setImageUrl] = useState("");
   const [productType, setProductType] = useState(type);
+  // Vazio = sem limite. Guardado como texto porque o campo precisa aceitar
+  // "apagar tudo" sem virar 0 (0 travaria o cliente em nenhum adicional).
+  const [maxExtras, setMaxExtras] = useState("");
 
   useEffect(() => {
     loadProducts();
@@ -128,6 +131,7 @@ export function ProductList({
     setCategoryId(preselectCategoryId ?? (categories.length > 0 ? categories[0].id : ""));
     setImageUrl("");
     setProductType(type === "beverage" ? "beverage" : "standard");
+    setMaxExtras("");
     setIsDialogOpen(true);
   }
 
@@ -172,6 +176,7 @@ export function ProductList({
     setCategoryId(prod.category_id || "");
     setImageUrl(prod.image_url || "");
     setProductType(prod.product_type);
+    setMaxExtras(prod.max_extras != null ? String(prod.max_extras) : "");
     setIsDialogOpen(true);
   }
 
@@ -188,6 +193,16 @@ export function ProductList({
       return;
     }
 
+    let maxExtrasValue: number | null = null;
+    if (maxExtras.trim() !== "") {
+      const parsed = parseInt(maxExtras, 10);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        toast.error("Limite de adicionais precisa ser um número de 0 ou mais");
+        return;
+      }
+      maxExtrasValue = parsed;
+    }
+
     setSaving(true);
     const payload = {
       name,
@@ -197,6 +212,7 @@ export function ProductList({
       image_url: imageUrl,
       product_type: productType,
       pizzeria_id: pizzeriaId,
+      max_extras: maxExtrasValue,
       active: editingProduct ? editingProduct.active : true,
       available: editingProduct ? editingProduct.available : true,
     };
@@ -664,6 +680,26 @@ export function ProductList({
                   onChange={(e) => setDescription(e.target.value)}
                   placeholder="Ingredientes, detalhes..."
                 />
+              </div>
+            )}
+
+            {productType !== "beverage" && (
+              <div className="space-y-2">
+                <Label htmlFor="prod-max-extras">Limite de adicionais</Label>
+                <Input
+                  id="prod-max-extras"
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  value={maxExtras}
+                  onChange={(e) => setMaxExtras(e.target.value)}
+                  placeholder="Sem limite"
+                  aria-describedby="prod-max-extras-ajuda"
+                />
+                <p id="prod-max-extras-ajuda" className="text-xs text-muted-foreground">
+                  Quantos adicionais o cliente pode marcar neste item (ex.: 2). Deixe vazio para não
+                  ter limite.
+                </p>
               </div>
             )}
 

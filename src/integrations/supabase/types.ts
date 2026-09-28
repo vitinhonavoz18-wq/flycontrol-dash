@@ -3059,6 +3059,7 @@ export type Database = {
           id: string;
           image_url: string | null;
           last_synced_at: string | null;
+          max_extras: number | null;
           name: string;
           pizzeria_id: string;
           price: number;
@@ -3077,6 +3078,7 @@ export type Database = {
           id?: string;
           image_url?: string | null;
           last_synced_at?: string | null;
+          max_extras?: number | null;
           name: string;
           pizzeria_id: string;
           price?: number;
@@ -3095,6 +3097,7 @@ export type Database = {
           id?: string;
           image_url?: string | null;
           last_synced_at?: string | null;
+          max_extras?: number | null;
           name?: string;
           pizzeria_id?: string;
           price?: number;

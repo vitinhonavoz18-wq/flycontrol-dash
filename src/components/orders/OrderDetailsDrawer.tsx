@@ -13,12 +13,14 @@ import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-
 import { OrderTimer } from "./OrderTimer";
 import {
   countItems,
+  extrairAdicionaisDoItem,
   formatBRL,
   formatPaymentMethod,
   formatPaymentStatus,
   formatReceivedAt,
   formatSource,
   getOrderTypeLabel,
+  notaDoItemSemAdicionais,
 } from "./orderDisplay";
 import {
   ORDER_COLUMNS,
@@ -105,23 +107,32 @@ export function OrderDetailsDrawer({
               Itens ({countItems(order.items)})
             </h4>
             <ul className="space-y-2">
-              {items.map((item, index) => (
-                <li key={index} className="space-y-0.5">
-                  <div className="flex justify-between gap-2">
-                    <span className="font-medium">
-                      {item.qty ?? item.quantity ?? 1}× {formatItemName(item)}
-                    </span>
-                    <span className="whitespace-nowrap text-muted-foreground">
-                      {formatBRL(getItemPrice(item))}
-                    </span>
-                  </div>
-                  {item.notes && (
-                    <p className="pl-4 text-[11px] italic text-muted-foreground">
-                      Obs: {item.notes}
-                    </p>
-                  )}
-                </li>
-              ))}
+              {items.map((item, index) => {
+                const adicionais = extrairAdicionaisDoItem(item);
+                const notaLivre = notaDoItemSemAdicionais(item);
+                return (
+                  <li key={index} className="space-y-0.5">
+                    <div className="flex justify-between gap-2">
+                      <span className="font-medium">
+                        {item.qty ?? item.quantity ?? 1}× {formatItemName(item)}
+                      </span>
+                      <span className="whitespace-nowrap text-muted-foreground">
+                        {formatBRL(getItemPrice(item))}
+                      </span>
+                    </div>
+                    {adicionais.length > 0 && (
+                      <p className="pl-4 text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                        Adicionais: {adicionais.join(", ")}
+                      </p>
+                    )}
+                    {notaLivre && (
+                      <p className="pl-4 text-[11px] italic text-muted-foreground">
+                        Obs: {notaLivre}
+                      </p>
+                    )}
+                  </li>
+                );
+              })}
               {items.length === 0 && (
                 <li className="text-xs text-muted-foreground">Nenhum item registrado.</li>
               )}

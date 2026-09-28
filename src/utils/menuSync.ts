@@ -396,6 +396,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
       image_url: data.image_url,
       active: data.active !== undefined ? data.active : true,
       category_id: normalizedCategoryId,
+      max_extras: data.max_extras ?? null,
     };
   }
 

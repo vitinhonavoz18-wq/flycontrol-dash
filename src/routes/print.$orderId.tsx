@@ -2,6 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeOrderType } from "@/utils/order-utils";
+import { extrairAdicionaisDoItem, notaDoItemSemAdicionais } from "@/components/orders/orderDisplay";
 
 
 
@@ -117,10 +118,15 @@ function Print() {
           const allFlavors = [...new Set([...flavors, ...selectedFlavors])];
 
           // Ingredientes/Adicionais
-          const ingredients = Array.isArray(it.ingredients) ? it.ingredients : 
+          const ingredients = Array.isArray(it.ingredients) ? it.ingredients :
                              (typeof it.ingredients === 'string' ? [it.ingredients] : []);
-          const additions = Array.isArray(it.additions) ? it.additions : 
-                           Array.isArray(it.adicionais) ? it.adicionais : [];
+          // O site guarda o adicional escolhido dentro do texto do item
+          // (`notes`) quando não manda uma lista pronta — por isso a extração
+          // olha os dois formatos, e a observação livre abaixo mostra só o
+          // que sobra depois de tirar esse trecho, pra não repetir a mesma
+          // informação duas vezes na comanda.
+          const additions = extrairAdicionaisDoItem(it);
+          const notaLivreDoItem = notaDoItemSemAdicionais(it);
           
           return (
             <div key={i} className="border-b border-gray-100 pb-2 last:border-0">
@@ -169,9 +175,9 @@ function Print() {
               )}
 
               {/* Observação do Item */}
-              {(it.notes || it.observacao || it.item_notes) && (
+              {notaLivreDoItem && (
                 <div className="ml-4 mt-1 rounded bg-gray-50 p-1 text-xs">
-                  <span className="font-bold">Obs Item:</span> {it.notes || it.observacao || it.item_notes}
+                  <span className="font-bold">Obs Item:</span> {notaLivreDoItem}
                 </div>
               )}
               

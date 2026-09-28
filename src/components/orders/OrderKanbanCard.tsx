@@ -17,6 +17,7 @@ import {
   formatSource,
   getOrderTypeLabel,
   isPaid,
+  itemsResumo,
 } from "./orderDisplay";
 import { getDelayLevel, getStatusLabelForOrder } from "./orderStatusConfig";
 
@@ -48,6 +49,7 @@ export function OrderCardContent({
   const paymentStatus = formatPaymentStatus(order.payment_status);
   const source = formatSource(order.source);
   const itemCount = countItems(order.items);
+  const itens = itemsResumo(order.items);
 
   return (
     <div className="space-y-3">
@@ -108,6 +110,23 @@ export function OrderCardContent({
           <span className="font-bold text-primary">{formatBRL(order.total)}</span>
         </p>
       </div>
+
+      {itens.length > 0 && (
+        <ul className="space-y-1 border-t border-border/60 pt-2 text-[11px]">
+          {itens.map((it, idx) => (
+            <li key={idx} className="text-foreground">
+              <span className="font-semibold">
+                {it.qtd}x {it.nome}
+              </span>
+              {it.adicionais.length > 0 && (
+                <p className="mt-0.5 pl-3 font-medium text-amber-700 dark:text-amber-400">
+                  + {it.adicionais.join(", ")}
+                </p>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
 
       <dl className="space-y-1 border-t border-border/60 pt-2 text-[11px]">
         <div className="flex items-center justify-between gap-2">

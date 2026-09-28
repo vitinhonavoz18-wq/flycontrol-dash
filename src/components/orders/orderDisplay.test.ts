@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Order } from "@/types/order";
 import {
   countItems,
+  extrairAdicionaisDoItem,
   formatBRL,
   formatPaymentMethod,
   formatPaymentStatus,
@@ -9,6 +10,8 @@ import {
   formatSource,
   getOrderTypeLabel,
   isPaid,
+  itemsResumo,
+  notaDoItemSemAdicionais,
 } from "./orderDisplay";
 
 function makeOrder(overrides: Partial<Order> = {}): Order {
@@ -132,5 +135,73 @@ describe("tipo do pedido e localização resumida", () => {
     expect(formatShortLocation(makeOrder({ customer_address: null }))).toBe(
       "Endereço não informado",
     );
+  });
+});
+
+describe("adicionais escondidos dentro do texto do item", () => {
+  it("lê os adicionais do formato que o site escreve no notes", () => {
+    expect(
+      extrairAdicionaisDoItem({
+        notes: "Um saboroso açaí • Adicionais (+R$6,00): Bacon, Cheddar",
+      }),
+    ).toEqual(["Bacon", "Cheddar"]);
+  });
+
+  it("lê os adicionais mesmo sem descrição na frente", () => {
+    expect(extrairAdicionaisDoItem({ notes: "Adicionais (+R$3,00): Bacon" })).toEqual(["Bacon"]);
+  });
+
+  it("prefere a lista estruturada quando ela existe", () => {
+    expect(
+      extrairAdicionaisDoItem({
+        additions: [{ name: "Bacon" }, "Cheddar"],
+        notes: "texto que não deveria ser usado",
+      }),
+    ).toEqual(["Bacon", "Cheddar"]);
+  });
+
+  it("também aceita a chave em português (adicionais)", () => {
+    expect(extrairAdicionaisDoItem({ adicionais: [{ nome: "Bacon" }] })).toEqual(["Bacon"]);
+  });
+
+  it("devolve lista vazia quando não há adicional nenhum", () => {
+    expect(extrairAdicionaisDoItem({ notes: "Sem cebola, por favor" })).toEqual([]);
+    expect(extrairAdicionaisDoItem(null)).toEqual([]);
+    expect(extrairAdicionaisDoItem({})).toEqual([]);
+  });
+
+  it("tira o trecho de adicionais e devolve só o resto da observação", () => {
+    expect(
+      notaDoItemSemAdicionais({
+        notes: "Um saboroso açaí • Adicionais (+R$6,00): Bacon, Cheddar",
+      }),
+    ).toBe("Um saboroso açaí");
+  });
+
+  it("some com o texto quando o item só tinha o trecho de adicionais", () => {
+    expect(notaDoItemSemAdicionais({ notes: "Adicionais (+R$3,00): Bacon" })).toBe("");
+  });
+
+  it("mantém a observação intacta quando não tem adicional", () => {
+    expect(notaDoItemSemAdicionais({ notes: "Sem cebola, por favor" })).toBe("Sem cebola, por favor");
+  });
+});
+
+describe("resumo dos itens para o card do Kanban", () => {
+  it("junta nome, quantidade e adicionais de cada item", () => {
+    expect(
+      itemsResumo([
+        { name: "Açaí 250ml", qty: 2, notes: "Adicionais (+R$4,00): Granola" },
+        { product_name: "Coca-Cola", quantity: 1 },
+      ]),
+    ).toEqual([
+      { nome: "Açaí 250ml", qtd: 2, adicionais: ["Granola"] },
+      { nome: "Coca-Cola", qtd: 1, adicionais: [] },
+    ]);
+  });
+
+  it("devolve lista vazia quando não é um array", () => {
+    expect(itemsResumo(null)).toEqual([]);
+    expect(itemsResumo({ foo: "bar" })).toEqual([]);
   });
 });

@@ -26,6 +26,64 @@ export function countItems(items: Order["items"]): number {
   }, 0);
 }
 
+/**
+ * O site do cliente escreve os adicionais escolhidos dentro do texto do item
+ * (`notes`), no formato "descrição • Adicionais (+R$X,XX): Bacon, Cheddar" —
+ * não existe hoje uma lista separada. Sem isto, quem olha o pedido via o
+ * `notes` cru vê tudo misturado, sob o rótulo genérico de observação, e o
+ * adicional passa batido no meio do texto.
+ */
+const ADICIONAIS_NO_TEXTO_RE = /\s*•?\s*Adicionais\s*\(\+[^)]*\):\s*(.+)$/i;
+
+function textoDoItem(item: OrderItem | null | undefined): string {
+  return item?.notes || item?.observations || item?.observacao || item?.item_notes || "";
+}
+
+function nomeDoAdicional(a: unknown): string {
+  if (typeof a === "string") return a;
+  const obj = a as { name?: unknown; nome?: unknown } | null | undefined;
+  return String(obj?.name ?? obj?.nome ?? "");
+}
+
+/** Lista de nomes dos adicionais escolhidos neste item, ou lista vazia. */
+export function extrairAdicionaisDoItem(item: OrderItem | null | undefined): string[] {
+  if (!item) return [];
+  const estruturado = Array.isArray(item.additions)
+    ? item.additions
+    : Array.isArray(item.adicionais)
+      ? item.adicionais
+      : null;
+  if (estruturado && estruturado.length > 0) {
+    return estruturado.map(nomeDoAdicional).filter(Boolean);
+  }
+  const m = textoDoItem(item).match(ADICIONAIS_NO_TEXTO_RE);
+  if (!m) return [];
+  return m[1]
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
+/** O que sobra do texto do item depois de tirar fora o trecho de adicionais. */
+export function notaDoItemSemAdicionais(item: OrderItem | null | undefined): string {
+  return textoDoItem(item).replace(ADICIONAIS_NO_TEXTO_RE, "").trim();
+}
+
+export type ItemResumo = { nome: string; qtd: number; adicionais: string[] };
+
+/** Nome, quantidade e adicionais de cada item — pronto para listar num card. */
+export function itemsResumo(items: Order["items"]): ItemResumo[] {
+  if (!Array.isArray(items)) return [];
+  return (items as OrderItem[]).map((item) => {
+    const qtd = Number(item?.qty ?? item?.quantity ?? 1);
+    return {
+      nome: item?.product_name || item?.name || item?.title || item?.nome || "Item",
+      qtd: Number.isFinite(qtd) && qtd > 0 ? qtd : 1,
+      adicionais: extrairAdicionaisDoItem(item),
+    };
+  });
+}
+
 export const ORDER_TYPE_LABELS: Record<string, string> = {
   delivery: "Delivery",
   pickup: "Retirada no local",

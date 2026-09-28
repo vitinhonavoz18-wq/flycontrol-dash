@@ -884,6 +884,7 @@ export const Route = createFileRoute("/api/orders")({
                 quantity: Number(it.quantity || 1),
                 unit_price: parseMoney(it.unit_price || it.price || 0),
                 total_price: Number(it.quantity || 1) * parseMoney(it.unit_price || it.price || 0),
+                observations: it.notes || it.observacao || it.item_notes || null,
               }));
               await (supabaseAdmin.from("order_items") as any).insert(orderItemsToInsert);
             } catch (err) {
