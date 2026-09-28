@@ -24,7 +24,7 @@ function Print() {
         setO(data);
         const { data: p } = await supabase
           .from("pizzerias")
-          .select("name, phone, address")
+          .select("name, phone, address, logo_url")
           .eq("id", data.tenant_id)
           .maybeSingle();
         setPz(p);
@@ -44,12 +44,28 @@ function Print() {
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
 
+  // TEMPORÁRIO: teste da logo na comanda só para a Emily Burguer. Depois que
+  // o dono confirmar que ficou bom, isto vira `pz?.logo_url` puro (vale para
+  // qualquer loja que tenha logo cadastrada), sem essa lista.
+  const LOJAS_COM_LOGO_NA_COMANDA_TESTE = new Set(["emily burguer"]);
+  const podeMostrarLogo = LOJAS_COM_LOGO_NA_COMANDA_TESTE.has(
+    (pz?.name ?? "").trim().toLowerCase(),
+  );
+  const logoParaImprimir = podeMostrarLogo ? pz?.logo_url : null;
 
   return (
     <div className="print-area">
       {/* CABEÇALHO DA PIZZARIA */}
       <div className="mb-4 text-center">
-        <div className="text-xl font-bold uppercase leading-none">{pz?.name ?? "Pizzaria"}</div>
+        {logoParaImprimir ? (
+          <img
+            src={logoParaImprimir}
+            alt={pz?.name ?? "Logo da loja"}
+            className="comanda-logo mx-auto mb-1 max-h-16 max-w-[70%] object-contain"
+          />
+        ) : (
+          <div className="text-xl font-bold uppercase leading-none">{pz?.name ?? "Pizzaria"}</div>
+        )}
         {pz?.phone && <div className="mt-1 text-base">{pz.phone}</div>}
         {pz?.address && <div className="text-xs">{pz.address}</div>}
         <div className="my-2 border-t-2 border-dashed border-black"></div>
@@ -318,6 +334,17 @@ function Print() {
             box-shadow: none !important;
             page-break-after: avoid !important;
             page-break-before: avoid !important;
+          }
+
+          .comanda-logo {
+            /* Impressora térmica é preto e branco: garante que a logo saia
+               mesmo em navegador configurado para "economizar tinta" (que
+               costuria de outra forma cortar imagens de fundo, não esta —
+               mas o ajuste evita cinza lavado em logos com cor sólida). */
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            max-height: 18mm !important;
+            margin: 0 auto 2mm auto !important;
           }
 
           .print-area h1,
