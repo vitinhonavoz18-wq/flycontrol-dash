@@ -3,6 +3,11 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeOrderType } from "@/utils/order-utils";
 import { extrairAdicionaisDoItem, notaDoItemSemAdicionais } from "@/components/orders/orderDisplay";
+// Só o símbolo, recortado de flycontrol-logo.png: aquele arquivo já vem com
+// "FlyControl" escrito dentro da imagem, e a comanda também escreve o nome
+// embaixo — usar o arquivo inteiro repetiria o nome duas vezes (uma ilegível,
+// pequena demais na imagem; outra no texto).
+import flycontrolLogo from "@/assets/flycontrol-mark.png";
 
 
 
@@ -58,17 +63,22 @@ function Print() {
       {/* CABEÇALHO DA PIZZARIA */}
       <div className="mb-4 text-center">
         {logoParaImprimir ? (
+          // Com a logo, o cabeçalho fica só ela: nem telefone, nem endereço,
+          // nem a linha divisória — a marca já basta, e menos texto em cima
+          // parece mais premium do que empilhar tudo junto.
           <img
             src={logoParaImprimir}
             alt={pz?.name ?? "Logo da loja"}
-            className="comanda-logo mx-auto mb-1 max-h-16 max-w-[70%] object-contain"
+            className="comanda-logo mx-auto mb-2 max-h-24 max-w-[80%] object-contain"
           />
         ) : (
-          <div className="text-xl font-bold uppercase leading-none">{pz?.name ?? "Pizzaria"}</div>
+          <>
+            <div className="text-xl font-bold uppercase leading-none">{pz?.name ?? "Pizzaria"}</div>
+            {pz?.phone && <div className="mt-1 text-base">{pz.phone}</div>}
+            {pz?.address && <div className="text-xs">{pz.address}</div>}
+            <div className="my-2 border-t-2 border-dashed border-black"></div>
+          </>
         )}
-        {pz?.phone && <div className="mt-1 text-base">{pz.phone}</div>}
-        {pz?.address && <div className="text-xs">{pz.address}</div>}
-        <div className="my-2 border-t-2 border-dashed border-black"></div>
         <div className="text-lg font-bold">PEDIDO #{o.order_number}</div>
         <div className="text-sm">{new Date(o.created_at).toLocaleString("pt-BR")}</div>
       </div>
@@ -250,6 +260,11 @@ function Print() {
       </div>
 
       <div className="print-footer mt-6 border-t border-gray-200 pt-2 text-center text-[10px] text-gray-400">
+        <img
+          src={flycontrolLogo}
+          alt="FlyControl"
+          className="flycontrol-footer-logo mx-auto mb-1 max-h-6 object-contain opacity-80"
+        />
         <div>FlyControl · Sistema de Gestão para Pizzarias</div>
         <div>Impressão em {new Date().toLocaleString("pt-BR")}</div>
       </div>
@@ -343,8 +358,15 @@ function Print() {
                mas o ajuste evita cinza lavado em logos com cor sólida). */
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
-            max-height: 18mm !important;
+            max-height: 26mm !important;
             margin: 0 auto 2mm auto !important;
+          }
+
+          .flycontrol-footer-logo {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            max-height: 6mm !important;
+            margin: 0 auto 1mm auto !important;
           }
 
           .print-area h1,
