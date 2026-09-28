@@ -49,14 +49,11 @@ function Print() {
     return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
   };
 
-  // TEMPORÁRIO: teste da logo na comanda só para a Emily Burguer. Depois que
-  // o dono confirmar que ficou bom, isto vira `pz?.logo_url` puro (vale para
-  // qualquer loja que tenha logo cadastrada), sem essa lista.
-  const LOJAS_COM_LOGO_NA_COMANDA_TESTE = new Set(["emily burguer"]);
-  const podeMostrarLogo = LOJAS_COM_LOGO_NA_COMANDA_TESTE.has(
-    (pz?.name ?? "").trim().toLowerCase(),
-  );
-  const logoParaImprimir = podeMostrarLogo ? pz?.logo_url : null;
+  // Testado primeiro só na Emily Burguer; aprovado, agora vale para
+  // qualquer loja que já tenha uma logo cadastrada em "Minha Loja". Sem
+  // logo cadastrada, a comanda cai sozinha para o nome em texto — nenhuma
+  // loja fica com o cabeçalho quebrado ou vazio.
+  const logoParaImprimir = pz?.logo_url || null;
 
   return (
     <div className="print-area">
