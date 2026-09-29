@@ -396,7 +396,11 @@ function prepareDataForExternal(type: MenuType, data: any) {
       image_url: data.image_url,
       active: data.active !== undefined ? data.active : true,
       category_id: normalizedCategoryId,
-      max_extras: data.max_extras ?? null,
+      // Só viaja quando quem chamou informou o limite (a tela de produto
+      // sempre informa, inclusive `null` = "sem limite"). Quem não mexe em
+      // limite, como a importação em massa, não manda o campo — assim o site
+      // não recebe uma coluna que talvez ainda não exista nele.
+      ...(data.max_extras !== undefined ? { max_extras: data.max_extras } : {}),
     };
   }
 

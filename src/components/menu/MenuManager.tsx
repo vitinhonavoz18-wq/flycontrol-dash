@@ -101,8 +101,11 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
     if (data) setPizzeria(data);
   }
 
-  async function loadCategories() {
-    setLoading(true);
+  // `silent`: recarrega sem trocar a tela por um "carregando". A importação
+  // usa isso — trocar a tela desmontava a janela de importação junto e o dono
+  // nunca via o resultado nem a lista de itens que falharam.
+  async function loadCategories(silent = false) {
+    if (!silent) setLoading(true);
     const { data, error } = await supabase
       .from("menu_categories")
       .select("*")
@@ -114,7 +117,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
     } else {
       setCategories(data || []);
     }
-    setLoading(false);
+    if (!silent) setLoading(false);
   }
 
   async function handleLocalRefresh() {
@@ -151,9 +154,8 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
           pizzeriaSlug={pizzeria?.slug}
           pizzeriaApiKey={pizzeria?.api_key}
           syncEndpoint={pizzeria?.sync_endpoint}
-          existingCategoryCount={categories.length}
           onImported={() => {
-            loadCategories();
+            void loadCategories(true);
             setRefreshKey((k) => k + 1);
           }}
         />
