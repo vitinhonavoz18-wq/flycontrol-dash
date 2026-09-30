@@ -173,6 +173,43 @@ describe("gravação bem-sucedida", () => {
   });
 });
 
+describe("cancelar pedido", () => {
+  it("grava 'cancelado' e confirma com aviso próprio", async () => {
+    mocks.updateResult = { data: [{ id: "order-1", status: "cancelado" }], error: null };
+    const { hook, store, onStatusApplied } = setup();
+
+    await act(async () => {
+      const result = await hook.result.current.moveOrder(makeOrder(), "cancelado");
+      expect(result.ok).toBe(true);
+    });
+
+    expect(mocks.statusUpdate).toHaveBeenCalledWith({ status: "cancelado" });
+    expect(store.orders[0].status).toBe("cancelado");
+    expect(toastMocks.success).toHaveBeenCalledWith("Pedido cancelado.");
+    expect(onStatusApplied).toHaveBeenCalledWith(
+      expect.objectContaining({ status: "cancelado" }),
+      "cancelado",
+    );
+  });
+
+  it("devolve o card e explica quando o banco recusa o cancelamento", async () => {
+    mocks.updateResult = { data: [], error: { message: "permission denied" } };
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
+    const { hook, store } = setup([makeOrder({ status: "preparando" })]);
+
+    await act(async () => {
+      await hook.result.current.moveOrder(makeOrder({ status: "preparando" }), "cancelado");
+    });
+
+    expect(store.orders[0].status).toBe("preparando");
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      "Não foi possível cancelar o pedido. Tente novamente.",
+    );
+    expect(toastMocks.success).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+});
+
 describe("falhas", () => {
   it("reverte o card e avisa o usuário quando o banco recusa", async () => {
     mocks.updateResult = { data: [], error: { message: "permission denied" } };

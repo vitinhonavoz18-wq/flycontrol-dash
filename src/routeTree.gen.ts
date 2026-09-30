@@ -84,6 +84,7 @@ import { Route as ApiCrmOutboxRouteImport } from './routes/api/crm.outbox'
 import { Route as ApiCrmPingRouteImport } from './routes/api/crm.ping'
 import { Route as ApiCrmProductsRouteImport } from './routes/api/crm.products'
 import { Route as ApiCrmReplyRouteImport } from './routes/api/crm.reply'
+import { Route as ApiCrmWhatsappDeviceRouteImport } from './routes/api/crm.whatsapp-device'
 import { Route as ApiMarketingQueueRouteImport } from './routes/api/marketing.queue'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
@@ -491,6 +492,11 @@ const ApiCrmReplyRoute = ApiCrmReplyRouteImport.update({
   path: '/api/crm/reply',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCrmWhatsappDeviceRoute = ApiCrmWhatsappDeviceRouteImport.update({
+  id: '/api/crm/whatsapp-device',
+  path: '/api/crm/whatsapp-device',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiMarketingQueueRoute = ApiMarketingQueueRouteImport.update({
   id: '/api/marketing/queue',
   path: '/api/marketing/queue',
@@ -706,6 +712,7 @@ export interface FileRoutesByFullPath {
   '/api/crm/ping': typeof ApiCrmPingRoute
   '/api/crm/products': typeof ApiCrmProductsRoute
   '/api/crm/reply': typeof ApiCrmReplyRoute
+  '/api/crm/whatsapp-device': typeof ApiCrmWhatsappDeviceRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -803,6 +810,7 @@ export interface FileRoutesByTo {
   '/api/crm/ping': typeof ApiCrmPingRoute
   '/api/crm/products': typeof ApiCrmProductsRoute
   '/api/crm/reply': typeof ApiCrmReplyRoute
+  '/api/crm/whatsapp-device': typeof ApiCrmWhatsappDeviceRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -907,6 +915,7 @@ export interface FileRoutesById {
   '/api/crm/ping': typeof ApiCrmPingRoute
   '/api/crm/products': typeof ApiCrmProductsRoute
   '/api/crm/reply': typeof ApiCrmReplyRoute
+  '/api/crm/whatsapp-device': typeof ApiCrmWhatsappDeviceRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
@@ -1011,6 +1020,7 @@ export interface FileRouteTypes {
     | '/api/crm/ping'
     | '/api/crm/products'
     | '/api/crm/reply'
+    | '/api/crm/whatsapp-device'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -1108,6 +1118,7 @@ export interface FileRouteTypes {
     | '/api/crm/ping'
     | '/api/crm/products'
     | '/api/crm/reply'
+    | '/api/crm/whatsapp-device'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -1211,6 +1222,7 @@ export interface FileRouteTypes {
     | '/api/crm/ping'
     | '/api/crm/products'
     | '/api/crm/reply'
+    | '/api/crm/whatsapp-device'
     | '/api/marketing/queue'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
@@ -1273,6 +1285,7 @@ export interface RootRouteChildren {
   ApiCrmPingRoute: typeof ApiCrmPingRoute
   ApiCrmProductsRoute: typeof ApiCrmProductsRoute
   ApiCrmReplyRoute: typeof ApiCrmReplyRoute
+  ApiCrmWhatsappDeviceRoute: typeof ApiCrmWhatsappDeviceRoute
   ApiMarketingQueueRoute: typeof ApiMarketingQueueRouteWithChildren
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPizzeriasFiqonTestRoute: typeof ApiPizzeriasFiqonTestRoute
@@ -1818,6 +1831,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCrmReplyRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/crm/whatsapp-device': {
+      id: '/api/crm/whatsapp-device'
+      path: '/api/crm/whatsapp-device'
+      fullPath: '/api/crm/whatsapp-device'
+      preLoaderRoute: typeof ApiCrmWhatsappDeviceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/marketing/queue': {
       id: '/api/marketing/queue'
       path: '/api/marketing/queue'
@@ -2220,6 +2240,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCrmPingRoute: ApiCrmPingRoute,
   ApiCrmProductsRoute: ApiCrmProductsRoute,
   ApiCrmReplyRoute: ApiCrmReplyRoute,
+  ApiCrmWhatsappDeviceRoute: ApiCrmWhatsappDeviceRoute,
   ApiMarketingQueueRoute: ApiMarketingQueueRouteWithChildren,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPizzeriasFiqonTestRoute: ApiPizzeriasFiqonTestRoute,

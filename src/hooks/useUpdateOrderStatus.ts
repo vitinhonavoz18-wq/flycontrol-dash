@@ -80,16 +80,20 @@ export function useUpdateOrderStatus({ setOrders, onStatusApplied }: UseUpdateOr
       if (ehPedidoDeDemonstracao(order.id)) {
         setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, status: toStatus } : o)));
         if (toStatus === "entregue") toast.success("Pedido finalizado com sucesso.");
+        if (toStatus === "cancelado") toast.success("Pedido cancelado.");
         return { ok: true };
       }
 
-      // Finalizar é a única transição que TIRA o pedido do quadro. Ela
-      // merece aviso próprio nos dois desfechos: quem some com um pedido da
-      // tela precisa saber se sumiu porque deu certo ou porque deu errado.
+      // Finalizar e cancelar são as transições que TIRAM o pedido do quadro.
+      // Elas merecem aviso próprio nos dois desfechos: quem some com um pedido
+      // da tela precisa saber se sumiu porque deu certo ou porque deu errado.
       const finalizando = toStatus === "entregue";
+      const cancelando = toStatus === "cancelado";
       const erroGenerico = finalizando
         ? "Não foi possível finalizar o pedido. Tente novamente."
-        : "Não foi possível atualizar o pedido. Tente novamente.";
+        : cancelando
+          ? "Não foi possível cancelar o pedido. Tente novamente."
+          : "Não foi possível atualizar o pedido. Tente novamente.";
 
       markPending(order.id, true);
       setOrders((prev) =>
@@ -143,6 +147,7 @@ export function useUpdateOrderStatus({ setOrders, onStatusApplied }: UseUpdateOr
         }
 
         if (finalizando) toast.success("Pedido finalizado com sucesso.");
+        if (cancelando) toast.success("Pedido cancelado.");
 
         onStatusApplied?.({ ...order, status: toStatus }, toStatus);
         return { ok: true };

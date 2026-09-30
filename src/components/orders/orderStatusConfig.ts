@@ -148,12 +148,12 @@ export function formatElapsed(createdAt: string | Date, now: number): string {
 export type MoveCheck = { allowed: true } | { allowed: false; reason: string };
 
 /**
- * Todo destino que o quadro aceita soltar um card em cima: as três colunas,
- * mais o botão "Finalizar pedido" que aparece durante o arraste. `"entregue"`
- * não tem coluna própria — ao virar esse status o pedido some do quadro e
- * passa a existir só no histórico.
+ * Todo destino que o quadro aceita: as três colunas, mais o botão
+ * "Finalizar pedido" que aparece durante o arraste, mais o "Cancelar pedido"
+ * dos detalhes. `"entregue"` e `"cancelado"` não têm coluna própria — ao
+ * virar um deles o pedido some do quadro e passa a existir só no histórico.
  */
-export type MoveTarget = KanbanStatus | "entregue";
+export type MoveTarget = KanbanStatus | "entregue" | "cancelado";
 
 /**
  * O identificador do alvo de soltar da faixa "Finalizar pedido".
@@ -191,11 +191,18 @@ export const FINALIZE_TARGET_ID = "entregue" as const;
  * Nem todo pedido passa por "Saiu para entrega": balcão e mesa não têm
  * entregador. Exigir a passagem por essa etapa obrigaria o lojista a mentir
  * no quadro para conseguir fechar uma retirada no balcão.
+ *
+ * POR QUE TODA ETAPA CANCELA
+ *
+ * A loja precisa poder RECUSAR um pedido novo (acabou o ingrediente, fora da
+ * área) e cancelar um que já andou (cliente desistiu, ninguém em casa). Sem
+ * isso, o pedido ficaria parado no quadro — e o cliente, no aplicativo,
+ * esperando uma comida que não vai chegar. O botão pede confirmação antes.
  */
 export const ALLOWED_TRANSITIONS: Readonly<Record<KanbanStatus, readonly MoveTarget[]>> = {
-  novo: ["preparando", "saiu"],
-  preparando: ["novo", "saiu", "entregue"],
-  saiu: ["novo", "preparando", "entregue"],
+  novo: ["preparando", "saiu", "cancelado"],
+  preparando: ["novo", "saiu", "entregue", "cancelado"],
+  saiu: ["novo", "preparando", "entregue", "cancelado"],
 } as const;
 
 /**

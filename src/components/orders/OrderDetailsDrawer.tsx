@@ -1,4 +1,15 @@
-import { Loader2, MapPin, Phone, Printer, Trash2 } from "lucide-react";
+import { Ban, Loader2, MapPin, Phone, Printer, Trash2 } from "lucide-react";
+import { useState } from "react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,12 +33,7 @@ import {
   getOrderTypeLabel,
   notaDoItemSemAdicionais,
 } from "./orderDisplay";
-import {
-  ORDER_COLUMNS,
-  canMoveOrder,
-  getStatusLabel,
-  type KanbanStatus,
-} from "./orderStatusConfig";
+import { ORDER_COLUMNS, canMoveOrder, getStatusLabel, type MoveTarget } from "./orderStatusConfig";
 
 export type OrderDetailsDrawerProps = {
   order: Order | null;
@@ -36,7 +42,7 @@ export type OrderDetailsDrawerProps = {
   onOpenChange: (open: boolean) => void;
   isPending: boolean;
   canDelete: boolean;
-  onMove: (order: Order, status: KanbanStatus) => void;
+  onMove: (order: Order, status: MoveTarget) => void;
   onDelete: (order: Order) => void;
 };
 
@@ -191,6 +197,16 @@ export function OrderDetailsDrawer({
                 <Printer className="h-4 w-4" aria-hidden="true" /> Imprimir
               </Button>
             </a>
+            {canMoveOrder(order.status, "cancelado").allowed && (
+              <CancelOrderButton
+                order={order}
+                disabled={isPending}
+                onConfirm={() => {
+                  onMove(order, "cancelado");
+                  onOpenChange(false);
+                }}
+              />
+            )}
             {canDelete && (
               <Button
                 size="sm"
@@ -208,6 +224,65 @@ export function OrderDetailsDrawer({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+/**
+ * "Cancelar pedido", com confirmação.
+ *
+ * Cancelar tira o pedido do quadro e, no aplicativo FlyDelivery, o cliente
+ * passa a ver "Pedido cancelado". Um clique perdido não pode fazer isso — por
+ * isso a pergunta antes, como o garçom que confirma "cancela mesmo a mesa 4?".
+ */
+function CancelOrderButton({
+  order,
+  disabled,
+  onConfirm,
+}: {
+  order: Order;
+  disabled: boolean;
+  onConfirm: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const fromApp = order.source === "flydelivery";
+  const recusa = order.status === "novo";
+
+  return (
+    <>
+      <Button
+        size="sm"
+        variant="outline"
+        className="border-destructive/20 text-destructive hover:bg-destructive/10"
+        disabled={disabled}
+        onClick={() => setOpen(true)}
+      >
+        <Ban className="h-4 w-4" aria-hidden="true" />{" "}
+        {recusa ? "Recusar pedido" : "Cancelar pedido"}
+      </Button>
+      <AlertDialog open={open} onOpenChange={setOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {recusa ? "Recusar" : "Cancelar"} o pedido #{order.order_number}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              O pedido sai do quadro e fica no histórico como cancelado.
+              {fromApp ? " O cliente verá “Pedido cancelado” no aplicativo FlyDelivery." : ""} Se
+              quiser explicar o motivo, fale com o cliente pelo telefone ou WhatsApp.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Voltar</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={onConfirm}
+            >
+              Sim, {recusa ? "recusar" : "cancelar"} pedido
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
 

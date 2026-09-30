@@ -93,6 +93,20 @@ describe("regras de movimentação", () => {
     expect(r.allowed === false && r.reason).toMatch(/Aceite o pedido antes de finalizar/);
   });
 
+  it("cancela (ou recusa) a partir de qualquer etapa do quadro", () => {
+    // A loja precisa poder recusar o pedido novo (acabou o ingrediente) e
+    // cancelar o que já andou (ninguém em casa). Sem isso, o pedido ficaria
+    // parado no quadro e o cliente esperando no aplicativo.
+    for (const status of ["novo", "preparando", "saiu"]) {
+      expect(canMoveOrder(status, "cancelado")).toEqual({ allowed: true });
+    }
+  });
+
+  it("não cancela de novo o que já saiu do quadro", () => {
+    expect(canMoveOrder("cancelado", "cancelado").allowed).toBe(false);
+    expect(canMoveOrder("entregue", "cancelado").allowed).toBe(false);
+  });
+
   it("recusa soltar o card na coluna em que ele já está", () => {
     const result = canMoveOrder("preparando", "preparando");
     expect(result.allowed).toBe(false);

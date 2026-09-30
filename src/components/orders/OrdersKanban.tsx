@@ -222,7 +222,7 @@ export function OrdersKanban({
   );
 
   const handleMoveFromDrawer = useCallback(
-    (order: Order, status: KanbanStatus) => {
+    (order: Order, status: MoveTarget) => {
       void moveOrder(order, status);
     },
     [moveOrder],
