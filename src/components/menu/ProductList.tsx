@@ -266,7 +266,8 @@ export function ProductList({
           } else if (syncResult.error === "auth_error") {
             errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
           } else if (syncResult.error === "cors_error") {
-            errorMsg = "Erro de conexão ao atualizar o site público.";
+            errorMsg =
+              "Não consegui confirmar com o site público (a conexão falhou duas vezes seguidas). Verifique sua internet e tente salvar de novo.";
           } else if (syncResult.error === "html_response") {
             errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
           } else if (syncResult.error?.startsWith("api_error:")) {
@@ -343,7 +344,8 @@ export function ProductList({
         } else if (syncResult.error === "auth_error") {
           errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
         } else if (syncResult.error === "cors_error") {
-          errorMsg = "Erro de conexão ao atualizar o site público.";
+          errorMsg =
+            "Não consegui confirmar com o site público (a conexão falhou duas vezes seguidas). Verifique sua internet e tente salvar de novo.";
         } else if (syncResult.error === "html_response") {
           errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
         } else if (syncResult.error?.startsWith("api_error:")) {
@@ -394,7 +396,8 @@ export function ProductList({
         } else if (syncResult.error === "auth_error") {
           errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
         } else if (syncResult.error === "cors_error") {
-          errorMsg = "Erro de conexão ao atualizar o site público.";
+          errorMsg =
+            "Não consegui confirmar com o site público (a conexão falhou duas vezes seguidas). Verifique sua internet e tente salvar de novo.";
         } else if (syncResult.error === "html_response") {
           errorMsg = "Endpoint retornou HTML, mas era esperado JSON.";
         } else if (syncResult.error?.startsWith("api_error:")) {

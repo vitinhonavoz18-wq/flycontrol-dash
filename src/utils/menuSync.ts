@@ -84,6 +84,30 @@ function deriveRestBase(endpoint: string): string {
   }
 }
 
+/**
+ * Tenta de novo, uma única vez, só quando a falha foi de REDE — o `fetch`
+ * nem conseguiu conversar com o servidor (sem resposta nenhuma). Quando o
+ * servidor respondeu com erro (404, 500, etc.) não tenta de novo aqui:
+ * repetir não muda uma resposta que já veio.
+ *
+ * Cobre a instabilidade de conexão que aparece só de vez em quando — sem
+ * isso, um soluço de meio segundo na rede do lojista virava "Erro de
+ * conexão ao atualizar o site público" e ele tinha que clicar em Salvar de
+ * novo à mão.
+ */
+async function fetchComRetry(url: string, init: RequestInit): Promise<Response> {
+  try {
+    return await fetch(url, init);
+  } catch (erroDeRede) {
+    console.warn(
+      "[SyncExternal] Falha de rede na primeira tentativa, tentando mais uma vez:",
+      erroDeRede,
+    );
+    await new Promise((resolve) => setTimeout(resolve, 1200));
+    return fetch(url, init);
+  }
+}
+
 const SF_ID_PREFIXES = [
   "sf_prod_",
   "sf_cat_",
@@ -259,7 +283,7 @@ export async function syncToExternal(
     const init: RequestInit = { method, headers };
     if (bodyObj !== undefined) init.body = JSON.stringify(bodyObj);
 
-    const response = await fetch(url, init);
+    const response = await fetchComRetry(url, init);
     console.log("Status HTTP recebido:", response.status);
 
     if (response.status === 404) {
