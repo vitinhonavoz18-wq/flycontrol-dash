@@ -222,8 +222,12 @@ export function OrdersKanban({
   );
 
   const handleMoveFromDrawer = useCallback(
-    (order: Order, status: KanbanStatus) => {
-      void moveOrder(order, status);
+    async (order: Order, status: MoveTarget) => {
+      const resultado = await moveOrder(order, status);
+      // Finalizado, o pedido sai do quadro: deixar os detalhes abertos
+      // mostraria um pedido que já foi embora, com todos os botões apagados.
+      // Se a gravação falhou, a janela fica — o aviso de erro explica.
+      if (resultado.ok && status === "entregue") setDetailsId(null);
     },
     [moveOrder],
   );

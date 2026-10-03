@@ -1,4 +1,4 @@
-import { Loader2, MapPin, Phone, Printer, Trash2 } from "lucide-react";
+import { CheckCircle2, Loader2, MapPin, Phone, Printer, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -22,12 +22,7 @@ import {
   getOrderTypeLabel,
   notaDoItemSemAdicionais,
 } from "./orderDisplay";
-import {
-  ORDER_COLUMNS,
-  canMoveOrder,
-  getStatusLabel,
-  type KanbanStatus,
-} from "./orderStatusConfig";
+import { ORDER_COLUMNS, canMoveOrder, getStatusLabel, type MoveTarget } from "./orderStatusConfig";
 
 export type OrderDetailsDrawerProps = {
   order: Order | null;
@@ -36,7 +31,7 @@ export type OrderDetailsDrawerProps = {
   onOpenChange: (open: boolean) => void;
   isPending: boolean;
   canDelete: boolean;
-  onMove: (order: Order, status: KanbanStatus) => void;
+  onMove: (order: Order, status: MoveTarget) => void;
   onDelete: (order: Order) => void;
 };
 
@@ -182,6 +177,12 @@ export function OrderDetailsDrawer({
                   </Button>
                 );
               })}
+              {/* O mesmo "Finalizar pedido" da faixa verde que aparece ao
+                  arrastar o card. No celular, arrastar até a faixa é
+                  desajeitado; com o botão aqui, finalizar é um toque só.
+                  Passa pela mesma regra do arraste: pedido que acabou de
+                  entrar não finaliza sem antes ser aceito. */}
+              <FinalizarButton order={order} isPending={isPending} onMove={onMove} />
             </div>
           </section>
 
@@ -208,6 +209,34 @@ export function OrderDetailsDrawer({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function FinalizarButton({
+  order,
+  isPending,
+  onMove,
+}: {
+  order: Order;
+  isPending: boolean;
+  onMove: (order: Order, status: MoveTarget) => void;
+}) {
+  const check = canMoveOrder(order.status, "entregue");
+  return (
+    <Button
+      size="sm"
+      className="bg-emerald-600 text-xs text-white hover:bg-emerald-700"
+      disabled={!check.allowed || isPending}
+      title={check.allowed ? undefined : check.reason}
+      onClick={() => onMove(order, "entregue")}
+    >
+      {isPending ? (
+        <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+      ) : (
+        <CheckCircle2 className="h-3.5 w-3.5" aria-hidden="true" />
+      )}
+      Finalizar pedido
+    </Button>
   );
 }
 
