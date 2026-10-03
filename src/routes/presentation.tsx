@@ -12,7 +12,7 @@ import {
   Home,
   ArrowRight,
 } from "lucide-react";
-import logo from "@/assets/flycontrol-logo-hero.png";
+import logo from "@/assets/flycontrol-logo-hero.webp";
 
 export const Route = createFileRoute("/presentation")({
   component: PresentationPage,

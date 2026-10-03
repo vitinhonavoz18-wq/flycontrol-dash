@@ -251,18 +251,6 @@ export async function configurarWebhook(
   });
 }
 
-/** Envio direto, usado só como plano B quando o fluxo do n8n não está de pé. */
-export async function enviarTexto(
-  token: string,
-  numero: string,
-  texto: string,
-): Promise<RespostaUazapi<{ id?: string; messageid?: string }>> {
-  return chamar("/send/text", {
-    token,
-    corpo: { number: numero.replace(/\D/g, ""), text: texto, linkPreview: false },
-  });
-}
-
 /**
  * Traduz o vocabulário da UAZAPI para o nosso.
  *

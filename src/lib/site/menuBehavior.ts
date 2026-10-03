@@ -136,9 +136,9 @@ export const VISIBILIDADES_DE_COMBOS = ["auto", "always", "hide"] as const;
 
 export type VisibilidadeDeCombos = (typeof VISIBILIDADES_DE_COMBOS)[number];
 
-export const CHAVE_DOS_COMBOS = "combos_visibility";
+const CHAVE_DOS_COMBOS = "combos_visibility";
 
-export const VISIBILIDADE_PADRAO_DE_COMBOS: VisibilidadeDeCombos = "auto";
+const VISIBILIDADE_PADRAO_DE_COMBOS: VisibilidadeDeCombos = "auto";
 
 export const COMBOS_INFO: Readonly<Record<VisibilidadeDeCombos, string>> = {
   auto: "Automático (só se existir combo)",

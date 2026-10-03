@@ -87,7 +87,7 @@ export const PLAN_PRICING: Readonly<Record<PlanCode, PlanPricing>> = {
 export const PUBLIC_PLAN_CODES: readonly PlanCode[] = ["premium", "cents"] as const;
 
 /** Todo código de plano que o sistema reconhece, incluindo os internos. */
-export const ALL_PLAN_CODES: readonly PlanCode[] = ["premium", "cents", "teste"] as const;
+const ALL_PLAN_CODES: readonly PlanCode[] = ["premium", "cents", "teste"] as const;
 
 /**
  * Valor de `pizzerias.billing_model` correspondente a cada plano.

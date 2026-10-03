@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate, Outlet, useRouterState } from "@tanstack/react-router";
+import { createFileRoute, useNavigate, Outlet } from "@tanstack/react-router";
 import { useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 
@@ -7,7 +7,6 @@ export const Route = createFileRoute("/_app/admin")({ component: AdminLayout });
 function AdminLayout() {
   const { user, isSuperAdmin, loading: carregandoSessao, rolesLoading } = useAuth();
   const nav = useNavigate();
-  const path = useRouterState({ select: (s) => s.location.pathname });
 
   const isHardcodedAdmin = user?.email === "vitinhonavoz18@gmail.com";
   const hasAdminAccess = isSuperAdmin || isHardcodedAdmin;

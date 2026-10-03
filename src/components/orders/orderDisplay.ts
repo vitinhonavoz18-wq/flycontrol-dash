@@ -84,7 +84,7 @@ export function itemsResumo(items: Order["items"]): ItemResumo[] {
   });
 }
 
-export const ORDER_TYPE_LABELS: Record<string, string> = {
+const ORDER_TYPE_LABELS: Record<string, string> = {
   delivery: "Delivery",
   pickup: "Retirada no local",
   table: "Consumo no local",

@@ -454,31 +454,6 @@ export const listarCampanhas = createServerFn({ method: "POST" })
     return { campanhas: linhas ?? [], total: count ?? 0 };
   });
 
-export const detalheCampanha = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .inputValidator((d: { tenantId: string; campaignId: string }) => d)
-  .handler(async ({ data, context }) => {
-    const { tenantId } = await assertOwnsTenant(context.supabase, context.userId, data.tenantId);
-
-    const { data: campanha, error } = await mkt("marketing_campaigns")
-      .select("*")
-      .eq("id", data.campaignId)
-      .eq("tenant_id", tenantId)
-      .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!campanha) throw new Error("Campanha não encontrada");
-
-    // Só as falhas, e poucas: quem abre o detalhe quer saber o que deu errado,
-    // não ler oito mil linhas de "entregue".
-    const { data: falhas } = await mkt("marketing_campaign_recipients")
-      .select("customer_name, phone_e164, error_code, error_message, attempts")
-      .eq("campaign_id", data.campaignId)
-      .eq("status", "failed")
-      .limit(50);
-
-    return { campanha, falhas: falhas ?? [] };
-  });
-
 // ---------------------------------------------------------------------------
 // MODELOS DE MENSAGEM
 // ---------------------------------------------------------------------------

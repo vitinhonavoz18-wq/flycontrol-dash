@@ -131,11 +131,6 @@ export function decisaoValida(chave: string, valor: string): boolean {
   return DECISOES_ACEITAS.get(chave)?.includes(valor) ?? false;
 }
 
-/** As chaves aceitas, para quem precisar listar (telas, testes). */
-export function chavesDeDecisao(): string[] {
-  return [...DECISOES_ACEITAS.keys()];
-}
-
 export type EtapaDoGuia = {
   id: IdDaEtapaDoGuia;
   /** O nome curto, o que aparece na lista de progresso. */
@@ -394,7 +389,7 @@ export function etapaDoGuiaPorId(id: string): EtapaDoGuia | undefined {
   return ETAPAS_DO_GUIA.find((e) => e.id === id);
 }
 
-export function ehIdDeEtapaDoGuia(id: string | null | undefined): id is IdDaEtapaDoGuia {
+function ehIdDeEtapaDoGuia(id: string | null | undefined): id is IdDaEtapaDoGuia {
   return !!id && ETAPAS_DO_GUIA.some((e) => e.id === id);
 }
 
@@ -457,12 +452,7 @@ export function progressoDoGuia(concluidas: readonly IdDaEtapaDoGuia[]): number 
  * cobrança e as telas da conta continuam abertas: trancar o lojista fora da
  * página de pagamento ou do suporte transformaria um guia em sequestro.
  */
-export const ROTAS_SEMPRE_LIBERADAS: readonly string[] = [
-  "/docs",
-  "/billing",
-  "/settings",
-  "/preparar",
-];
+const ROTAS_SEMPRE_LIBERADAS: readonly string[] = ["/docs", "/billing", "/settings", "/preparar"];
 
 export function rotaPermitidaNoGuia(rota: string, etapa: EtapaDoGuia | null): boolean {
   if (!etapa) return true;

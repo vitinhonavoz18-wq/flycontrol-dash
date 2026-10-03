@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING } from "@/lib/billing/plans";
-import logo from "@/assets/flycontrol-logo.png";
+import logo from "@/assets/flycontrol-logo.webp";
 
 export const Route = createFileRoute("/plans")({ component: PlansPage });
 

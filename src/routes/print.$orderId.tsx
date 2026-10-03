@@ -1,15 +1,22 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeOrderType } from "@/utils/order-utils";
 import { extrairAdicionaisDoItem, notaDoItemSemAdicionais } from "@/components/orders/orderDisplay";
-// Só o símbolo, recortado de flycontrol-logo.png: aquele arquivo já vem com
+// Só o símbolo, recortado do logo completo: aquele arquivo já vem com
 // "FlyControl" escrito dentro da imagem, e a comanda também escreve o nome
 // embaixo — usar o arquivo inteiro repetiria o nome duas vezes (uma ilegível,
 // pequena demais na imagem; outra no texto).
 import flycontrolLogo from "@/assets/flycontrol-mark.png";
-
-
+import {
+  PAPEIS,
+  esperarConteudoCarregar,
+  estiloDeImpressao,
+  larguraDaPrevia,
+  lerPapelSalvo,
+  salvarPapel,
+  type Papel,
+} from "@/lib/impressao/papel";
 
 export const Route = createFileRoute("/print/$orderId")({ component: Print });
 
@@ -17,14 +24,19 @@ function Print() {
   const { orderId } = Route.useParams();
   const [o, setO] = useState<any>(null);
   const [pz, setPz] = useState<any>(null);
+  const [pronto, setPronto] = useState(false);
+  const [papel, setPapel] = useState<Papel>("auto");
+  const areaRef = useRef<HTMLDivElement>(null);
+
+  // A escolha de papel fica no computador (cada um tem a sua impressora).
+  // Lida depois de abrir a página porque o servidor não tem acesso a ela.
+  useEffect(() => {
+    setPapel(lerPapelSalvo());
+  }, []);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase
-        .from("orders")
-        .select("*")
-        .eq("id", orderId)
-        .maybeSingle();
+      const { data } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
       if (data) {
         setO(data);
         const { data: p } = await supabase
@@ -33,11 +45,30 @@ function Print() {
           .eq("id", data.tenant_id)
           .maybeSingle();
         setPz(p);
-        // Pequeno atraso para garantir renderização antes do diálogo de impressão
-        setTimeout(() => window.print(), 800);
+        setPronto(true);
       }
     })();
   }, [orderId]);
+
+  // Abre a impressão só depois que a comanda está desenhada, com a logo e
+  // as letras carregadas — ver `esperarConteudoCarregar`.
+  useEffect(() => {
+    if (!pronto) return;
+    let cancelado = false;
+    const espera = setTimeout(async () => {
+      await esperarConteudoCarregar(areaRef.current);
+      if (!cancelado) window.print();
+    }, 150);
+    return () => {
+      cancelado = true;
+      clearTimeout(espera);
+    };
+  }, [pronto]);
+
+  function escolherPapel(novo: Papel) {
+    setPapel(novo);
+    salvarPapel(novo);
+  }
 
   if (!o) return <div className="p-6 text-center text-sm">Carregando pedido...</div>;
 
@@ -56,220 +87,261 @@ function Print() {
   const logoParaImprimir = pz?.logo_url || null;
 
   return (
-    <div className="print-area">
-      {/* CABEÇALHO DA PIZZARIA */}
-      <div className="mb-4 text-center">
-        {logoParaImprimir ? (
-          // Com a logo, o cabeçalho fica só ela: nem telefone, nem endereço,
-          // nem a linha divisória — a marca já basta, e menos texto em cima
-          // parece mais premium do que empilhar tudo junto.
-          <img
-            src={logoParaImprimir}
-            alt={pz?.name ?? "Logo da loja"}
-            className="comanda-logo mx-auto mb-2 max-h-24 max-w-[80%] object-contain"
-          />
-        ) : (
-          <>
-            <div className="text-xl font-bold uppercase leading-none">{pz?.name ?? "Pizzaria"}</div>
-            {pz?.phone && <div className="mt-1 text-base">{pz.phone}</div>}
-            {pz?.address && <div className="text-xs">{pz.address}</div>}
-            <div className="my-2 border-t-2 border-dashed border-black"></div>
-          </>
-        )}
-        <div className="text-lg font-bold">PEDIDO #{o.order_number}</div>
-        <div className="text-sm">{new Date(o.created_at).toLocaleString("pt-BR")}</div>
-      </div>
-
-      <div className="my-2 border-t border-dashed border-black"></div>
-
-      {/* DADOS DO CLIENTE */}
-      <div className="space-y-1">
-        <div>
-          <span className="font-bold">Cliente:</span>{" "}
-          <span className="text-base">{o.customer_name}</span>
-        </div>
-        <div>
-          <span className="font-bold">Telefone:</span>{" "}
-          <span className="text-base">{o.customer_phone}</span>
-        </div>
-        {o.customer_address && (
-          <div>
-            <span className="font-bold">Endereço:</span>{" "}
-            <span className="text-base">{o.customer_address}</span>
-          </div>
-        )}
-        {o.neighborhood && (
-          <div>
-            <span className="font-bold">Bairro:</span>{" "}
-            <span className="text-base">{o.neighborhood}</span>
-          </div>
-        )}
-        <div className="mt-1 inline-block bg-black px-2 py-0.5 text-xs font-bold uppercase text-white">
-          Tipo: {
-            orderType === "delivery" ? "Entrega" : 
-            orderType === "pickup" ? "Retirada" : 
-            orderType === "table" ? "Mesa" : "Pedido"
-          }
-        </div>
-        {orderType === "pickup" && o.ticket_number && (
-          <div className="mt-1 text-lg font-black uppercase">
-            FICHA: {o.ticket_number}
-          </div>
-        )}
-        {orderType === "table" && (
-          <div className="mt-1 text-lg font-black uppercase">
-            {o.table_number || o.tableNumber || o.mesa ? `MESA: ${o.table_number || o.tableNumber || o.mesa}` : "MESA NÃO IDENTIFICADA"}
-          </div>
-        )}
-
-      </div>
-
-      <div className="my-3 border-t-2 border-dashed border-black"></div>
-
-      {/* ITENS DO PEDIDO */}
-      <div className="mb-2 font-bold uppercase">Itens do Pedido:</div>
-      <div className="space-y-4">
-        {items.map((it: any, i: number) => {
-          const qty = it.qty ?? it.quantity ?? 1;
-          const name = it.product_name ?? it.name ?? it.title ?? it.nome ?? "Item";
-          const price = Number(it.unit_price ?? it.price ?? 0);
-          const subtotal = Number(it.total_price ?? it.total ?? it.subtotal ?? (price * qty));
-          
-          // Sabores (para pizzas)
-          const flavors = Array.isArray(it.flavors) ? it.flavors : [];
-          const selectedFlavors = Array.isArray(it.selected_flavors) ? it.selected_flavors : [];
-          const allFlavors = [...new Set([...flavors, ...selectedFlavors])];
-
-          // Ingredientes/Adicionais
-          const ingredients = Array.isArray(it.ingredients) ? it.ingredients :
-                             (typeof it.ingredients === 'string' ? [it.ingredients] : []);
-          // O site guarda o adicional escolhido dentro do texto do item
-          // (`notes`) quando não manda uma lista pronta — por isso a extração
-          // olha os dois formatos, e a observação livre abaixo mostra só o
-          // que sobra depois de tirar esse trecho, pra não repetir a mesma
-          // informação duas vezes na comanda.
-          const additions = extrairAdicionaisDoItem(it);
-          const notaLivreDoItem = notaDoItemSemAdicionais(it);
-          
-          return (
-            <div key={i} className="border-b border-gray-100 pb-2 last:border-0">
-              <div className="flex items-start justify-between gap-2">
-                <span className="font-bold">
-                  {qty}x {name}
-                  {it.size && <span className="text-sm font-normal"> ({it.size})</span>}
-                </span>
-                <span className="whitespace-nowrap font-bold">{formatCurrency(subtotal)}</span>
+    <div className="pagina-da-comanda">
+      <div ref={areaRef} className="print-area" style={{ width: larguraDaPrevia(papel) }}>
+        {/* CABEÇALHO DA PIZZARIA */}
+        <div className="mb-4 text-center">
+          {logoParaImprimir ? (
+            // Com a logo, o cabeçalho fica só ela: nem telefone, nem endereço,
+            // nem a linha divisória — a marca já basta, e menos texto em cima
+            // parece mais premium do que empilhar tudo junto.
+            <img
+              src={logoParaImprimir}
+              alt={pz?.name ?? "Logo da loja"}
+              className="comanda-logo mx-auto mb-2 max-h-24 max-w-[80%] object-contain"
+            />
+          ) : (
+            <>
+              <div className="text-xl font-bold uppercase leading-none">
+                {pz?.name ?? "Pizzaria"}
               </div>
-
-              {/* Detalhes da Pizza */}
-              {allFlavors.length > 0 && (
-                <div className="ml-4 mt-1">
-                  <div className="text-xs font-bold uppercase">Sabores:</div>
-                  {allFlavors.map((f: string, idx: number) => (
-                    <div key={idx} className="text-sm leading-tight">• {f}</div>
-                  ))}
-                </div>
-              )}
-
-              {/* Borda */}
-              {(it.crust || it.borda) && (
-                <div className="ml-4 mt-1">
-                  <span className="text-xs font-bold uppercase">Borda:</span>{" "}
-                  <span className="text-sm">{it.crust || it.borda}</span>
-                </div>
-              )}
-
-              {/* Ingredientes */}
-              {ingredients.length > 0 && (
-                <div className="ml-4 mt-1">
-                  <div className="text-xs font-bold uppercase">Ingredientes:</div>
-                  <div className="text-xs italic">{ingredients.join(", ")}</div>
-                </div>
-              )}
-
-              {/* Adicionais */}
-              {additions.length > 0 && (
-                <div className="ml-4 mt-1">
-                  <div className="text-xs font-bold uppercase">Adicionais:</div>
-                  {additions.map((add: any, idx: number) => (
-                    <div key={idx} className="text-sm">+ {typeof add === 'string' ? add : (add.name || add.nome)}</div>
-                  ))}
-                </div>
-              )}
-
-              {/* Observação do Item */}
-              {notaLivreDoItem && (
-                <div className="ml-4 mt-1 rounded bg-gray-50 p-1 text-xs">
-                  <span className="font-bold">Obs Item:</span> {notaLivreDoItem}
-                </div>
-              )}
-              
-              {qty > 1 && (
-                <div className="mt-1 text-right text-[10px] text-gray-500">
-                  Valor unitário: {formatCurrency(price)}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
-
-      <div className="my-3 border-t-2 border-dashed border-black"></div>
-
-      {/* TOTAIS */}
-      <div className="space-y-1">
-        <div className="flex justify-between text-sm">
-          <span>Subtotal</span>
-          <span>{formatCurrency(o.subtotal || (Number(o.total) - Number(o.delivery_fee)))}</span>
+              {pz?.phone && <div className="mt-1 text-base">{pz.phone}</div>}
+              {pz?.address && <div className="text-xs">{pz.address}</div>}
+              <div className="my-2 border-t-2 border-dashed border-black"></div>
+            </>
+          )}
+          <div className="text-lg font-bold">PEDIDO #{o.order_number}</div>
+          <div className="text-sm">{new Date(o.created_at).toLocaleString("pt-BR")}</div>
         </div>
-        <div className="flex justify-between text-sm">
-          <span>Taxa de Entrega</span>
-          <span>{formatCurrency(o.delivery_fee)}</span>
-        </div>
-        <div className="flex justify-between border-t border-black pt-1 text-lg font-bold">
-          <span>TOTAL</span>
-          <span>{formatCurrency(o.total)}</span>
-        </div>
-      </div>
 
-      <div className="my-3 border-t border-dashed border-black"></div>
+        <div className="my-2 border-t border-dashed border-black"></div>
 
-      {/* PAGAMENTO E OBS GERAIS */}
-      <div className="space-y-2">
-        {o.payment_method && (
+        {/* DADOS DO CLIENTE */}
+        <div className="space-y-1">
           <div>
-            <span className="font-bold">Forma de Pagamento:</span>
-            <div className="text-base uppercase">{o.payment_method}</div>
+            <span className="font-bold">Cliente:</span>{" "}
+            <span className="text-base">{o.customer_name}</span>
           </div>
-        )}
-        {o.change_for && Number(o.change_for) > 0 && (
-          <div className="bg-gray-100 p-1">
-            <span className="font-bold">Troco para:</span>{" "}
-            <span className="text-base font-bold">{formatCurrency(o.change_for)}</span>
+          <div>
+            <span className="font-bold">Telefone:</span>{" "}
+            <span className="text-base">{o.customer_phone}</span>
           </div>
-        )}
-        {o.notes && (
-          <div className="mt-2 border-l-4 border-black pl-2">
-            <span className="font-bold">Observações Gerais:</span>
-            <div className="text-sm italic">{o.notes}</div>
+          {o.customer_address && (
+            <div>
+              <span className="font-bold">Endereço:</span>{" "}
+              <span className="text-base">{o.customer_address}</span>
+            </div>
+          )}
+          {o.neighborhood && (
+            <div>
+              <span className="font-bold">Bairro:</span>{" "}
+              <span className="text-base">{o.neighborhood}</span>
+            </div>
+          )}
+          {/* Borda preta em vez de fundo preto com letra branca: o navegador
+            não imprime fundos por padrão, e o "Tipo" saía branco no branco —
+            invisível em boa parte das impressoras. */}
+          <div className="mt-1 inline-block border-2 border-black px-2 py-0.5 text-xs font-bold uppercase text-black">
+            Tipo:{" "}
+            {orderType === "delivery"
+              ? "Entrega"
+              : orderType === "pickup"
+                ? "Retirada"
+                : orderType === "table"
+                  ? "Mesa"
+                  : "Pedido"}
           </div>
-        )}
-      </div>
+          {orderType === "pickup" && o.ticket_number && (
+            <div className="mt-1 text-lg font-black uppercase">FICHA: {o.ticket_number}</div>
+          )}
+          {orderType === "table" && (
+            <div className="mt-1 text-lg font-black uppercase">
+              {o.table_number || o.tableNumber || o.mesa
+                ? `MESA: ${o.table_number || o.tableNumber || o.mesa}`
+                : "MESA NÃO IDENTIFICADA"}
+            </div>
+          )}
+        </div>
 
-      <div className="print-footer mt-6 border-t border-gray-200 pt-2 text-center text-[10px] text-gray-400">
-        <img
-          src={flycontrolLogo}
-          alt="FlyControl"
-          className="flycontrol-footer-logo mx-auto mb-1 max-h-6 object-contain opacity-80"
-        />
-        {/* "Delivery" em vez de "Pizzarias": o FlyControl atende vários tipos
+        <div className="my-3 border-t-2 border-dashed border-black"></div>
+
+        {/* ITENS DO PEDIDO */}
+        <div className="mb-2 font-bold uppercase">Itens do Pedido:</div>
+        <div className="space-y-4">
+          {items.map((it: any, i: number) => {
+            const qty = it.qty ?? it.quantity ?? 1;
+            const name = it.product_name ?? it.name ?? it.title ?? it.nome ?? "Item";
+            const price = Number(it.unit_price ?? it.price ?? 0);
+            const subtotal = Number(it.total_price ?? it.total ?? it.subtotal ?? price * qty);
+
+            // Sabores (para pizzas)
+            const flavors = Array.isArray(it.flavors) ? it.flavors : [];
+            const selectedFlavors = Array.isArray(it.selected_flavors) ? it.selected_flavors : [];
+            const allFlavors = [...new Set([...flavors, ...selectedFlavors])];
+
+            // Ingredientes/Adicionais
+            const ingredients = Array.isArray(it.ingredients)
+              ? it.ingredients
+              : typeof it.ingredients === "string"
+                ? [it.ingredients]
+                : [];
+            // O site guarda o adicional escolhido dentro do texto do item
+            // (`notes`) quando não manda uma lista pronta — por isso a extração
+            // olha os dois formatos, e a observação livre abaixo mostra só o
+            // que sobra depois de tirar esse trecho, pra não repetir a mesma
+            // informação duas vezes na comanda.
+            const additions = extrairAdicionaisDoItem(it);
+            const notaLivreDoItem = notaDoItemSemAdicionais(it);
+
+            return (
+              <div key={i} className="border-b border-gray-100 pb-2 last:border-0">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="font-bold">
+                    {qty}x {name}
+                    {it.size && <span className="text-sm font-normal"> ({it.size})</span>}
+                  </span>
+                  <span className="whitespace-nowrap font-bold">{formatCurrency(subtotal)}</span>
+                </div>
+
+                {/* Detalhes da Pizza */}
+                {allFlavors.length > 0 && (
+                  <div className="ml-4 mt-1">
+                    <div className="text-xs font-bold uppercase">Sabores:</div>
+                    {allFlavors.map((f: string, idx: number) => (
+                      <div key={idx} className="text-sm leading-tight">
+                        • {f}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Borda */}
+                {(it.crust || it.borda) && (
+                  <div className="ml-4 mt-1">
+                    <span className="text-xs font-bold uppercase">Borda:</span>{" "}
+                    <span className="text-sm">{it.crust || it.borda}</span>
+                  </div>
+                )}
+
+                {/* Ingredientes */}
+                {ingredients.length > 0 && (
+                  <div className="ml-4 mt-1">
+                    <div className="text-xs font-bold uppercase">Ingredientes:</div>
+                    <div className="text-xs italic">{ingredients.join(", ")}</div>
+                  </div>
+                )}
+
+                {/* Adicionais */}
+                {additions.length > 0 && (
+                  <div className="ml-4 mt-1">
+                    <div className="text-xs font-bold uppercase">Adicionais:</div>
+                    {additions.map((add: any, idx: number) => (
+                      <div key={idx} className="text-sm">
+                        + {typeof add === "string" ? add : add.name || add.nome}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Observação do Item */}
+                {notaLivreDoItem && (
+                  <div className="ml-4 mt-1 rounded bg-gray-50 p-1 text-xs">
+                    <span className="font-bold">Obs Item:</span> {notaLivreDoItem}
+                  </div>
+                )}
+
+                {qty > 1 && (
+                  <div className="mt-1 text-right text-[10px] text-gray-500">
+                    Valor unitário: {formatCurrency(price)}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="my-3 border-t-2 border-dashed border-black"></div>
+
+        {/* TOTAIS */}
+        <div className="space-y-1">
+          <div className="flex justify-between text-sm">
+            <span>Subtotal</span>
+            <span>{formatCurrency(o.subtotal || Number(o.total) - Number(o.delivery_fee))}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span>Taxa de Entrega</span>
+            <span>{formatCurrency(o.delivery_fee)}</span>
+          </div>
+          <div className="flex justify-between border-t border-black pt-1 text-lg font-bold">
+            <span>TOTAL</span>
+            <span>{formatCurrency(o.total)}</span>
+          </div>
+        </div>
+
+        <div className="my-3 border-t border-dashed border-black"></div>
+
+        {/* PAGAMENTO E OBS GERAIS */}
+        <div className="space-y-2">
+          {o.payment_method && (
+            <div>
+              <span className="font-bold">Forma de Pagamento:</span>
+              <div className="text-base uppercase">{o.payment_method}</div>
+            </div>
+          )}
+          {o.change_for && Number(o.change_for) > 0 && (
+            <div className="bg-gray-100 p-1">
+              <span className="font-bold">Troco para:</span>{" "}
+              <span className="text-base font-bold">{formatCurrency(o.change_for)}</span>
+            </div>
+          )}
+          {o.notes && (
+            <div className="mt-2 border-l-4 border-black pl-2">
+              <span className="font-bold">Observações Gerais:</span>
+              <div className="text-sm italic">{o.notes}</div>
+            </div>
+          )}
+        </div>
+
+        <div className="print-footer mt-6 border-t border-gray-200 pt-2 text-center text-[10px] text-gray-400">
+          <img
+            src={flycontrolLogo}
+            alt="FlyControl"
+            className="flycontrol-footer-logo mx-auto mb-1 max-h-6 object-contain opacity-80"
+          />
+          {/* "Delivery" em vez de "Pizzarias": o FlyControl atende vários tipos
             de negócio, não só pizzaria — a logo acima já diz "FlyControl",
             então aqui só precisa da linha que serve pra qualquer nicho. */}
-        <div>Sistema de Gestão para Delivery</div>
-        <div>Impressão em {new Date().toLocaleString("pt-BR")}</div>
+          <div>Sistema de Gestão para Delivery</div>
+          <div>Impressão em {new Date().toLocaleString("pt-BR")}</div>
+        </div>
       </div>
 
-      <div className="no-print mt-8 flex flex-col gap-2">
+      <div className="no-print controles-da-comanda">
+        <div className="space-y-2">
+          <div className="text-sm font-bold">Papel da impressora</div>
+          <div className="grid grid-cols-2 gap-2">
+            {PAPEIS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => escolherPapel(p.id)}
+                aria-pressed={papel === p.id}
+                className={`rounded-md border px-2 py-2 text-xs font-semibold ${
+                  papel === p.id
+                    ? "border-black bg-black text-white"
+                    : "border-gray-300 bg-white text-gray-800"
+                }`}
+              >
+                {p.rotulo}
+              </button>
+            ))}
+          </div>
+          <p className="text-xs text-gray-600">{PAPEIS.find((p) => p.id === papel)?.ajuda}</p>
+          <p className="text-xs text-gray-500">
+            Saiu cortada ou em branco? Escolha o papel da sua impressora e imprima de novo. Este
+            computador lembra a escolha.
+          </p>
+        </div>
         <button
           onClick={() => window.print()}
           className="w-full rounded-md bg-black py-3 font-bold text-white transition-opacity hover:opacity-90"
@@ -285,107 +357,67 @@ function Print() {
       </div>
 
       <style>{`
-        /* Reset de tela para visualização no navegador */
+        /* Na tela: a prévia da comanda no meio, do tamanho do papel escolhido. */
         body {
           margin: 0;
           padding: 0;
           background-color: #f3f4f6;
+        }
+
+        .pagina-da-comanda {
           display: flex;
-          justify-content: center;
-          align-items: flex-start;
+          flex-direction: column;
+          align-items: center;
           min-height: 100vh;
+          padding: 20px 12px;
+          box-sizing: border-box;
         }
 
         .print-area {
-          width: 80mm;
           max-width: 100%;
           background: white;
           padding: 16px;
+          box-sizing: border-box;
           box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-          margin: 20px auto;
           font-family: sans-serif;
           color: black;
           line-height: 1.25;
+          overflow-wrap: anywhere;
         }
 
+        .controles-da-comanda {
+          width: 80mm;
+          max-width: 100%;
+          margin-top: 24px;
+          display: flex;
+          flex-direction: column;
+          gap: 8px;
+        }
+
+        ${estiloDeImpressao(papel)}
+
         @media print {
-          @page {
-            size: 80mm auto;
-            margin: 0;
-          }
-
-          html, body {
-            width: 80mm !important;
-            height: auto !important;
+          .pagina-da-comanda {
+            display: block !important;
             min-height: 0 !important;
-            margin: 0 !important;
             padding: 0 !important;
-            overflow: visible !important;
-            background: white !important;
-          }
-
-          body * {
-            visibility: hidden;
-          }
-
-          .print-area, .print-area * {
-            visibility: visible;
-          }
-
-          .print-area {
-            position: static !important;
-            width: 76mm !important;
-            max-width: 76mm !important;
-            height: auto !important;
-            min-height: 0 !important;
-            margin: 0 auto !important;
-            padding: 2mm !important;
-            box-sizing: border-box !important;
-            font-family: monospace, Arial, sans-serif !important;
-            font-size: 10px !important;
-            line-height: 1.2 !important;
-            color: #000 !important;
-            background: #fff !important;
-            box-shadow: none !important;
-            page-break-after: avoid !important;
-            page-break-before: avoid !important;
           }
 
           .comanda-logo {
-            /* Impressora térmica é preto e branco: garante que a logo saia
-               mesmo em navegador configurado para "economizar tinta" (que
-               costuria de outra forma cortar imagens de fundo, não esta —
-               mas o ajuste evita cinza lavado em logos com cor sólida). */
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
             max-height: 26mm !important;
+            max-width: 80% !important;
             margin: 0 auto 2mm auto !important;
           }
 
           .flycontrol-footer-logo {
-            -webkit-print-color-adjust: exact !important;
-            print-color-adjust: exact !important;
             max-height: 6mm !important;
             margin: 0 auto 1mm auto !important;
-          }
-
-          .print-area h1,
-          .print-area h2,
-          .print-area h3 {
-            margin: 0 0 2mm 0 !important;
-            padding: 0 !important;
-            line-height: 1.1 !important;
           }
 
           .print-area p,
           .print-area div {
             margin-top: 0 !important;
             margin-bottom: 1mm !important;
-          }
-
-          .print-area hr,
-          .separator {
-            margin: 1.5mm 0 !important;
           }
 
           .print-footer {
@@ -396,16 +428,8 @@ function Print() {
             text-align: center !important;
           }
 
-          .no-print,
-          button,
-          nav,
-          header,
-          footer:not(.print-footer),
-          iframe,
-          [class*="lovable"],
-          [id*="lovable"] {
+          .no-print {
             display: none !important;
-            visibility: hidden !important;
           }
         }
       `}</style>

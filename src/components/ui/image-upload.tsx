@@ -26,6 +26,10 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
  */
 const MAX_DIMENSION = 900;
 const SIGNED_URL_TTL = 60 * 60 * 24 * 365 * 50; // ~50 years
+// Cada foto enviada ganha um nome único, então o arquivo de um endereço nunca
+// muda: o celular do cliente pode guardá-la por um ano em vez do padrão de
+// 1 hora, e o cardápio reaberto mostra as fotos sem esperar o servidor.
+const CACHE_UM_ANO = String(60 * 60 * 24 * 365);
 const ACCEPTED = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
 interface ImageUploadProps {
@@ -99,7 +103,11 @@ export function ImageUpload({ value, onChange, folder = "misc", disabled, classN
         const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from(BUCKET)
-          .upload(path, blob, { contentType: blob.type, upsert: false });
+          .upload(path, blob, {
+            contentType: blob.type,
+            upsert: false,
+            cacheControl: CACHE_UM_ANO,
+          });
         if (upErr) throw upErr;
         setProgress(80);
         const { data: signed, error: signErr } = await supabase.storage

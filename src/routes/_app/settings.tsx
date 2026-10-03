@@ -55,7 +55,6 @@ function AddPizzeriaDialog({ onSuccess }: { onSuccess: () => void }) {
     e.preventDefault();
     setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const name = fd.get("name") as string;
     const apiKey = fd.get("apiKey") as string;
 
     // Buscar se já existe

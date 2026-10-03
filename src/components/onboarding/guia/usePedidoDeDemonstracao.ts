@@ -1,9 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import {
-  ID_DO_PEDIDO_DE_DEMONSTRACAO,
-  montarPedidoDeDemonstracao,
-} from "@/lib/onboarding/guia/pedidoDeDemonstracao";
+import { montarPedidoDeDemonstracao } from "@/lib/onboarding/guia/pedidoDeDemonstracao";
 import type { Order } from "@/types/order";
 
 /**
@@ -58,5 +55,3 @@ export function usePedidoDeDemonstracao(tenantId: string | null, ligado: boolean
 
   return pedido;
 }
-
-export { ID_DO_PEDIDO_DE_DEMONSTRACAO };

@@ -111,7 +111,7 @@ async function signToken(waiterId: string, tenantId: string, expiresAt: number) 
   return `${payload}.${toB64(sig)}`;
 }
 
-export async function verifyWaiterToken(token: string): Promise<{ waiterId: string; tenantId: string } | null> {
+async function verifyWaiterToken(token: string): Promise<{ waiterId: string; tenantId: string } | null> {
   const parts = token.split(".");
   if (parts.length !== 4) return null;
   const [waiterId, tenantId, expStr, sigB64] = parts;
@@ -260,28 +260,6 @@ export const waiterLogin = createServerFn({ method: "POST" })
     throw new Error("Usuário ou senha inválidos");
   });
 
-// Claim/assign waiter to an open table session (stamps responsibility)
-export const claimTableSession = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; sessionId: string }) => d)
-  .handler(async ({ data }) => {
-    const auth = await verifyWaiterToken(data.token);
-    if (!auth) throw new Error("Sessão de garçom expirada");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    const { data: sess, error: sErr } = await supabaseAdmin
-      .from("table_sessions")
-      .select("id, restaurant_id, status, waiter_id")
-      .eq("id", data.sessionId)
-      .maybeSingle();
-    if (sErr) throw new Error(sErr.message);
-    if (!sess) throw new Error("Comanda não encontrada");
-    if (sess.restaurant_id !== auth.tenantId) throw new Error("Comanda não pertence à sua loja");
-    if (sess.status !== "open") throw new Error("Comanda já está fechada");
-    const { error: uErr } = await supabaseAdmin
-      .from("table_sessions").update({ waiter_id: auth.waiterId }).eq("id", data.sessionId);
-    if (uErr) throw new Error(uErr.message);
-    return { ok: true };
-  });
-
 // ============================================================
 // Waiter portal data fetchers + actions (token-authenticated)
 // ============================================================
@@ -292,111 +270,6 @@ async function authed(token: string) {
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
   return { auth, supabaseAdmin };
 }
-
-// List open sessions for the waiter's tenant (with current responsible)
-export const listMyTenantSessions = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string }) => d)
-  .handler(async ({ data }) => {
-    const { auth, supabaseAdmin } = await authed(data.token);
-    const { data: rows, error } = await supabaseAdmin
-      .from("table_sessions")
-      .select("id, table_number, table_name, status, total_amount, subtotal_amount, service_fee_amount, service_fee_enabled, opened_at, closed_at, waiter_id, waiters(full_name)")
-      .eq("restaurant_id", auth.tenantId)
-      .eq("status", "open")
-      .order("opened_at", { ascending: false });
-    if (error) throw new Error(error.message);
-    return (rows || []).map((r: any) => ({ ...r, waiter: r.waiters }));
-  });
-
-// List tables that are active and have no open session (available to open)
-export const listAvailableTables = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string }) => d)
-  .handler(async ({ data }) => {
-    const { auth, supabaseAdmin } = await authed(data.token);
-    const { data: tables, error } = await supabaseAdmin
-      .from("restaurant_tables")
-      .select("id, table_number, table_name, public_token, is_active")
-      .eq("restaurant_id", auth.tenantId)
-      .eq("is_active", true)
-      .order("table_number");
-    if (error) throw new Error(error.message);
-    const { data: openSess } = await supabaseAdmin
-      .from("table_sessions")
-      .select("table_number")
-      .eq("restaurant_id", auth.tenantId)
-      .eq("status", "open");
-    const taken = new Set((openSess || []).map((s: any) => String(s.table_number)));
-    return (tables || []).filter((t: any) => !taken.has(String(t.table_number)));
-  });
-
-// Open a new table session and assign current waiter
-export const openTableAsWaiter = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; tableId: string }) => d)
-  .handler(async ({ data }) => {
-    const { auth, supabaseAdmin } = await authed(data.token);
-    const { data: t, error: tErr } = await supabaseAdmin
-      .from("restaurant_tables")
-      .select("id, restaurant_id, table_number, table_name, is_active")
-      .eq("id", data.tableId)
-      .maybeSingle();
-    if (tErr) throw new Error(tErr.message);
-    if (!t || t.restaurant_id !== auth.tenantId) throw new Error("Mesa não encontrada");
-    if (!t.is_active) throw new Error("Mesa inativa");
-
-    const { data: existing } = await supabaseAdmin
-      .from("table_sessions")
-      .select("id")
-      .eq("restaurant_id", auth.tenantId)
-      .eq("table_number", String(t.table_number))
-      .eq("status", "open")
-      .maybeSingle();
-    if (existing) throw new Error("Já existe uma comanda aberta para esta mesa");
-
-    const { data: pzCfg } = await supabaseAdmin
-      .from("pizzerias")
-      .select("service_fee_percent")
-      .eq("id", auth.tenantId)
-      .maybeSingle();
-    const defaultPct = Number((pzCfg as any)?.service_fee_percent ?? 10);
-
-    const { data: ins, error: iErr } = await supabaseAdmin
-      .from("table_sessions")
-      .insert({
-        restaurant_id: auth.tenantId,
-        table_id: t.id,
-        table_number: String(t.table_number),
-        table_name: t.table_name || `Mesa ${t.table_number}`,
-        status: "open",
-        subtotal_amount: 0,
-        total_amount: 0,
-        service_fee_enabled: false,
-        service_fee_percent: defaultPct,
-        service_fee_amount: 0,
-        waiter_id: auth.waiterId,
-        opened_at: new Date().toISOString(),
-      })
-      .select("id")
-      .single();
-
-    if (iErr) throw new Error(iErr.message);
-    return { ok: true, sessionId: ins.id };
-  });
-
-// List orders linked to a session (waiter must own session's tenant)
-export const listSessionOrders = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; sessionId: string }) => d)
-  .handler(async ({ data }) => {
-    const { auth, supabaseAdmin } = await authed(data.token);
-    const { data: sess } = await supabaseAdmin
-      .from("table_sessions").select("restaurant_id").eq("id", data.sessionId).maybeSingle();
-    if (!sess || sess.restaurant_id !== auth.tenantId) throw new Error("Comanda não encontrada");
-    const { data: links, error } = await supabaseAdmin
-      .from("table_session_orders")
-      .select("order_id, orders(id, order_number, customer_name, total, status, items, notes, created_at)")
-      .eq("table_session_id", data.sessionId);
-    if (error) throw new Error(error.message);
-    return (links || []).map((d: any) => d.orders).filter(Boolean);
-  });
 
 // Request close for a session (waiter-driven)
 export const waiterRequestClose = createServerFn({ method: "POST" })
@@ -447,53 +320,6 @@ export const waiterRequestClose = createServerFn({ method: "POST" })
       .single();
     if (error) throw new Error(error.message);
     return { ok: true, requestId: ins.id, status: "created" };
-  });
-
-// List pending close requests for waiter's tenant
-export const listMyCloseRequests = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string }) => d)
-  .handler(async ({ data }) => {
-    const { auth, supabaseAdmin } = await authed(data.token);
-    const { data: rows, error } = await supabaseAdmin
-      .from("table_close_requests")
-      .select("id, table_number, status, requested_at, customer_name, session_id")
-      .eq("restaurant_id", auth.tenantId)
-      .in("status", ["pending", "viewed"])
-      .order("requested_at", { ascending: false })
-      .limit(50);
-    if (error) throw new Error(error.message);
-    return rows || [];
-  });
-
-// Waiter commissions: 15% service fee on closed sessions assigned to this waiter
-export const listMyCommissions = createServerFn({ method: "POST" })
-  .inputValidator((d: { token: string; fromIso?: string; toIso?: string }) => d)
-  .handler(async ({ data }) => {
-    const { auth, supabaseAdmin } = await authed(data.token);
-    let q = supabaseAdmin
-      .from("table_sessions")
-      .select("id, table_number, opened_at, closed_at, status, subtotal_amount, service_fee_amount, service_fee_enabled, total_amount")
-      .eq("restaurant_id", auth.tenantId)
-      .eq("waiter_id", auth.waiterId)
-      .order("closed_at", { ascending: false, nullsFirst: false })
-      .limit(200);
-    if (data.fromIso) q = q.gte("opened_at", data.fromIso);
-    if (data.toIso) q = q.lte("opened_at", data.toIso);
-    const { data: rows, error } = await q;
-    if (error) throw new Error(error.message);
-    const sessions = rows || [];
-    const closed = sessions.filter((s: any) => s.status === "closed");
-    const totalSubtotal = closed.reduce((a: number, s: any) => a + Number(s.subtotal_amount || 0), 0);
-    const totalCommission = closed.reduce((a: number, s: any) => a + Number(s.service_fee_amount || 0), 0);
-    return {
-      sessions,
-      summary: {
-        closedCount: closed.length,
-        openCount: sessions.length - closed.length,
-        totalSubtotal,
-        totalCommission,
-      },
-    };
   });
 
 // ============================================================

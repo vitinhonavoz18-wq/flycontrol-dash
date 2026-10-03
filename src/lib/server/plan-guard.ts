@@ -122,6 +122,3 @@ export async function assertOwnsTenantWithAddon(
 
   return { tenantId: data.id as string, isAdmin: false };
 }
-
-/** O texto que a tela usa para saber que o caso é "falta contratar". */
-export const ERRO_ADDON_NAO_CONTRATADO = "ainda não está contratado";

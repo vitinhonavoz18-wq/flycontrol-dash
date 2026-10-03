@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { toast } from "sonner";
-import { AlertTriangle, Check, Copy, FileJson, Loader2, Upload, X } from "lucide-react";
+import { AlertTriangle, Check, Copy, FileJson, Loader2, Sparkles, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { syncToExternal } from "@/utils/menuSync";
 import { Button } from "@/components/ui/button";
@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  INSTRUCAO_PARA_IA,
   MENU_IMPORT_EXAMPLE,
   countEntries,
   parseMenuImport,
@@ -58,7 +59,8 @@ export function MenuImportDialog({
   const [text, setText] = useState("");
   const [errors, setErrors] = useState<string[]>([]);
   const [menu, setMenu] = useState<ParsedMenu | null>(null);
-  const [showExample, setShowExample] = useState(false);
+  const [avisos, setAvisos] = useState<string[]>([]);
+  const [modeloAberto, setModeloAberto] = useState<"nenhum" | "modelo" | "ia">("nenhum");
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const [failures, setFailures] = useState<Failure[]>([]);
   const [created, setCreated] = useState(0);
@@ -71,6 +73,7 @@ export function MenuImportDialog({
     setText("");
     setErrors([]);
     setMenu(null);
+    setAvisos([]);
     setProgress({ done: 0, total: 0 });
     setFailures([]);
     setCreated(0);
@@ -100,6 +103,7 @@ export function MenuImportDialog({
     }
     setErrors([]);
     setMenu(result.data);
+    setAvisos(result.avisos);
     setStage("preview");
   }
 
@@ -132,7 +136,13 @@ export function MenuImportDialog({
           const sync = await syncToExternal({
             type: "category",
             action: "create",
-            data: { name: categoria.nome, description: categoria.descricao ?? "", active: true },
+            data: {
+              name: categoria.nome,
+              description: categoria.descricao ?? "",
+              image_url: categoria.imagem ?? null,
+              active: true,
+              order_index: orderIndex,
+            },
             pizzeriaSlug: pizzeriaSlug!,
             pizzeriaApiKey: pizzeriaApiKey!,
             syncEndpoint,
@@ -146,6 +156,7 @@ export function MenuImportDialog({
           .insert({
             name: categoria.nome,
             description: categoria.descricao ?? null,
+            image_url: categoria.imagem ?? null,
             pizzeria_id: pizzeriaId,
             order_index: orderIndex,
             active: true,
@@ -246,6 +257,7 @@ export function MenuImportDialog({
             name: item.nome,
             description: item.descricao ?? "",
             price: item.preco,
+            image_url: item.imagem ?? null,
             category_id: opts.categoryId,
             product_type: opts.productType,
             active: true,
@@ -263,6 +275,7 @@ export function MenuImportDialog({
         name: item.nome,
         description: item.descricao ?? null,
         price: item.preco,
+        image_url: item.imagem ?? null,
         category_id: opts.categoryId,
         product_type: opts.productType,
         pizzeria_id: pizzeriaId,
@@ -339,26 +352,44 @@ export function MenuImportDialog({
                 conferir a prévia.
               </p>
 
-              <div className="rounded-lg border border-border">
-                <button
-                  type="button"
-                  onClick={() => setShowExample((v) => !v)}
-                  className="flex w-full items-center justify-between p-3 text-left text-sm font-medium"
-                >
-                  <span>Ver o modelo do arquivo</span>
-                  <span className="text-xs text-muted-foreground">
-                    {showExample ? "ocultar" : "mostrar"}
-                  </span>
-                </button>
+              <div className="space-y-2 rounded-lg border border-border p-3">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant={modeloAberto === "modelo" ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setModeloAberto(modeloAberto === "modelo" ? "nenhum" : "modelo")}
+                  >
+                    Ver o modelo do arquivo
+                  </Button>
+                  <Button
+                    variant={modeloAberto === "ia" ? "default" : "outline"}
+                    size="sm"
+                    className="gap-1.5"
+                    onClick={() => setModeloAberto(modeloAberto === "ia" ? "nenhum" : "ia")}
+                  >
+                    <Sparkles className="h-3.5 w-3.5" aria-hidden="true" /> Montar com o ChatGPT
+                  </Button>
+                </div>
 
-                {showExample && (
-                  <div className="space-y-2 border-t border-border p-3">
-                    <p className="text-xs text-muted-foreground">
-                      Use este modelo como base. Os quatro campos são opcionais — mande só o que
-                      tiver. Preço aceita <code>45.90</code> ou <code>&quot;45,90&quot;</code>.
-                    </p>
-                    <pre className="max-h-64 overflow-auto rounded-md bg-muted/50 p-3 text-xs leading-relaxed">
-                      {MENU_IMPORT_EXAMPLE}
+                {modeloAberto === "modelo" && (
+                  <p className="text-xs text-muted-foreground">
+                    Use este modelo como base. As quatro listas são opcionais — mande só o que
+                    tiver. Preço aceita <code>45.90</code> ou <code>&quot;45,90&quot;</code>. A foto
+                    (<code>imagem</code>) é opcional e precisa ser um endereço começando com{" "}
+                    <code>https://</code>.
+                  </p>
+                )}
+                {modeloAberto === "ia" && (
+                  <p className="text-xs text-muted-foreground">
+                    Copie este texto, cole no ChatGPT (ou outra IA) junto com a foto do seu cardápio
+                    ou a lista de produtos, e cole aqui embaixo o que ele responder.
+                  </p>
+                )}
+
+                {modeloAberto !== "nenhum" && (
+                  <div className="space-y-2">
+                    <pre className="max-h-64 overflow-auto rounded-md bg-muted/50 p-3 text-xs leading-relaxed whitespace-pre-wrap">
+                      {modeloAberto === "modelo" ? MENU_IMPORT_EXAMPLE : INSTRUCAO_PARA_IA}
                     </pre>
                     <div className="flex flex-wrap gap-2">
                       <Button
@@ -366,21 +397,30 @@ export function MenuImportDialog({
                         size="sm"
                         className="gap-2"
                         onClick={() => {
+                          const conteudo =
+                            modeloAberto === "modelo" ? MENU_IMPORT_EXAMPLE : INSTRUCAO_PARA_IA;
                           void navigator.clipboard
-                            .writeText(MENU_IMPORT_EXAMPLE)
-                            .then(() => toast.success("Modelo copiado."))
-                            .catch(() => toast.error("Não foi possível copiar."));
+                            .writeText(conteudo)
+                            .then(() => toast.success("Copiado."))
+                            .catch(() =>
+                              toast.error("Não consegui copiar. Selecione o texto e copie à mão."),
+                            );
                         }}
                       >
-                        <Copy className="h-3.5 w-3.5" aria-hidden="true" /> Copiar modelo
+                        <Copy className="h-3.5 w-3.5" aria-hidden="true" /> Copiar
                       </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setText(MENU_IMPORT_EXAMPLE)}
-                      >
-                        Preencher com o modelo
-                      </Button>
+                      {modeloAberto === "modelo" && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => {
+                            setText(MENU_IMPORT_EXAMPLE);
+                            setErrors([]);
+                          }}
+                        >
+                          Preencher com o modelo
+                        </Button>
+                      )}
                     </div>
                   </div>
                 )}
@@ -455,11 +495,28 @@ export function MenuImportDialog({
                 <Summary label="Bebidas" value={menu.bebidas.length} />
                 <Summary label="Bordas" value={menu.bordas.length} />
                 <Summary label="Adicionais" value={menu.adicionais.length} />
+                <Summary label="Com foto" value={contarFotos(menu)} />
                 <div className="mt-2 flex justify-between border-t border-border pt-2 font-bold">
                   <span>Total a criar</span>
                   <span>{countEntries(menu)}</span>
                 </div>
               </div>
+
+              {avisos.length > 0 && (
+                <div className="space-y-1 rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-xs">
+                  <p className="flex items-center gap-2 font-semibold text-amber-700 dark:text-amber-400">
+                    <AlertTriangle className="h-4 w-4" aria-hidden="true" /> Confira antes de
+                    importar
+                  </p>
+                  <ul className="space-y-1 text-muted-foreground">
+                    {avisos.map((a, i) => (
+                      <li key={i} className="break-words">
+                        • {a}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
 
               {menu.categorias.length > 0 && (
                 <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg border border-border p-3 text-xs">
@@ -570,6 +627,15 @@ export function MenuImportDialog({
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+/** Quantos produtos, bebidas e categorias chegam com foto. */
+function contarFotos(menu: ParsedMenu): number {
+  return (
+    menu.categorias.filter((c) => c.imagem).length +
+    menu.categorias.reduce((s, c) => s + c.itens.filter((i) => i.imagem).length, 0) +
+    menu.bebidas.filter((b) => b.imagem).length
   );
 }
 

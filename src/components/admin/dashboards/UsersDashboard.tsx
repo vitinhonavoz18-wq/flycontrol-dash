@@ -12,7 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
-import { Search, Loader2, AlertCircle } from "lucide-react";
+import { Search, AlertCircle } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { StoreLifecycleActions } from "@/components/admin/StoreLifecycleActions";
 

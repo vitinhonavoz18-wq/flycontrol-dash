@@ -987,7 +987,7 @@ type PizzeriaOption = { id: string; name: string; slug: string; status: string }
  * Combos, qual loja quer editar — sem isso ele sempre caía na loja mais
  * antiga cadastrada, sem chance de escolher outra.
  */
-export default function MyStore() {
+function MyStore() {
   const { user, isSuperAdmin } = useAuth();
   const [pizzerias, setPizzerias] = useState<PizzeriaOption[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);

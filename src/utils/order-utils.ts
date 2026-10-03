@@ -1,5 +1,3 @@
-import { OrderItem } from "@/types/order";
-
 export const formatItemName = (it: any) => {
   if (it.product_name) return it.product_name;
   if (it.name) return it.name;

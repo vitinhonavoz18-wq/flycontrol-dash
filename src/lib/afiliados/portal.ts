@@ -124,7 +124,7 @@ async function chamar<T>(fn: string, args?: Record<string, unknown>): Promise<T>
 
 // ─── Leituras ─────────────────────────────────────────────────────────────
 
-export const chaves = {
+const chaves = {
   perfil: ["afiliado", "perfil"] as const,
   resumo: ["afiliado", "resumo"] as const,
   serie: (dias: PeriodoDoGrafico) => ["afiliado", "serie", dias] as const,

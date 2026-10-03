@@ -1,5 +1,4 @@
 import { createFileRoute, Link, Outlet, useNavigate, useRouterState } from "@tanstack/react-router";
-import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/components/theme-provider";
@@ -29,7 +28,7 @@ import {
   Package,
   Handshake,
 } from "lucide-react";
-import logo from "@/assets/flycontrol-logo.png";
+import logo from "@/assets/flycontrol-logo.webp";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -140,7 +139,6 @@ function AppLayoutInner() {
     pizzeriaStatus &&
     (pizzeriaStatus.subscription_status === "suspended" || !pizzeriaStatus.is_active);
   const isBlocked = isSuspended && !isSuperAdmin && !isHardcodedAdmin;
-  const isPublicRoute = ["/docs", "/settings"].includes(path); // Settings is restricted but we might want them to see it? User said block main functions.
 
   // We block if inactive, not super admin, and trying to access anything other than docs or if explicitly blocked
   // "/billing" também escapa do bloqueio: é lá que a fatura em atraso tem o

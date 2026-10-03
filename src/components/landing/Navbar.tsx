@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
-import logo from "@/assets/flycontrol-logo-hero.png";
+import logo from "@/assets/flycontrol-logo-hero.webp";
 
 /**
  * A barra do topo da página pública.

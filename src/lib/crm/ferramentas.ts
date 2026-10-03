@@ -29,7 +29,7 @@ export function normalizar(texto: string): string {
 }
 
 /** Todos os itens vendáveis, de todas as categorias, numa lista só. */
-export function itensDoCatalogo(catalogo: Catalogo): ItemCardapio[] {
+function itensDoCatalogo(catalogo: Catalogo): ItemCardapio[] {
   return catalogo.cardapio.flatMap((c) => c.itens);
 }
 

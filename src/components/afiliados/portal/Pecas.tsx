@@ -277,24 +277,6 @@ export function BotaoPrincipal({
   );
 }
 
-export function BotaoSecundario({
-  children,
-  className,
-  ...props
-}: React.ButtonHTMLAttributes<HTMLButtonElement>) {
-  return (
-    <button
-      {...props}
-      className={cn(
-        "inline-flex h-12 items-center justify-center gap-2 rounded-full border border-white/15 px-6 text-sm font-medium text-white transition-colors hover:bg-white/5 disabled:opacity-45",
-        className,
-      )}
-    >
-      {children}
-    </button>
-  );
-}
-
 /** Campo de formulário com rótulo, ajuda e erro. */
 export function Campo({
   id,

@@ -148,7 +148,11 @@ export function DashboardShowcase({
         }}
       />
 
-      <div ref={carta} className="fly-showcase fly-float" style={{ transformStyle: "preserve-3d" }}>
+      <div
+        ref={carta}
+        className="fly-showcase fly-float"
+        style={{ transformStyle: "preserve-3d", animationPlayState: naTela ? "running" : "paused" }}
+      >
         {/* Duas camadas de propósito: a de fora faz a flutuação lenta, a de
             dentro faz o giro do mouse. Somar os dois numa transformação só
             faria um apagar o outro. */}

@@ -11,7 +11,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, FileWarning } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/flycontrol-logo.png";
+import logo from "@/assets/flycontrol-logo.webp";
 
 export function LegalSection({
   id,
@@ -31,13 +31,7 @@ export function LegalSection({
 }
 
 /** Bloco em destaque para o que ainda depende de redação jurídica. */
-export function PendingLegalNotice({
-  intro,
-  sections,
-}: {
-  intro: string;
-  sections: readonly string[];
-}) {
+function PendingLegalNotice({ intro, sections }: { intro: string; sections: readonly string[] }) {
   if (sections.length === 0) return null;
 
   return (

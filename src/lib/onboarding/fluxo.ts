@@ -56,7 +56,7 @@ export function limparRespostasQueNaoValemMais(respostas: Respostas): Respostas 
 }
 
 /** Uma etapa está respondida quando tem ao menos uma opção marcada. */
-export function respondida(respostas: Respostas, id: IdDaEtapa): boolean {
+function respondida(respostas: Respostas, id: IdDaEtapa): boolean {
   return (respostas[id] ?? []).length > 0;
 }
 
@@ -87,20 +87,10 @@ export function progresso(respostas: Respostas, etapaAtual: IdDaEtapa | null): n
   return Math.min(100, Math.round(((respondidas + emAndamento) / visiveis.length) * 100));
 }
 
-export function indiceDaEtapa(respostas: Respostas, id: IdDaEtapa): number {
-  return etapasVisiveis(respostas).findIndex((e) => e.id === id);
-}
-
 export function etapaAnterior(respostas: Respostas, id: IdDaEtapa): IdDaEtapa | null {
   const visiveis = etapasVisiveis(respostas);
   const i = visiveis.findIndex((e) => e.id === id);
   return i > 0 ? visiveis[i - 1].id : null;
-}
-
-export function etapaSeguinte(respostas: Respostas, id: IdDaEtapa): IdDaEtapa | null {
-  const visiveis = etapasVisiveis(respostas);
-  const i = visiveis.findIndex((e) => e.id === id);
-  return i >= 0 && i < visiveis.length - 1 ? visiveis[i + 1].id : null;
 }
 
 /**
