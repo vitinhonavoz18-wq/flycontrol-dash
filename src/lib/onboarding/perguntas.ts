@@ -288,8 +288,3 @@ export const ETAPAS: readonly Etapa[] = [
 export function etapaPorId(id: string): Etapa | undefined {
   return ETAPAS.find((e) => e.id === id);
 }
-
-/** Os valores que o servidor aceita para uma etapa. Nada além disso entra. */
-export function valoresValidos(id: string): Set<string> {
-  return new Set((etapaPorId(id)?.opcoes ?? []).map((o) => o.valor));
-}

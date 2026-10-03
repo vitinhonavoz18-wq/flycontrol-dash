@@ -17,7 +17,7 @@
 
 import { HOST_ARTES_PADRAO } from "./mensagem";
 
-export const TIPOS_ACEITOS = ["image/jpeg", "image/png", "image/webp"] as const;
+const TIPOS_ACEITOS = ["image/jpeg", "image/png", "image/webp"] as const;
 
 /** 5 MB. Acima disso o WhatsApp costuma recusar, e a espera não compensa. */
 export const TAMANHO_MAXIMO_BYTES = 5 * 1024 * 1024;

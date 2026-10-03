@@ -58,7 +58,7 @@ function textoUtil(v: unknown): string | null {
  *
  * `senderName` entra por último E só quando quem falou foi o cliente.
  */
-export function nomeDoCliente(
+function nomeDoCliente(
   chat: Record<string, unknown> | null,
   mensagem: Record<string, unknown>,
   fromMe: boolean,

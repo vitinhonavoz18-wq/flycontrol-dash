@@ -5,8 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Tabs, TabsContent } from "@/components/ui/tabs";
 import { ScrollableTabs, type ScrollableTabItem } from "@/components/layout/ScrollableTabs";
-import { Button } from "@/components/ui/button";
-import { Plus, Loader2, RefreshCw } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { CategoryList } from "./CategoryList";
 import { ProductList } from "./ProductList";
 import { ExtraList } from "./ExtraList";
@@ -21,8 +20,6 @@ import { useAuth } from "@/lib/auth";
 interface MenuManagerProps {
   pizzeriaId: string;
 }
-
-const DEFAULT_SYNC_ENDPOINT = "https://watjejwgtieqfkpebkfz.supabase.co/functions/v1/menu-sync";
 
 /**
  * Abas do cardápio, em um só lugar — a ordem aqui é a ordem na tela.
@@ -73,7 +70,6 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   };
   const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [pizzeria, setPizzeria] = useState<any>(null);
   // As listas de cada aba carregam os próprios dados ao montar. Depois de uma
   // importação em massa, trocar esta chave é o que faz todas recarregarem —

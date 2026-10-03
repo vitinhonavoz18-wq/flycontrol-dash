@@ -13,25 +13,10 @@ import { caminhoDaMidia, conferirArquivo, type TipoMidia } from "./midia";
  * veria a foto do comprovante quebrada.
  */
 
-export const BALDE = "crm-chat-media";
+const BALDE = "crm-chat-media";
 
 /** Quanto tempo o endereço vale. Uma hora dá para ver, ouvir e baixar. */
 const VALIDADE_SEGUNDOS = 60 * 60;
-
-/** O endereço assinado de um arquivo. `null` quando não dá para assinar. */
-export async function enderecoAssinado(
-  caminho: string | null | undefined,
-  segundos = VALIDADE_SEGUNDOS,
-): Promise<string | null> {
-  const p = String(caminho ?? "").trim();
-  if (!p) return null;
-  const { data, error } = await supabaseAdmin.storage.from(BALDE).createSignedUrl(p, segundos);
-  if (error) {
-    console.error("[crm/midia] não consegui assinar o endereço:", error.message);
-    return null;
-  }
-  return data?.signedUrl ?? null;
-}
 
 /**
  * Assina vários de uma vez, para a tela não abrir uma ligação por balão.

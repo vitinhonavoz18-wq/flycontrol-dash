@@ -24,10 +24,10 @@ import { parsePrice } from "@/lib/menu/importSchema";
  * trabalhar minutos numa operação que ninguém queria. Mil produtos cobrem um
  * mercado inteiro; quem tiver mais faz em duas levas.
  */
-export const MAX_PRODUTOS_POR_IMPORTACAO = 1000;
+const MAX_PRODUTOS_POR_IMPORTACAO = 1000;
 
 /** Teto de tamanho do texto colado, antes mesmo de tentar ler. */
-export const MAX_CARACTERES = 2_000_000;
+const MAX_CARACTERES = 2_000_000;
 
 export type EmbalagemImportada = {
   /** Como aparece para o lojista: "Caixa com 12". */

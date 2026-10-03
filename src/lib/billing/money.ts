@@ -10,7 +10,7 @@
 /** Centavos. O tipo é `number`, mas o contrato é "inteiro, nunca fracionário". */
 export type Cents = number;
 
-export function isValidCents(value: unknown): value is Cents {
+function isValidCents(value: unknown): value is Cents {
   return typeof value === "number" && Number.isSafeInteger(value);
 }
 

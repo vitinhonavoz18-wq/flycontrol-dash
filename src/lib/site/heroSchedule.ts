@@ -31,23 +31,13 @@
  * testar a virada da meia-noite sem esperar a meia-noite chegar.
  */
 
-export const MINUTOS_POR_DIA = 1440;
+const MINUTOS_POR_DIA = 1440;
 export const MINUTOS_POR_SEMANA = MINUTOS_POR_DIA * 7;
 
 /** 0 = domingo … 6 = sábado. Mesma numeração de `Date.getDay()`. */
 export type DiaDaSemana = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export const TODOS_OS_DIAS: readonly DiaDaSemana[] = [0, 1, 2, 3, 4, 5, 6];
-
-export const NOME_DO_DIA: Record<DiaDaSemana, string> = {
-  0: "Domingo",
-  1: "Segunda",
-  2: "Terça",
-  3: "Quarta",
-  4: "Quinta",
-  5: "Sexta",
-  6: "Sábado",
-};
 
 export const NOME_CURTO_DO_DIA: Record<DiaDaSemana, string> = {
   0: "Dom",
@@ -112,7 +102,7 @@ export const FUSOS = [
   { id: "America/Noronha", nome: "Fernando de Noronha" },
 ] as const;
 
-export const PROGRAMACAO_PADRAO: ProgramacaoDoHero = {
+const PROGRAMACAO_PADRAO: ProgramacaoDoHero = {
   // "fixo" é o padrão de propósito: loja que nunca configurou nada continua
   // exatamente como está hoje, com a capa única que ela já escolheu.
   modo: "fixo",
@@ -261,7 +251,7 @@ export function periodoCobre(p: PeriodoDoHero, minutoSemana: number): boolean {
  * só aparecesse depois do envio, ele descobriria o problema com o arquivo já
  * enviado — como só descobrir que a mesa está reservada depois de sentar.
  */
-export function periodoAgendavel(p: PeriodoDoHero): boolean {
+function periodoAgendavel(p: PeriodoDoHero): boolean {
   return (
     p.ativo === true &&
     minutosDoHorario(p.inicio) !== null &&
@@ -272,7 +262,7 @@ export function periodoAgendavel(p: PeriodoDoHero): boolean {
 }
 
 /** Além de ocupar a agenda, tem mídia para mostrar? Só assim vai para o ar. */
-export function periodoUtilizavel(p: PeriodoDoHero): boolean {
+function periodoUtilizavel(p: PeriodoDoHero): boolean {
   return periodoAgendavel(p) && typeof p.url === "string" && p.url.trim().length > 0;
 }
 

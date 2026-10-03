@@ -15,7 +15,7 @@
 export const LIMITE_DA_VITRINE = 3;
 
 /** Os códigos de pendência que o banco devolve, na ordem em que aparecem. */
-export const PENDENCIAS = [
+const PENDENCIAS = [
   "product_inactive",
   "product_unavailable",
   "no_name",

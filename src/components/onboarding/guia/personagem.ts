@@ -5,7 +5,7 @@
  * ESTE É O ÚNICO ARQUIVO QUE SABE O NOME DOS ARQUIVOS DE IMAGEM
  * ═══════════════════════════════════════════════════════════════════════
  *
- * Para trocar uma pose, basta substituir o PNG correspondente em
+ * Para trocar uma pose, basta substituir a imagem correspondente em
  * `src/assets/personagem/` — ou, se o arquivo novo tiver outro nome, mudar
  * UMA linha deste mapa. Nada do guia (etapas, holofote, progresso, telas)
  * conhece caminho de imagem: todos pedem por EMOÇÃO.
@@ -16,21 +16,21 @@
  *
  * SOBRE OS ARQUIVOS
  *
- * São PNGs com fundo transparente, na proporção original do personagem
+ * São imagens WebP com fundo transparente, na proporção original do personagem
  * (1145 × 1374). Os enviados originalmente tinham ~1,4 MB cada — quase 10 MB
  * no total. Num celular no meio do serviço, com internet de loja, isso é o
  * guia travando antes de começar. Os daqui são os MESMOS desenhos reduzidos
- * para o tamanho em que aparecem na tela; os originais, intactos, estão em
- * `docs/personagem-originais/`.
+ * para o tamanho em que aparecem na tela, em WebP (≈25 KB cada, contra
+ * ≈200 KB do PNG); os originais, intactos, estão em `docs/personagem-originais/`.
  */
 
-import atencao from "@/assets/personagem/atencao.png";
-import boasVindas from "@/assets/personagem/boas-vindas.png";
-import comemorando from "@/assets/personagem/comemorando.png";
-import neutro from "@/assets/personagem/neutro.png";
-import orientando from "@/assets/personagem/orientando.png";
-import sucesso from "@/assets/personagem/sucesso.png";
-import trabalhando from "@/assets/personagem/trabalhando.png";
+import atencao from "@/assets/personagem/atencao.webp";
+import boasVindas from "@/assets/personagem/boas-vindas.webp";
+import comemorando from "@/assets/personagem/comemorando.webp";
+import neutro from "@/assets/personagem/neutro.webp";
+import orientando from "@/assets/personagem/orientando.webp";
+import sucesso from "@/assets/personagem/sucesso.webp";
+import trabalhando from "@/assets/personagem/trabalhando.webp";
 import type { EmocaoDoGuia } from "@/lib/onboarding/guia/etapas";
 
 export type Pose = {
@@ -83,7 +83,3 @@ export const POSES: Readonly<Record<EmocaoDoGuia, Pose>> = {
  * escrevendo.
  */
 export const PROPORCAO_DO_PERSONAGEM = 1145 / 1374;
-
-export function poseDa(emocao: EmocaoDoGuia): Pose {
-  return POSES[emocao] ?? POSES.neutro;
-}

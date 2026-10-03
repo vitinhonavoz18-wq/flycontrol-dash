@@ -139,7 +139,7 @@ export const MODELOS: readonly ModeloVisual[] = [
 
 export const MODELO_PADRAO = "black";
 
-export function modelo(id: string | null | undefined): ModeloVisual {
+function modelo(id: string | null | undefined): ModeloVisual {
   return MODELOS.find((m) => m.id === id) ?? MODELOS[0];
 }
 

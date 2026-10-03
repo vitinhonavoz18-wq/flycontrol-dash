@@ -4,8 +4,6 @@ import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Copy, ExternalLink, Download, FileText, Share2 } from "lucide-react";
-import { toPng } from "html-to-image";
-import { jsPDF } from "jspdf";
 import { useRef, useState } from "react";
 
 interface PizzeriaPromotionProps {
@@ -37,6 +35,7 @@ export function PizzeriaPromotion({ pizzeria }: PizzeriaPromotionProps) {
     if (!qrRef.current) return;
     setLoading(true);
     try {
+      const { toPng } = await import("html-to-image");
       const dataUrl = await toPng(qrRef.current, { backgroundColor: "#ffffff" });
       const link = document.createElement("a");
       link.download = `qrcode-conectfly-${pizzeria.slug}.png`;
@@ -55,11 +54,16 @@ export function PizzeriaPromotion({ pizzeria }: PizzeriaPromotionProps) {
     if (!qrRef.current) return;
     setLoading(true);
     try {
+      // As duas bibliotecas de imagem/PDF pesam ~400 KB. Elas só são baixadas
+      // quando alguém clica para gerar o arquivo, e não toda vez que a tela
+      // abre — como só tirar a impressora da caixa quando for imprimir.
+      const [{ toPng }, { jsPDF }] = await Promise.all([
+        import("html-to-image"),
+        import("jspdf"),
+      ]);
       const dataUrl = await toPng(qrRef.current, { backgroundColor: "#ffffff" });
       const pdf = new jsPDF();
-      const imgProps = pdf.getImageProperties(dataUrl);
       const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
 
       // Adicionar Título
       pdf.setFontSize(20);

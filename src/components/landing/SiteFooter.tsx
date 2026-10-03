@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import logo from "@/assets/flycontrol-logo-hero.png";
+import logo from "@/assets/flycontrol-logo-hero.webp";
 import { IconeInstagram, IconeWhatsApp } from "./iconesSociais";
 import {
   INSTAGRAM_LINK,

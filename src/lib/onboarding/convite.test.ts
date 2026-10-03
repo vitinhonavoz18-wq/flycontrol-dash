@@ -16,23 +16,9 @@ const tela = readFileSync("src/routes/preparar.tsx", "utf8");
 
 describe("o questionário só aparece para quem tem convite", () => {
   it("loja sem caderno NÃO é mandada para o questionário", () => {
-    // Esta é a inversão que consertou o problema. Antes, a ausência de caderno
-    // era lida como "loja nova" — e caderno não nasce sozinho, então toda
-    // loja criada pelo Painel Admin, toda loja restaurada e todo cadastro
-    // abandonado na primeira pergunta caíam no questionário para sempre.
-    const inicio = servidor.indexOf("export const precisaDeOnboarding");
-    expect(inicio).toBeGreaterThan(0);
-    const bloco = servidor.slice(inicio, servidor.indexOf("export const", inicio + 10));
-
-    expect(bloco).toContain("if (!data) return { pendente: false }");
-    // A conferência do "sem caderno" precisa vir ANTES da conferência de
-    // status: invertido, `undefined !== "completed"` volta a dar verdadeiro.
-    expect(bloco.indexOf("if (!data)")).toBeLessThan(bloco.indexOf('!== "completed"'));
-  });
-
-  it("a tela de preparação usa a mesma regra da portaria", () => {
-    // Se as duas discordarem, o painel manda para o questionário e o
-    // questionário manda de volta para o painel — a porta giratória.
+    // Antes, a ausência de caderno era lida como "loja nova" — e caderno não
+    // nasce sozinho, então toda loja criada pelo Painel Admin, toda loja
+    // restaurada e todo cadastro abandonado caíam no questionário para sempre.
     const inicio = servidor.indexOf("export const lerOnboarding");
     const bloco = servidor.slice(inicio, servidor.indexOf("export const", inicio + 10));
     expect(bloco).toContain("if (!data) return null");

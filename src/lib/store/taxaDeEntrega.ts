@@ -61,7 +61,7 @@ export function formatarTaxa(fee: number): string {
  * preço de ninguém. Mas R$ 500 de entrega nunca é de propósito, e uma
  * pergunta a mais é mais barata que um cliente perdido.
  */
-export const TAXA_SUSPEITA = 100;
+const TAXA_SUSPEITA = 100;
 
 export function pareceEngano(fee: number): boolean {
   return fee >= TAXA_SUSPEITA;

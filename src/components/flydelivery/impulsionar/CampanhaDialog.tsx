@@ -376,7 +376,7 @@ function Linha({ rotulo, valor, destaque }: { rotulo: string; valor: string; des
 }
 
 /** O banner do jeito que o aplicativo desenha (components/SponsoredBanner.tsx). */
-export function PreviaDoBanner({
+function PreviaDoBanner({
   produto,
   storeName,
   promo,

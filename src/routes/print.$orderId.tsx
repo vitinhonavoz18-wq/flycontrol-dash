@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { normalizeOrderType } from "@/utils/order-utils";
 import { extrairAdicionaisDoItem, notaDoItemSemAdicionais } from "@/components/orders/orderDisplay";
-// Só o símbolo, recortado de flycontrol-logo.png: aquele arquivo já vem com
+// Só o símbolo, recortado do logo completo: aquele arquivo já vem com
 // "FlyControl" escrito dentro da imagem, e a comanda também escreve o nome
 // embaixo — usar o arquivo inteiro repetiria o nome duas vezes (uma ilegível,
 // pequena demais na imagem; outra no texto).

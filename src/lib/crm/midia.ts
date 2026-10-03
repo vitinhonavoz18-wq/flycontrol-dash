@@ -84,7 +84,7 @@ export function resumoDaMensagem(corpo: string | null | undefined, tipo: unknown
 }
 
 /** O que a loja pode mandar pelo painel, e o teto de tamanho de cada um. */
-export const LIMITE_MB: Record<TipoMidia, number> = {
+const LIMITE_MB: Record<TipoMidia, number> = {
   image: 10,
   audio: 16,
   video: 16,

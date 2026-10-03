@@ -235,7 +235,7 @@ export function validateState(value: string): FieldResult {
 // Empresa
 // ---------------------------------------------------------------------------
 
-export function validateCompanyName(value: string): FieldResult {
+function validateCompanyName(value: string): FieldResult {
   const name = value.trim();
   if (name.length < 2) return fail("Informe o nome do estabelecimento.");
   return OK;

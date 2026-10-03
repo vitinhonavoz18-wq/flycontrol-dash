@@ -10,9 +10,8 @@
  * novo renderia 30 dias novos toda vez.
  */
 
-import type { Cents } from "./money";
 import { computeCycleEnd, computeNextCycleStart } from "./billingEngine";
-import { getPlanPricing, type PlanCode } from "./plans";
+import type { PlanCode } from "./plans";
 
 /** Trinta dias são trinta dias. Não "um mês", que varia de 28 a 31. */
 export const TRIAL_DURATION_DAYS = 30;
@@ -190,11 +189,6 @@ export function computeCycleStartAfter(input: {
   return input.cycleType === "free_trial"
     ? new Date(input.cycleEnd.getTime() + 1)
     : computeNextCycleStart(input.cycleStart);
-}
-
-/** Preço por pedido que passa a valer quando o período gratuito acaba. */
-export function priceAfterTrialCents(planCode: PlanCode = TRIAL_PLAN_CODE): Cents {
-  return getPlanPricing(planCode).defaultOrderUnitPriceCents;
 }
 
 /** Data no formato brasileiro, ou travessão quando não há data. */

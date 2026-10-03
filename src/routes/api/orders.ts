@@ -28,39 +28,6 @@ export const Route = createFileRoute("/api/orders")({
       POST: async ({ request }) => {
         const cors = getCorsHeaders(request);
 
-        const validateTableForOrder = async (
-          restaurantId: string,
-          tableNumber: string,
-          tableToken: string,
-        ) => {
-          // O token da mesa é a senha daquela mesa: escrito por extenso no
-          // registro, qualquer um que leia os registros passa a poder abrir
-          // conta em nome dela. Aqui fica só se veio ou não.
-          console.log(
-            `🔍 [API/Orders] Validando mesa: #${tableNumber} (token ${tableToken ? "presente" : "ausente"})`,
-          );
-          const { data: table, error } = await supabaseAdmin
-            .from("restaurant_tables")
-            .select("id, table_number, table_name, public_token, is_active")
-            .eq("restaurant_id", restaurantId)
-            .eq("table_number", tableNumber)
-            .eq("public_token", tableToken)
-            .eq("is_active", true)
-            .maybeSingle();
-
-          if (error) {
-            console.error("❌ [API/Orders] Erro ao buscar mesa:", error.message);
-            return { valid: false, reason: "db_error" };
-          }
-
-          if (!table) {
-            console.warn("⚠️ [API/Orders] Mesa não encontrada ou token inválido");
-            return { valid: false, reason: "invalid_table" };
-          }
-
-          return { valid: true, table };
-        };
-
         const getOrCreateTableSession = async (
           restaurantId: string,
           tableId: string | null,

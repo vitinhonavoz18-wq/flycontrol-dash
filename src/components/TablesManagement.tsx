@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import {
   useTables,
   useTableSessions,
@@ -29,7 +29,6 @@ import {
 } from "@/components/ui/dialog";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import {
-  QrCode,
   Plus,
   Printer,
   Trash2,
@@ -48,7 +47,7 @@ import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
 // Helpers para processamento de pedidos (compatível com Dashboard.tsx)
-import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-utils";
+import { formatItemName, getItemPrice } from "@/utils/order-utils";
 
 interface TablesManagementProps {
   tenantId: string;
@@ -261,18 +260,6 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     `);
     printWindow.document.close();
   }
-
-  const normalizeTableValue = (val: any): string => {
-    if (val === undefined || val === null) return "";
-    const str = String(val).trim().toLowerCase();
-    // Remove prefix "mesa" se existir
-    const cleaned = str.replace(/^mesa\s*/, "");
-    // Pad com zero se for puramente numérico e tiver apenas 1 dígito
-    if (/^\d$/.test(cleaned)) {
-      return cleaned.padStart(2, "0");
-    }
-    return cleaned;
-  };
 
   // A lógica de sincronização foi movida para o backend (triggers SQL).
   // Mantemos apenas funções de recarregamento e exibição de dados.

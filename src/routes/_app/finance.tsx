@@ -8,9 +8,7 @@ import { toast } from "sonner";
 
 import {
   TrendingUp,
-  TrendingDown,
   DollarSign,
-  Calendar,
   Trophy,
   Calculator,
   Package,
@@ -22,19 +20,13 @@ import {
   Clock,
   Sparkles,
   Pizza,
-  CupSoda,
   Wallet,
   Receipt,
-  Target,
-  Lightbulb,
   Zap,
   RefreshCw,
   ShoppingBag,
   Flame,
   CreditCard,
-  Banknote,
-  Smartphone,
-  Info,
   Truck,
   ShoppingCart,
   History,
@@ -63,8 +55,6 @@ import {
   YAxis,
   Tooltip as RTooltip,
   CartesianGrid,
-  BarChart,
-  Bar,
   Cell,
   PieChart,
   Pie,
@@ -76,9 +66,6 @@ import {
   subDays,
   startOfMonth,
   endOfMonth,
-  startOfWeek,
-  endOfWeek,
-  isWithinInterval,
   subMonths,
   eachDayOfInterval,
 } from "date-fns";
@@ -497,7 +484,6 @@ function Finance() {
     );
   }
 
-  const lastOrder = orders[0];
   const healthStatus: "Saudável" | "Atenção" | "Baixo movimento" =
     currentMetrics.revenue > 1000
       ? "Saudável"
