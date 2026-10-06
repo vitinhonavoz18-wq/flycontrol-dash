@@ -51,12 +51,13 @@ bun run build    # monta o site como ele iria para o ar
 
 ---
 
-## As duas chaves (variáveis de ambiente, opcionais)
+## As chaves (variáveis de ambiente, opcionais)
 
 | Chave | Para quê | Se não existir |
 |---|---|---|
 | `VITE_FLYDELIVERY_PARCEIROS_URL` | Endereço completo da página (ex.: `https://parceiros.flydelivery.com.br`). Vira o endereço oficial informado ao Google e a base da imagem da prévia do WhatsApp. | Usa `https://flycontrol.conectfly.com.br/flydelivery-parceiros` |
 | `VITE_FLYDELIVERY_PARCEIROS_INDEXAR` | Só com o valor `sim` o Google pode mostrar a página nas buscas. | **Não indexa** (seguro) |
+| `VITE_FLYDELIVERY_PARCEIROS_SISTEMA_URL` | Onde ficam cadastro, login, Termos e Privacidade. Usado na cópia de teste para mandar o visitante ao site oficial. | Links internos (o normal) |
 
 Esquecer de configurar nunca publica a página de teste no Google — o padrão
 é sempre "não indexar".
@@ -100,48 +101,65 @@ emenda invisível, o ajuste é no vídeo, não no site.
 
 ---
 
-## Publicar num endereço de teste (staging) — SÓ COM AUTORIZAÇÃO
+## A cópia de teste (preview) na Cloudflare
 
-O sistema roda na **Cloudflare Workers**. Hoje existe um "worker" chamado
-`flycontrol-dash`, que atende `flycontrol.conectfly.com.br` e é publicado
-automaticamente quando algo entra na `main`.
+O sistema roda na **Cloudflare Workers**. O site oficial é o "worker"
+`flycontrol-dash`, que atende `flycontrol.conectfly.com.br` e só é publicado
+quando algo entra na `main` (`.github/workflows/deploy.yml`).
 
-A ideia para o teste é criar um **segundo worker, com outro nome**, a partir
-do mesmo código. Ele não encosta no primeiro: é uma segunda loja com a mesma
-planta, em outro endereço.
+A cópia de teste é um **segundo worker, com outro nome**:
+`flydelivery-parceiros-preview`, no endereço gratuito da Cloudflare
+(`https://flydelivery-parceiros-preview.<sua-conta>.workers.dev`). É uma
+segunda loja com a mesma planta, em outro endereço — não encosta na primeira.
 
-1. **Criar o worker de teste.** O roteiro pronto está em
-   `docs/flydelivery-parceiros/deploy-staging.yml.exemplo`. Ele publica com o
-   nome `flydelivery-parceiros-staging` e **tira o agendamento diário de
-   cobrança** do worker de teste — senão ele também rodaria a cobrança todo
-   dia às 5h. Para usar, copie o arquivo para `.github/workflows/` (com
-   extensão `.yml`) — antes disso ele não faz nada.
+**Como ela é publicada:** `.github/workflows/preview-flydelivery-parceiros.yml`
+roda sozinho quando chega código nas branches `claude/ecstatic-allen-de1jao` ou
+`staging/flydelivery-parceiros` (ou clicando em "Run workflow" no GitHub). A
+`main` continua indo só para o site oficial.
 
-2. **Configurar no painel da Cloudflare** (Workers → `flydelivery-parceiros-staging`
-   → Settings):
-   - Variáveis: só as **públicas** do Supabase (`SUPABASE_URL`,
-     `SUPABASE_PUBLISHABLE_KEY`).
-   - **Não** colocar no teste: `SUPABASE_SERVICE_ROLE_KEY`, `BILLING_CRON_SECRET`,
-     chaves da InfinityPay, da UAZAPI ou do SiteCreatorFly. O teste é para ver a
-     página, não para mexer em cobrança ou cadastro de verdade.
+**As travas** (se qualquer uma falhar, nada é publicado):
 
-3. **Endereço.** Em Domains & Routes → Add → Custom Domain, por exemplo
-   `parceiros.flydelivery.com.br`. Isso só funciona se o domínio
-   `flydelivery.com.br` estiver na mesma conta da Cloudflare. Se não estiver,
-   dá para usar um subdomínio do `conectfly.com.br` ou o endereço gratuito
-   `*.workers.dev` que a Cloudflare oferece.
+- a chave do Supabase tem que ser a **pública** (uma chave secreta colada no
+  lugar errado é recusada);
+- o nome do worker tem que ser o de teste, nunca `flycontrol-dash`;
+- sem agendamento: a cobrança diária das 05:00 não existe na cópia;
+- sem rotas nem domínios: ela só atende no endereço `*.workers.dev`;
+- a porta de entrada da cópia passa por 35 conferências automáticas
+  (`.github/preview-parceiros/testar-entrada.mjs`) antes de cada publicação;
+- depois de publicada, a cópia é conferida de verdade pela internet.
 
-4. **Abrir direto na página nova.** No endereço de teste, a raiz `/` ainda
-   mostra a página do FlyControl. Para abrir direto na nova, crie uma regra de
-   redirecionamento na Cloudflare (Rules → Redirect Rules) de `/` para
-   `/flydelivery-parceiros` — **só no domínio de teste**.
+**O que a cópia faz** (pela porta de entrada `entrada.mjs`):
 
-5. **Fechar com senha (recomendado).** O Cloudflare Access (Zero Trust) deixa
-   o endereço de teste aberto só para e-mails autorizados. É grátis para
-   equipes pequenas.
+- mostra **só a página nova**, no endereço exato — `/` cai nela, e qualquer
+  coisa depois dela (`/flydelivery-parceiros/xyz`) volta para ela;
+- qualquer outro endereço (login, cadastro, painel) vai para o site oficial;
+- não aceita envio de nada (cadastro, formulário, pagamento): só abrir páginas;
+- a página entregue proíbe o navegador de falar com o banco de dados;
+- pede ao Google para não indexar nada (páginas, fotos e vídeo).
 
-Nenhum desses passos muda o `flycontrol-dash`, o domínio oficial ou o DNS
-existente.
+Os botões "Começar grátis", "Entrar", "Termos" e "Privacidade" abrem o site
+oficial, levando junto o código de afiliado (`?ref=`) se a pessoa chegou com um.
+
+**O que a cópia recebe:** só o endereço e a chave **pública** do Supabase — as
+mesmas que qualquer navegador já recebe. Nenhuma chave secreta.
+
+**Atenção — endereço `workers.dev` do site oficial:** o site oficial também
+responde em `flycontrol-dash.<sua-conta>.workers.dev` (é o padrão da
+Cloudflare quando não se desliga). O endereço da cópia revela o `<sua-conta>`,
+o que torna esse endereço fácil de adivinhar. Recomendação (decisão sua):
+Workers → `flycontrol-dash` → Settings → Domains & Routes → desligar o
+`workers.dev`. Antes, confira se a variável `FLYCONTROL_PUBLIC_URL` do site
+oficial aponta para `flycontrol.conectfly.com.br` — a cobrança diária usa esse
+endereço.
+
+**Domínio próprio (opcional, futuro):** no painel da Cloudflare, Workers →
+`flydelivery-parceiros-preview` → Settings → Domains & Routes → Add → Custom
+Domain (ex.: `parceiros.flydelivery.com.br`). Só funciona se o domínio estiver
+na mesma conta da Cloudflare. Para fechar com senha, use o Cloudflare Access
+(Zero Trust), grátis para equipes pequenas.
+
+**Para apagar a cópia:** Workers → `flydelivery-parceiros-preview` → Settings →
+Delete. O site oficial não é afetado.
 
 ---
 

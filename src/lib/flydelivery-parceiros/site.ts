@@ -25,6 +25,13 @@
  *
  * O padrão seguro é sempre NÃO indexar: esquecer de configurar nunca publica
  * a página de teste no Google por acidente.
+ *
+ * - VITE_FLYDELIVERY_PARCEIROS_SISTEMA_URL: onde ficam o cadastro, o login e
+ *   as páginas de Termos e Privacidade. Vazio (o normal) = no próprio site.
+ *   Na cópia de teste (preview) ela aponta para o site oficial: a cópia não
+ *   tem as chaves que um cadastro precisa, então "Começar grátis" ali levaria
+ *   a um formulário que não consegue terminar. É a mesma ideia de pôr no
+ *   folheto da feira o endereço da loja de verdade, e não o do estande.
  */
 
 /** Onde a página mora dentro do sistema. */
@@ -52,6 +59,27 @@ export function normalizarUrl(valor: string | undefined | null): string {
 export function lerPermissaoDeIndexar(valor: string | undefined | null): boolean {
   return (valor ?? "").trim().toLowerCase() === "sim";
 }
+
+/** As telas do sistema para onde a página manda o visitante. */
+export type TelaDoSistema = "/signup" | "/login" | "/terms" | "/privacy";
+
+/**
+ * Endereço completo da tela no sistema oficial, quando a página está numa
+ * cópia separada; `null` quando está no próprio sistema (link interno).
+ * Só aceita endereço começando com https:// — qualquer outra coisa é tratada
+ * como "não configurado", para um erro de digitação não virar link quebrado.
+ */
+export function enderecoNoSistema(
+  tela: TelaDoSistema,
+  base: string | undefined | null,
+): string | null {
+  const limpo = (base ?? "").trim().replace(/\/+$/, "");
+  if (!/^https:\/\/[^/\s]+/.test(limpo)) return null;
+  return `${limpo}${tela}`;
+}
+
+export const URL_DO_SISTEMA = (import.meta.env.VITE_FLYDELIVERY_PARCEIROS_SISTEMA_URL ??
+  "") as string;
 
 export const URL_DA_PAGINA = normalizarUrl(import.meta.env.VITE_FLYDELIVERY_PARCEIROS_URL);
 export const PERMITIR_INDEXACAO = lerPermissaoDeIndexar(

@@ -1,7 +1,7 @@
-import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial";
 import { HeroVideo } from "./HeroVideo";
+import { LinkDoSistema } from "./LinkDoSistema";
 
 /**
  * A primeira tela.
@@ -41,14 +41,10 @@ export function FlyDeliveryHero() {
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Link
-              to="/signup"
-              search={{ plan: undefined, google: undefined }}
-              className="fdp-btn fdp-btn-primario"
-            >
+            <LinkDoSistema para="/signup" className="fdp-btn fdp-btn-primario">
               Começar grátis
               <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
-            </Link>
+            </LinkDoSistema>
             <a href="#como-funciona" className="fdp-btn fdp-btn-secundario">
               Conhecer plataforma
             </a>

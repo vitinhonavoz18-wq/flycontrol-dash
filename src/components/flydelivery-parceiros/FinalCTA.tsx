@@ -1,8 +1,8 @@
-import { Link } from "@tanstack/react-router";
 import { ArrowRight } from "lucide-react";
 import { Reveal } from "@/components/landing/primitivos";
 import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial";
 import simbolo from "@/assets/flydelivery-parceiros/fly-delivery-simbolo.webp";
+import { LinkDoSistema } from "./LinkDoSistema";
 
 /**
  * Seção 08 — o último convite.
@@ -58,14 +58,10 @@ export function FinalCTA() {
           </p>
 
           <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-            <Link
-              to="/signup"
-              search={{ plan: undefined, google: undefined }}
-              className="fdp-btn fdp-btn-primario"
-            >
+            <LinkDoSistema para="/signup" className="fdp-btn fdp-btn-primario">
               Começar grátis
               <ArrowRight className="h-[18px] w-[18px]" aria-hidden />
-            </Link>
+            </LinkDoSistema>
             <a href="#como-funciona" className="fdp-btn fdp-btn-claro">
               Conhecer plataforma
             </a>

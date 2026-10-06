@@ -4,6 +4,7 @@ import {
   ROTA_DA_PAGINA,
   TITULO,
   cabecalhoDaPagina,
+  enderecoNoSistema,
   lerPermissaoDeIndexar,
   normalizarUrl,
 } from "./site";
@@ -63,5 +64,34 @@ describe("endereço e prévia do link", () => {
     expect(TITULO).toBe("FlyDelivery Parceiros | Gestão completa para delivery");
     expect(valorDaMeta(meta, "description")).toBe(DESCRICAO);
     expect(valorDaMeta(meta, "og:title")).toBe(TITULO);
+  });
+});
+
+describe("links para cadastro e login", () => {
+  it("no próprio sistema (sem configuração), os links continuam internos", () => {
+    for (const base of [undefined, null, "", "   "]) {
+      expect(enderecoNoSistema("/signup", base)).toBeNull();
+    }
+  });
+
+  it("na cópia de teste, apontam para o site oficial", () => {
+    const oficial = "https://flycontrol.conectfly.com.br/";
+    expect(enderecoNoSistema("/signup", oficial)).toBe(
+      "https://flycontrol.conectfly.com.br/signup",
+    );
+    expect(enderecoNoSistema("/login", oficial)).toBe("https://flycontrol.conectfly.com.br/login");
+    expect(enderecoNoSistema("/privacy", oficial)).toBe(
+      "https://flycontrol.conectfly.com.br/privacy",
+    );
+  });
+
+  it("endereço sem https:// é ignorado em vez de virar link quebrado", () => {
+    for (const ruim of [
+      "flycontrol.conectfly.com.br",
+      "http://exemplo.com",
+      "javascript:alert(1)",
+    ]) {
+      expect(enderecoNoSistema("/signup", ruim)).toBeNull();
+    }
   });
 });

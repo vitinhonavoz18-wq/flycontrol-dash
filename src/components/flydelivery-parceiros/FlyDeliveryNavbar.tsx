@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Link } from "@tanstack/react-router";
 import { ArrowRight, Menu, X } from "lucide-react";
 import { LINKS_DO_MENU } from "./dados";
 import { Logo } from "./Logo";
+import { LinkDoSistema } from "./LinkDoSistema";
 
 /**
  * A barra do topo da página FlyDelivery Parceiros.
@@ -84,16 +84,15 @@ export function FlyDeliveryNavbar() {
           </ul>
 
           <div className="hidden items-center gap-5 lg:flex">
-            <Link to="/login" className="fdp-nav-link">
+            <LinkDoSistema para="/login" className="fdp-nav-link">
               Entrar
-            </Link>
-            <Link
-              to="/signup"
-              search={{ plan: undefined, google: undefined }}
+            </LinkDoSistema>
+            <LinkDoSistema
+              para="/signup"
               className="fdp-btn fdp-btn-primario min-h-[44px] px-5 text-[15px]"
             >
               Começar grátis
-            </Link>
+            </LinkDoSistema>
           </div>
 
           <button
@@ -149,17 +148,20 @@ export function FlyDeliveryNavbar() {
           </ul>
 
           <div className="mt-8 flex flex-col gap-3">
-            <Link
-              to="/signup"
-              search={{ plan: undefined, google: undefined }}
+            <LinkDoSistema
+              para="/signup"
               className="fdp-btn fdp-btn-primario w-full"
               onClick={fechar}
             >
               Começar grátis
-            </Link>
-            <Link to="/login" className="fdp-btn fdp-btn-secundario w-full" onClick={fechar}>
+            </LinkDoSistema>
+            <LinkDoSistema
+              para="/login"
+              className="fdp-btn fdp-btn-secundario w-full"
+              onClick={fechar}
+            >
               Entrar
-            </Link>
+            </LinkDoSistema>
           </div>
         </div>
       )}

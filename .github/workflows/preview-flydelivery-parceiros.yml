@@ -1,0 +1,208 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# PREVIEW (cópia de teste) do FlyDelivery Parceiros na Cloudflare
+#
+# Publica uma CÓPIA do sistema num worker SEPARADO, chamado
+# "flydelivery-parceiros-preview", no endereço gratuito da Cloudflare:
+#   https://flydelivery-parceiros-preview.<sua-conta>.workers.dev
+#
+# O site oficial ("flycontrol-dash", flycontrol.conectfly.com.br) NÃO é
+# tocado: outro nome, outro endereço, sem domínio próprio e sem DNS.
+#
+# QUANDO RODA
+#
+# Só quando chega código nas branches de teste abaixo (ou clicando em "Run
+# workflow"). Envios para a main continuam indo só para o deploy oficial
+# (deploy.yml), como sempre.
+#
+# AS TRAVAS (o passo "Preparar a cópia de teste" PARA tudo se alguma falhar)
+#
+# - O nome do worker tem que ser o de teste — nunca "flycontrol-dash".
+# - Sem agendamento: a cobrança diária das 05:00 não existe nesta cópia.
+# - Sem rotas nem domínios: ela só atende no endereço *.workers.dev.
+# - A porta de entrada da cópia (.github/preview-parceiros/entrada.mjs) só
+#   atende visitas, manda "/" para a página nova e pede ao Google para não
+#   indexar nada.
+#
+# O QUE A CÓPIA RECEBE
+#
+# Só o endereço e a chave PÚBLICA do Supabase — os mesmos que qualquer
+# navegador já recebe. Nenhuma chave secreta (serviço do Supabase, cobrança,
+# InfinityPay, WhatsApp, SiteCreatorFly) é entregue a ela. Telas que dependem
+# dessas chaves simplesmente não funcionam no preview, e isso é de propósito.
+# ─────────────────────────────────────────────────────────────────────────────
+name: Preview — FlyDelivery Parceiros
+
+on:
+  push:
+    branches:
+      - "claude/ecstatic-allen-de1jao"
+      - "staging/flydelivery-parceiros"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Dois envios seguidos: o segundo cancela o primeiro, para não publicar fora
+# de ordem.
+concurrency:
+  group: preview-flydelivery-parceiros
+  cancel-in-progress: true
+
+env:
+  NOME_DO_PREVIEW: flydelivery-parceiros-preview
+
+jobs:
+  preview:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      # Usa de preferência as chaves VITE_*: são exatamente as que o site
+      # oficial já entrega a qualquer navegador. E confere que a chave é
+      # mesmo a PÚBLICA — se alguém tivesse colado a chave secreta no lugar
+      # errado, a cópia a mostraria para qualquer visitante.
+      - name: Conferir as chaves públicas do Supabase
+        env:
+          URL_A: ${{ secrets.SUPABASE_URL }}
+          URL_B: ${{ secrets.VITE_SUPABASE_URL }}
+          CHAVE_A: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          CHAVE_B: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          URL="${URL_B:-$URL_A}"
+          CHAVE="${CHAVE_B:-$CHAVE_A}"
+          erro() { echo "::error::$1 Nada foi publicado."; exit 1; }
+          [ -n "$URL" ] && [ -n "$CHAVE" ] || erro "Faltam o endereço ou a chave pública do Supabase nos segredos."
+          case "$URL" in https://*) ;; *) erro "O endereço do Supabase precisa começar com https://." ;; esac
+          papel_do_jwt() {
+            local p; p=$(printf '%s' "$1" | cut -d. -f2 | tr '_-' '/+')
+            while [ $(( ${#p} % 4 )) -ne 0 ]; do p="$p="; done
+            printf '%s' "$p" | base64 -d 2>/dev/null | jq -r '.role // empty' 2>/dev/null || true
+          }
+          case "$CHAVE" in
+            sb_publishable_*) ;;
+            sb_secret_*) erro "A chave configurada é SECRETA (sb_secret_)." ;;
+            eyJ*) [ "$(papel_do_jwt "$CHAVE")" = "anon" ] || erro "A chave configurada não é a pública (papel diferente de anon)." ;;
+            *) erro "Formato de chave do Supabase desconhecido." ;;
+          esac
+          echo "Chave pública conferida."
+
+      - name: Montar o site
+        run: bun run build
+        env:
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          # Teste NUNCA indexa. Não colocar "sim" aqui.
+          VITE_FLYDELIVERY_PARCEIROS_INDEXAR: "nao"
+          # Cadastro, login, Termos e Privacidade abrem no site OFICIAL: a
+          # cópia não tem as chaves que um cadastro precisa para terminar.
+          VITE_FLYDELIVERY_PARCEIROS_SISTEMA_URL: https://flycontrol.conectfly.com.br
+
+      - name: Remover o _redirects (quebra os arquivos estáticos no Workers)
+        run: rm -f .output/public/_redirects
+
+      - name: Preparar a cópia de teste (com travas)
+        env:
+          URL_A: ${{ secrets.SUPABASE_URL }}
+          URL_B: ${{ secrets.VITE_SUPABASE_URL }}
+          CHAVE_A: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          CHAVE_B: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+        run: |
+          set -euo pipefail
+          CONFIG=.output/server/wrangler.json
+          cp .github/preview-parceiros/entrada.mjs .output/server/entrada-preview.mjs
+
+          jq --arg nome "$NOME_DO_PREVIEW" \
+             --arg url "${URL_B:-$URL_A}" \
+             --arg chave "${CHAVE_B:-$CHAVE_A}" \
+             '.name = $nome
+              | .main = "entrada-preview.mjs"
+              | .workers_dev = true
+              | .vars = { SUPABASE_URL: $url, SUPABASE_PUBLISHABLE_KEY: $chave }
+              | del(.triggers, .routes, .route)' \
+             "$CONFIG" > "$CONFIG.novo"
+          mv "$CONFIG.novo" "$CONFIG"
+
+          # Arquivos prontos (fotos, vídeo, ícones) não passam pela porta de
+          # entrada; esta regra pede ao Google para não indexá-los também.
+          printf '\n/*\n  X-Robots-Tag: noindex, nofollow\n' >> .output/public/_headers
+
+          # ── Travas: se qualquer uma falhar, nada é publicado. ──
+          test "$(jq -r .name "$CONFIG")" = "$NOME_DO_PREVIEW"
+          test "$(jq -r .name "$CONFIG")" != "flycontrol-dash"
+          test "$(jq -r .main "$CONFIG")" = "entrada-preview.mjs"
+          test "$(jq -c '.triggers // empty' "$CONFIG")" = ""
+          test "$(jq -c '.routes // empty' "$CONFIG")" = ""
+          test "$(jq -c '.route // empty' "$CONFIG")" = ""
+          # A entrada da cópia não pode ter a parte de tarefas agendadas.
+          # (Escrito com "if" de propósito: um "! grep" NÃO para o script
+          # quando falha, e a trava viraria enfeite.)
+          if grep -Eq "\bscheduled\b" .output/server/entrada-preview.mjs; then
+            echo "::error::A entrada da cópia de teste tem tarefa agendada. Nada foi publicado."
+            exit 1
+          fi
+
+          echo "Configuração da cópia de teste (sem os valores):"
+          jq '.vars |= with_entries(.value = "(definido)") | del(.rules)' "$CONFIG"
+
+      # Prova, com pedidos de todo tipo, que a porta só deixa passar a página
+      # nova, recusa envios e manda o resto para o site oficial. Falhou aqui,
+      # nada é publicado.
+      - name: Testar a porta da cópia
+        run: node .github/preview-parceiros/testar-entrada.mjs .output/server/entrada-preview.mjs
+
+      - name: Publicar a cópia de teste
+        id: publicar
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          set -euo pipefail
+          bunx wrangler --cwd .output/ deploy --name "$NOME_DO_PREVIEW" 2>&1 | tee deploy.log
+          ENDERECO=$(grep -oE "https://${NOME_DO_PREVIEW}\.[a-z0-9-]+\.workers\.dev" deploy.log | head -1 || true)
+          if [ -z "$ENDERECO" ]; then
+            echo "::error::A publicação terminou, mas o endereço *.workers.dev não apareceu. Confira se a conta tem um subdomínio workers.dev ativo."
+            exit 1
+          fi
+          echo "endereco=$ENDERECO" >> "$GITHUB_OUTPUT"
+
+      # Depois de publicada, confere a cópia DE VERDADE, pela internet.
+      - name: Conferir a cópia publicada
+        env:
+          ENDERECO: ${{ steps.publicar.outputs.endereco }}
+        run: |
+          set -euo pipefail
+          # O endereço novo pode levar alguns segundos para responder.
+          for i in $(seq 1 30); do
+            [ "$(curl -s -o /dev/null -w '%{http_code}' "$ENDERECO/flydelivery-parceiros")" = "200" ] && break
+            sleep 4
+          done
+          falha() { echo "::error::$1"; exit 1; }
+          [ "$(curl -s -o /dev/null -w '%{http_code}' "$ENDERECO/flydelivery-parceiros")" = "200" ] || falha "A página nova não abriu."
+          # Os cabeçalhos são guardados antes de procurar neles: "curl | grep -q"
+          # pode dar falso erro neste modo estrito do script.
+          PAGINA=$(curl -sI "$ENDERECO/flydelivery-parceiros")
+          LOGIN=$(curl -sI "$ENDERECO/login")
+          SUB=$(curl -sI "$ENDERECO/flydelivery-parceiros/xyz")
+          grep -qi '^x-robots-tag: noindex' <<<"$PAGINA" || falha "A página está sem o aviso de não indexar."
+          [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$ENDERECO/_serverFn/teste")" = "403" ] || falha "A cópia aceitou um envio."
+          grep -qi '^location: https://flycontrol.conectfly.com.br/login' <<<"$LOGIN" || falha "O login não foi mandado ao site oficial."
+          grep -qiE '^location: .*/flydelivery-parceiros\s*$' <<<"$SUB" || falha "Subendereço não voltou para a página."
+          {
+            echo "## Preview publicado"
+            echo ""
+            echo "Abra: **$ENDERECO**"
+            echo ""
+            echo "Cópia de teste — o site oficial não foi alterado."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "Preview no ar: $ENDERECO"

@@ -1,6 +1,6 @@
-import { Link } from "@tanstack/react-router";
 import { linkWhatsAppSuporte } from "@/lib/landing/contato";
 import { Logo } from "./Logo";
+import { LinkDoSistema } from "./LinkDoSistema";
 
 /**
  * O rodapé.
@@ -55,19 +55,19 @@ export function FlyDeliveryFooter() {
                 Suporte
               </ItemDoRodape>
               <li>
-                <Link to="/terms" className="fdp-nav-link px-0 text-[15px]">
+                <LinkDoSistema para="/terms" className="fdp-nav-link px-0 text-[15px]">
                   Termos
-                </Link>
+                </LinkDoSistema>
               </li>
               <li>
-                <Link to="/privacy" className="fdp-nav-link px-0 text-[15px]">
+                <LinkDoSistema para="/privacy" className="fdp-nav-link px-0 text-[15px]">
                   Privacidade
-                </Link>
+                </LinkDoSistema>
               </li>
               <li>
-                <Link to="/login" className="fdp-nav-link px-0 text-[15px]">
+                <LinkDoSistema para="/login" className="fdp-nav-link px-0 text-[15px]">
                   Entrar
-                </Link>
+                </LinkDoSistema>
               </li>
             </ul>
           </nav>
