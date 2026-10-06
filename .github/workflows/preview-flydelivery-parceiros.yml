@@ -177,25 +177,43 @@ jobs:
           echo "endereco=$ENDERECO" >> "$GITHUB_OUTPUT"
 
       # Depois de publicada, confere a cópia DE VERDADE, pela internet.
+      # Um endereço recém-criado pode responder de forma instável por alguns
+      # instantes, então a página precisa responder bem 3 vezes SEGUIDAS
+      # (até ~3 minutos). Cada tentativa mostra o código recebido — se der
+      # erro, o motivo fica escrito aqui no registro.
       - name: Conferir a cópia publicada
         env:
           ENDERECO: ${{ steps.publicar.outputs.endereco }}
         run: |
-          set -euo pipefail
-          # O endereço novo pode levar alguns segundos para responder.
-          for i in $(seq 1 30); do
-            [ "$(curl -s -o /dev/null -w '%{http_code}' "$ENDERECO/flydelivery-parceiros")" = "200" ] && break
-            sleep 4
-          done
+          set -uo pipefail
           falha() { echo "::error::$1"; exit 1; }
-          [ "$(curl -s -o /dev/null -w '%{http_code}' "$ENDERECO/flydelivery-parceiros")" = "200" ] || falha "A página nova não abriu."
+          PAGINA_URL="$ENDERECO/flydelivery-parceiros"
+          seguidas=0
+          for i in $(seq 1 45); do
+            codigo=$(curl -s -o corpo.html -w '%{http_code}' --max-time 20 "$PAGINA_URL" || true)
+            echo "tentativa $i: HTTP $codigo"
+            if [ "$codigo" = "200" ]; then
+              seguidas=$((seguidas + 1))
+              [ "$seguidas" -ge 3 ] && break
+            else
+              seguidas=0
+              echo "  resposta (início): $(head -c 300 corpo.html | tr '\n' ' ')"
+            fi
+            sleep 3
+          done
+          [ "$seguidas" -ge 3 ] || falha "A página nova não respondeu bem 3 vezes seguidas."
+
           # Os cabeçalhos são guardados antes de procurar neles: "curl | grep -q"
-          # pode dar falso erro neste modo estrito do script.
-          PAGINA=$(curl -sI "$ENDERECO/flydelivery-parceiros")
-          LOGIN=$(curl -sI "$ENDERECO/login")
-          SUB=$(curl -sI "$ENDERECO/flydelivery-parceiros/xyz")
+          # pode dar falso erro no modo estrito do script.
+          PAGINA=$(curl -sI --max-time 20 "$PAGINA_URL" || true)
+          LOGIN=$(curl -sI --max-time 20 "$ENDERECO/login" || true)
+          SUB=$(curl -sI --max-time 20 "$ENDERECO/flydelivery-parceiros/xyz" || true)
+          ENVIO=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST "$ENDERECO/_serverFn/teste" || true)
+          echo "$PAGINA" | grep -iE '^(HTTP|x-robots-tag|content-security-policy)' || true
+
           grep -qi '^x-robots-tag: noindex' <<<"$PAGINA" || falha "A página está sem o aviso de não indexar."
-          [ "$(curl -s -o /dev/null -w '%{http_code}' -X POST "$ENDERECO/_serverFn/teste")" = "403" ] || falha "A cópia aceitou um envio."
+          grep -qi "^content-security-policy: connect-src 'self'" <<<"$PAGINA" || falha "A página está sem a proibição de falar com o banco."
+          [ "$ENVIO" = "403" ] || falha "A cópia não recusou um envio (HTTP $ENVIO)."
           grep -qi '^location: https://flycontrol.conectfly.com.br/login' <<<"$LOGIN" || falha "O login não foi mandado ao site oficial."
           grep -qiE '^location: .*/flydelivery-parceiros\s*$' <<<"$SUB" || falha "Subendereço não voltou para a página."
           {
