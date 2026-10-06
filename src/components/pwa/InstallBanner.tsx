@@ -77,6 +77,9 @@ export function InstallBanner() {
   // do RESTAURANTE, que o parceiro não usa — e o aviso cobriria o menu de
   // baixo do portal.
   if (caminho.startsWith("/affiliates")) return null;
+  // A página FlyDelivery Parceiros (em teste) também não oferece o app do
+  // painel: o aviso, escuro e com a marca antiga, cobriria a página nova.
+  if (caminho.startsWith("/flydelivery-parceiros")) return null;
   const { isStandalone, isMobile, isIOS } = env;
   if (isStandalone || !isMobile) return null;
 

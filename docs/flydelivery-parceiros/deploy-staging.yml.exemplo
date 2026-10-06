@@ -1,0 +1,79 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# MODELO — NÃO ESTÁ ATIVO.
+#
+# Este arquivo só passa a valer se for copiado para .github/workflows/ com a
+# extensão .yml. Enquanto estiver aqui em docs/, o GitHub ignora.
+#
+# O QUE ELE FAZ
+#
+# Publica uma CÓPIA do sistema num worker SEPARADO da Cloudflare, chamado
+# "flydelivery-parceiros-staging", para testar a página nova num endereço
+# próprio. O worker oficial ("flycontrol-dash") não é tocado.
+#
+# QUANDO RODA
+#
+# Só quando alguém envia código para a branch "staging/flydelivery-parceiros"
+# ou clica em "Run workflow" no GitHub. Envios para a main continuam indo só
+# para o deploy oficial (deploy.yml), como sempre.
+#
+# DIFERENÇAS PARA O DEPLOY OFICIAL
+#
+# 1. Outro nome de worker (outro "endereço interno" na Cloudflare).
+# 2. Sem o agendamento diário de cobrança: o worker oficial dispara o
+#    fechamento de ciclos às 05:00. A cópia de teste NÃO pode fazer isso.
+# 3. Endereço da página informado à própria página (para o Google e a prévia
+#    do WhatsApp), e Google bloqueado (a chave de indexar fica desligada).
+# ─────────────────────────────────────────────────────────────────────────────
+name: Deploy de teste — FlyDelivery Parceiros
+
+on:
+  push:
+    branches: ["staging/flydelivery-parceiros"]
+  workflow_dispatch:
+
+jobs:
+  deploy-staging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Instalar dependências
+        run: bun install --frozen-lockfile
+
+      - name: Montar o site
+        run: bun run build
+        env:
+          SUPABASE_PROJECT_ID: ${{ secrets.SUPABASE_PROJECT_ID }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_PUBLISHABLE_KEY: ${{ secrets.SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_PROJECT_ID: ${{ secrets.VITE_SUPABASE_PROJECT_ID }}
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          # Trocar pelo endereço de teste escolhido.
+          VITE_FLYDELIVERY_PARCEIROS_URL: https://parceiros.flydelivery.com.br/flydelivery-parceiros
+          # Teste NUNCA indexa. Não colocar "sim" aqui.
+          VITE_FLYDELIVERY_PARCEIROS_INDEXAR: "nao"
+
+      - name: Remover o _redirects (quebra os arquivos estáticos no Workers)
+        run: rm -f .output/public/_redirects
+
+      - name: Trocar o nome do worker e tirar a cobrança agendada
+        run: |
+          CONFIG=.output/server/wrangler.json
+          jq '.name = "flydelivery-parceiros-staging" | del(.triggers)' "$CONFIG" > "$CONFIG.novo"
+          mv "$CONFIG.novo" "$CONFIG"
+          echo "Configuração do worker de teste:"
+          cat "$CONFIG"
+          # Trava de segurança: se por algum motivo o nome não mudou, PARA
+          # aqui em vez de publicar por cima do worker oficial.
+          test "$(jq -r .name "$CONFIG")" = "flydelivery-parceiros-staging"
+          test "$(jq -r '.triggers // empty' "$CONFIG")" = ""
+
+      - name: Publicar o worker de teste
+        run: bunx wrangler --cwd .output/ deploy --name flydelivery-parceiros-staging
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}

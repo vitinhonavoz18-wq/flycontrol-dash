@@ -1,0 +1,706 @@
+/* ══════════════════════════════════════════════════════════════════════════
+   FLYDELIVERY PARCEIROS — aparência da página nova
+
+   ONDE ISTO VALE
+
+   Só dentro de `.fdp`, o contêiner da página nova. Este arquivo não é
+   importado pelo resto do sistema: ele entra no cabeçalho apenas da rota
+   /flydelivery-parceiros. O painel e a página atual do FlyControl nunca o
+   carregam — é a vitrine nova montada nos fundos da loja, com a porta da
+   frente funcionando igual.
+
+   POR QUE "@layer components"
+
+   As classes daqui ficam na mesma camada de "componentes" do Tailwind. Assim
+   uma classe utilitária escrita no próprio elemento (um `mt-6`, um `px-4`)
+   continua podendo ajustar o que foi definido aqui. Sem isso, qualquer regra
+   deste arquivo ganharia de qualquer utilitária, e ajustar um botão exigiria
+   mexer aqui.
+
+   O LARANJA
+
+   É o mesmo #FF5A00 da marca. Em texto pequeno sobre branco ele não tem
+   contraste suficiente para leitura confortável, então a etiqueta pequena
+   usa o tom mais fechado (--fdp-laranja-texto). Nos botões, o texto é o
+   azul-marinho: branco sobre este laranja fica abaixo do mínimo de leitura
+   recomendado. Para trocar, basta mudar --fdp-sobre-laranja.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+.fdp {
+  --fdp-laranja-rgb: 255 90 0;
+  --fdp-laranja: rgb(var(--fdp-laranja-rgb));
+  --fdp-laranja-forte: #e64a00;
+  --fdp-laranja-claro: #ff8a3d;
+  --fdp-laranja-texto: #c2410c;
+  --fdp-laranja-suave: #fff1e7;
+  --fdp-laranja-borda: rgb(var(--fdp-laranja-rgb) / 0.24);
+  --fdp-sobre-laranja: #0b1530;
+
+  --fdp-marinho: #0b1530;
+  --fdp-marinho-2: #121e3f;
+  --fdp-marinho-3: #1b2a52;
+
+  --fdp-texto: #0b1530;
+  --fdp-texto-2: #4a5470;
+  --fdp-texto-3: #646d84;
+
+  --fdp-fundo: #ffffff;
+  --fdp-superficie: #f7f8fb;
+  --fdp-creme: #fff8f2;
+  --fdp-borda: #e7e9f0;
+  --fdp-borda-forte: #d6dae5;
+
+  --fdp-raio-sm: 12px;
+  --fdp-raio-md: 18px;
+  --fdp-raio-lg: 28px;
+
+  --fdp-sombra-sm: 0 1px 2px rgb(11 21 48 / 0.06), 0 1px 1px rgb(11 21 48 / 0.04);
+  --fdp-sombra-md: 0 14px 34px -14px rgb(11 21 48 / 0.2);
+  --fdp-sombra-lg: 0 44px 90px -36px rgb(11 21 48 / 0.34);
+  --fdp-brilho: 0 16px 36px -14px rgb(var(--fdp-laranja-rgb) / 0.6);
+
+  --fdp-curva: cubic-bezier(0.22, 1, 0.36, 1);
+
+  background: var(--fdp-fundo);
+  color: var(--fdp-texto);
+  font-family:
+    "Inter",
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "Segoe UI",
+    Roboto,
+    sans-serif;
+  font-feature-settings: "cv11", "ss01";
+  -webkit-font-smoothing: antialiased;
+  /* Enfeite que passa da borda (brilhos, sombras) nunca cria rolagem para o
+     lado. `clip` corta sem virar uma "caixa rolável" — se virasse, a barra do
+     topo deixaria de grudar. `hidden` fica de reserva para navegador antigo. */
+  overflow-x: hidden;
+  overflow-x: clip;
+}
+
+.fdp ::selection {
+  background: rgb(var(--fdp-laranja-rgb) / 0.2);
+}
+
+/* Foco visível só para quem navega pelo teclado: o anel laranja diz onde a
+   pessoa está, como a luz acesa na mesa que chamou o garçom. */
+.fdp :focus-visible {
+  outline: 2px solid var(--fdp-laranja-forte);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+/* As âncoras do menu param abaixo da barra fixa, e não escondidas atrás dela. */
+.fdp section[id] {
+  scroll-margin-top: 84px;
+}
+
+/* Toda borda dentro da página nova nasce clara. O sistema usa uma cor de
+   borda do tema escuro; sem isto, uma linha esquecida sem cor ficaria
+   cinza-escura no meio do branco. Fica na camada "base" para que qualquer
+   utilitária (ex.: border-white) ainda possa trocar. */
+@layer base {
+  .fdp *,
+  .fdp ::before,
+  .fdp ::after {
+    border-color: var(--fdp-borda);
+  }
+}
+
+/* O sistema tem uma regra geral que, no celular, encolhe TODO título
+   (h1 para 26px, h2 para 20px, h3 para 18px) — ela foi feita para as telas do
+   painel. Aqui ela encolheria a manchete do Hero. Em vez de mexer na regra
+   geral (que o painel usa), este seletor repete o dela dentro de `.fdp`, o
+   que o torna mais forte, e devolve a palavra às classes da própria página
+   ("revert-layer" = "ignore as regras soltas e use o que as classes dizem"). */
+@media (max-width: 767px) {
+  .fdp :is(h1, h2, h3):not(.font-display):not(.portal-afiliado *) {
+    font-size: revert-layer;
+    line-height: revert-layer;
+    letter-spacing: revert-layer;
+  }
+}
+
+@layer components {
+  /* ── Tipografia ─────────────────────────────────────────────────────── */
+
+  .fdp-titulo-hero {
+    font-size: clamp(2.75rem, 1rem + 4.4vw, 4.75rem);
+    font-weight: 800;
+    line-height: 0.98;
+    letter-spacing: -0.045em;
+    color: var(--fdp-texto);
+    text-wrap: balance;
+  }
+
+  .fdp-titulo-secao {
+    font-size: clamp(2rem, 1.2rem + 2.6vw, 3.5rem);
+    font-weight: 800;
+    line-height: 1.02;
+    letter-spacing: -0.04em;
+    color: var(--fdp-texto);
+    text-wrap: balance;
+  }
+
+  .fdp-rotulo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-size: 0.8125rem;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--fdp-laranja-texto);
+  }
+
+  .fdp-rotulo::before {
+    content: "";
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: var(--fdp-laranja);
+    box-shadow: 0 0 0 4px rgb(var(--fdp-laranja-rgb) / 0.16);
+  }
+
+  .fdp-texto-lg {
+    font-size: clamp(1.0625rem, 0.98rem + 0.4vw, 1.25rem);
+    line-height: 1.55;
+    color: var(--fdp-texto-2);
+  }
+
+  .fdp-texto {
+    font-size: 1rem;
+    line-height: 1.6;
+    color: var(--fdp-texto-2);
+  }
+
+  /* "desejo." — o laranja só no fim da frase, onde a promessa está. Os dois
+     tons ficam dentro da faixa que ainda tem contraste em letra grande. */
+  .fdp-desejo {
+    background: linear-gradient(100deg, var(--fdp-laranja) 0%, var(--fdp-laranja-forte) 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    /* Sem isto, letras com perna (o "j") são cortadas pelo recorte. */
+    padding-bottom: 0.08em;
+  }
+
+  /* ── Botões ─────────────────────────────────────────────────────────── */
+
+  .fdp-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 52px;
+    padding: 0 1.6rem;
+    border-radius: 9999px;
+    font-size: 1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+    transition:
+      transform 220ms var(--fdp-curva),
+      box-shadow 220ms var(--fdp-curva),
+      background-color 220ms ease,
+      border-color 220ms ease,
+      color 220ms ease;
+  }
+
+  .fdp-btn:active {
+    transform: translateY(0) scale(0.98);
+  }
+
+  .fdp-btn-primario {
+    background: linear-gradient(180deg, #ff6a14 0%, var(--fdp-laranja) 100%);
+    color: var(--fdp-sobre-laranja);
+    box-shadow:
+      var(--fdp-brilho),
+      inset 0 1px 0 rgb(255 255 255 / 0.28);
+  }
+
+  .fdp-btn-primario:hover {
+    transform: translateY(-2px);
+    box-shadow:
+      0 22px 44px -16px rgb(var(--fdp-laranja-rgb) / 0.75),
+      inset 0 1px 0 rgb(255 255 255 / 0.28);
+  }
+
+  .fdp-btn-primario svg {
+    transition: transform 220ms var(--fdp-curva);
+  }
+
+  .fdp-btn-primario:hover svg {
+    transform: translateX(3px);
+  }
+
+  .fdp-btn-secundario {
+    background: rgb(255 255 255 / 0.7);
+    color: var(--fdp-texto);
+    border: 1px solid var(--fdp-borda-forte);
+    box-shadow: var(--fdp-sombra-sm);
+  }
+
+  .fdp-btn-secundario:hover {
+    border-color: var(--fdp-laranja-borda);
+    color: var(--fdp-laranja-texto);
+    transform: translateY(-2px);
+  }
+
+  /* Versão para fundo azul-marinho. */
+  .fdp-btn-claro {
+    background: rgb(255 255 255 / 0.06);
+    color: #fff;
+    border: 1px solid rgb(255 255 255 / 0.22);
+  }
+
+  .fdp-btn-claro:hover {
+    background: rgb(255 255 255 / 0.12);
+    border-color: rgb(255 255 255 / 0.4);
+    transform: translateY(-2px);
+  }
+
+  /* ── Barra do topo ──────────────────────────────────────────────────── */
+
+  .fdp-nav {
+    transition:
+      background-color 260ms ease,
+      box-shadow 260ms ease,
+      border-color 260ms ease;
+    border-bottom: 1px solid transparent;
+  }
+
+  /* Depois de rolar: vidro bem leve, sombra curta. Só a barra recebe o
+     desfoque — é uma faixa de 70px, não a página inteira. */
+  .fdp-nav[data-rolou="sim"] {
+    background: rgb(255 255 255 / 0.84);
+    border-bottom-color: rgb(11 21 48 / 0.06);
+    box-shadow: 0 8px 24px -18px rgb(11 21 48 / 0.35);
+    -webkit-backdrop-filter: saturate(160%) blur(14px);
+    backdrop-filter: saturate(160%) blur(14px);
+  }
+
+  .fdp-nav-link {
+    position: relative;
+    padding: 0.5rem 0.25rem;
+    font-size: 0.9375rem;
+    font-weight: 500;
+    color: var(--fdp-texto-2);
+    transition: color 180ms ease;
+  }
+
+  .fdp-nav-link::after {
+    content: "";
+    position: absolute;
+    left: 0.25rem;
+    right: 0.25rem;
+    bottom: 0.2rem;
+    height: 2px;
+    border-radius: 2px;
+    background: var(--fdp-laranja);
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform 260ms var(--fdp-curva);
+  }
+
+  .fdp-nav-link:hover {
+    color: var(--fdp-texto);
+  }
+
+  .fdp-nav-link:hover::after {
+    transform: scaleX(1);
+  }
+
+  /* ── Hero ───────────────────────────────────────────────────────────── */
+
+  /* O fundo do Hero repete as cores do próprio vídeo (branco que esquenta
+     para um creme alaranjado à direita). É isso que faz o vídeo parecer
+     parte da página, e não um retângulo colado nela. */
+  .fdp-hero-fundo {
+    position: absolute;
+    /* Começa 120px acima do topo: com o parallax o fundo desce um pouco ao
+       rolar, e assim nunca aparece uma faixa branca em cima. */
+    inset: -120px 0 0 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+      /* Embaixo, o creme se desfaz no branco da próxima seção — sem linha. */
+      linear-gradient(to bottom, transparent 72%, #ffffff 100%),
+      radial-gradient(60% 70% at 78% 45%, rgb(255 138 61 / 0.2) 0%, transparent 70%),
+      radial-gradient(40% 40% at 12% 8%, rgb(255 138 61 / 0.08) 0%, transparent 70%),
+      linear-gradient(90deg, #ffffff 0%, #ffffff 38%, #fff6ee 100%);
+  }
+
+  /* As bordas do vídeo somem em degradê, nos quatro lados. A máscara é
+     calculada uma vez — não custa nada por quadro do vídeo. */
+  .fdp-video-moldura {
+    -webkit-mask-image:
+      linear-gradient(to right, transparent 0%, #000 13%, #000 91%, transparent 100%),
+      linear-gradient(to bottom, transparent 0%, #000 7%, #000 86%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(to right, transparent 0%, #000 13%, #000 91%, transparent 100%),
+      linear-gradient(to bottom, transparent 0%, #000 7%, #000 86%, transparent 100%);
+    mask-composite: intersect;
+  }
+
+  /* O botão de pausar a animação existe, mas só aparece para quem chega
+     nele pelo teclado (Tab). Quem usa mouse ou dedo nunca vê controle nenhum
+     sobre o vídeo — e quem precisa parar o movimento, consegue. */
+  .fdp-pausa {
+    position: absolute;
+    right: 12%;
+    bottom: 16%;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(4px);
+    transition:
+      opacity 160ms ease,
+      transform 160ms ease;
+  }
+
+  .fdp-pausa:focus-visible {
+    opacity: 1;
+    pointer-events: auto;
+    transform: none;
+  }
+
+  /* ── Cartões e superfícies ──────────────────────────────────────────── */
+
+  .fdp-cartao {
+    background: #fff;
+    border: 1px solid var(--fdp-borda);
+    border-radius: var(--fdp-raio-md);
+    box-shadow: var(--fdp-sombra-sm);
+    transition:
+      transform 260ms var(--fdp-curva),
+      box-shadow 260ms var(--fdp-curva),
+      border-color 260ms ease;
+  }
+
+  .fdp-cartao-vivo:hover {
+    transform: translateY(-4px);
+    border-color: var(--fdp-laranja-borda);
+    box-shadow: var(--fdp-sombra-md);
+  }
+
+  .fdp-icone {
+    display: grid;
+    place-items: center;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 14px;
+    background: var(--fdp-laranja-suave);
+    color: var(--fdp-laranja-forte);
+    transition:
+      background-color 260ms ease,
+      color 260ms ease,
+      transform 260ms var(--fdp-curva);
+  }
+
+  .fdp-cartao-vivo:hover .fdp-icone {
+    background: var(--fdp-laranja);
+    color: #fff;
+    transform: rotate(-4deg) scale(1.04);
+  }
+
+  .fdp-selo {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--fdp-laranja-suave);
+    color: var(--fdp-laranja-texto);
+    border: 1px solid var(--fdp-laranja-borda);
+  }
+
+  /* A janela do painel nas ilustrações (quadro de pedidos). */
+  .fdp-janela {
+    background: #fff;
+    border: 1px solid var(--fdp-borda);
+    border-radius: 22px;
+    box-shadow:
+      var(--fdp-sombra-lg),
+      0 0 0 6px rgb(255 255 255 / 0.6);
+  }
+
+  /* O celular das ilustrações. */
+  .fdp-celular {
+    position: relative;
+    border-radius: 44px;
+    padding: 10px;
+    background: linear-gradient(160deg, #1d2742 0%, #0b1530 60%, #151f3b 100%);
+    box-shadow:
+      var(--fdp-sombra-lg),
+      inset 0 0 0 1.5px rgb(255 255 255 / 0.12);
+  }
+
+  .fdp-celular-tela {
+    position: relative;
+    overflow: hidden;
+    border-radius: 34px;
+    background: #fff;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   MOVIMENTO
+
+   Só transparência e posição — as duas coisas que a placa de vídeo do
+   aparelho faz sozinha, sem redesenhar a tela. Nada de partícula, nada de
+   cena 3D. É o que mantém a página leve num Android intermediário.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Ecossistema: o "pedido" correndo pela linha que liga as etapas. */
+@keyframes fdp-cometa-x {
+  0% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateX(500%);
+    opacity: 0;
+  }
+}
+
+@keyframes fdp-cometa-y {
+  0% {
+    transform: translateY(-100%);
+    opacity: 0;
+  }
+  10% {
+    opacity: 1;
+  }
+  90% {
+    opacity: 1;
+  }
+  100% {
+    transform: translateY(500%);
+    opacity: 0;
+  }
+}
+
+.fdp-cometa-x {
+  width: 20%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, var(--fdp-laranja) 70%, #ffd2b3);
+  border-radius: 9999px;
+  opacity: 0;
+}
+
+.fdp-cometa-y {
+  width: 100%;
+  height: 20%;
+  background: linear-gradient(180deg, transparent, var(--fdp-laranja) 70%, #ffd2b3);
+  border-radius: 9999px;
+  opacity: 0;
+}
+
+/* O selo "ao vivo" pulsando. */
+@keyframes fdp-pulso {
+  0% {
+    box-shadow: 0 0 0 0 rgb(var(--fdp-laranja-rgb) / 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 10px rgb(var(--fdp-laranja-rgb) / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(var(--fdp-laranja-rgb) / 0);
+  }
+}
+
+@keyframes fdp-pulso-verde {
+  0% {
+    box-shadow: 0 0 0 0 rgb(22 163 74 / 0.45);
+  }
+  70% {
+    box-shadow: 0 0 0 8px rgb(22 163 74 / 0);
+  }
+  100% {
+    box-shadow: 0 0 0 0 rgb(22 163 74 / 0);
+  }
+}
+
+/* Quadro de pedidos: o pedido novo entra, fica, e volta a entrar — um ciclo
+   de 7 segundos, para parecer movimento de salão e não pisca-pisca. */
+@keyframes fdp-pedido-chega {
+  0% {
+    opacity: 0;
+    transform: translateY(-10px) scale(0.97);
+  }
+  8%,
+  94% {
+    opacity: 1;
+    transform: none;
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes fdp-aviso-chega {
+  0%,
+  8% {
+    opacity: 0;
+    transform: translateY(8px) scale(0.96);
+  }
+  16%,
+  70% {
+    opacity: 1;
+    transform: none;
+  }
+  80%,
+  100% {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+}
+
+/* Parallax do brilho do Hero, preso à rolagem — sem JavaScript. Navegador que
+   ainda não sabe fazer isso simplesmente deixa o brilho parado. */
+@keyframes fdp-parallax {
+  to {
+    transform: translate3d(0, 90px, 0);
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .fdp-cometa-x {
+    animation: fdp-cometa-x 4.2s var(--fdp-curva) infinite;
+  }
+
+  .fdp-cometa-y {
+    animation: fdp-cometa-y 4.2s var(--fdp-curva) infinite;
+  }
+
+  .fdp-ao-vivo {
+    animation: fdp-pulso 2.2s ease-out infinite;
+  }
+
+  .fdp-ao-vivo-verde {
+    animation: fdp-pulso-verde 2.4s ease-out infinite;
+  }
+
+  .fdp-pedido-novo {
+    animation: fdp-pedido-chega 7s var(--fdp-curva) infinite;
+  }
+
+  .fdp-aviso {
+    animation: fdp-aviso-chega 7s var(--fdp-curva) infinite;
+  }
+
+  @supports (animation-timeline: scroll()) {
+    .fdp-parallax {
+      animation: fdp-parallax linear both;
+      animation-timeline: scroll(root);
+      animation-range: 0 100vh;
+    }
+  }
+}
+
+/* Etapas da operação: acendem em sequência quando a seção aparece. */
+.fdp-etapa {
+  opacity: 0.35;
+  transform: translateY(10px);
+  transition:
+    opacity 600ms var(--fdp-curva),
+    transform 600ms var(--fdp-curva);
+  transition-delay: var(--fdp-atraso, 0ms);
+}
+
+.fdp-etapa-icone {
+  background: var(--fdp-marinho-3);
+  color: rgb(255 255 255 / 0.8);
+  transition:
+    background-color 500ms ease,
+    color 500ms ease,
+    box-shadow 500ms ease;
+  transition-delay: var(--fdp-atraso, 0ms);
+}
+
+[data-ativo="sim"] .fdp-etapa {
+  opacity: 1;
+  transform: none;
+}
+
+[data-ativo="sim"] .fdp-etapa-icone {
+  background: var(--fdp-laranja);
+  color: var(--fdp-sobre-laranja);
+  box-shadow: 0 0 0 6px rgb(var(--fdp-laranja-rgb) / 0.18);
+}
+
+.fdp-progresso-x,
+.fdp-progresso-y {
+  transition: transform 1800ms var(--fdp-curva);
+}
+
+.fdp-progresso-x {
+  transform: scaleX(0);
+  transform-origin: left;
+}
+
+.fdp-progresso-y {
+  transform: scaleY(0);
+  transform-origin: top;
+}
+
+[data-ativo="sim"] .fdp-progresso-x {
+  transform: scaleX(1);
+}
+
+[data-ativo="sim"] .fdp-progresso-y {
+  transform: scaleY(1);
+}
+
+/* Quem pediu menos movimento no aparelho recebe tudo no lugar final, de uma
+   vez: etapas acesas, linha cheia, pedido já na tela. O conteúdo é o mesmo —
+   só não se mexe. */
+@media (prefers-reduced-motion: reduce) {
+  .fdp-etapa {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .fdp-progresso-x {
+    transform: scaleX(1);
+    transition: none;
+  }
+
+  .fdp-progresso-y {
+    transform: scaleY(1);
+    transition: none;
+  }
+
+  .fdp-cometa-x,
+  .fdp-cometa-y {
+    display: none;
+  }
+
+  .fdp-btn:hover,
+  .fdp-cartao-vivo:hover {
+    transform: none;
+  }
+}
+
+/* Quem pediu menos transparência no aparelho recebe a barra sólida. */
+@media (prefers-reduced-transparency: reduce) {
+  .fdp .fdp-nav[data-rolou="sim"] {
+    background: #fff;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
