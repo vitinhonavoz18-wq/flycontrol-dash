@@ -113,6 +113,11 @@ const SF_ID_PREFIXES = [
   "sf_border_",
   "sf_add_",
   "sf_bev_",
+  // O site manda bebidas como "sf_drink_" e sabores como "sf_flavor_".
+  // Sem tirar esse prefixo, o site procurava um item com esse nome inteiro,
+  // não achava e respondia 404 ao salvar.
+  "sf_drink_",
+  "sf_flavor_",
   "sf_size_",
 ];
 
