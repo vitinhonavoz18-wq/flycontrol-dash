@@ -23,7 +23,7 @@ import { addonDaFeature } from "@/lib/addons";
  * Isto é UX. O bloqueio de verdade está no servidor (`plan-guard.ts`) e na
  * RLS — esconder a tela nunca foi a proteção.
  */
-export function PremiumFeatureLock({ feature }: { feature?: Feature }) {
+function PremiumFeatureLock({ feature }: { feature?: Feature }) {
   const premium = PLAN_PRICING.premium;
   const featureName = feature ? FEATURE_LABELS[feature] : null;
   // Só entra na lista o que o upgrade realmente entrega. O Chat é vendido à

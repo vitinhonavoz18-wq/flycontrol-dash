@@ -56,7 +56,7 @@ export const NOME_DO_EVENTO: Record<string, string> = {
   PAYOUT_CYCLE_RUN: "Rodada de repasses",
 };
 
-export const REGRA_SUSPEITA: Record<string, string> = {
+const REGRA_SUSPEITA: Record<string, string> = {
   same_phone_as_affiliate: "Loja indicada tem o mesmo celular do afiliado",
   many_conversions_same_device: "Várias lojas criadas pelo mesmo aparelho/rede em 24h",
   withdrawal_soon_after_pix_change: "Repasse montado logo depois de trocar a chave Pix",

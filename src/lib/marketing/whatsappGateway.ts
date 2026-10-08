@@ -19,9 +19,6 @@
  * FlyControl deixa as mensagens prontas numa fila e o n8n vem buscar. Por
  * isso o provedor padrão aqui é o `ProvedorViaFila`: ele não faz chamada de
  * rede nenhuma — apenas registra que a mensagem está pronta.
- *
- * O `ProvedorUazapiDireto` fica escrito e desligado, para o dia em que fizer
- * sentido o FlyControl falar direto. Ele não é usado em nenhum caminho ativo.
  */
 
 export type MensagemTexto = {
@@ -108,7 +105,7 @@ export function traduzirStatus(bruto: unknown): StatusMensagem {
  * Não faz chamada de rede. É de propósito — o disparo em massa não pode
  * depender de o painel ficar aberto, nem prender o pedido de quem clicou.
  */
-export class ProvedorViaFila implements WhatsAppProvider {
+class ProvedorViaFila implements WhatsAppProvider {
   readonly nome = "fila";
 
   async enviar(): Promise<ResultadoEnvio> {
@@ -165,87 +162,6 @@ function pegarTexto(o: Record<string, unknown>, chaves: string[]): string | unde
     if (typeof v === "number") return String(v);
   }
   return undefined;
-}
-
-/**
- * Conversa direta com a UAZAPI. NÃO ESTÁ EM USO.
- *
- * Fica aqui pronto para o dia em que o FlyControl precisar enviar sem passar
- * pelo n8n. O endereço e o token vêm do ambiente do servidor — nunca do
- * banco e nunca do navegador, porque token no navegador é chave de casa
- * pendurada do lado de fora da porta.
- */
-export class ProvedorUazapiDireto implements WhatsAppProvider {
-  readonly nome = "uazapi";
-
-  constructor(
-    private readonly baseUrl: string,
-    private readonly token: string,
-  ) {}
-
-  async enviar(instanciaId: string, mensagem: MensagemWhatsApp): Promise<ResultadoEnvio> {
-    const rota = mensagem.tipo === "imagem" ? "/send/media" : "/send/text";
-    const corpo =
-      mensagem.tipo === "imagem"
-        ? { number: mensagem.para, text: mensagem.texto, file: mensagem.urlImagem, type: "image" }
-        : { number: mensagem.para, text: mensagem.texto };
-
-    try {
-      const r = await fetch(`${this.baseUrl}${rota}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          token: this.token,
-          instance: instanciaId,
-        },
-        body: JSON.stringify(corpo),
-      });
-
-      if (!r.ok) {
-        // 4xx é problema do pedido (número inválido, instância errada) e
-        // repetir não adianta. 5xx e tempo esgotado merecem nova tentativa.
-        return {
-          ok: false,
-          erro: `Fornecedor respondeu ${r.status}`,
-          codigo: String(r.status),
-          podeTentarDeNovo: r.status >= 500 || r.status === 429,
-        };
-      }
-
-      const json = (await r.json().catch(() => ({}))) as Record<string, unknown>;
-      return {
-        ok: true,
-        providerMessageId: pegarTexto(json, ["id", "messageId", "message_id"]),
-        status: "sent",
-      };
-    } catch (e) {
-      return {
-        ok: false,
-        erro: e instanceof Error ? e.message : "Falha de rede",
-        podeTentarDeNovo: true,
-      };
-    }
-  }
-
-  async statusInstancia(instanciaId: string): Promise<StatusInstancia> {
-    try {
-      const r = await fetch(`${this.baseUrl}/instance/status`, {
-        headers: { token: this.token, instance: instanciaId },
-      });
-      if (!r.ok) return { status: "error", mensagem: `Fornecedor respondeu ${r.status}` };
-      const json = (await r.json().catch(() => ({}))) as Record<string, unknown>;
-      const bruto = String(json.status ?? "").toLowerCase();
-      if (bruto.includes("connected")) return { status: "connected" };
-      if (bruto.includes("connecting")) return { status: "connecting" };
-      return { status: "disconnected" };
-    } catch (e) {
-      return { status: "error", mensagem: e instanceof Error ? e.message : "Falha de rede" };
-    }
-  }
-
-  interpretarWebhook(corpo: unknown): EventoWebhook | null {
-    return interpretarWebhookPadrao(corpo);
-  }
 }
 
 /**

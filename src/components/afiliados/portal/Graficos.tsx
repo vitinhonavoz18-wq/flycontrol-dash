@@ -10,17 +10,13 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import {
-  useSerieDoAfiliado,
-  type PeriodoDoGrafico,
-  type SerieDoAfiliado,
-} from "@/lib/afiliados/portal";
+import { useSerieDoAfiliado, type PeriodoDoGrafico } from "@/lib/afiliados/portal";
 import { PERIODOS, rotuloDoPonto } from "@/lib/afiliados/situacoes";
 import { mensagemDeErro, reais } from "@/lib/afiliados/validacao";
 import { cn } from "@/lib/utils";
 import { Carregando, Erro, Painel } from "./Pecas";
 
-export function SeletorDePeriodo({
+function SeletorDePeriodo({
   valor,
   aoMudar,
 }: {

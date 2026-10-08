@@ -49,7 +49,7 @@ export type ResultadoAuthCrm =
   { ok: true; tenantId: string } | { ok: false; status: number; erro: string };
 
 /** O que o n8n apresenta na porta, sem o "Bearer " na frente. */
-export function segredoApresentado(request: Request): string {
+function segredoApresentado(request: Request): string {
   const cabecalho =
     request.headers.get("authorization") || request.headers.get("x-crm-secret") || "";
   return cabecalho.replace(/^Bearer\s+/i, "").trim();

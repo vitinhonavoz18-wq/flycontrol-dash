@@ -39,7 +39,7 @@ describe("o personagem", () => {
     for (const e of emocoes) {
       expect(POSES[e], `falta a pose "${e}"`).toBeTruthy();
       expect(POSES[e].descricao.length, `pose "${e}" sem descrição`).toBeGreaterThan(10);
-      const arquivo = `src/assets/personagem/${e}.png`;
+      const arquivo = `src/assets/personagem/${e}.webp`;
       expect(existsSync(arquivo), `${arquivo} não existe`).toBe(true);
     }
   });
@@ -56,7 +56,7 @@ describe("o personagem", () => {
     // As enviadas tinham ~1,4 MB cada, quase 10 MB no total. Num celular com
     // internet de loja, isso é o guia travando antes de começar.
     for (const e of Object.keys(POSES) as EmocaoDoGuia[]) {
-      const kb = statSync(`src/assets/personagem/${e}.png`).size / 1024;
+      const kb = statSync(`src/assets/personagem/${e}.webp`).size / 1024;
       expect(kb, `pose "${e}" com ${Math.round(kb)} KB`).toBeLessThan(320);
     }
   });

@@ -48,7 +48,7 @@ function enxugar(valor: number): number {
 // Conversões
 // ---------------------------------------------------------------------------
 
-export function rgbParaHsl({ r, g, b }: Rgb): Hsl {
+function rgbParaHsl({ r, g, b }: Rgb): Hsl {
   const rn = r / 255;
   const gn = g / 255;
   const bn = b / 255;
@@ -71,7 +71,7 @@ export function rgbParaHsl({ r, g, b }: Rgb): Hsl {
   return { h: enxugar(h), s: enxugar(s * 100), l: enxugar(l * 100) };
 }
 
-export function hslParaRgb({ h, s, l }: Hsl): Rgb {
+function hslParaRgb({ h, s, l }: Hsl): Rgb {
   const hn = ((h % 360) + 360) % 360;
   const sn = limitar(s, 0, 100) / 100;
   const ln = limitar(l, 0, 100) / 100;
@@ -169,7 +169,7 @@ export function lerCor(entrada: unknown): Hsl | null {
 }
 
 /** Prende matiz, saturação e luminosidade dentro dos limites válidos. */
-export function normalizar({ h, s, l }: Hsl): Hsl {
+function normalizar({ h, s, l }: Hsl): Hsl {
   return {
     h: enxugar(((h % 360) + 360) % 360),
     s: enxugar(limitar(s, 0, 100)),

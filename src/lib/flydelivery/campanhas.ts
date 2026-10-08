@@ -18,7 +18,7 @@ export type StatusDeCampanha =
 
 export const LIMITE_DE_CAMPANHAS = 3;
 
-export const ROTULO_DO_STATUS: Record<StatusDeCampanha, string> = {
+const ROTULO_DO_STATUS: Record<StatusDeCampanha, string> = {
   // Só campanhas antigas (antes do pós-pago) passam por aprovação.
   pending: "Aguardando aprovação",
   scheduled: "Programado",
@@ -130,7 +130,7 @@ export function diasRestantesTexto(dias: number): string {
 /** Situação da cobrança de um impulsionamento (tabela `billing_addon_charges`). */
 export type StatusFinanceiro = "pending_invoice" | "invoiced" | "paid" | "cancelled" | "refunded";
 
-export const ROTULO_FINANCEIRO: Record<StatusFinanceiro, string> = {
+const ROTULO_FINANCEIRO: Record<StatusFinanceiro, string> = {
   pending_invoice: "Na próxima fatura",
   invoiced: "Faturado",
   paid: "Pago",
@@ -138,7 +138,7 @@ export const ROTULO_FINANCEIRO: Record<StatusFinanceiro, string> = {
   refunded: "Estornado",
 };
 
-export const COR_FINANCEIRO: Record<StatusFinanceiro, string> = {
+const COR_FINANCEIRO: Record<StatusFinanceiro, string> = {
   pending_invoice: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
   invoiced: "bg-sky-500/15 text-sky-700 dark:text-sky-400",
   paid: "bg-success/15 text-success",

@@ -225,7 +225,7 @@ export function dataDoDia(ymd: string | null | undefined): string {
 }
 
 /** Link público de divulgação do afiliado. */
-export const SITE_PUBLICO = "https://flycontrol.conectfly.com.br";
+const SITE_PUBLICO = "https://flycontrol.conectfly.com.br";
 
 export function linkDoAfiliado(codigo: string, caminho = "/"): string {
   const base = caminho.startsWith("/") ? caminho : `/${caminho}`;

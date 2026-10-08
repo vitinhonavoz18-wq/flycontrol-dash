@@ -11,6 +11,12 @@ const BUCKET = "menu-images";
 const MAX_BYTES = 25 * 1024 * 1024; // 25 MB
 const SIGNED_URL_TTL = 60 * 60 * 24 * 365 * 50; // ~50 anos
 const ACCEPTED = ["video/mp4", "video/webm", "video/quicktime"];
+// Quanto tempo o celular do cliente pode guardar o vídeo sem perguntar de
+// novo ao servidor. Cada envio ganha um nome novo (data + sorteio), então o
+// arquivo de um endereço nunca muda: guardar por um ano é seguro. Sem isto
+// valia o padrão de 1 hora — depois disso, quem voltava ao cardápio esperava
+// o celular conferir o vídeo de novo antes de ele aparecer.
+const CACHE_UM_ANO = String(60 * 60 * 24 * 365);
 
 interface VideoUploadProps {
   value?: string | null;
@@ -46,7 +52,11 @@ export function VideoUpload({
         const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
         const { error: upErr } = await supabase.storage
           .from(BUCKET)
-          .upload(path, file, { contentType: file.type, upsert: false });
+          .upload(path, file, {
+            contentType: file.type,
+            upsert: false,
+            cacheControl: CACHE_UM_ANO,
+          });
         if (upErr) throw upErr;
         const { data: signed, error: signErr } = await supabase.storage
           .from(BUCKET)

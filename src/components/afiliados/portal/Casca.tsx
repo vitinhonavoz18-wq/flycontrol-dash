@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
-import logo from "@/assets/flycontrol-logo-hero.png";
+import logo from "@/assets/flycontrol-logo-hero.webp";
 import { cn } from "@/lib/utils";
 import { classeDoCampo } from "./Pecas";
 

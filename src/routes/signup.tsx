@@ -1,4 +1,4 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
 import {
   ArrowLeft,
@@ -45,7 +45,7 @@ import {
   type FieldErrors,
   type OwnerData,
 } from "@/lib/signup/validation";
-import logo from "@/assets/flycontrol-logo.png";
+import logo from "@/assets/flycontrol-logo.webp";
 
 type SignupSearch = { plan: PlanCode | undefined; google?: "1" };
 
@@ -130,7 +130,6 @@ function Field({
 
 function SignupWizard() {
   const { plan: planFromUrl, google: googleFlag } = Route.useSearch();
-  const navigate = useNavigate();
   const { user: googleUser, signInWithGoogle } = useAuth();
 
   // Só é "cadastro pelo Google" quando a tela chegou com o sinal do callback

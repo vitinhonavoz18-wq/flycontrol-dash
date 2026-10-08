@@ -1,5 +1,3 @@
-import { toast } from "sonner";
-
 type MenuType =
   | "category"
   | "product"

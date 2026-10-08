@@ -19,7 +19,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CHECKOUT_TOKEN_STORAGE_KEY } from "@/lib/billing/checkout";
 import { confirmCheckoutReturn, type ConfirmReturnResult } from "@/lib/billing/checkout.functions";
 import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
-import logo from "@/assets/flycontrol-logo.png";
+import logo from "@/assets/flycontrol-logo.webp";
 
 export const Route = createFileRoute("/pagamento/$plano")({ component: CheckoutReturnPage });
 

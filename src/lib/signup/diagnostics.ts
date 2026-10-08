@@ -21,8 +21,6 @@
 
 const ENV_VAR = "SIGNUP_DEBUG_ERRORS";
 
-export const SIGNUP_DEBUG_ENV_VAR = ENV_VAR;
-
 export function isSignupDebugEnabled(env: Record<string, string | undefined>): boolean {
   return env[ENV_VAR]?.trim().toLowerCase() === "true";
 }

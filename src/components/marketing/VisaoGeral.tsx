@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Loader2, Users, ShieldCheck, Send, CheckCheck, Megaphone, Smartphone } from "lucide-react";
+import { Loader2, Users, ShieldCheck, Send, Megaphone, Smartphone } from "lucide-react";
 import { resumoMarketing } from "@/lib/marketing/marketing.functions";
 import { toast } from "sonner";
 

@@ -19,7 +19,6 @@ import {
 import { toast } from "sonner";
 import {
   Bell,
-  BellOff,
   Printer,
   Phone,
   MapPin,
@@ -140,7 +139,7 @@ function Dashboard() {
   const [showNew, setShowNew] = useState(false);
   const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
   const [recentNewOrderIds, setRecentNewOrderIds] = useState<string[]>([]);
-  const [knownOrderIds, setKnownOrderIds] = useState<Set<string>>(new Set());
+  const [, setKnownOrderIds] = useState<Set<string>>(new Set());
 
   const initialLoad = useRef(true);
   const soundOnRef = useRef(soundOn);
@@ -286,72 +285,6 @@ function Dashboard() {
     setOrders((prev) => prev.map((o) => (o.id === order.id ? { ...o, is_seen: true } : o)));
   };
 
-  async function handleTableOrder(order: Order) {
-    const type = normalizeOrderType(order);
-    if (type !== "table") return;
-
-    // Check if table_id is provided, otherwise try to find it by table_number
-    let tableId = (order as any).table_id;
-    if (!tableId && order.table_number) {
-      const { data: tableData } = await supabase
-        .from("restaurant_tables")
-        .select("id")
-        .eq("tenant_id", order.tenant_id)
-        .eq("table_number", order.table_number)
-        .eq("is_active", true)
-        .maybeSingle();
-
-      if (tableData) tableId = tableData.id;
-    }
-
-    if (!tableId) return;
-
-    // Find active session for this table
-    const { data: sessionData } = await supabase
-      .from("table_sessions")
-      .select("id, total_amount")
-      .or(`tenant_id.eq.${order.tenant_id},restaurant_id.eq.${order.tenant_id}`)
-      .eq("table_id", tableId)
-      .eq("status", "open")
-      .maybeSingle();
-
-    let sessionId = sessionData?.id;
-
-    if (!sessionId) {
-      // Create new session
-      const { data: newSession, error: sessionError } = await supabase
-        .from("table_sessions")
-        .insert({
-          restaurant_id: order.tenant_id,
-          tenant_id: order.tenant_id,
-          table_id: tableId,
-          table_number: order.table_number || "?",
-          status: "open",
-          total_amount: order.total,
-        } as any)
-        .select()
-        .single();
-
-      if (!sessionError) sessionId = newSession.id;
-    } else if (sessionData) {
-      // Update session amount
-      await supabase
-        .from("table_sessions")
-        .update({
-          total_amount: Number(sessionData.total_amount || 0) + Number(order.total || 0),
-        } as any)
-        .eq("id", sessionId);
-    }
-
-    if (sessionId) {
-      // Link order to session
-      await supabase.from("table_session_orders").insert({
-        table_session_id: sessionId,
-        order_id: order.id,
-      });
-    }
-  }
-
   function subscribeToOrders(pizzeriaId: string) {
     return supabase
       .channel(`orders-${pizzeriaId}`)
@@ -366,9 +299,8 @@ function Dashboard() {
         (p) => {
           const o = p.new as Order;
 
-          // O processamento de Table/Comanda agora é feito de forma centralizada
+          // O processamento de Table/Comanda é feito de forma centralizada
           // via TablesManagement ou via trigger no banco para garantir consistência.
-          // handleTableOrder(o);
 
           // Não processar se o pedido já foi processado (evitar duplicatas no canal)
           setOrders((prev) => {

@@ -29,7 +29,7 @@
  */
 
 /** O nome do parâmetro. Uma constante para as telas não divergirem na grafia. */
-export const PARAMETRO_DA_ABA = "aba";
+const PARAMETRO_DA_ABA = "aba";
 
 /**
  * @param busca  O que o roteador entrega: um objeto (`{ aba: "delivery" }`)

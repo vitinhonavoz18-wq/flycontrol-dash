@@ -31,7 +31,7 @@ export const ROTULO_PAINEL: Record<SituacaoPedido, string> = {
 };
 
 /** Pedido que ainda está andando: dá para mexer nele. */
-export const EM_ANDAMENTO: SituacaoPedido[] = ["novo", "preparando", "saiu"];
+const EM_ANDAMENTO: SituacaoPedido[] = ["novo", "preparando", "saiu"];
 
 /** Situações que o lojista pode apagar da vista do cliente. */
 const ESCONDIDAS = ["deleted", "removed", "excluido"];

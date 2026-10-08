@@ -26,7 +26,7 @@ export const ADDON_LABELS: Record<Addon, string> = {
 };
 
 /** Qual aba depende de qual contratação. */
-export const ADDON_DA_FEATURE: Partial<Record<Feature, Addon>> = {
+const ADDON_DA_FEATURE: Partial<Record<Feature, Addon>> = {
   chat: "crm_chat",
 };
 

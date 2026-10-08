@@ -115,8 +115,7 @@ export const lerOnboarding = createServerFn({ method: "POST" })
 
     // Sem caderno não há convite em aberto. Devolver nulo faz a tela de
     // preparação mandar a pessoa para o painel em vez de abrir um
-    // questionário que ninguém pediu — a mesma regra de
-    // `precisaDeOnboarding`, para as duas portas não discordarem.
+    // questionário que ninguém pediu.
     if (!data) return null;
 
     const linha = data;
@@ -327,50 +326,6 @@ export const concluirOnboarding = createServerFn({ method: "POST" })
       return { ok: true, destino: produtos > 0 ? "painel" : "cardapio" };
     },
   );
-
-/**
- * A pergunta mais barata possível: este lojista ainda precisa passar pelo
- * onboarding?
- *
- * O painel inteiro pergunta isso a cada sessão, então ela é de propósito
- * enxuta — uma consulta, sem contar produtos nem carregar respostas. É a
- * portaria conferindo a pulseira, não revistando a mochila.
- *
- * SÓ VÊ O QUESTIONÁRIO QUEM FOI CONVIDADO
- *
- * O convite é o caderno: o cadastro abre um, com status "not_started", e é
- * ele que faz o questionário aparecer — uma vez só, para quem acabou de se
- * cadastrar.
- *
- * A regra já foi o contrário, e foi um erro caro: loja SEM caderno era
- * tratada como loja nova. Só que caderno não nasce sozinho — quem cria loja
- * pelo Painel Admin, quem restaura uma loja e quem se cadastrou e fechou a
- * aba antes da primeira resposta ficavam todos sem caderno. Resultado: o
- * questionário voltava a cada login, para sempre.
- *
- * Era a recepcionista parando TODO mundo que não estava na lista de visitas —
- * inclusive o funcionário que trabalha ali há meses e só quer chegar na sala
- * dele. Agora ela para só quem tem convite em aberto na mão.
- */
-export const precisaDeOnboarding = createServerFn({ method: "POST" })
-  .middleware([requireSupabaseAuth])
-  .handler(async ({ context }): Promise<{ pendente: boolean }> => {
-    const loja = await lojaDoUsuario(context.userId);
-    // Sem loja não há o que preparar: quem não tem loja vê a tela de
-    // boas-vindas do painel, não o questionário.
-    if (!loja) return { pendente: false };
-
-    const { data } = await caderno
-      .from("onboarding_answers")
-      .select("status")
-      .eq("company_id", loja.id)
-      .maybeSingle();
-
-    // Sem caderno não há convite, e sem convite não há questionário.
-    if (!data) return { pendente: false };
-
-    return { pendente: data.status !== "completed" };
-  });
 
 /**
  * "Pular por agora".

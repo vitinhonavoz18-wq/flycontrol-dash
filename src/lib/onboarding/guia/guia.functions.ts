@@ -28,7 +28,6 @@ import { validateBrazilianPhone } from "@/lib/signup/validation";
 import {
   decisaoValida,
   etapasConcluidas,
-  ehIdDeEtapaDoGuia,
   progressoDoGuia,
   proximaEtapaDoGuia,
   type DecisoesDoGuia,
@@ -545,8 +544,4 @@ export const sairDoGuia = createServerFn({ method: "POST" })
     return { ok: true };
   });
 
-/** Exportado para teste: a leitura dos sinais sem passar pela rota. */
-export const __lerSinais = lerSinais;
-export const __temConteudo = temConteudo;
 export type { IdDaEtapaDoGuia };
-export { ehIdDeEtapaDoGuia };

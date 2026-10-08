@@ -2,7 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { crm } from "@/lib/crm/db";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { montarCatalogo } from "@/lib/crm/catalogo";
-import { casarItens, taxaDoBairro, taxaParaCentavos, emReais } from "@/lib/crm/ferramentas";
+import { casarItens, taxaDoBairro, emReais } from "@/lib/crm/ferramentas";
 import { podeSerAlteradoPelaIa } from "@/lib/crm/pedidoStatus";
 import { rotaDoCrm, respostaCrm, erroCrm, telefoneDoCorpo, textoOpcional } from "@/lib/crm/rotaCrm";
 
