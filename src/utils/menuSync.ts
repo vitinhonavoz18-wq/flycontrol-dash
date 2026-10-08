@@ -286,19 +286,6 @@ export async function syncToExternal(
     const response = await fetchComRetry(url, init);
     console.log("Status HTTP recebido:", response.status);
 
-    if (
-      response.status === 404 &&
-      protocol === "rest" &&
-      action === "update" &&
-      externalType !== "restaurant"
-    ) {
-      // O painel guardava o código de um item que o site não conhece mais
-      // (foi apagado lá, ou o cardápio do site foi refeito). Em vez de travar
-      // o lojista num erro, recria o item no site e devolve o código novo —
-      // as telas já gravam o código que volta daqui.
-      console.warn("[SyncExternal] 404 no update — item não existe no site, recriando.");
-      return syncToExternal({ ...params, action: "create", externalId: undefined });
-    }
     if (response.status === 404) {
       console.error("[SyncExternal] 404 - Endpoint não encontrado");
       return { success: false, error: "404" };

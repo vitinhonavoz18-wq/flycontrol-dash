@@ -434,37 +434,3 @@ describe("syncToExternal — delivery_zone (bairro e taxa)", () => {
     expect(chamadas).toHaveLength(0);
   });
 });
-
-describe("syncToExternal — item que o site não conhece mais", () => {
-  afterEach(() => {
-    vi.unstubAllGlobals();
-  });
-
-  it("recria o item quando o update dá 404 e devolve o código novo", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(new Response("not found", { status: 404 }))
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ success: true, data: { id: "novo-id" } }), {
-          status: 200,
-          headers: { "content-type": "application/json" },
-        }),
-      );
-    vi.stubGlobal("fetch", fetchMock);
-
-    const result = await syncToExternal({
-      type: "beverage",
-      action: "update",
-      externalId: "sf_bev_antigo",
-      pizzeriaSlug: "loja",
-      pizzeriaApiKey: "chave",
-      syncEndpoint: REST_ENDPOINT,
-      data: { name: "Sukita Lata", price: 500 },
-    });
-
-    expect(result).toEqual({ success: true, externalId: "novo-id" });
-    expect(fetchMock.mock.calls[0][1]?.method).toBe("PUT");
-    expect(fetchMock.mock.calls[1][1]?.method).toBe("POST");
-    expect(fetchMock.mock.calls[1][0]).toBe("https://conectfly.com.br/api/menu-sync/beverage");
-  });
-});
