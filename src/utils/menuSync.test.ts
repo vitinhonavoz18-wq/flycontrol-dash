@@ -434,3 +434,32 @@ describe("syncToExternal — delivery_zone (bairro e taxa)", () => {
     expect(chamadas).toHaveLength(0);
   });
 });
+
+describe("syncToExternal — código de bebida vindo do site (sf_drink_)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("tira o prefixo sf_drink_ antes de falar com o site", async () => {
+    const fetchMock = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ success: true, data: { id: "abc-123" } }), { status: 200 }),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const result = await syncToExternal({
+      type: "beverage",
+      action: "update",
+      externalId: "sf_drink_abc-123",
+      pizzeriaSlug: "loja",
+      pizzeriaApiKey: "chave",
+      syncEndpoint: REST_ENDPOINT,
+      data: { name: "Sukita Lata", price: 500 },
+    });
+
+    expect(result.success).toBe(true);
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      "https://conectfly.com.br/api/menu-sync/beverage/abc-123",
+    );
+  });
+});
