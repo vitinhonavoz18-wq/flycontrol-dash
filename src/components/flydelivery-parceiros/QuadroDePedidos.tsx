@@ -75,12 +75,12 @@ export function QuadroDePedidos() {
 
           {/* As colunas. No celular cabem duas; a terceira aparece a partir
               do tablet — melhor duas legíveis do que três espremidas. */}
-          <div className="mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-3 sm:gap-3">
+          <div className="fdp-quadro-colunas mt-3 grid grid-cols-2 gap-2 sm:mt-4 sm:grid-cols-3 sm:gap-3">
             {QUADRO_DE_EXEMPLO.map((coluna, i) => (
               <Coluna
                 key={coluna.titulo}
                 coluna={coluna}
-                className={i === 2 ? "hidden sm:block" : ""}
+                className={i === 2 ? "fdp-quadro-coluna-extra hidden sm:block" : ""}
               />
             ))}
           </div>

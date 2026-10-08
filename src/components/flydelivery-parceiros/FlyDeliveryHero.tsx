@@ -1,6 +1,6 @@
 import { ArrowRight } from "lucide-react";
 import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial";
-import { HeroVideo } from "./HeroVideo";
+import { HeroVisual } from "./HeroVisual";
 import { LinkDoSistema } from "./LinkDoSistema";
 
 /**
@@ -55,10 +55,10 @@ export function FlyDeliveryHero() {
           </p>
         </div>
 
-        {/* No celular o vídeo encosta nas bordas da tela: as pontas já somem
-            em degradê, então ele "sangra" para fora em vez de virar uma caixa
-            pequena no meio. */}
-        <HeroVideo className="-mx-5 sm:mx-auto sm:w-full sm:max-w-[640px] lg:max-w-none lg:-mr-6 xl:-mr-12" />
+        {/* No celular a animação encosta nas bordas da tela: as pontas do
+            hambúrguer já somem em degradê, então ele "sangra" para fora em vez
+            de virar uma caixa pequena no meio. */}
+        <HeroVisual className="-mx-5 sm:mx-auto sm:w-full sm:max-w-[640px] lg:max-w-none lg:-mr-6 xl:-mr-12" />
       </div>
     </section>
   );

@@ -104,13 +104,103 @@ describe("estrutura", () => {
     );
     expect(total).toBe(1);
   });
+});
 
-  it("o vídeo do Hero toca sozinho, mudo, em loop, sem controles", () => {
-    const video = readFileSync(join(PASTA, "HeroVideo.tsx"), "utf8");
-    const tag = video.match(/<video[\s\S]*?\/>/)?.[0] ?? "";
-    expect(tag).toMatch(/\bmuted\b/);
-    expect(tag).toMatch(/\bloop\b/);
-    expect(tag).toMatch(/\bplaysInline\b/);
-    expect(tag).not.toMatch(/\bcontrols\b/);
+/**
+ * O ciclo do Hero (hambúrguer → pedidos → hambúrguer → marketplace →
+ * hambúrguer). Estes testes leem o CSS e garantem as regras que fazem o laço
+ * não ter emenda — se alguém mexer num tempo e esquecer da outra ponta, o
+ * teste acusa antes de ir para o ar.
+ */
+describe("ciclo do Hero", () => {
+  const css = readFileSync(join(PASTA, "parceiros.css"), "utf8");
+  const visual = readFileSync(join(PASTA, "HeroVisual.tsx"), "utf8");
+
+  /** Devolve os blocos de um @keyframes: { "0%": "...", "16.25%": "...", ... } */
+  function quadrosDe(nome: string): Map<string, string> {
+    const inicio = css.indexOf(`@keyframes ${nome} {`);
+    expect(inicio, `@keyframes ${nome} não existe`).toBeGreaterThanOrEqual(0);
+    let i = css.indexOf("{", inicio) + 1;
+    let nivel = 1;
+    let fim = i;
+    while (nivel > 0 && fim < css.length) {
+      if (css[fim] === "{") nivel++;
+      if (css[fim] === "}") nivel--;
+      fim++;
+    }
+    const corpo = css.slice(i, fim - 1);
+    const mapa = new Map<string, string>();
+    for (const m of corpo.matchAll(/([\d.%,\s]+)\{([^}]*)\}/g)) {
+      // A curva de tempo não é estado visual: fica de fora da comparação.
+      const declaracoes = m[2]
+        .split(";")
+        .map((d) => d.replace(/\s+/g, " ").trim())
+        .filter((d) => d && !d.startsWith("animation-timing-function"))
+        .sort()
+        .join("; ");
+      for (const sel of m[1]
+        .split(",")
+        .map((x) => x.trim())
+        .filter(Boolean)) {
+        mapa.set(sel, declaracoes);
+      }
+      i = 0;
+    }
+    return mapa;
+  }
+
+  const ANIMACOES = [
+    "fdp-heroi-hamburguer",
+    "fdp-heroi-balanco",
+    "fdp-heroi-respiro",
+    "fdp-heroi-pedidos",
+    "fdp-heroi-marketplace",
+  ];
+
+  it.each(ANIMACOES)("%s termina exatamente como começa (laço sem emenda)", (nome) => {
+    const q = quadrosDe(nome);
+    expect(q.get("0%"), `${nome} sem 0%`).toBeTruthy();
+    expect(q.get("100%"), `${nome} sem 100%`).toBeTruthy();
+    expect(q.get("100%")).toBe(q.get("0%"));
+  });
+
+  it("todas as camadas usam o mesmo ciclo (8 s), e o respiro cabe nele inteiro", () => {
+    expect(css).toMatch(/--fdp-heroi-ciclo:\s*8s/);
+    expect(css).toMatch(/animation-duration:\s*var\(--fdp-heroi-ciclo\)/);
+    expect(css).toMatch(/animation-duration:\s*calc\(var\(--fdp-heroi-ciclo\)\s*\/\s*2\)/);
+  });
+
+  it("o hambúrguer está visível no início e no fim; as interfaces, escondidas", () => {
+    expect(quadrosDe("fdp-heroi-hamburguer").get("0%")).toMatch(/opacity: 1/);
+    expect(quadrosDe("fdp-heroi-pedidos").get("0%")).toMatch(/opacity: 0/);
+    expect(quadrosDe("fdp-heroi-marketplace").get("0%")).toMatch(/opacity: 0/);
+  });
+
+  it("só anima o que a placa de vídeo faz sozinha (sem mexer em tamanho ou posição de layout)", () => {
+    for (const nome of ANIMACOES) {
+      for (const declaracoes of quadrosDe(nome).values()) {
+        for (const d of declaracoes.split("; ")) {
+          const propriedade = d.split(":")[0];
+          expect(["opacity", "transform", "filter"], `${nome} anima ${propriedade}`).toContain(
+            propriedade,
+          );
+        }
+      }
+    }
+  });
+
+  it("respeita quem pediu menos movimento", () => {
+    const bloco = css.slice(css.lastIndexOf("@media (prefers-reduced-motion: reduce)"));
+    expect(bloco).toMatch(/\.fdp-heroi \.fdp-heroi-anima\s*\{\s*animation: none !important;/);
+  });
+
+  it("usa a imagem oficial e os componentes que a página já tem", () => {
+    expect(visual).toMatch(/hero-hamburguer\.webp/);
+    expect(visual).toMatch(/<QuadroDePedidos \/>/);
+    expect(visual).toMatch(/<CelularMarketplace \/>/);
+  });
+
+  it("não usa cronômetros: o tempo é todo do CSS", () => {
+    expect(visual).not.toMatch(/setTimeout|setInterval|requestAnimationFrame/);
   });
 });

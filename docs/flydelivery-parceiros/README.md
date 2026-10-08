@@ -15,17 +15,17 @@ funcionando igual, e só quem recebe o endereço vê a vitrine nova.
 
 ## Onde está cada coisa
 
-| O quê | Onde |
-|---|---|
-| A rota (o endereço `/flydelivery-parceiros`) | `src/routes/flydelivery-parceiros.tsx` |
-| A página inteira, montada | `src/components/flydelivery-parceiros/FlyDeliveryParceirosPage.tsx` |
-| As seções (Hero, Ecossistema, Pedidos, Marketplace, Recursos, Operação, FlyBoy, Chamada final, Rodapé) | `src/components/flydelivery-parceiros/*.tsx` |
-| Todos os textos e listas | `src/components/flydelivery-parceiros/dados.ts` |
-| Cores, botões e animações | `src/components/flydelivery-parceiros/parceiros.css` |
-| Título, descrição, Google e prévia do WhatsApp | `src/lib/flydelivery-parceiros/site.ts` |
-| Vídeo, foto inicial e símbolo | `src/assets/flydelivery-parceiros/` |
-| Ícones da aba e imagem da prévia do link | `public/flydelivery-parceiros/` |
-| Vídeo original (intacto) | `docs/flydelivery-parceiros/hero-original.mp4` |
+| O quê                                                                                                  | Onde                                                                |
+| ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------- |
+| A rota (o endereço `/flydelivery-parceiros`)                                                           | `src/routes/flydelivery-parceiros.tsx`                              |
+| A página inteira, montada                                                                              | `src/components/flydelivery-parceiros/FlyDeliveryParceirosPage.tsx` |
+| As seções (Hero, Ecossistema, Pedidos, Marketplace, Recursos, Operação, FlyBoy, Chamada final, Rodapé) | `src/components/flydelivery-parceiros/*.tsx`                        |
+| Todos os textos e listas                                                                               | `src/components/flydelivery-parceiros/dados.ts`                     |
+| Cores, botões e animações                                                                              | `src/components/flydelivery-parceiros/parceiros.css`                |
+| Título, descrição, Google e prévia do WhatsApp                                                         | `src/lib/flydelivery-parceiros/site.ts`                             |
+| Imagem do hambúrguer e símbolo                                                                         | `src/assets/flydelivery-parceiros/`                                 |
+| Ícones da aba e imagem da prévia do link                                                               | `public/flydelivery-parceiros/`                                     |
+| Vídeo original do Hero (intacto, não usado pela página)                                                | `docs/flydelivery-parceiros/hero-original.mp4`                      |
 
 ---
 
@@ -53,51 +53,52 @@ bun run build    # monta o site como ele iria para o ar
 
 ## As chaves (variáveis de ambiente, opcionais)
 
-| Chave | Para quê | Se não existir |
-|---|---|---|
-| `VITE_FLYDELIVERY_PARCEIROS_URL` | Endereço completo da página (ex.: `https://parceiros.flydelivery.com.br`). Vira o endereço oficial informado ao Google e a base da imagem da prévia do WhatsApp. | Usa `https://flycontrol.conectfly.com.br/flydelivery-parceiros` |
-| `VITE_FLYDELIVERY_PARCEIROS_INDEXAR` | Só com o valor `sim` o Google pode mostrar a página nas buscas. | **Não indexa** (seguro) |
-| `VITE_FLYDELIVERY_PARCEIROS_SISTEMA_URL` | Onde ficam cadastro, login, Termos e Privacidade. Usado na cópia de teste para mandar o visitante ao site oficial. | Links internos (o normal) |
+| Chave                                    | Para quê                                                                                                                                                         | Se não existir                                                  |
+| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------- |
+| `VITE_FLYDELIVERY_PARCEIROS_URL`         | Endereço completo da página (ex.: `https://parceiros.flydelivery.com.br`). Vira o endereço oficial informado ao Google e a base da imagem da prévia do WhatsApp. | Usa `https://flycontrol.conectfly.com.br/flydelivery-parceiros` |
+| `VITE_FLYDELIVERY_PARCEIROS_INDEXAR`     | Só com o valor `sim` o Google pode mostrar a página nas buscas.                                                                                                  | **Não indexa** (seguro)                                         |
+| `VITE_FLYDELIVERY_PARCEIROS_SISTEMA_URL` | Onde ficam cadastro, login, Termos e Privacidade. Usado na cópia de teste para mandar o visitante ao site oficial.                                               | Links internos (o normal)                                       |
 
 Esquecer de configurar nunca publica a página de teste no Google — o padrão
 é sempre "não indexar".
 
 ---
 
-## O vídeo do Hero
+## A animação do Hero
 
-O arquivo que chegou (`hero-original.mp4`, 1280×720, 8 s, 3 MB) é uma tela de
-site inteira: já vem com o menu, o título e os botões desenhados dentro. Se
-fosse usado inteiro do lado direito, o visitante leria o título duas vezes.
+O lado direito do Hero é uma **animação nativa da página** (não é mais um
+vídeo): hambúrguer → Gestão de Pedidos → hambúrguer → Marketplace →
+hambúrguer, num ciclo de 8 segundos sem emenda visível.
 
-Por isso a versão do site mostra **só o lado direito do quadro**, onde a
-animação acontece. Nada foi redesenhado, só enquadrado. Também saiu o áudio,
-porque o vídeo toca sempre mudo.
+| Peça              | De onde vem                                                                                                                             |
+| ----------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
+| Hambúrguer        | `src/assets/flydelivery-parceiros/hero-hamburguer.webp` — o primeiro quadro do vídeo oficial do Hero (o mesmo que a página já mostrava) |
+| Gestão de Pedidos | o componente `QuadroDePedidos` — o mesmo da seção "Gestão de pedidos"                                                                   |
+| Marketplace       | o componente `CelularMarketplace` — o mesmo da seção "Marketplace"                                                                      |
 
-| Arquivo | Tamanho | Para quem |
-|---|---|---|
-| `hero-loop.mp4` (H.264) | ~0,8 MB | Quase todos os navegadores |
-| `hero-loop.webm` (VP9) | ~0,9 MB | Reserva, só para quem não toca MP4 |
-| `hero-poster.webp` | ~48 KB | A foto que aparece na hora |
+Onde ajustar:
 
-Como foram gerados (recorte de 744×640 a partir do ponto x=536, y=80):
+- **Componente:** `src/components/flydelivery-parceiros/HeroVisual.tsx`.
+- **Tempo e movimento:** `parceiros.css`, seção "HERO — o ciclo do
+  hambúrguer". Os ajustes ficam no topo da seção, com nome em português
+  (`--fdp-heroi-ciclo`, `--fdp-heroi-balanco`, `--fdp-heroi-flutuacao`…), e a
+  linha do tempo está escrita num quadro logo acima deles.
 
-```bash
-ffmpeg -i hero-original.mp4 -vf "crop=744:640:536:80" -an \
-  -c:v libx264 -preset veryslow -crf 25 -profile:v high -pix_fmt yuv420p \
-  -movflags +faststart hero-loop.mp4
+Garantias (conferidas por testes automáticos em `parceiros.test.ts`):
 
-ffmpeg -i hero-original.mp4 -vf "crop=744:640:536:80" -an \
-  -c:v libvpx-vp9 -crf 35 -b:v 0 -row-mt 1 -deadline good -cpu-used 1 -g 96 \
-  -pix_fmt yuv420p hero-loop.webm
+- o último instante de cada camada é idêntico ao primeiro — o laço não salta;
+- todas as camadas usam o mesmo ciclo de 8 s;
+- só se anima transparência, posição/escala/giro e um desfoque leve — nada
+  que empurre o resto da página;
+- quem pede menos movimento no aparelho vê só o hambúrguer, parado;
+- sem cronômetros no código: o tempo é todo do CSS.
 
-ffmpeg -i hero-original.mp4 -vf "crop=744:640:536:80" -frames:v 1 \
-  -c:v libwebp -quality 82 hero-poster.webp
-```
+A animação pausa sozinha quando o Hero sai da tela e tem um botão "Pausar
+animação" que aparece para quem navega pelo teclado (Tab).
 
-**Observação:** o vídeo termina no celular e recomeça no hambúrguer. A virada
-do loop é um corte seco — está assim no arquivo original. Se quiser uma
-emenda invisível, o ajuste é no vídeo, não no site.
+O vídeo de referência de movimento não foi adicionado ao projeto. O vídeo
+original do Hero não é mais usado pela página, mas continua guardado intacto
+em `hero-original.mp4`.
 
 ---
 
@@ -135,7 +136,7 @@ roda sozinho quando chega código nas branches `claude/ecstatic-allen-de1jao` ou
 - qualquer outro endereço (login, cadastro, painel) vai para o site oficial;
 - não aceita envio de nada (cadastro, formulário, pagamento): só abrir páginas;
 - a página entregue proíbe o navegador de falar com o banco de dados;
-- pede ao Google para não indexar nada (páginas, fotos e vídeo).
+- pede ao Google para não indexar nada (páginas e imagens).
 
 Os botões "Começar grátis", "Entrar", "Termos" e "Privacidade" abrem o site
 oficial, levando junto o código de afiliado (`?ref=`) se a pessoa chegou com um.
