@@ -230,6 +230,9 @@ function AppLayoutInner() {
     // Programa de afiliados: aprovação de parceiros, comissões, saques e
     // auditoria. Só aparece aqui, no bloco do Painel Admin.
     { to: "/admin/affiliates", label: "Afiliados", icon: Handshake },
+    // Pix pago no aplicativo FlyDelivery com split SyncPay: comissões,
+    // contas recebedoras das lojas, conciliação e auditoria.
+    { to: "/admin/flydelivery-pagamentos", label: "Pagamentos FlyDelivery", icon: Wallet },
   ];
 
   const NavItems = ({ className = "" }: { className?: string }) => (
