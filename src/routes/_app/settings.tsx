@@ -1,11 +1,21 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { RevisaoDoTutorial } from "@/components/onboarding/guia/RevisaoDoTutorial";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
-import { Copy, Check, Plug, Plus, Play, ExternalLink, Loader2 } from "lucide-react";
+import {
+  Banknote,
+  ChevronRight,
+  Copy,
+  Check,
+  Plug,
+  Plus,
+  Play,
+  ExternalLink,
+  Loader2,
+} from "lucide-react";
 import { Input } from "@/components/ui/input";
 import {
   Dialog,
@@ -504,6 +514,26 @@ function Settings() {
       )}
       <div className="mb-8">
         <NotificationSettings />
+      </div>
+
+      {/* Financeiro › Recebimentos: conta SyncPay da loja para receber o Pix
+          pago no aplicativo FlyDelivery, com a divisão automática. */}
+      <div className="mb-8 rounded-xl border border-primary/30 bg-card p-5">
+        <div className="mb-2 flex items-center gap-2">
+          <Banknote className="h-5 w-5 text-primary" />
+          <h2 className="text-lg font-semibold">Financeiro</h2>
+        </div>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-sm text-muted-foreground">
+            Recebimentos do Pix pago no aplicativo FlyDelivery: sua conta SyncPay, comissão e
+            vendas.
+          </p>
+          <Button asChild variant="outline" className="gap-2">
+            <Link to="/financeiro/recebimentos">
+              Recebimentos <ChevronRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

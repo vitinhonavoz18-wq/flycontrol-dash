@@ -54,9 +54,11 @@ import { Route as AppAdminAffiliatesRouteImport } from './routes/_app/admin/affi
 import { Route as AppAdminAnalyticsRouteImport } from './routes/_app/admin/analytics'
 import { Route as AppAdminCentsRouteImport } from './routes/_app/admin/cents'
 import { Route as AppAdminFinanceRouteImport } from './routes/_app/admin/finance'
+import { Route as AppAdminFlydeliveryPagamentosRouteImport } from './routes/_app/admin/flydelivery-pagamentos'
 import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizzerias'
 import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
+import { Route as AppFinanceiroRecebimentosRouteImport } from './routes/_app/financeiro.recebimentos'
 import { Route as AppInventoryIndexRouteImport } from './routes/_app/inventory.index'
 import { Route as AppInventoryCountRouteImport } from './routes/_app/inventory.count'
 import { Route as AppInventoryEntriesRouteImport } from './routes/_app/inventory.entries'
@@ -96,6 +98,7 @@ import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/publ
 import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/public/request-close-table'
 import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
 import { Route as ApiWebhooksInfinitypayRouteImport } from './routes/api/webhooks.infinitypay'
+import { Route as ApiWebhooksSyncpayRouteImport } from './routes/api/webhooks.syncpay'
 import { Route as ApiWebhooksWhatsappStatusRouteImport } from './routes/api/webhooks.whatsapp-status'
 import { Route as AppAdminAffiliatesIndexRouteImport } from './routes/_app/admin/affiliates.index'
 import { Route as AppAdminAffiliatesAuditRouteImport } from './routes/_app/admin/affiliates.audit'
@@ -104,6 +107,8 @@ import { Route as AppAdminAffiliatesReferralsRouteImport } from './routes/_app/a
 import { Route as AppAdminAffiliatesSettingsRouteImport } from './routes/_app/admin/affiliates.settings'
 import { Route as AppAdminAffiliatesWithdrawalsRouteImport } from './routes/_app/admin/affiliates.withdrawals'
 import { Route as ApiCrmOutboxResultRouteImport } from './routes/api/crm.outbox.result'
+import { Route as ApiFlydeliveryPagamentosConciliarRouteImport } from './routes/api/flydelivery.pagamentos.conciliar'
+import { Route as ApiFlydeliveryPagamentosPixRouteImport } from './routes/api/flydelivery.pagamentos.pix'
 import { Route as ApiMarketingQueueResultRouteImport } from './routes/api/marketing.queue.result'
 import { Route as ApiPizzeriasIdDeactivateRouteImport } from './routes/api/pizzerias.$id.deactivate'
 import { Route as ApiPizzeriasIdDeleteRouteImport } from './routes/api/pizzerias.$id.delete'
@@ -336,6 +341,12 @@ const AppAdminFinanceRoute = AppAdminFinanceRouteImport.update({
   path: '/finance',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppAdminFlydeliveryPagamentosRoute =
+  AppAdminFlydeliveryPagamentosRouteImport.update({
+    id: '/flydelivery-pagamentos',
+    path: '/flydelivery-pagamentos',
+    getParentRoute: () => AppAdminRoute,
+  } as any)
 const AppAdminPizzeriasRoute = AppAdminPizzeriasRouteImport.update({
   id: '/pizzerias',
   path: '/pizzerias',
@@ -351,6 +362,12 @@ const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppFinanceiroRecebimentosRoute =
+  AppFinanceiroRecebimentosRouteImport.update({
+    id: '/financeiro/recebimentos',
+    path: '/financeiro/recebimentos',
+    getParentRoute: () => AppRoute,
+  } as any)
 const AppInventoryIndexRoute = AppInventoryIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -555,6 +572,11 @@ const ApiWebhooksInfinitypayRoute = ApiWebhooksInfinitypayRouteImport.update({
   path: '/api/webhooks/infinitypay',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiWebhooksSyncpayRoute = ApiWebhooksSyncpayRouteImport.update({
+  id: '/api/webhooks/syncpay',
+  path: '/api/webhooks/syncpay',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWebhooksWhatsappStatusRoute =
   ApiWebhooksWhatsappStatusRouteImport.update({
     id: '/api/webhooks/whatsapp-status',
@@ -600,6 +622,18 @@ const ApiCrmOutboxResultRoute = ApiCrmOutboxResultRouteImport.update({
   path: '/result',
   getParentRoute: () => ApiCrmOutboxRoute,
 } as any)
+const ApiFlydeliveryPagamentosConciliarRoute =
+  ApiFlydeliveryPagamentosConciliarRouteImport.update({
+    id: '/api/flydelivery/pagamentos/conciliar',
+    path: '/api/flydelivery/pagamentos/conciliar',
+    getParentRoute: () => rootRouteImport,
+  } as any)
+const ApiFlydeliveryPagamentosPixRoute =
+  ApiFlydeliveryPagamentosPixRouteImport.update({
+    id: '/api/flydelivery/pagamentos/pix',
+    path: '/api/flydelivery/pagamentos/pix',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiMarketingQueueResultRoute = ApiMarketingQueueResultRouteImport.update({
   id: '/result',
   path: '/result',
@@ -684,9 +718,11 @@ export interface FileRoutesByFullPath {
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/cents': typeof AppAdminCentsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
+  '/admin/flydelivery-pagamentos': typeof AppAdminFlydeliveryPagamentosRoute
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/financeiro/recebimentos': typeof AppFinanceiroRecebimentosRoute
   '/inventory/count': typeof AppInventoryCountRoute
   '/inventory/entries': typeof AppInventoryEntriesRoute
   '/inventory/movements': typeof AppInventoryMovementsRoute
@@ -724,6 +760,7 @@ export interface FileRoutesByFullPath {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
+  '/api/webhooks/syncpay': typeof ApiWebhooksSyncpayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/admin/': typeof AppAdminIndexRoute
   '/inventory/': typeof AppInventoryIndexRoute
@@ -734,6 +771,8 @@ export interface FileRoutesByFullPath {
   '/admin/affiliates/settings': typeof AppAdminAffiliatesSettingsRoute
   '/admin/affiliates/withdrawals': typeof AppAdminAffiliatesWithdrawalsRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
+  '/api/flydelivery/pagamentos/conciliar': typeof ApiFlydeliveryPagamentosConciliarRoute
+  '/api/flydelivery/pagamentos/pix': typeof ApiFlydeliveryPagamentosPixRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -782,9 +821,11 @@ export interface FileRoutesByTo {
   '/admin/analytics': typeof AppAdminAnalyticsRoute
   '/admin/cents': typeof AppAdminCentsRoute
   '/admin/finance': typeof AppAdminFinanceRoute
+  '/admin/flydelivery-pagamentos': typeof AppAdminFlydeliveryPagamentosRoute
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/financeiro/recebimentos': typeof AppFinanceiroRecebimentosRoute
   '/inventory/count': typeof AppInventoryCountRoute
   '/inventory/entries': typeof AppInventoryEntriesRoute
   '/inventory/movements': typeof AppInventoryMovementsRoute
@@ -822,6 +863,7 @@ export interface FileRoutesByTo {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
+  '/api/webhooks/syncpay': typeof ApiWebhooksSyncpayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/admin': typeof AppAdminIndexRoute
   '/inventory': typeof AppInventoryIndexRoute
@@ -832,6 +874,8 @@ export interface FileRoutesByTo {
   '/admin/affiliates/settings': typeof AppAdminAffiliatesSettingsRoute
   '/admin/affiliates/withdrawals': typeof AppAdminAffiliatesWithdrawalsRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
+  '/api/flydelivery/pagamentos/conciliar': typeof ApiFlydeliveryPagamentosConciliarRoute
+  '/api/flydelivery/pagamentos/pix': typeof ApiFlydeliveryPagamentosPixRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -887,9 +931,11 @@ export interface FileRoutesById {
   '/_app/admin/analytics': typeof AppAdminAnalyticsRoute
   '/_app/admin/cents': typeof AppAdminCentsRoute
   '/_app/admin/finance': typeof AppAdminFinanceRoute
+  '/_app/admin/flydelivery-pagamentos': typeof AppAdminFlydeliveryPagamentosRoute
   '/_app/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
+  '/_app/financeiro/recebimentos': typeof AppFinanceiroRecebimentosRoute
   '/_app/inventory/count': typeof AppInventoryCountRoute
   '/_app/inventory/entries': typeof AppInventoryEntriesRoute
   '/_app/inventory/movements': typeof AppInventoryMovementsRoute
@@ -927,6 +973,7 @@ export interface FileRoutesById {
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
+  '/api/webhooks/syncpay': typeof ApiWebhooksSyncpayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
   '/_app/admin/': typeof AppAdminIndexRoute
   '/_app/inventory/': typeof AppInventoryIndexRoute
@@ -937,6 +984,8 @@ export interface FileRoutesById {
   '/_app/admin/affiliates/settings': typeof AppAdminAffiliatesSettingsRoute
   '/_app/admin/affiliates/withdrawals': typeof AppAdminAffiliatesWithdrawalsRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
+  '/api/flydelivery/pagamentos/conciliar': typeof ApiFlydeliveryPagamentosConciliarRoute
+  '/api/flydelivery/pagamentos/pix': typeof ApiFlydeliveryPagamentosPixRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
@@ -992,9 +1041,11 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/cents'
     | '/admin/finance'
+    | '/admin/flydelivery-pagamentos'
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/financeiro/recebimentos'
     | '/inventory/count'
     | '/inventory/entries'
     | '/inventory/movements'
@@ -1032,6 +1083,7 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/api/webhooks/infinitypay'
+    | '/api/webhooks/syncpay'
     | '/api/webhooks/whatsapp-status'
     | '/admin/'
     | '/inventory/'
@@ -1042,6 +1094,8 @@ export interface FileRouteTypes {
     | '/admin/affiliates/settings'
     | '/admin/affiliates/withdrawals'
     | '/api/crm/outbox/result'
+    | '/api/flydelivery/pagamentos/conciliar'
+    | '/api/flydelivery/pagamentos/pix'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -1090,9 +1144,11 @@ export interface FileRouteTypes {
     | '/admin/analytics'
     | '/admin/cents'
     | '/admin/finance'
+    | '/admin/flydelivery-pagamentos'
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/financeiro/recebimentos'
     | '/inventory/count'
     | '/inventory/entries'
     | '/inventory/movements'
@@ -1130,6 +1186,7 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/api/webhooks/infinitypay'
+    | '/api/webhooks/syncpay'
     | '/api/webhooks/whatsapp-status'
     | '/admin'
     | '/inventory'
@@ -1140,6 +1197,8 @@ export interface FileRouteTypes {
     | '/admin/affiliates/settings'
     | '/admin/affiliates/withdrawals'
     | '/api/crm/outbox/result'
+    | '/api/flydelivery/pagamentos/conciliar'
+    | '/api/flydelivery/pagamentos/pix'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -1194,9 +1253,11 @@ export interface FileRouteTypes {
     | '/_app/admin/analytics'
     | '/_app/admin/cents'
     | '/_app/admin/finance'
+    | '/_app/admin/flydelivery-pagamentos'
     | '/_app/admin/pizzerias'
     | '/_app/admin/subscriptions'
     | '/_app/admin/users'
+    | '/_app/financeiro/recebimentos'
     | '/_app/inventory/count'
     | '/_app/inventory/entries'
     | '/_app/inventory/movements'
@@ -1234,6 +1295,7 @@ export interface FileRouteTypes {
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
     | '/api/webhooks/infinitypay'
+    | '/api/webhooks/syncpay'
     | '/api/webhooks/whatsapp-status'
     | '/_app/admin/'
     | '/_app/inventory/'
@@ -1244,6 +1306,8 @@ export interface FileRouteTypes {
     | '/_app/admin/affiliates/settings'
     | '/_app/admin/affiliates/withdrawals'
     | '/api/crm/outbox/result'
+    | '/api/flydelivery/pagamentos/conciliar'
+    | '/api/flydelivery/pagamentos/pix'
     | '/api/marketing/queue/result'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
@@ -1297,7 +1361,10 @@ export interface RootRouteChildren {
   ApiPublicRequestCloseTableRoute: typeof ApiPublicRequestCloseTableRoute
   ApiPublicTableSessionStatusRoute: typeof ApiPublicTableSessionStatusRoute
   ApiWebhooksInfinitypayRoute: typeof ApiWebhooksInfinitypayRoute
+  ApiWebhooksSyncpayRoute: typeof ApiWebhooksSyncpayRoute
   ApiWebhooksWhatsappStatusRoute: typeof ApiWebhooksWhatsappStatusRoute
+  ApiFlydeliveryPagamentosConciliarRoute: typeof ApiFlydeliveryPagamentosConciliarRoute
+  ApiFlydeliveryPagamentosPixRoute: typeof ApiFlydeliveryPagamentosPixRoute
   ApiPizzeriasIdDeactivateRoute: typeof ApiPizzeriasIdDeactivateRoute
   ApiPizzeriasIdDeleteRoute: typeof ApiPizzeriasIdDeleteRoute
   ApiPizzeriasIdProvisionRoute: typeof ApiPizzeriasIdProvisionRoute
@@ -1621,6 +1688,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminFinanceRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/_app/admin/flydelivery-pagamentos': {
+      id: '/_app/admin/flydelivery-pagamentos'
+      path: '/flydelivery-pagamentos'
+      fullPath: '/admin/flydelivery-pagamentos'
+      preLoaderRoute: typeof AppAdminFlydeliveryPagamentosRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/admin/pizzerias': {
       id: '/_app/admin/pizzerias'
       path: '/pizzerias'
@@ -1641,6 +1715,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/users'
       preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppAdminRoute
+    }
+    '/_app/financeiro/recebimentos': {
+      id: '/_app/financeiro/recebimentos'
+      path: '/financeiro/recebimentos'
+      fullPath: '/financeiro/recebimentos'
+      preLoaderRoute: typeof AppFinanceiroRecebimentosRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/inventory/': {
       id: '/_app/inventory/'
@@ -1915,6 +1996,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiWebhooksInfinitypayRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/webhooks/syncpay': {
+      id: '/api/webhooks/syncpay'
+      path: '/api/webhooks/syncpay'
+      fullPath: '/api/webhooks/syncpay'
+      preLoaderRoute: typeof ApiWebhooksSyncpayRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/webhooks/whatsapp-status': {
       id: '/api/webhooks/whatsapp-status'
       path: '/api/webhooks/whatsapp-status'
@@ -1970,6 +2058,20 @@ declare module '@tanstack/react-router' {
       fullPath: '/api/crm/outbox/result'
       preLoaderRoute: typeof ApiCrmOutboxResultRouteImport
       parentRoute: typeof ApiCrmOutboxRoute
+    }
+    '/api/flydelivery/pagamentos/conciliar': {
+      id: '/api/flydelivery/pagamentos/conciliar'
+      path: '/api/flydelivery/pagamentos/conciliar'
+      fullPath: '/api/flydelivery/pagamentos/conciliar'
+      preLoaderRoute: typeof ApiFlydeliveryPagamentosConciliarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/flydelivery/pagamentos/pix': {
+      id: '/api/flydelivery/pagamentos/pix'
+      path: '/api/flydelivery/pagamentos/pix'
+      fullPath: '/api/flydelivery/pagamentos/pix'
+      preLoaderRoute: typeof ApiFlydeliveryPagamentosPixRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/api/marketing/queue/result': {
       id: '/api/marketing/queue/result'
@@ -2054,6 +2156,7 @@ interface AppAdminRouteChildren {
   AppAdminAnalyticsRoute: typeof AppAdminAnalyticsRoute
   AppAdminCentsRoute: typeof AppAdminCentsRoute
   AppAdminFinanceRoute: typeof AppAdminFinanceRoute
+  AppAdminFlydeliveryPagamentosRoute: typeof AppAdminFlydeliveryPagamentosRoute
   AppAdminPizzeriasRoute: typeof AppAdminPizzeriasRoute
   AppAdminSubscriptionsRoute: typeof AppAdminSubscriptionsRoute
   AppAdminUsersRoute: typeof AppAdminUsersRoute
@@ -2065,6 +2168,7 @@ const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminAnalyticsRoute: AppAdminAnalyticsRoute,
   AppAdminCentsRoute: AppAdminCentsRoute,
   AppAdminFinanceRoute: AppAdminFinanceRoute,
+  AppAdminFlydeliveryPagamentosRoute: AppAdminFlydeliveryPagamentosRoute,
   AppAdminPizzeriasRoute: AppAdminPizzeriasRoute,
   AppAdminSubscriptionsRoute: AppAdminSubscriptionsRoute,
   AppAdminUsersRoute: AppAdminUsersRoute,
@@ -2121,6 +2225,7 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppTablesRoute: typeof AppTablesRoute
   AppWaitersRoute: typeof AppWaitersRoute
+  AppFinanceiroRecebimentosRoute: typeof AppFinanceiroRecebimentosRoute
 }
 
 const AppRouteChildren: AppRouteChildren = {
@@ -2141,6 +2246,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppTablesRoute: AppTablesRoute,
   AppWaitersRoute: AppWaitersRoute,
+  AppFinanceiroRecebimentosRoute: AppFinanceiroRecebimentosRoute,
 }
 
 const AppRouteWithChildren = AppRoute._addFileChildren(AppRouteChildren)
@@ -2252,7 +2358,11 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicRequestCloseTableRoute: ApiPublicRequestCloseTableRoute,
   ApiPublicTableSessionStatusRoute: ApiPublicTableSessionStatusRoute,
   ApiWebhooksInfinitypayRoute: ApiWebhooksInfinitypayRoute,
+  ApiWebhooksSyncpayRoute: ApiWebhooksSyncpayRoute,
   ApiWebhooksWhatsappStatusRoute: ApiWebhooksWhatsappStatusRoute,
+  ApiFlydeliveryPagamentosConciliarRoute:
+    ApiFlydeliveryPagamentosConciliarRoute,
+  ApiFlydeliveryPagamentosPixRoute: ApiFlydeliveryPagamentosPixRoute,
   ApiPizzeriasIdDeactivateRoute: ApiPizzeriasIdDeactivateRoute,
   ApiPizzeriasIdDeleteRoute: ApiPizzeriasIdDeleteRoute,
   ApiPizzeriasIdProvisionRoute: ApiPizzeriasIdProvisionRoute,
