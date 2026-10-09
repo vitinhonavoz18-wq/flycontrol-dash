@@ -204,3 +204,60 @@ describe("ciclo do Hero", () => {
     expect(visual).not.toMatch(/setTimeout|setInterval|requestAnimationFrame/);
   });
 });
+
+/**
+ * O celular da seção Marketplace é uma foto (o mockup aprovado), não o
+ * desenho. Estes testes garantem que ela continua leve, transparente e com o
+ * tamanho certo declarado — se alguém trocar o arquivo e esquecer de
+ * atualizar width/height, a página "pularia" ao carregar; o teste acusa antes.
+ */
+describe("celular do Marketplace", () => {
+  const secao = readFileSync(join(PASTA, "MarketplaceSection.tsx"), "utf8");
+  const arquivo = readFileSync(
+    join(RAIZ, "src", "assets", "flydelivery-parceiros", "marketplace-celular.webp"),
+  );
+
+  /** Lê o cabeçalho VP8X do WebP: tamanho da imagem e se tem transparência. */
+  function cabecalhoWebp(b: Buffer) {
+    expect(b.toString("ascii", 0, 4)).toBe("RIFF");
+    expect(b.toString("ascii", 8, 12)).toBe("WEBP");
+    expect(b.toString("ascii", 12, 16), "WebP sem VP8X (sem transparência)").toBe("VP8X");
+    return {
+      transparente: (b[20] & 0x10) !== 0,
+      largura: b.readUIntLE(24, 3) + 1,
+      altura: b.readUIntLE(27, 3) + 1,
+    };
+  }
+
+  it("a seção mostra a foto aprovada, e não mais o desenho", () => {
+    expect(secao).toMatch(/assets\/flydelivery-parceiros\/marketplace-celular\.webp/);
+    expect(secao).not.toMatch(/<CelularMarketplace\b/);
+  });
+
+  it("o arquivo é WebP com fundo transparente e leve (até 150 KB)", () => {
+    const { transparente } = cabecalhoWebp(arquivo);
+    expect(transparente).toBe(true);
+    expect(arquivo.length).toBeLessThanOrEqual(150 * 1024);
+  });
+
+  it("width/height no código são os do arquivo (a página não pula ao carregar)", () => {
+    const { largura, altura } = cabecalhoWebp(arquivo);
+    expect(secao).toMatch(new RegExp(`width=\\{${largura}\\}`));
+    expect(secao).toMatch(new RegExp(`height=\\{${altura}\\}`));
+  });
+
+  it("tem descrição para leitor de tela e só carrega perto da seção", () => {
+    const alt = secao.match(/alt="([^"]*)"/)?.[1] ?? "";
+    expect(alt.length).toBeGreaterThan(30);
+    expect(secao).toMatch(/loading="lazy"/);
+  });
+
+  it("não tem largura fixa que estoure tela pequena", () => {
+    // No celular a largura acompanha a tela (vw), com piso que cabe em 320 px.
+    const larguraCelular = secao.match(/w-\[clamp\((\d+)px,(\d+)vw,(\d+)px\)\]/);
+    expect(larguraCelular, "largura do celular deveria ser clamp(…px,…vw,…px)").toBeTruthy();
+    const [, piso, vw] = larguraCelular!.map(Number);
+    expect(piso).toBeLessThanOrEqual(320 - 2 * 20); // tela de 320 px menos as margens
+    expect(vw).toBeLessThanOrEqual(80);
+  });
+});

@@ -1,5 +1,5 @@
 import { Reveal } from "@/components/landing/primitivos";
-import { CelularMarketplace } from "./CelularMarketplace";
+import celularMarketplace from "@/assets/flydelivery-parceiros/marketplace-celular.webp";
 import { PONTOS_MARKETPLACE } from "./dados";
 import { CabecalhoDeSecao } from "./primitivos";
 
@@ -9,6 +9,17 @@ import { CabecalhoDeSecao } from "./primitivos";
  * Pouco texto: uma frase e cinco itens de uma linha. O celular conta o resto.
  * A frase central é a mais importante para o dono do restaurante — ele
  * cadastra uma vez só, no painel, e o aplicativo mostra igual.
+ *
+ * O celular é a imagem aprovada do aplicativo (moldura cobre, levemente
+ * inclinado), recortada da referência com fundo transparente — assim ele
+ * assenta no fundo da seção sem "caixa" em volta, e a sombra que veio na
+ * imagem vira sombra de verdade. A referência inteira fica guardada em
+ * docs/flydelivery-parceiros/marketplace-referencia.webp.
+ *
+ * Tamanho: no celular, ~60% da largura da tela (como na imagem aprovada); no
+ * tablet para em 320 px; no computador, 340 px — perto da altura do texto ao
+ * lado. width/height são os do arquivo: o navegador reserva o espaço antes da
+ * imagem chegar, e nada pula na tela.
  */
 export function MarketplaceSection() {
   return (
@@ -26,9 +37,17 @@ export function MarketplaceSection() {
         }}
       />
 
-      <div className="mx-auto grid max-w-[1240px] items-center gap-14 lg:grid-cols-2 lg:gap-20">
+      <div className="mx-auto grid max-w-[1240px] items-center gap-6 lg:grid-cols-2 lg:gap-20">
         <Reveal className="order-2 lg:order-1">
-          <CelularMarketplace />
+          <img
+            src={celularMarketplace}
+            alt="Aplicativo FlyDelivery aberto no celular: busca de restaurantes, pedido em andamento, categorias, produto em destaque e ofertas de lojas perto de você."
+            width={588}
+            height={1027}
+            loading="lazy"
+            decoding="async"
+            className="fdp-marketplace-celular mx-auto block h-auto w-[clamp(208px,62vw,320px)] lg:w-[340px]"
+          />
         </Reveal>
 
         <div className="order-1 lg:order-2">

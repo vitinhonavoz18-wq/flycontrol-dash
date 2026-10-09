@@ -23,9 +23,10 @@ funcionando igual, e só quem recebe o endereço vê a vitrine nova.
 | Todos os textos e listas                                                                               | `src/components/flydelivery-parceiros/dados.ts`                     |
 | Cores, botões e animações                                                                              | `src/components/flydelivery-parceiros/parceiros.css`                |
 | Título, descrição, Google e prévia do WhatsApp                                                         | `src/lib/flydelivery-parceiros/site.ts`                             |
-| Imagem do hambúrguer e símbolo                                                                         | `src/assets/flydelivery-parceiros/`                                 |
+| Imagens (hambúrguer, celular do Marketplace, símbolo)                                                  | `src/assets/flydelivery-parceiros/`                                 |
 | Ícones da aba e imagem da prévia do link                                                               | `public/flydelivery-parceiros/`                                     |
 | Vídeo original do Hero (intacto, não usado pela página)                                                | `docs/flydelivery-parceiros/hero-original.mp4`                      |
+| Imagem de referência do celular do Marketplace (intacta, não usada pela página)                        | `docs/flydelivery-parceiros/marketplace-referencia.webp`            |
 
 ---
 
@@ -74,7 +75,7 @@ hambúrguer, num ciclo de 8 segundos sem emenda visível.
 | ----------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
 | Hambúrguer        | `src/assets/flydelivery-parceiros/hero-hamburguer.webp` — o primeiro quadro do vídeo oficial do Hero (o mesmo que a página já mostrava) |
 | Gestão de Pedidos | o componente `QuadroDePedidos` — o mesmo da seção "Gestão de pedidos"                                                                   |
-| Marketplace       | o componente `CelularMarketplace` — o mesmo da seção "Marketplace"                                                                      |
+| Marketplace       | o componente `CelularMarketplace` — o celular desenhado com código (a seção "Marketplace" usa a foto, ver abaixo)                       |
 
 Onde ajustar:
 
@@ -99,6 +100,32 @@ animação" que aparece para quem navega pelo teclado (Tab).
 O vídeo de referência de movimento não foi adicionado ao projeto. O vídeo
 original do Hero não é mais usado pela página, mas continua guardado intacto
 em `hero-original.mp4`.
+
+---
+
+## O celular da seção Marketplace
+
+É a **imagem aprovada** do aplicativo FlyDelivery (moldura cobre, levemente
+inclinado), em `src/assets/flydelivery-parceiros/marketplace-celular.webp`.
+
+- Foi recortada de `docs/flydelivery-parceiros/marketplace-referencia.webp`
+  com **fundo transparente**: o celular fica opaco e a sombra que veio na
+  imagem vira sombra de verdade, que assenta no fundo da seção. Sobre fundo
+  branco, o resultado é visualmente igual à referência.
+- Tamanho do arquivo: 588 × 1027 px, ~110 KB. Só carrega quando a pessoa
+  chega perto da seção.
+- Nitidez: a referência é o único arquivo que existe, e o celular nela tem
+  ~550 px de largura. Em iPhone e MacBook (telas de alta densidade), olhando
+  de muito perto, a tela do app fica um pouco menos nítida que o texto da
+  página. Com o arquivo original do mockup em resolução maior (≥ 1000 px de
+  largura), refaça o recorte e troque o arquivo.
+- Na tela: ~60% da largura no celular (como na imagem aprovada), até 320 px
+  no tablet, 340 px no computador.
+
+**Para trocar a imagem** (por exemplo, por uma versão em resolução maior):
+substitua o arquivo mantendo o nome e o fundo transparente, e atualize
+`width`/`height` em `MarketplaceSection.tsx` para o tamanho do novo arquivo.
+Um teste automático confere que os dois batem — se esquecer, ele avisa.
 
 ---
 

@@ -17,7 +17,9 @@ import { QuadroDePedidos } from "./QuadroDePedidos";
  * - Hambúrguer: a mesma imagem que o Hero já mostrava (o primeiro quadro do
  *   vídeo oficial). Ele balança devagar, como um produto girando numa vitrine.
  * - Pedidos: o MESMO quadro de pedidos da seção "Gestão de pedidos".
- * - Marketplace: o MESMO celular da seção "Marketplace".
+ * - Marketplace: o celular do aplicativo desenhado com código
+ *   (CelularMarketplace) — o que a seção "Marketplace" usava antes de ganhar
+ *   a foto do celular.
  * Nada foi redesenhado: são as peças que a página já tinha.
  *
  * QUEM COMANDA O TEMPO
@@ -125,7 +127,7 @@ function CamadaPedidos() {
   );
 }
 
-/** O Marketplace: o celular da seção 04. */
+/** O Marketplace: o celular desenhado com código (CelularMarketplace). */
 function CamadaMarketplace() {
   return (
     <div aria-hidden="true" className="fdp-heroi-camada fdp-heroi-marketplace fdp-heroi-anima">

@@ -18,6 +18,9 @@ import simbolo from "@/assets/flydelivery-parceiros/fly-delivery-simbolo.webp";
 /**
  * A ilustração do aplicativo FlyDelivery aberto no celular.
  *
+ * Usada na animação do Hero (HeroVisual). A seção Marketplace mostra a foto
+ * aprovada do celular (marketplace-celular.webp), não este desenho.
+ *
  * Desenhada com código (nítida e leve, como o quadro de pedidos). A primeira
  * loja da lista é "Sua loja" — a ideia da seção numa imagem só: o seu
  * restaurante aparecendo para quem está com fome perto de você.
