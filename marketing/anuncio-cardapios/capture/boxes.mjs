@@ -1,0 +1,22 @@
+import { openStore, settle, prepareHero } from './lib.mjs';
+const { b, p } = await openStore('acai-deus-provera', { dpr: 1 }); await settle(p, 1500); await prepareHero(p);
+await p.evaluate(() => {
+  const t = [...document.querySelectorAll('*')].find(e => e.childElementCount === 0 && /AÇAÍ NA TIGELA 500ML/i.test(e.textContent));
+  let c = t; while (c && ![...c.querySelectorAll('button')].some(b => /adicionar$/i.test(b.innerText.trim()))) c = c.parentElement;
+  c.setAttribute('data-cap', 'card');
+});
+const card = p.locator('[data-cap=card]');
+const yOf = await p.evaluate(() => { const el = [...document.querySelectorAll('h1,h2,h3,h4,p,span,div,button')].find(e => e.childElementCount <= 1 && /^AÇAÍ NA TIGELA 500ML/i.test((e.innerText || '').trim())); return el.getBoundingClientRect().top + window.scrollY - 330; });
+await p.evaluate((y) => window.scrollTo(0, y), yOf); await settle(p, 500);
+const box = async (l) => { const r = await l.boundingBox(); return [Math.round(r.x + r.width / 2), Math.round(r.y + r.height / 2)]; };
+const out = {};
+out.adicionais = await box(card.getByRole('button', { name: /ADICIONAIS/i }));
+await card.getByRole('button', { name: /ADICIONAIS/i }).click(); await settle(p, 500);
+out.nutella = await box(card.getByRole('button', { name: /^Nutella/ }));
+out.morango = await box(card.getByRole('button', { name: /^Calda de Morango/ }));
+out.pacoca = await box(card.getByRole('button', { name: /^Paçoca/ }));
+out.adicionar = await box(card.getByRole('button', { name: /^\+?\s*ADICIONAR$/i }));
+await card.getByRole('button', { name: /^\+?\s*ADICIONAR$/i }).click(); await settle(p, 800);
+out.pill = await box(p.getByRole('button', { name: /1\s*ITEM/i }));
+console.log(JSON.stringify(out));
+await b.close();

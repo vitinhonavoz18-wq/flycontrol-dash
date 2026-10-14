@@ -1,0 +1,611 @@
+{
+ "fps": 30,
+ "duration": 59.0,
+ "segments": [
+  [
+   0.0,
+   11.25,
+   1.2
+  ],
+  [
+   12.4,
+   17.95,
+   13.6
+  ],
+  [
+   17.95,
+   23.3,
+   19.55
+  ],
+  [
+   23.3,
+   36.97,
+   25.4
+  ],
+  [
+   36.97,
+   44.56,
+   41.0
+  ],
+  [
+   44.56,
+   51.07,
+   49.1
+  ]
+ ],
+ "markers": {
+  "q1End": 5.879,
+  "preco": 6.464,
+  "audio": 8.0,
+  "mudaPedido": 9.2,
+  "mudaTudo": 11.04,
+  "mas": 13.84,
+  "porOutro": 17.787,
+  "outro": 17.92,
+  "lugar": 18.24,
+  "fly1": 20.12,
+  "imagine": 25.62,
+  "acai": 32.5,
+  "doce": 33.54,
+  "hamburguer": 34.06,
+  "pastel": 35.54,
+  "cada": 36.713,
+  "escolha": 41.23,
+  "personalize": 42.323,
+  "adicione": 43.07,
+  "carrinho": 43.71,
+  "confira": 44.51,
+  "tudo": 45.737,
+  "fly2": 49.42,
+  "seuNegocio": 50.66,
+  "conheca": 54.68,
+  "end": 55.4
+ },
+ "words": [
+  {
+   "text": "Seu",
+   "start": 1.28,
+   "end": 1.439
+  },
+  {
+   "text": "cliente",
+   "start": 1.64,
+   "end": 1.839
+  },
+  {
+   "text": "ainda",
+   "start": 1.88,
+   "end": 2.079
+  },
+  {
+   "text": "precisa",
+   "start": 2.2,
+   "end": 2.479
+  },
+  {
+   "text": "mandar",
+   "start": 2.6,
+   "end": 2.959
+  },
+  {
+   "text": "VÁRIAS",
+   "start": 3.04,
+   "end": 3.359
+  },
+  {
+   "text": "mensagens…",
+   "start": 3.44,
+   "end": 4.559
+  },
+  {
+   "text": "só",
+   "start": 4.64,
+   "end": 4.759
+  },
+  {
+   "text": "pra",
+   "start": 4.8,
+   "end": 4.879
+  },
+  {
+   "text": "fazer",
+   "start": 4.96,
+   "end": 5.199
+  },
+  {
+   "text": "um",
+   "start": 5.24,
+   "end": 5.279
+  },
+  {
+   "text": "pedido?",
+   "start": 5.36,
+   "end": 5.879
+  },
+  {
+   "text": "Pergunta",
+   "start": 6.464,
+   "end": 6.879
+  },
+  {
+   "text": "o",
+   "start": 6.96,
+   "end": 6.999
+  },
+  {
+   "text": "preço…",
+   "start": 7.04,
+   "end": 7.959
+  },
+  {
+   "text": "manda",
+   "start": 8.0,
+   "end": 8.239
+  },
+  {
+   "text": "áudio…",
+   "start": 8.48,
+   "end": 9.159
+  },
+  {
+   "text": "muda",
+   "start": 9.2,
+   "end": 9.359
+  },
+  {
+   "text": "o",
+   "start": 9.4,
+   "end": 9.439
+  },
+  {
+   "text": "pedido…",
+   "start": 9.52,
+   "end": 10.489
+  },
+  {
+   "text": "e",
+   "start": 10.56,
+   "end": 10.599
+  },
+  {
+   "text": "depois",
+   "start": 10.64,
+   "end": 10.959
+  },
+  {
+   "text": "muda",
+   "start": 11.04,
+   "end": 11.439
+  },
+  {
+   "text": "tudo",
+   "start": 11.48,
+   "end": 11.759
+  },
+  {
+   "text": "de",
+   "start": 11.84,
+   "end": 11.919
+  },
+  {
+   "text": "novo!",
+   "start": 12.0,
+   "end": 12.439
+  },
+  {
+   "text": "Mas…",
+   "start": 13.84,
+   "end": 15.119
+  },
+  {
+   "text": "e",
+   "start": 15.36,
+   "end": 15.439
+  },
+  {
+   "text": "se",
+   "start": 15.52,
+   "end": 15.559
+  },
+  {
+   "text": "o",
+   "start": 15.6,
+   "end": 15.679
+  },
+  {
+   "text": "cliente",
+   "start": 15.92,
+   "end": 16.159
+  },
+  {
+   "text": "fizesse",
+   "start": 16.2,
+   "end": 16.599
+  },
+  {
+   "text": "o",
+   "start": 16.64,
+   "end": 16.719
+  },
+  {
+   "text": "pedido…",
+   "start": 17.2,
+   "end": 17.732
+  },
+  {
+   "text": "por",
+   "start": 17.787,
+   "end": 17.839
+  },
+  {
+   "text": "OUTRO",
+   "start": 17.92,
+   "end": 18.159
+  },
+  {
+   "text": "lugar?",
+   "start": 18.24,
+   "end": 18.879
+  },
+  {
+   "text": "Com",
+   "start": 19.84,
+   "end": 19.919
+  },
+  {
+   "text": "o",
+   "start": 20.0,
+   "end": 20.079
+  },
+  {
+   "text": "FlyControl,",
+   "start": 20.12,
+   "end": 20.959
+  },
+  {
+   "text": "existe",
+   "start": 21.04,
+   "end": 21.359
+  },
+  {
+   "text": "um",
+   "start": 21.4,
+   "end": 21.439
+  },
+  {
+   "text": "jeito",
+   "start": 21.52,
+   "end": 21.919
+  },
+  {
+   "text": "muito",
+   "start": 21.96,
+   "end": 22.239
+  },
+  {
+   "text": "mais",
+   "start": 22.28,
+   "end": 22.479
+  },
+  {
+   "text": "simples,",
+   "start": 22.56,
+   "end": 23.079
+  },
+  {
+   "text": "moderno",
+   "start": 23.12,
+   "end": 23.759
+  },
+  {
+   "text": "e",
+   "start": 23.84,
+   "end": 23.919
+  },
+  {
+   "text": "profissional.",
+   "start": 24.04,
+   "end": 25.55
+  },
+  {
+   "text": "Imagine",
+   "start": 25.62,
+   "end": 26.099
+  },
+  {
+   "text": "seus",
+   "start": 26.18,
+   "end": 26.339
+  },
+  {
+   "text": "clientes",
+   "start": 26.42,
+   "end": 26.819
+  },
+  {
+   "text": "escolhendo",
+   "start": 26.9,
+   "end": 27.379
+  },
+  {
+   "text": "com",
+   "start": 27.46,
+   "end": 27.619
+  },
+  {
+   "text": "facilidade,",
+   "start": 27.74,
+   "end": 28.619
+  },
+  {
+   "text": "explorando",
+   "start": 28.66,
+   "end": 29.219
+  },
+  {
+   "text": "os",
+   "start": 29.26,
+   "end": 29.299
+  },
+  {
+   "text": "produtos",
+   "start": 29.38,
+   "end": 29.939
+  },
+  {
+   "text": "e",
+   "start": 30.02,
+   "end": 30.179
+  },
+  {
+   "text": "personalizando",
+   "start": 30.46,
+   "end": 31.139
+  },
+  {
+   "text": "os",
+   "start": 31.18,
+   "end": 31.219
+  },
+  {
+   "text": "pedidos.",
+   "start": 31.3,
+   "end": 32.119
+  },
+  {
+   "text": "Seja",
+   "start": 32.24,
+   "end": 32.339
+  },
+  {
+   "text": "um",
+   "start": 32.38,
+   "end": 32.419
+  },
+  {
+   "text": "açaí,",
+   "start": 32.5,
+   "end": 33.179
+  },
+  {
+   "text": "um",
+   "start": 33.22,
+   "end": 33.379
+  },
+  {
+   "text": "doce,",
+   "start": 33.54,
+   "end": 33.966
+  },
+  {
+   "text": "um",
+   "start": 33.993,
+   "end": 34.019
+  },
+  {
+   "text": "hambúrguer…",
+   "start": 34.06,
+   "end": 34.859
+  },
+  {
+   "text": "ou",
+   "start": 34.9,
+   "end": 34.979
+  },
+  {
+   "text": "aquele",
+   "start": 35.14,
+   "end": 35.379
+  },
+  {
+   "text": "pastel",
+   "start": 35.54,
+   "end": 35.779
+  },
+  {
+   "text": "especial…",
+   "start": 35.86,
+   "end": 36.686
+  },
+  {
+   "text": "cada",
+   "start": 36.713,
+   "end": 36.899
+  },
+  {
+   "text": "negócio",
+   "start": 36.98,
+   "end": 37.539
+  },
+  {
+   "text": "com",
+   "start": 37.58,
+   "end": 37.619
+  },
+  {
+   "text": "o",
+   "start": 37.66,
+   "end": 37.699
+  },
+  {
+   "text": "seu",
+   "start": 37.78,
+   "end": 37.979
+  },
+  {
+   "text": "próprio",
+   "start": 38.02,
+   "end": 38.339
+  },
+  {
+   "text": "cardápio.",
+   "start": 38.5,
+   "end": 41.16
+  },
+  {
+   "text": "Escolha.",
+   "start": 41.23,
+   "end": 42.136
+  },
+  {
+   "text": "Personalize.",
+   "start": 42.323,
+   "end": 43.029
+  },
+  {
+   "text": "Adicione",
+   "start": 43.07,
+   "end": 43.549
+  },
+  {
+   "text": "ao",
+   "start": 43.59,
+   "end": 43.629
+  },
+  {
+   "text": "carrinho",
+   "start": 43.71,
+   "end": 44.189
+  },
+  {
+   "text": "e",
+   "start": 44.27,
+   "end": 44.349
+  },
+  {
+   "text": "confira",
+   "start": 44.51,
+   "end": 44.749
+  },
+  {
+   "text": "seu",
+   "start": 44.83,
+   "end": 45.202
+  },
+  {
+   "text": "pedido.",
+   "start": 45.417,
+   "end": 45.682
+  },
+  {
+   "text": "Tudo",
+   "start": 45.737,
+   "end": 45.869
+  },
+  {
+   "text": "em",
+   "start": 45.95,
+   "end": 46.029
+  },
+  {
+   "text": "uma",
+   "start": 46.11,
+   "end": 46.189
+  },
+  {
+   "text": "experiência",
+   "start": 46.27,
+   "end": 46.989
+  },
+  {
+   "text": "simples",
+   "start": 47.15,
+   "end": 47.549
+  },
+  {
+   "text": "e",
+   "start": 47.59,
+   "end": 47.629
+  },
+  {
+   "text": "intuitiva.",
+   "start": 47.75,
+   "end": 49.274
+  },
+  {
+   "text": "FlyControl.",
+   "start": 49.42,
+   "end": 50.379
+  },
+  {
+   "text": "Seu",
+   "start": 50.42,
+   "end": 50.539
+  },
+  {
+   "text": "negócio",
+   "start": 50.66,
+   "end": 51.099
+  },
+  {
+   "text": "merece",
+   "start": 51.26,
+   "end": 51.499
+  },
+  {
+   "text": "uma",
+   "start": 51.54,
+   "end": 51.579
+  },
+  {
+   "text": "experiência",
+   "start": 51.66,
+   "end": 52.219
+  },
+  {
+   "text": "de",
+   "start": 52.3,
+   "end": 52.379
+  },
+  {
+   "text": "pedidos",
+   "start": 52.5,
+   "end": 53.019
+  },
+  {
+   "text": "muito",
+   "start": 53.1,
+   "end": 53.419
+  },
+  {
+   "text": "mais",
+   "start": 53.46,
+   "end": 53.659
+  },
+  {
+   "text": "profissional.",
+   "start": 53.78,
+   "end": 54.559
+  },
+  {
+   "text": "Conheça",
+   "start": 54.68,
+   "end": 55.019
+  },
+  {
+   "text": "agora!",
+   "start": 55.1,
+   "end": 55.4
+  }
+ ]
+}

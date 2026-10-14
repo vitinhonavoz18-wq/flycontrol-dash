@@ -1,0 +1,9 @@
+node_modules/
+out/
+capture/frames/
+capture/stills/
+capture/explore/
+capture/hero/
+public/clips/
+public/stills/
+public/audio/*.wav
