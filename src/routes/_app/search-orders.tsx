@@ -23,9 +23,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, RotateCcw, Loader2 } from "lucide-react";
+import { Search, RotateCcw, Loader2, ChevronLeft, ChevronRight } from "lucide-react";
 import { formatItemName, getItemPrice, normalizeOrderType } from "@/utils/order-utils";
 import { toast } from "sonner";
+import { SeletorDeEstabelecimento } from "@/components/orders/SeletorDeEstabelecimento";
+import {
+  PEDIDOS_POR_PAGINA,
+  TODOS_OS_ESTABELECIMENTOS,
+  escopoDaBusca,
+  filtroDeTipoDoPedido,
+} from "@/lib/orders/buscaDePedidos";
 
 export const Route = createFileRoute("/_app/search-orders")({ component: SearchOrdersPage });
 
@@ -49,7 +56,36 @@ type OrderRow = {
   table_number: string | null;
   table_name: string | null;
   payment_status: string | null;
+  /** Nome da loja, vindo da ligação real pedido -> loja no banco. */
+  loja?: { name: string | null } | null;
 };
+
+type Filtros = {
+  establishment: string;
+  customer: string;
+  phone: string;
+  orderNumber: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  payment: string;
+  type: string;
+};
+
+const FILTROS_PADRAO: Filtros = {
+  establishment: TODOS_OS_ESTABELECIMENTOS,
+  customer: "",
+  phone: "",
+  orderNumber: "",
+  startDate: "",
+  endDate: "",
+  status: "all",
+  payment: "all",
+  type: "all",
+};
+
+const MSG_SEM_RESULTADO = "Nenhum pedido encontrado para os filtros selecionados.";
+const MSG_ANTES_DA_BUSCA = "Nenhum pedido. Ajuste os filtros e clique em Buscar.";
 
 const STATUS_OPTIONS = [
   "pendente",
@@ -75,91 +111,141 @@ function fmtDateTime(s: string) {
 }
 
 function SearchOrdersPage() {
-  const { user, isSuperAdmin } = useAuth();
+  const { user, isSuperAdmin, rolesLoading } = useAuth();
+  // Lojas do próprio usuário (só usado para quem NÃO é administrador geral).
   const [tenantIds, setTenantIds] = useState<string[]>([]);
+  const [tenantsLoaded, setTenantsLoaded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [rows, setRows] = useState<OrderRow[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(0);
+  const [searched, setSearched] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [selected, setSelected] = useState<OrderRow | null>(null);
 
-  const [filters, setFilters] = useState({
-    customer: "",
-    phone: "",
-    orderNumber: "",
-    startDate: "",
-    endDate: "",
-    status: "all",
-    payment: "all",
-    type: "all",
-  });
+  const [filters, setFilters] = useState<Filtros>(FILTROS_PADRAO);
+  // Filtros da última busca feita: trocar de página usa estes, não o que
+  // estiver digitado no formulário e ainda não foi buscado.
+  const [applied, setApplied] = useState<Filtros | null>(null);
+  const [appliedStoreName, setAppliedStoreName] = useState<string | null>(null);
+  const [storeName, setStoreName] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadTenants() {
-      if (!user) return;
-      let q = supabase.from("pizzerias").select("id");
-      if (!isSuperAdmin) q = q.eq("owner_id", user.id);
-      const { data } = await q;
-      setTenantIds((data || []).map((p: any) => p.id));
+      if (!user || rolesLoading) return;
+      if (isSuperAdmin) {
+        // O administrador não precisa da lista inteira de ids: escolhe a loja
+        // no seletor, e o banco já lhe permite ver todas.
+        setTenantIds([]);
+        setTenantsLoaded(true);
+        return;
+      }
+      const { data } = await supabase.from("pizzerias").select("id").eq("owner_id", user.id);
+      setTenantIds((data || []).map((p) => p.id));
+      setTenantsLoaded(true);
     }
+    setTenantsLoaded(false);
     loadTenants();
-  }, [user, isSuperAdmin]);
+  }, [user, isSuperAdmin, rolesLoading]);
 
-  async function runSearch() {
-    if (!tenantIds.length) {
+  async function runSearch(f: Filtros, targetPage: number) {
+    if (rolesLoading || !tenantsLoaded) {
+      toast.error("Ainda carregando suas permissões. Tente de novo em instantes.");
+      return;
+    }
+    const escopo = escopoDaBusca({
+      isSuperAdmin,
+      lojaEscolhida: isSuperAdmin ? f.establishment : "",
+      minhasLojas: tenantIds,
+    });
+    if (escopo.tipo === "nenhuma") {
       toast.error("Nenhuma loja encontrada");
       return;
     }
     setLoading(true);
+    setErrorMsg(null);
     try {
+      const from = targetPage * PEDIDOS_POR_PAGINA;
       let q = supabase
         .from("orders")
-        .select("*")
-        .in("tenant_id", tenantIds)
+        .select("*, loja:pizzerias!orders_tenant_id_fkey(name)", { count: "exact" })
         .order("created_at", { ascending: false })
-        .limit(500);
+        .order("id", { ascending: false })
+        .range(from, from + PEDIDOS_POR_PAGINA - 1);
 
-      if (filters.customer.trim()) q = q.ilike("customer_name", `%${filters.customer.trim()}%`);
-      if (filters.phone.trim()) q = q.ilike("customer_phone", `%${filters.phone.trim()}%`);
-      if (filters.orderNumber.trim()) {
-        const n = Number(filters.orderNumber.trim());
+      if (escopo.tipo === "uma") q = q.eq("tenant_id", escopo.lojaId);
+      if (escopo.tipo === "minhas") q = q.in("tenant_id", escopo.lojaIds);
+      // escopo "todas": sem filtro de loja — o banco só devolve o que este
+      // usuário pode ver (o administrador geral vê todas as lojas).
+
+      if (f.customer.trim()) q = q.ilike("customer_name", `%${f.customer.trim()}%`);
+      if (f.phone.trim()) q = q.ilike("customer_phone", `%${f.phone.trim()}%`);
+      if (f.orderNumber.trim()) {
+        const n = Number(f.orderNumber.trim());
         if (!isNaN(n)) q = q.eq("order_number", n);
       }
-      if (filters.startDate) q = q.gte("created_at", new Date(filters.startDate).toISOString());
-      if (filters.endDate) {
-        const end = new Date(filters.endDate);
+      if (f.startDate) q = q.gte("created_at", new Date(f.startDate).toISOString());
+      if (f.endDate) {
+        const end = new Date(f.endDate);
         end.setHours(23, 59, 59, 999);
         q = q.lte("created_at", end.toISOString());
       }
-      if (filters.status !== "all") q = q.eq("status", filters.status);
-      if (filters.payment !== "all") q = q.eq("payment_method", filters.payment);
+      if (f.status !== "all") q = q.eq("status", f.status);
+      if (f.payment !== "all") q = q.eq("payment_method", f.payment);
+      // Tipo do pedido agora é filtrado no banco (antes era depois de chegar),
+      // para a contagem e as páginas saírem certas.
+      const tipo = filtroDeTipoDoPedido(f.type);
+      if (tipo) q = q.or(tipo);
 
-      const { data, error } = await q;
+      const { data, error, count } = await q;
       if (error) throw error;
 
-      let result = (data || []) as OrderRow[];
-      if (filters.type !== "all") {
-        result = result.filter((o) => normalizeOrderType(o) === filters.type);
-      }
-      setRows(result);
-    } catch (e: any) {
-      toast.error(e.message || "Erro ao buscar pedidos");
+      setRows((data || []) as unknown as OrderRow[]);
+      setTotal(count ?? 0);
+      setPage(targetPage);
+      setSearched(true);
+    } catch (e: unknown) {
+      const msg = (e as { message?: string })?.message || "Erro ao buscar pedidos";
+      setErrorMsg("Não foi possível buscar os pedidos. Tente novamente.");
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
   }
 
-  function resetFilters() {
-    setFilters({
-      customer: "",
-      phone: "",
-      orderNumber: "",
-      startDate: "",
-      endDate: "",
-      status: "all",
-      payment: "all",
-      type: "all",
-    });
-    setRows([]);
+  function onSearchClick() {
+    setApplied(filters);
+    setAppliedStoreName(storeName);
+    runSearch(filters, 0);
   }
+
+  function goToPage(p: number) {
+    if (!applied) return;
+    runSearch(applied, p);
+  }
+
+  function resetFilters() {
+    setFilters(FILTROS_PADRAO);
+    setStoreName(null);
+    setApplied(null);
+    setAppliedStoreName(null);
+    setRows([]);
+    setTotal(0);
+    setPage(0);
+    setSearched(false);
+    setErrorMsg(null);
+  }
+
+  const totalPages = Math.max(1, Math.ceil(total / PEDIDOS_POR_PAGINA));
+  const showStore = isSuperAdmin;
+  const emptyMessage = loading
+    ? "Buscando..."
+    : errorMsg
+      ? errorMsg
+      : searched
+        ? MSG_SEM_RESULTADO
+        : MSG_ANTES_DA_BUSCA;
+  const appliedChips = applied ? describeApplied(applied, isSuperAdmin, appliedStoreName) : [];
 
   const items = useMemo(() => {
     if (!selected) return [];
@@ -189,6 +275,22 @@ function SearchOrdersPage() {
 
       <Card className="p-4 md:p-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Só o administrador geral vê este campo. Esconder não é a
+              proteção: o banco também só entrega pedidos das lojas que a
+              pessoa pode ver. */}
+          {isSuperAdmin && (
+            <div className="space-y-1.5 sm:col-span-2 lg:col-span-4">
+              <Label htmlFor="filtro-estabelecimento">Estabelecimento</Label>
+              <SeletorDeEstabelecimento
+                id="filtro-estabelecimento"
+                value={filters.establishment}
+                onChange={(v, loja) => {
+                  setFilters((f) => ({ ...f, establishment: v }));
+                  setStoreName(loja?.name ?? null);
+                }}
+              />
+            </div>
+          )}
           <div className="space-y-1.5">
             <Label>Nome do Cliente</Label>
             <Input
@@ -285,7 +387,7 @@ function SearchOrdersPage() {
           </div>
         </div>
         <div className="flex flex-wrap gap-2 pt-2">
-          <Button onClick={runSearch} disabled={loading}>
+          <Button onClick={onSearchClick} disabled={loading || rolesLoading}>
             {loading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -302,14 +404,26 @@ function SearchOrdersPage() {
       <Card className="p-0 overflow-hidden">
         <div className="p-4 border-b flex items-center justify-between">
           <div className="font-semibold">Resultados</div>
-          <Badge variant="secondary">{rows.length} pedido(s)</Badge>
+          <Badge variant="secondary">{total} pedido(s)</Badge>
         </div>
+        {appliedChips.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 border-b px-4 py-2">
+            <span className="text-xs text-muted-foreground self-center">Filtros aplicados:</span>
+            {appliedChips.map((c) => (
+              <Badge key={c} variant="outline" className="font-normal">
+                {c}
+              </Badge>
+            ))}
+          </div>
+        )}
         {/* Celular: um card por pedido, com o essencial — uma tabela de 6
             colunas em 360px vira letra ilegível com rolagem lateral. */}
         <div className="divide-y md:hidden">
           {rows.length === 0 ? (
-            <div className="py-8 text-center text-sm text-muted-foreground">
-              {loading ? "Buscando..." : "Nenhum pedido. Ajuste os filtros e clique em Buscar."}
+            <div
+              className={`py-8 text-center text-sm ${errorMsg && !loading ? "text-destructive" : "text-muted-foreground"}`}
+            >
+              {emptyMessage}
             </div>
           ) : (
             rows.map((o) => (
@@ -323,6 +437,11 @@ function SearchOrdersPage() {
                   <span className="font-mono font-semibold">#{o.order_number}</span>
                   <Badge variant="outline">{o.status || "—"}</Badge>
                 </div>
+                {showStore && (
+                  <div className="truncate text-xs font-medium text-primary">
+                    {o.loja?.name || "—"}
+                  </div>
+                )}
                 <div className="text-sm font-medium">{o.customer_name || "—"}</div>
                 <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground">
                   <span>{fmtDateTime(o.created_at)}</span>
@@ -339,6 +458,7 @@ function SearchOrdersPage() {
             <TableHeader>
               <TableRow>
                 <TableHead>Nº</TableHead>
+                {showStore && <TableHead>Estabelecimento</TableHead>}
                 <TableHead>Cliente</TableHead>
                 <TableHead>Data/Hora</TableHead>
                 <TableHead>Total</TableHead>
@@ -349,16 +469,22 @@ function SearchOrdersPage() {
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                    {loading
-                      ? "Buscando..."
-                      : "Nenhum pedido. Ajuste os filtros e clique em Buscar."}
+                  <TableCell
+                    colSpan={showStore ? 7 : 6}
+                    className={`text-center py-8 ${errorMsg && !loading ? "text-destructive" : "text-muted-foreground"}`}
+                  >
+                    {emptyMessage}
                   </TableCell>
                 </TableRow>
               ) : (
                 rows.map((o) => (
                   <TableRow key={o.id} className="cursor-pointer" onClick={() => setSelected(o)}>
                     <TableCell className="font-mono">#{o.order_number}</TableCell>
+                    {showStore && (
+                      <TableCell className="max-w-[220px] truncate">
+                        {o.loja?.name || "—"}
+                      </TableCell>
+                    )}
                     <TableCell>{o.customer_name || "—"}</TableCell>
                     <TableCell>{fmtDateTime(o.created_at)}</TableCell>
                     <TableCell>{fmtMoney(o.total)}</TableCell>
@@ -372,6 +498,32 @@ function SearchOrdersPage() {
             </TableBody>
           </Table>
         </div>
+        {total > PEDIDOS_POR_PAGINA && (
+          <div className="flex flex-wrap items-center justify-between gap-2 border-t p-3 text-sm">
+            <span className="text-muted-foreground">
+              Página {page + 1} de {totalPages} · mostrando {page * PEDIDOS_POR_PAGINA + 1}–
+              {page * PEDIDOS_POR_PAGINA + rows.length} de {total}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading || page === 0}
+                onClick={() => goToPage(page - 1)}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" /> Anterior
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={loading || page + 1 >= totalPages}
+                onClick={() => goToPage(page + 1)}
+              >
+                Próxima <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
+          </div>
+        )}
       </Card>
 
       <Dialog open={!!selected} onOpenChange={(o) => !o && setSelected(null)}>
@@ -390,6 +542,7 @@ function SearchOrdersPage() {
                 </Section>
 
                 <Section title="Pedido">
+                  {showStore && <Row label="Estabelecimento" value={selected.loja?.name} />}
                   <Row label="Data/Hora" value={fmtDateTime(selected.created_at)} />
                   <Row label="Tipo" value={normalizeOrderType(selected)} />
                   <Row label="Status" value={selected.status} />
@@ -448,6 +601,29 @@ function SearchOrdersPage() {
       </Dialog>
     </div>
   );
+}
+
+/** Resumo, em palavras, dos filtros usados na última busca. */
+function describeApplied(f: Filtros, isSuperAdmin: boolean, storeName: string | null): string[] {
+  const out: string[] = [];
+  if (isSuperAdmin) {
+    out.push(
+      f.establishment === TODOS_OS_ESTABELECIMENTOS
+        ? "Todos os estabelecimentos"
+        : `Estabelecimento: ${storeName || "selecionado"}`,
+    );
+  }
+  if (f.customer.trim()) out.push(`Cliente: ${f.customer.trim()}`);
+  if (f.phone.trim()) out.push(`Telefone: ${f.phone.trim()}`);
+  if (f.orderNumber.trim()) out.push(`Pedido nº ${f.orderNumber.trim()}`);
+  if (f.status !== "all") out.push(`Status: ${f.status}`);
+  if (f.startDate) out.push(`De ${f.startDate.split("-").reverse().join("/")}`);
+  if (f.endDate) out.push(`Até ${f.endDate.split("-").reverse().join("/")}`);
+  if (f.payment !== "all") out.push(`Pagamento: ${f.payment}`);
+  if (f.type !== "all") {
+    out.push(`Tipo: ${TYPE_OPTIONS.find((t) => t.value === f.type)?.label ?? f.type}`);
+  }
+  return out;
 }
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
