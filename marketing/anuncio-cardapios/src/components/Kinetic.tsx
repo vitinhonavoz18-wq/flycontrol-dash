@@ -97,6 +97,7 @@ export const Sheen: React.FC<{ at: number; w: number; h: number }> = ({ at, w, h
     <div
       style={{
         position: 'absolute', left: 0, top: 0, width: w, height: h, pointerEvents: 'none', mixBlendMode: 'screen',
+        WebkitMaskImage: 'radial-gradient(ellipse 50% 50% at 50% 50%, #000 55%, transparent 100%)',
         background: `linear-gradient(105deg, transparent ${x * 100 - 12}%, rgba(255,255,255,0.65) ${x * 100}%, transparent ${x * 100 + 12}%)`,
       }}
     />

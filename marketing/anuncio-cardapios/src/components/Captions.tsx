@@ -38,12 +38,12 @@ export const Captions: React.FC<{ y?: number }> = ({ y = 1735 }) => {
     <div
       style={{
         position: 'absolute', left: 60, right: 60, top: y, display: 'flex', flexWrap: 'wrap', justifyContent: 'center',
-        gap: '6px 14px', opacity: inP * (1 - outP), transform: `translateY(${(1 - inP) * 14}px)`,
+        gap: '6px 18px', opacity: inP * (1 - outP), transform: `translateY(${(1 - inP) * 14}px)`,
       }}
     >
       {g.words.map((w, i) => {
         const on = t >= w.start;
-        const pop = interpolate(t, [w.start, w.start + 0.12], [1.12, 1], clamp);
+        const pop = interpolate(t, [w.start, w.start + 0.12], [1.07, 1], clamp);
         return (
           <span
             key={i}

@@ -76,9 +76,9 @@ export const Features: React.FC = () => {
           )}
         </Phone>
       </div>
-      <Pin t={t} at={CART + 0.6} out={CART_SCROLL - 0.1} text="Resumo do pedido" x={540 - sw / 2 + 120 * k} y={CY - sh / 2 + 112 * k} />
-      <Pin t={t} at={CART + 1.1} out={CART_SCROLL - 0.1} text="Entrega ou retirada" x={540 - sw / 2 + 120 * k} y={CY - sh / 2 + 232 * k} />
-      <Pin t={t} at={CART_SCROLL + 0.7} out={FEAT_END} text="Total na hora" x={540 - sw / 2 + 120 * k} y={CY - sh / 2 + 765 * k} />
+      <Glow t={t} at={CART + 0.6} out={CART_SCROLL - 0.1} x={10} y={160} w={370} h={112} />
+      <Glow t={t} at={CART + 1.2} out={CART_SCROLL - 0.1} x={10} y={308} w={370} h={114} />
+      <Glow t={t} at={CART_SCROLL + 0.7} out={FEAT_END} x={10} y={700} w={370} h={100} />
       <div style={{ position: 'absolute', top: 120, left: 0, right: 0, textAlign: 'center' }}>
         <KWord text="ESCOLHA." at={M.escolha} out={M.personalize - 0.15} size={120} from="slam" color="#fff" glow={C.gold} depthColor="#3a2a00" />
       </div>
@@ -104,16 +104,13 @@ const Tap: React.FC<{ t: number; at: number; x: number; y: number }> = ({ t, at,
   );
 };
 
-const Pin: React.FC<{ t: number; at: number; out: number; text: string; x: number; y: number }> = ({ t, at, out, text, x, y }) => {
+/** Contorno luminoso sobre uma área da tela real (coordenadas 390x844). */
+const Glow: React.FC<{ t: number; at: number; out: number; x: number; y: number; w: number; h: number }> = ({ t, at, out, x, y, w, h }) => {
   const p = interpolate(t, [at, at + 0.3, out - 0.2, out], [0, 1, 1, 0], clamp);
   if (p <= 0) return null;
+  const left = 540 - sw / 2 + x * k;
+  const top = CY - sh / 2 + y * k;
   return (
-    <div style={{ position: 'absolute', left: x - 330, top: y - 26, display: 'flex', alignItems: 'center', opacity: p, transform: `translateX(${(1 - p) * -30}px)` }}>
-      <div style={{ fontFamily: display, fontWeight: 800, fontSize: 26, color: '#111', background: C.gold, padding: '10px 18px', borderRadius: 30, boxShadow: `0 0 24px ${hexA(C.fire, 0.6)}` }}>
-        {text}
-      </div>
-      <div style={{ width: 60 * p, height: 3, background: C.gold }} />
-      <div style={{ width: 14, height: 14, borderRadius: 7, background: C.gold, boxShadow: `0 0 12px ${C.gold}` }} />
-    </div>
+    <div style={{ position: 'absolute', left, top, width: w * k, height: h * k, borderRadius: 18, border: `3px solid ${C.gold}`, opacity: p, transform: `scale(${1.04 - 0.04 * p})`, boxShadow: `0 0 24px ${hexA(C.fire, 0.7)}, inset 0 0 18px ${hexA(C.gold, 0.25)}` }} />
   );
 };
