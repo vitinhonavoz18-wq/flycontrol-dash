@@ -37,6 +37,7 @@ import { DeliveryZonesManager } from "@/components/store/DeliveryZonesManager";
 import { AppearanceEditor } from "@/components/store/AppearanceEditor";
 import { MenuTextsEditor } from "@/components/store/MenuTextsEditor";
 import { HeroScheduleEditor } from "@/components/store/HeroScheduleEditor";
+import { StoreAddressField } from "@/components/store/StoreAddressField";
 import { layoutPorId } from "@/lib/menu/layouts";
 import {
   COMBOS_INFO,
@@ -527,6 +528,26 @@ function StoreEditor({
                   público.
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Endereço do cardápio online</CardTitle>
+              <CardDescription>
+                Escolha o nome que aparece no link da sua loja. Um endereço com o nome da loja passa
+                mais confiança para quem vai pedir.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <StoreAddressField
+                pizzeriaId={pizzeria.id}
+                publicUrl={pizzeria.public_url ?? null}
+                slug={pizzeria.slug ?? null}
+                onSaved={(novoLink) =>
+                  setPizzeria((prev: any) => ({ ...prev, public_url: novoLink }))
+                }
+              />
             </CardContent>
           </Card>
 
