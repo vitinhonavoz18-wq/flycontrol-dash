@@ -1,6 +1,7 @@
 import "./lib/error-capture";
 
 import { consumeLastCapturedError } from "./lib/error-capture";
+import { runDailyBillingCron } from "./lib/billing/dailyCron";
 import { renderErrorPage } from "./lib/error-page";
 
 type ServerEntry = {
@@ -66,34 +67,10 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
   return brandedErrorResponse();
 }
 
-/**
- * Disparo diário do Cloudflare Cron Trigger (ver wrangler.jsonc).
- *
- * Não repete a lógica de fechamento aqui — chama o próprio endpoint HTTP
- * já protegido pelo segredo, exatamente como qualquer outro agendador
- * externo faria. Um único caminho de fechamento, testado uma vez só.
- */
-async function runDailyBillingCron(env: Record<string, string | undefined>): Promise<void> {
-  const base = (env.FLYCONTROL_PUBLIC_URL || "").trim().replace(/\/+$/, "");
-  const secret = (env.BILLING_CRON_SECRET || "").trim();
-
-  if (!base || !secret) {
-    console.error(
-      "[cron] FLYCONTROL_PUBLIC_URL ou BILLING_CRON_SECRET ausente — fechamento de ciclos não disparado.",
-    );
-    return;
-  }
-
-  try {
-    const resp = await fetch(`${base}/api/billing/close-cycles`, {
-      method: "POST",
-      headers: { "x-billing-cron-secret": secret },
-    });
-    console.log(`[cron] fechamento de ciclos: status ${resp.status}`);
-  } catch (error) {
-    console.error("[cron] falha ao disparar o fechamento de ciclos:", error);
-  }
-}
+// ATENÇÃO: no pacote publicado (Nitro, preset cloudflare-module) a porta de
+// entrada do Worker é a do Nitro, não este arquivo. O `scheduled` abaixo NÃO
+// é chamado pela Cloudflare — quem recebe o despertador diário é o plugin
+// `src/nitro/billingCron.plugin.ts`. Fica aqui só para um build sem Nitro.
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
