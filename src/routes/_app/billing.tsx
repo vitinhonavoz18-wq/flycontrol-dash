@@ -28,7 +28,10 @@ import {
   type SubscriptionStatus,
 } from "@/lib/billing/subscriptionStatus";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
-import { getPendingCharge } from "@/lib/billing/getPendingCharge.functions";
+import {
+  conferirPagamentoDaFatura,
+  getFaturaEmAberto,
+} from "@/lib/billing/faturaEmAberto.functions";
 import { separarItensDaFatura, type ItemDaFatura } from "@/lib/billing/invoiceSections";
 import {
   SUBSCRIPTION_PHASE_LABELS,
@@ -354,21 +357,57 @@ function BillingPage() {
   }, [load]);
 
   const [pendingChargeUrl, setPendingChargeUrl] = useState<string | null>(null);
+  const [pendingInvoiceId, setPendingInvoiceId] = useState<string | null>(null);
 
+  // A fatura em aberto (no prazo OU vencida) e o link de pagamento. Vencida
+  // também mostra o botão: é exatamente quem foi suspenso que precisa pagar.
   useEffect(() => {
-    const pendingInvoice = snapshot?.invoices.find((i) => i.status === "pending");
-    if (!pendingInvoice) {
+    if (!snapshot?.companyId) {
       setPendingChargeUrl(null);
+      setPendingInvoiceId(null);
       return;
     }
     let cancelled = false;
-    void getPendingCharge({ data: { invoiceId: pendingInvoice.id } }).then((result) => {
-      if (!cancelled) setPendingChargeUrl(result?.checkoutUrl ?? null);
-    });
+    void getFaturaEmAberto({ data: { companyId: snapshot.companyId } })
+      .then((result) => {
+        if (cancelled) return;
+        setPendingChargeUrl(result?.checkoutUrl ?? null);
+        setPendingInvoiceId(result?.invoiceId ?? null);
+      })
+      .catch(() => undefined);
     return () => {
       cancelled = true;
     };
   }, [snapshot]);
+
+  // Volta da InfinityPay: ela devolve o cliente para cá com os dados do
+  // pagamento no endereço. Esses dados não provam nada sozinhos — o servidor
+  // pergunta à InfinityPay. Confirmado, recarrega o painel inteiro para a
+  // loja sair do bloqueio na hora.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const orderNsu = params.get("order_nsu");
+    if (!orderNsu?.startsWith("invoice:")) return;
+    void conferirPagamentoDaFatura({
+      data: {
+        orderNsu,
+        transactionNsu: params.get("transaction_nsu") ?? undefined,
+        slug: params.get("slug") ?? params.get("invoice_slug") ?? undefined,
+      },
+    })
+      .then((r) => {
+        if (r.pago) {
+          toast.success(r.mensagem);
+          window.location.replace("/billing");
+        } else {
+          toast.info(r.mensagem);
+          window.history.replaceState(null, "", "/billing");
+        }
+      })
+      .catch(() => {
+        window.history.replaceState(null, "", "/billing");
+      });
+  }, []);
 
   if (loading) {
     return (
@@ -854,7 +893,7 @@ function BillingPage() {
                 Botão bonito que não faz nada é pior que botão nenhum: o
                 cliente clica, não acontece nada, e ele acha que o sistema
                 comeu o pagamento dele. */}
-            {pendingChargeUrl && faturaAtual.status === "pending" && (
+            {pendingChargeUrl && faturaAtual.id === pendingInvoiceId && (
               <Button asChild className="h-11 w-full gap-2 sm:w-auto">
                 <a href={pendingChargeUrl} target="_blank" rel="noreferrer">
                   Pagar fatura <ExternalLink className="h-4 w-4" aria-hidden="true" />

@@ -60,3 +60,38 @@ export function pizzeriaAccessStatusFor(subscriptionStatus: string): "active" | 
     ? "active"
     : "suspended";
 }
+
+/** Faturas que ainda esperam pagamento. "overdue" continua cobrável. */
+export const OPEN_INVOICE_STATUSES = ["pending", "overdue"] as const;
+
+export function isOpenInvoiceStatus(status: string): boolean {
+  return (OPEN_INVOICE_STATUSES as readonly string[]).includes(status);
+}
+
+/**
+ * Em que situação a assinatura fica depois que UMA fatura foi paga, olhando
+ * as OUTRAS faturas que ainda estão em aberto.
+ *
+ * Pagar a conta de setembro libera a loja — a não ser que a de agosto também
+ * esteja atrasada além do prazo. É como o restaurante quitar a comanda de
+ * hoje, mas ainda dever a de ontem: a de hoje sai paga, a casa continua
+ * esperando a de ontem.
+ */
+export function statusAfterInvoicePaid(
+  otherOpenInvoices: ReadonlyArray<{ status: string; dueAt: Date }>,
+  now: Date,
+): "active" | "past_due" | "suspended" {
+  let result: "active" | "past_due" | "suspended" = "active";
+  for (const invoice of otherOpenInvoices) {
+    if (!isOpenInvoiceStatus(invoice.status)) continue;
+    const action = decideCollectionsAction({
+      dueAt: invoice.dueAt,
+      now,
+      // "active" faz a regra devolver a ação crua, sem o filtro de "já está".
+      subscriptionStatus: "active",
+    });
+    if (invoice.status === "overdue" || action === "suspend") return "suspended";
+    if (action === "mark_past_due") result = "past_due";
+  }
+  return result;
+}
