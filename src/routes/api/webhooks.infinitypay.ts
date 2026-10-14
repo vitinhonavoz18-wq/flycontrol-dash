@@ -24,9 +24,12 @@ import { checkInfinityPayPayment } from "@/lib/billing/infinitypay/api";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { validateGatewayConfirmation, validateIntentForReturn } from "@/lib/billing/checkout";
 import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
-import { pizzeriaAccessStatusFor } from "@/lib/billing/collections";
+import {
+  INVOICE_ORDER_PREFIX,
+  verifyAndConfirmInvoicePayment,
+} from "@/lib/billing/invoicePayment.server";
 
-const INVOICE_PREFIX = "invoice:";
+const INVOICE_PREFIX = INVOICE_ORDER_PREFIX;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -169,141 +172,34 @@ async function handleSignupCheckout(
   return json({ success: true, message: null }, 200);
 }
 
-type PaymentTransactionRow = {
-  id: string;
-  invoice_id: string;
-  status: string;
-  amount_cents: number;
-};
-
-type InvoiceRow = {
-  id: string;
-  subscription_id: string;
-  company_id: string;
-  status: string;
-};
-
 /** Confirmação de uma fatura de ciclo mensal. */
 async function handleInvoicePayment(
-  db: BillingDb,
   paymentTransactionId: string,
-  fullOrderNsu: string,
   transactionNsu: string | undefined,
   slug: string | undefined,
 ): Promise<Response> {
-  const { data: txFound, error: txError } = await db
-    .from("payment_transactions")
-    .select("id, invoice_id, status, amount_cents")
-    .eq("id", paymentTransactionId)
-    .maybeSingle();
+  const outcome = await verifyAndConfirmInvoicePayment({
+    paymentTransactionId,
+    transactionNsu,
+    slug,
+  });
 
-  if (txError || !txFound) {
+  if (outcome.ok) return json({ success: true, message: null }, 200);
+
+  if (outcome.reason === "not_found") {
     console.warn(`[infinitypay-webhook] cobrança ${paymentTransactionId} não encontrada.`);
     return json({ success: false, message: "pedido não encontrado" }, 400);
   }
-
-  const tx = txFound as unknown as PaymentTransactionRow;
-
-  if (tx.status === "paid") {
-    return json({ success: true, message: null }, 200);
-  }
-
-  const check = await checkInfinityPayPayment({ orderNsu: fullOrderNsu, transactionNsu, slug });
-  if (!check.ok) {
+  if (outcome.reason === "check_failed") {
     console.error(
-      `[infinitypay-webhook] reconferência falhou para ${fullOrderNsu}: ${check.error}`,
+      `[infinitypay-webhook] reconferência falhou para ${paymentTransactionId}: ${outcome.message}`,
     );
     return json({ success: false, message: "não foi possível reconferir o pagamento" }, 400);
   }
-
-  const confirmation = validateGatewayConfirmation(
-    { paid: check.paid, paidAmountCents: check.paidAmountCents },
-    tx.amount_cents,
+  console.warn(
+    `[infinitypay-webhook] reconferência não confirma pagamento de ${paymentTransactionId}: ${outcome.message}`,
   );
-  if (!confirmation.ok) {
-    console.warn(
-      `[infinitypay-webhook] reconferência não confirma pagamento de ${fullOrderNsu}: ${confirmation.code}`,
-    );
-    return json({ success: false, message: confirmation.message }, 400);
-  }
-
-  const nowIso = new Date().toISOString();
-
-  // Condicional ao status atual: se o aviso chegar duplicado, só a primeira
-  // chamada reivindica a cobrança.
-  const { data: claimed } = await db
-    .from("payment_transactions")
-    .update({
-      status: "paid",
-      paid_at: nowIso,
-      external_transaction_id: transactionNsu ?? null,
-      raw_provider_status: {
-        capture_method: check.captureMethod,
-        transaction_nsu: transactionNsu ?? null,
-      },
-      updated_at: nowIso,
-    })
-    .eq("id", tx.id)
-    .eq("status", tx.status)
-    .select("id")
-    .maybeSingle();
-
-  if (!claimed) {
-    return json({ success: true, message: null }, 200);
-  }
-
-  const { data: invoiceFound } = await db
-    .from("invoices")
-    .select("id, subscription_id, company_id, status")
-    .eq("id", tx.invoice_id)
-    .maybeSingle();
-  const invoice = invoiceFound as unknown as InvoiceRow | null;
-
-  if (invoice) {
-    await db
-      .from("invoices")
-      .update({ status: "paid", paid_at: nowIso, updated_at: nowIso })
-      .eq("id", invoice.id);
-
-    const { data: subFound } = await db
-      .from("subscriptions")
-      .select("id, status")
-      .eq("id", invoice.subscription_id)
-      .maybeSingle();
-    const subscription = subFound as { id: string; status: string } | null;
-
-    if (subscription) {
-      // Pagamento em dia libera de qualquer atraso — inclusive de uma
-      // suspensão que já tinha acontecido por falta de pagamento.
-      await db
-        .from("subscriptions")
-        .update({ status: "active", updated_at: nowIso })
-        .eq("id", subscription.id);
-
-      await supabaseAdmin
-        .from("pizzerias")
-        .update({ subscription_status: pizzeriaAccessStatusFor("active") })
-        .eq("id", invoice.company_id);
-
-      await db.from("subscription_events").insert({
-        subscription_id: subscription.id,
-        company_id: invoice.company_id,
-        event_type: "invoice_paid",
-        previous_status: subscription.status,
-        new_status: "active",
-        reason: "Fatura do ciclo paga pela InfinityPay (aviso + reconferência)",
-        metadata: {
-          invoice_id: invoice.id,
-          payment_transaction_id: tx.id,
-          transaction_nsu: transactionNsu ?? null,
-          capture_method: check.captureMethod,
-          provider_confirmed: true,
-        },
-      });
-    }
-  }
-
-  return json({ success: true, message: null }, 200);
+  return json({ success: false, message: outcome.message }, 400);
 }
 
 export const Route = createFileRoute("/api/webhooks/infinitypay")({
@@ -330,7 +226,7 @@ export const Route = createFileRoute("/api/webhooks/infinitypay")({
 
         if (orderNsu.startsWith(INVOICE_PREFIX)) {
           const paymentTransactionId = orderNsu.slice(INVOICE_PREFIX.length);
-          return handleInvoicePayment(db, paymentTransactionId, orderNsu, transactionNsu, slug);
+          return handleInvoicePayment(paymentTransactionId, transactionNsu, slug);
         }
 
         return handleSignupCheckout(db, orderNsu, transactionNsu, slug);

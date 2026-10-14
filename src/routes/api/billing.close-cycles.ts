@@ -3,6 +3,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { closeBillingCycle } from "@/lib/billing/closeCycle.server";
 import { createRecurringCharge } from "@/lib/billing/infinitypay/recurringCharge.server";
 import { reconcileOverdueInvoices } from "@/lib/billing/collections.server";
+import { recoverInvoiceCharges } from "@/lib/billing/invoiceRecovery.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
 
 /**
@@ -17,7 +18,10 @@ import { asBillingDb } from "@/lib/billing/supabaseBridge";
  *   2. Para cada fatura recém-emitida com valor a cobrar, gera o link de
  *      pagamento da InfinityPay (fatura de valor zero é paga sozinha —
  *      nada a cobrar não pode virar motivo de suspensão depois).
- *   3. Verifica faturas pendentes vencidas e aplica o prazo de tolerância
+ *   3. Rede de segurança (invoiceRecovery.server.ts): recria o link de quem
+ *      ficou sem, e reconfere com a InfinityPay os pagamentos cujo aviso
+ *      possa ter se perdido — antes de qualquer suspensão.
+ *   4. Verifica faturas pendentes vencidas e aplica o prazo de tolerância
  *      (ver collections.ts): sinaliza atraso, e suspende só depois do prazo.
  *
  * Feito para ser chamado por um agendador (Cloudflare Cron Trigger, cron do
@@ -150,6 +154,19 @@ export const Route = createFileRoute("/api/billing/close-cycles")({
           `[billing-cron] ${results.length} ciclo(s) vencido(s): ${succeeded} fechado(s), ${failed} com falha`,
         );
 
+        let recovery: Awaited<ReturnType<typeof recoverInvoiceCharges>> | null = null;
+        try {
+          recovery = await recoverInvoiceCharges();
+          console.log(
+            `[billing-cron] rede de segurança: ${recovery.openInvoices} fatura(s) em aberto, ` +
+              `${recovery.paymentsConfirmed} pagamento(s) confirmado(s) sem aviso, ` +
+              `${recovery.linksCreated} link(s) recriado(s), ${recovery.linksFailed} falha(s)`,
+          );
+          for (const e of recovery.errors) console.warn(`[billing-cron] ${e}`);
+        } catch (err) {
+          console.error("[billing-cron] falha na rede de segurança da cobrança:", err);
+        }
+
         let reconciliation: Awaited<ReturnType<typeof reconcileOverdueInvoices>> | null = null;
         try {
           reconciliation = await reconcileOverdueInvoices();
@@ -164,7 +181,7 @@ export const Route = createFileRoute("/api/billing/close-cycles")({
         // 207 quando houve falha parcial: um agendador que só olha o código
         // de status precisa distinguir "tudo certo" de "alguns falharam".
         return json(
-          { processed: results.length, succeeded, failed, results, reconciliation },
+          { processed: results.length, succeeded, failed, results, recovery, reconciliation },
           failed > 0 ? 207 : 200,
         );
       },

@@ -35,6 +35,7 @@ import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/mobile/BottomNav";
 import { GuiaDeConfiguracao } from "@/components/onboarding/guia/GuiaDeConfiguracao";
+import { FaturaEmAbertoPopup } from "@/components/billing/FaturaEmAbertoPopup";
 import { PlanProvider, usePlan } from "@/lib/plan-context";
 import type { Feature } from "@/lib/planPermissions";
 
@@ -432,6 +433,14 @@ function AppLayoutInner() {
           loja de verdade. Administrador da plataforma não tem loja para
           configurar e nunca vê o guia. */}
       <GuiaDeConfiguracao habilitado={!isSuperAdmin} tenantId={pizzeriaStatus?.id ?? null} />
+
+      {/* Aviso de fatura do plano: aparece no dia em que o mês fecha e a
+          fatura é emitida, em qualquer tela do painel — menos na de cobrança,
+          onde o botão de pagar já está à vista. */}
+      <FaturaEmAbertoPopup
+        companyId={isSuperAdmin ? null : (pizzeriaStatus?.id ?? null)}
+        oculto={path === "/billing"}
+      />
     </div>
   );
 }

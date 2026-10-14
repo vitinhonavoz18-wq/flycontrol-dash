@@ -9,6 +9,7 @@
 
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "../supabaseBridge";
+import { isOpenInvoiceStatus } from "../collections";
 import { createInfinityPayCheckoutLink, infinityPayHandle } from "./api";
 
 export type RecurringChargeResult =
@@ -40,7 +41,9 @@ export async function createRecurringCharge(invoiceId: string): Promise<Recurrin
   if (error || !invoiceRaw) return { ok: false, reason: "invoice_not_found" };
   const invoice = invoiceRaw as unknown as InvoiceRow;
 
-  if (invoice.status !== "pending") return { ok: false, reason: "invoice_not_pending" };
+  // Fatura vencida continua cobrável: é justamente quem foi suspenso que mais
+  // precisa de um link para pagar e voltar a funcionar.
+  if (!isOpenInvoiceStatus(invoice.status)) return { ok: false, reason: "invoice_not_pending" };
   if (invoice.total_cents <= 0) return { ok: false, reason: "nothing_to_charge" };
 
   const { data: companyRaw } = await supabaseAdmin

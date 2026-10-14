@@ -2,7 +2,9 @@ import { describe, expect, it } from "vitest";
 import {
   OVERDUE_GRACE_DAYS,
   decideCollectionsAction,
+  isOpenInvoiceStatus,
   pizzeriaAccessStatusFor,
+  statusAfterInvoicePaid,
 } from "./collections";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -75,5 +77,57 @@ describe("pizzeriaAccessStatusFor", () => {
     expect(pizzeriaAccessStatusFor("canceled")).toBe("suspended");
     expect(pizzeriaAccessStatusFor("expired")).toBe("suspended");
     expect(pizzeriaAccessStatusFor("pending_activation")).toBe("suspended");
+  });
+});
+
+describe("statusAfterInvoicePaid — a loja volta depois de pagar?", () => {
+  const now = new Date("2026-10-20T12:00:00Z");
+  const daysAgo = (n: number) => new Date(now.getTime() - n * 24 * 60 * 60 * 1000);
+
+  it("sem outra fatura em aberto: volta a ficar ativa", () => {
+    expect(statusAfterInvoicePaid([], now)).toBe("active");
+  });
+
+  it("outra fatura ainda no prazo: continua ativa", () => {
+    expect(statusAfterInvoicePaid([{ status: "pending", dueAt: daysAgo(-3) }], now)).toBe("active");
+  });
+
+  it("outra fatura vencida há pouco: fica em atraso, mas liberada", () => {
+    expect(statusAfterInvoicePaid([{ status: "pending", dueAt: daysAgo(1) }], now)).toBe(
+      "past_due",
+    );
+  });
+
+  it("outra fatura vencida além da tolerância: continua suspensa", () => {
+    expect(
+      statusAfterInvoicePaid([{ status: "pending", dueAt: daysAgo(OVERDUE_GRACE_DAYS + 1) }], now),
+    ).toBe("suspended");
+  });
+
+  it("outra fatura já marcada como vencida: continua suspensa", () => {
+    expect(statusAfterInvoicePaid([{ status: "overdue", dueAt: daysAgo(1) }], now)).toBe(
+      "suspended",
+    );
+  });
+
+  it("faturas pagas ou canceladas não contam", () => {
+    expect(
+      statusAfterInvoicePaid(
+        [
+          { status: "paid", dueAt: daysAgo(30) },
+          { status: "canceled", dueAt: daysAgo(30) },
+        ],
+        now,
+      ),
+    ).toBe("active");
+  });
+});
+
+describe("isOpenInvoiceStatus", () => {
+  it("vencida continua cobrável", () => {
+    expect(isOpenInvoiceStatus("pending")).toBe(true);
+    expect(isOpenInvoiceStatus("overdue")).toBe(true);
+    expect(isOpenInvoiceStatus("paid")).toBe(false);
+    expect(isOpenInvoiceStatus("canceled")).toBe(false);
   });
 });
