@@ -1,7 +1,5 @@
 import { chromium } from 'playwright-core';
-const slugRef = { slug: '' };
 export async function openStore(slug, { dpr = 3 } = {}) {
-  slugRef.slug = slug;
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
   const ctx = await b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: dpr, isMobile: true, hasTouch: true, locale: 'pt-BR',
     userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1' });
@@ -15,7 +13,7 @@ export async function openStore(slug, { dpr = 3 } = {}) {
     }
     // O Chromium de gravação não toca H.264: entrega o MESMO vídeo do hero convertido para WebM.
     if (url.includes('/menu-images/hero/') && url.includes('.mp4')) {
-      return route.fulfill({ status: 200, contentType: 'video/webm', path: `capture/hero/${slugRef.slug}.webm` });
+      return route.fulfill({ status: 200, contentType: 'video/webm', path: `capture/hero/${slug}.webm` });
     }
     return route.continue();
   });

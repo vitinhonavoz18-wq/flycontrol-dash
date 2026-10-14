@@ -4,9 +4,9 @@ import { C, FPS, M, clamp, rnd } from '../lib';
 import { hexA } from './Phone';
 
 /** Fundo: escuro e tenso antes da virada; quente e limpo depois. */
-export const Background: React.FC = () => {
+export const Background: React.FC<{ fly?: number }> = ({ fly = M.fly1 }) => {
   const t = useCurrentFrame() / FPS;
-  const after = interpolate(t, [M.fly1 - 0.1, M.fly1 + 0.6], [0, 1], clamp);
+  const after = interpolate(t, [fly - 0.1, fly + 0.6], [0, 1], clamp);
   const breathe = 0.5 + 0.5 * Math.sin(t * 1.3);
   return (
     <AbsoluteFill style={{ background: C.bg }}>

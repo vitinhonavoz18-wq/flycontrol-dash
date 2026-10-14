@@ -34,3 +34,18 @@ Para ver e mexer no navegador: `npx remotion studio src/index.ts`.
 - `src/scenes/Finale.tsx` — composição final, logo e CTA.
 - `capture/` — scripts de gravação (Playwright). `capture/lib.mjs` bloqueia toda escrita no site.
 - `audio/build.py` — trilha e efeitos sintetizados (originais, sem licença de terceiros).
+
+## Versão curta (~24 s) — composição `Curto`
+
+```bash
+# painel FlyControl original rodando local (em outro terminal, na raiz do flycontrol-dash):
+#   .env.local com VITE_SUPABASE_URL apontando para o projeto e uma chave qualquer — as chamadas são respondidas por capture/fc/mock.mjs
+npx vite dev --port 8080
+node capture/fc/shootfc.mjs && cp capture/fcstills/*.jpg public/fc/ && cp capture/fcstills/taps.json src/short/
+python3 audio/timeline_short.py && python3 audio/build_short.py
+npx remotion render out/bundle Curto out/final/FlyControl-curto.mp4
+```
+
+- `capture/fc/mock.mjs` — back end de demonstração: pedidos e clientes fictícios, produtos/preços reais do Açaí Deus Proverá.
+  Nenhuma chamada chega ao banco real.
+- `src/short/` — cenas da versão curta (intro, cardápios com vídeo de capa, montagem, gestão de pedidos, fecho).

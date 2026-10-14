@@ -1,6 +1,9 @@
 """Gera legendas (.srt), timeline com marcadores (.csv) a partir de src/timeline.json."""
 import json, re
-T = json.load(open('src/timeline.json'))
+import sys
+TL = sys.argv[1] if len(sys.argv) > 1 else 'src/timeline.json'
+OUT = sys.argv[2] if len(sys.argv) > 2 else 'entregas/FlyControl-anuncio-completo.srt'
+T = json.load(open(TL))
 W = T['words']
 groups, cur = [], []
 for w in W:
@@ -9,6 +12,12 @@ for w in W:
     cur.append(w)
     if re.search(r'[.!?]$', w['text']): groups.append(cur); cur = []
 if cur: groups.append(cur)
+# palavra solta (ex.: "o") vai junto com a frase seguinte
+merged = []
+for g in groups:
+    if merged and len(merged[-1]) == 1 and len(merged[-1][0]['text']) <= 2: merged[-1] = merged[-1] + g
+    else: merged.append(g)
+groups = merged
 def ts(s):
     ms = int(round(s * 1000)); h, ms = divmod(ms, 3600000); m, ms = divmod(ms, 60000); sec, ms = divmod(ms, 1000)
     return f'{h:02d}:{m:02d}:{sec:02d},{ms:03d}'
@@ -25,7 +34,8 @@ def srt(groups, shift=0.0, keep=None):
         txt = ' '.join(w['text'] for w in g).replace('OUTRO', 'outro').replace('VÁRIAS', 'várias')
         out.append(f'{n}\n{ts(a)} --> {ts(b)}\n{txt}\n')
     return '\n'.join(out)
-open('entregas/FlyControl-anuncio-completo.srt', 'w').write(srt(groups))
+open(OUT, 'w').write(srt(groups))
+if len(sys.argv) > 1: raise SystemExit
 # versão resumida: mesmos trechos do Root.tsx
 SHORT = [(13.4, 25.4), (36.6, 41.0), (48.9, 59.0)]
 keep, at = [], 0

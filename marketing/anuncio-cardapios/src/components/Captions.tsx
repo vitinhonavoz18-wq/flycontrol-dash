@@ -4,8 +4,7 @@ import { C, FPS, T, clamp } from '../lib';
 import { body } from '../fonts';
 
 /** Agrupa as palavras da narração em frases curtas (para legenda e para o .srt). */
-export function captionGroups() {
-  const W = T.words;
+export function captionGroups(W: { text: string; start: number; end: number }[] = T.words) {
   const groups: { words: typeof W; start: number; end: number }[] = [];
   let cur: typeof W = [];
   for (let i = 0; i < W.length; i++) {
@@ -22,15 +21,22 @@ export function captionGroups() {
     }
   }
   if (cur.length) groups.push({ words: cur, start: cur[0].start, end: cur[cur.length - 1].end });
-  return groups;
+  // palavra solta (ex.: "o") vai junto com a frase seguinte
+  const merged: typeof groups = [];
+  for (const g of groups) {
+    const last = merged[merged.length - 1];
+    if (last && last.words.length === 1 && last.words[0].text.length <= 2) merged[merged.length - 1] = { words: [...last.words, ...g.words], start: last.start, end: g.end };
+    else merged.push(g);
+  }
+  return merged;
 }
 
 const GROUPS = captionGroups();
 
 /** Legenda animada: palavra falada acende em laranja (karaokê). */
-export const Captions: React.FC<{ y?: number }> = ({ y = 1735 }) => {
+export const Captions: React.FC<{ y?: number; groups?: ReturnType<typeof captionGroups> }> = ({ y = 1735, groups = GROUPS }) => {
   const t = useCurrentFrame() / FPS;
-  const g = GROUPS.find((g) => t >= g.start - 0.08 && t <= g.end + 0.35);
+  const g = groups.find((g) => t >= g.start - 0.08 && t <= g.end + 0.35);
   if (!g) return null;
   const inP = interpolate(t, [g.start - 0.08, g.start + 0.12], [0, 1], clamp);
   const outP = interpolate(t, [g.end + 0.15, g.end + 0.35], [0, 1], clamp);

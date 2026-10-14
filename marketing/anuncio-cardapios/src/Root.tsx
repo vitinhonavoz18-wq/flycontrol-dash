@@ -2,6 +2,8 @@ import React from 'react';
 import { Composition, Sequence } from 'remotion';
 import { Main, MainProps } from './Main';
 import { FPS, T, f } from './lib';
+import { ShortMain, ShortProps } from './short/ShortMain';
+import tlShort from './timeline-short.json';
 
 const W = 1080;
 const H = 1920;
@@ -40,6 +42,8 @@ const Transition: React.FC = () => <Cut from={16.8} to={22.6} at={0} props={{ au
 
 export const RemotionRoot: React.FC = () => (
   <>
+    <Composition id="Curto" component={ShortMain} durationInFrames={f(tlShort.duration)} fps={FPS} width={W} height={H} defaultProps={{ audio: 'mix', captions: true } as ShortProps} />
+    <Composition id="CurtoSemNarracao" component={ShortMain} durationInFrames={f(tlShort.duration)} fps={FPS} width={W} height={H} defaultProps={{ audio: 'bed', captions: false } as ShortProps} />
     <Composition id="Anuncio" component={Main} durationInFrames={f(T.duration)} fps={FPS} width={W} height={H} defaultProps={{ audio: 'mix', captions: true } as MainProps} />
     <Composition id="SemNarracao" component={Main} durationInFrames={f(T.duration)} fps={FPS} width={W} height={H} defaultProps={{ audio: 'bed', captions: false } as MainProps} />
     <Composition id="Resumido" component={Short} durationInFrames={f(shortLen)} fps={FPS} width={W} height={H} />
