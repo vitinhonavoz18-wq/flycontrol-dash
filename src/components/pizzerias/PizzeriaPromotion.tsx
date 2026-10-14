@@ -11,6 +11,8 @@ interface PizzeriaPromotionProps {
     id: string;
     name: string;
     slug: string;
+    /** Link gravado do cardápio (muda quando o dono escolhe um endereço novo). */
+    public_url?: string | null;
   };
 }
 
@@ -18,9 +20,12 @@ export function PizzeriaPromotion({ pizzeria }: PizzeriaPromotionProps) {
   const qrRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(false);
 
-  // URL base - Pode ser configurada via variável de ambiente no futuro
+  // O link gravado é o que vale: ele acompanha o "Endereço da loja" escolhido
+  // em Minha Loja. Montar pelo slug do painel mostrava o endereço de teste — e,
+  // em lojas cujo slug daqui difere do de lá, o QR Code de OUTRA loja. O slug
+  // só fica como reserva para lojas que ainda não têm link gravado.
   const baseUrl = "https://conectfly.com.br";
-  const publicUrl = `${baseUrl}/${pizzeria.slug}`;
+  const publicUrl = pizzeria.public_url?.trim() || `${baseUrl}/${pizzeria.slug}`;
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(publicUrl);

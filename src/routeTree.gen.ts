@@ -110,6 +110,7 @@ import { Route as ApiCrmOutboxResultRouteImport } from './routes/api/crm.outbox.
 import { Route as ApiFlydeliveryPagamentosConciliarRouteImport } from './routes/api/flydelivery.pagamentos.conciliar'
 import { Route as ApiFlydeliveryPagamentosPixRouteImport } from './routes/api/flydelivery.pagamentos.pix'
 import { Route as ApiMarketingQueueResultRouteImport } from './routes/api/marketing.queue.result'
+import { Route as ApiPizzeriasIdAddressRouteImport } from './routes/api/pizzerias.$id.address'
 import { Route as ApiPizzeriasIdDeactivateRouteImport } from './routes/api/pizzerias.$id.deactivate'
 import { Route as ApiPizzeriasIdDeleteRouteImport } from './routes/api/pizzerias.$id.delete'
 import { Route as ApiPizzeriasIdProvisionRouteImport } from './routes/api/pizzerias.$id.provision'
@@ -639,6 +640,11 @@ const ApiMarketingQueueResultRoute = ApiMarketingQueueResultRouteImport.update({
   path: '/result',
   getParentRoute: () => ApiMarketingQueueRoute,
 } as any)
+const ApiPizzeriasIdAddressRoute = ApiPizzeriasIdAddressRouteImport.update({
+  id: '/api/pizzerias/$id/address',
+  path: '/api/pizzerias/$id/address',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPizzeriasIdDeactivateRoute =
   ApiPizzeriasIdDeactivateRouteImport.update({
     id: '/api/pizzerias/$id/deactivate',
@@ -774,6 +780,7 @@ export interface FileRoutesByFullPath {
   '/api/flydelivery/pagamentos/conciliar': typeof ApiFlydeliveryPagamentosConciliarRoute
   '/api/flydelivery/pagamentos/pix': typeof ApiFlydeliveryPagamentosPixRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
+  '/api/pizzerias/$id/address': typeof ApiPizzeriasIdAddressRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
@@ -877,6 +884,7 @@ export interface FileRoutesByTo {
   '/api/flydelivery/pagamentos/conciliar': typeof ApiFlydeliveryPagamentosConciliarRoute
   '/api/flydelivery/pagamentos/pix': typeof ApiFlydeliveryPagamentosPixRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
+  '/api/pizzerias/$id/address': typeof ApiPizzeriasIdAddressRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
@@ -987,6 +995,7 @@ export interface FileRoutesById {
   '/api/flydelivery/pagamentos/conciliar': typeof ApiFlydeliveryPagamentosConciliarRoute
   '/api/flydelivery/pagamentos/pix': typeof ApiFlydeliveryPagamentosPixRoute
   '/api/marketing/queue/result': typeof ApiMarketingQueueResultRoute
+  '/api/pizzerias/$id/address': typeof ApiPizzeriasIdAddressRoute
   '/api/pizzerias/$id/deactivate': typeof ApiPizzeriasIdDeactivateRoute
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
@@ -1097,6 +1106,7 @@ export interface FileRouteTypes {
     | '/api/flydelivery/pagamentos/conciliar'
     | '/api/flydelivery/pagamentos/pix'
     | '/api/marketing/queue/result'
+    | '/api/pizzerias/$id/address'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
@@ -1200,6 +1210,7 @@ export interface FileRouteTypes {
     | '/api/flydelivery/pagamentos/conciliar'
     | '/api/flydelivery/pagamentos/pix'
     | '/api/marketing/queue/result'
+    | '/api/pizzerias/$id/address'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
@@ -1309,6 +1320,7 @@ export interface FileRouteTypes {
     | '/api/flydelivery/pagamentos/conciliar'
     | '/api/flydelivery/pagamentos/pix'
     | '/api/marketing/queue/result'
+    | '/api/pizzerias/$id/address'
     | '/api/pizzerias/$id/deactivate'
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
@@ -1365,6 +1377,7 @@ export interface RootRouteChildren {
   ApiWebhooksWhatsappStatusRoute: typeof ApiWebhooksWhatsappStatusRoute
   ApiFlydeliveryPagamentosConciliarRoute: typeof ApiFlydeliveryPagamentosConciliarRoute
   ApiFlydeliveryPagamentosPixRoute: typeof ApiFlydeliveryPagamentosPixRoute
+  ApiPizzeriasIdAddressRoute: typeof ApiPizzeriasIdAddressRoute
   ApiPizzeriasIdDeactivateRoute: typeof ApiPizzeriasIdDeactivateRoute
   ApiPizzeriasIdDeleteRoute: typeof ApiPizzeriasIdDeleteRoute
   ApiPizzeriasIdProvisionRoute: typeof ApiPizzeriasIdProvisionRoute
@@ -2080,6 +2093,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMarketingQueueResultRouteImport
       parentRoute: typeof ApiMarketingQueueRoute
     }
+    '/api/pizzerias/$id/address': {
+      id: '/api/pizzerias/$id/address'
+      path: '/api/pizzerias/$id/address'
+      fullPath: '/api/pizzerias/$id/address'
+      preLoaderRoute: typeof ApiPizzeriasIdAddressRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pizzerias/$id/deactivate': {
       id: '/api/pizzerias/$id/deactivate'
       path: '/api/pizzerias/$id/deactivate'
@@ -2363,6 +2383,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiFlydeliveryPagamentosConciliarRoute:
     ApiFlydeliveryPagamentosConciliarRoute,
   ApiFlydeliveryPagamentosPixRoute: ApiFlydeliveryPagamentosPixRoute,
+  ApiPizzeriasIdAddressRoute: ApiPizzeriasIdAddressRoute,
   ApiPizzeriasIdDeactivateRoute: ApiPizzeriasIdDeactivateRoute,
   ApiPizzeriasIdDeleteRoute: ApiPizzeriasIdDeleteRoute,
   ApiPizzeriasIdProvisionRoute: ApiPizzeriasIdProvisionRoute,
