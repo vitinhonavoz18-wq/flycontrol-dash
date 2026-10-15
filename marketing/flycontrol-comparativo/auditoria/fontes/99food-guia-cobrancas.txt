@@ -1,0 +1,13 @@
+URL: https://99app.com/99food/restaurantes/guias/entendendo-as-cobrancas-da-99food/
+HTTP: 429
+Consultado em: 2026-10-15T15:29:13.927Z
+
+Falha ao verificar seu navegador
+
+Código 21
+
+Ponto de verificação de segurança da Vercel
+
+|
+
+iad1::1792078148-rY6aQEebXB9bL1TUCKrtX36GOhbmk4v5

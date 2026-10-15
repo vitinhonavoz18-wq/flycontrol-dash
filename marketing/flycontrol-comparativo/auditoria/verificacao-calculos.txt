@@ -1,0 +1,24 @@
+OK   ifood total %                   26,2%
+OK   ifood taxa 1 pedido             R$ 6,81
+OK   ifood restante                  R$ 19,19
+OK   ifood preço p/ preservar 26     R$ 35,23
+OK   ifood 100 pedidos               R$ 681,20
+OK   99 total %                      12,1%
+OK   99 taxa 1 pedido                R$ 3,15
+OK   99 restante                     R$ 22,85
+OK   99 preço p/ preservar 26        R$ 29,58
+OK   99 100 pedidos                  R$ 314,60
+OK   fly taxa 1 pedido               R$ 0,70
+OK   fly restante                    R$ 25,30
+OK   fly preço p/ preservar 26       R$ 26,70
+OK   fly 100 pedidos (faixa 1–100)   R$ 70,00
+OK   vendas 100 pedidos              R$ 2.600,00
+OK   diferença vs ifood              R$ 611,20
+OK   diferença vs 99                 R$ 244,60
+     ifood: cobrando R$ 35,23 sobram R$ 26,00 depois das taxas
+     99food: cobrando R$ 29,58 sobram R$ 26,00 depois das taxas
+     flycontrol: cobrando R$ 26,70 sobram R$ 26,00 depois das taxas
+     registro: ifood 100 × taxa arredondada por pedido = R$ 681,00
+     registro: 99food 100 × taxa arredondada por pedido = R$ 315,00
+     registro: flycontrol 100 × taxa arredondada por pedido = R$ 70,00
+Todos os números conferem.

@@ -1,0 +1,20 @@
+import { chromium } from 'playwright-core';
+import fs from 'fs';
+const OUT = new URL('./fontes/', import.meta.url).pathname;
+const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
+const ctx = await b.newContext({ viewport: { width: 1280, height: 900 }, locale: 'pt-BR', userAgent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0 Safari/537.36' });
+const p = await ctx.newPage();
+await p.goto('https://merchant.99app.com/pt-BR/store', { waitUntil: 'domcontentloaded', timeout: 60000 });
+await p.waitForTimeout(4000);
+for (let y = 0; y < 9000; y += 450) { await p.evaluate((y) => window.scrollTo(0, y), y); await p.waitForTimeout(600); }
+const sec = p.getByText('Entrega feita pela 99').first();
+await sec.scrollIntoViewIfNeeded(); await p.waitForTimeout(5000);
+const text = await p.evaluate(() => document.body.innerText);
+fs.writeFileSync(OUT + '99food-store-v2.txt', `URL: https://merchant.99app.com/pt-BR/store\nConsultado em: ${new Date().toISOString()}\n\n` + text);
+await sec.evaluate((el) => el.closest('section, div')?.scrollIntoView({ block: 'start' }));
+await p.waitForTimeout(3000);
+await p.screenshot({ path: OUT + '99food-entrega-pela-99.png' });
+await p.screenshot({ path: OUT + '99food-store-pagina-inteira.png', fullPage: true });
+const i = text.indexOf('Entrega feita pela 99');
+console.log(text.slice(i, i + 1400));
+await b.close();
