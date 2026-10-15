@@ -1,0 +1,10 @@
+node_modules/
+renders/
+assets/clips/
+assets/audio/
+assets/stills/
+narracao/*.wav
+narracao/*.mp3
+efeitos-sonoros/tmp/
+capturas-reais/cardapios/
+capturas-reais/painel-white/*.png

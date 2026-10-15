@@ -1,0 +1,344 @@
+{
+ "fps": 30,
+ "duration": 24.8,
+ "segments": [
+  [
+   0.0,
+   5.1,
+   0.25
+  ],
+  [
+   14.105,
+   19.31,
+   5.4
+  ],
+  [
+   29.95,
+   37.11,
+   10.7
+  ],
+  [
+   45.765,
+   49.95,
+   18.0
+  ],
+  [
+   49.95,
+   51.07,
+   22.45
+  ]
+ ],
+ "markers": {
+  "varias": 2.09,
+  "so": 3.69,
+  "q1End": 4.929,
+  "preco": null,
+  "audio": null,
+  "mudaPedido": null,
+  "mudaTudo": null,
+  "chaosEnd": 4.929,
+  "eSe": 5.455,
+  "porOutro": 7.882,
+  "outro": 8.015,
+  "lugar": 8.335,
+  "lugarEnd": 8.974,
+  "fly1": 9.815,
+  "simples": null,
+  "moderno": null,
+  "profissional1": null,
+  "seja": 10.89,
+  "acai": 11.15,
+  "doce": 12.19,
+  "hamburguer": 12.71,
+  "pastel": 14.19,
+  "cada": 15.363,
+  "proprio": 16.67,
+  "cardapio": 17.15,
+  "cardapioEnd": 17.859,
+  "seuNegocio": 18.115,
+  "pedidos": 20.195,
+  "profissional2": 21.475,
+  "profissional2End": 22.184,
+  "conheca": 22.64,
+  "end": 23.569,
+  "freeze": 5.179
+ },
+ "words": [
+  {
+   "text": "Seu",
+   "start": 0.33,
+   "end": 0.489
+  },
+  {
+   "text": "cliente",
+   "start": 0.69,
+   "end": 0.889
+  },
+  {
+   "text": "ainda",
+   "start": 0.93,
+   "end": 1.129
+  },
+  {
+   "text": "precisa",
+   "start": 1.25,
+   "end": 1.529
+  },
+  {
+   "text": "mandar",
+   "start": 1.65,
+   "end": 2.009
+  },
+  {
+   "text": "VÁRIAS",
+   "start": 2.09,
+   "end": 2.409
+  },
+  {
+   "text": "mensagens…",
+   "start": 2.49,
+   "end": 3.609
+  },
+  {
+   "text": "só",
+   "start": 3.69,
+   "end": 3.809
+  },
+  {
+   "text": "pra",
+   "start": 3.85,
+   "end": 3.929
+  },
+  {
+   "text": "fazer",
+   "start": 4.01,
+   "end": 4.249
+  },
+  {
+   "text": "um",
+   "start": 4.29,
+   "end": 4.329
+  },
+  {
+   "text": "pedido?",
+   "start": 4.41,
+   "end": 4.929
+  },
+  {
+   "text": "e",
+   "start": 5.455,
+   "end": 5.534
+  },
+  {
+   "text": "se",
+   "start": 5.615,
+   "end": 5.654
+  },
+  {
+   "text": "o",
+   "start": 5.695,
+   "end": 5.774
+  },
+  {
+   "text": "cliente",
+   "start": 6.015,
+   "end": 6.254
+  },
+  {
+   "text": "fizesse",
+   "start": 6.295,
+   "end": 6.694
+  },
+  {
+   "text": "o",
+   "start": 6.735,
+   "end": 6.814
+  },
+  {
+   "text": "pedido…",
+   "start": 7.295,
+   "end": 7.827
+  },
+  {
+   "text": "por",
+   "start": 7.882,
+   "end": 7.934
+  },
+  {
+   "text": "OUTRO",
+   "start": 8.015,
+   "end": 8.254
+  },
+  {
+   "text": "lugar?",
+   "start": 8.335,
+   "end": 8.974
+  },
+  {
+   "text": "Com",
+   "start": 9.535,
+   "end": 9.614
+  },
+  {
+   "text": "o",
+   "start": 9.695,
+   "end": 9.774
+  },
+  {
+   "text": "FlyControl,",
+   "start": 9.815,
+   "end": 10.604
+  },
+  {
+   "text": "seja",
+   "start": 10.89,
+   "end": 10.989
+  },
+  {
+   "text": "um",
+   "start": 11.03,
+   "end": 11.069
+  },
+  {
+   "text": "açaí,",
+   "start": 11.15,
+   "end": 11.829
+  },
+  {
+   "text": "um",
+   "start": 11.87,
+   "end": 12.029
+  },
+  {
+   "text": "doce,",
+   "start": 12.19,
+   "end": 12.616
+  },
+  {
+   "text": "um",
+   "start": 12.643,
+   "end": 12.669
+  },
+  {
+   "text": "hambúrguer…",
+   "start": 12.71,
+   "end": 13.509
+  },
+  {
+   "text": "ou",
+   "start": 13.55,
+   "end": 13.629
+  },
+  {
+   "text": "aquele",
+   "start": 13.79,
+   "end": 14.029
+  },
+  {
+   "text": "pastel",
+   "start": 14.19,
+   "end": 14.429
+  },
+  {
+   "text": "especial…",
+   "start": 14.51,
+   "end": 15.336
+  },
+  {
+   "text": "cada",
+   "start": 15.363,
+   "end": 15.549
+  },
+  {
+   "text": "negócio",
+   "start": 15.63,
+   "end": 16.189
+  },
+  {
+   "text": "com",
+   "start": 16.23,
+   "end": 16.269
+  },
+  {
+   "text": "o",
+   "start": 16.31,
+   "end": 16.349
+  },
+  {
+   "text": "seu",
+   "start": 16.43,
+   "end": 16.629
+  },
+  {
+   "text": "próprio",
+   "start": 16.67,
+   "end": 16.989
+  },
+  {
+   "text": "cardápio.",
+   "start": 17.15,
+   "end": 17.859
+  },
+  {
+   "text": "Seu",
+   "start": 18.115,
+   "end": 18.234
+  },
+  {
+   "text": "negócio",
+   "start": 18.355,
+   "end": 18.794
+  },
+  {
+   "text": "merece",
+   "start": 18.955,
+   "end": 19.194
+  },
+  {
+   "text": "uma",
+   "start": 19.235,
+   "end": 19.274
+  },
+  {
+   "text": "experiência",
+   "start": 19.355,
+   "end": 19.914
+  },
+  {
+   "text": "de",
+   "start": 19.995,
+   "end": 20.074
+  },
+  {
+   "text": "pedidos",
+   "start": 20.195,
+   "end": 20.714
+  },
+  {
+   "text": "muito",
+   "start": 20.795,
+   "end": 21.114
+  },
+  {
+   "text": "mais",
+   "start": 21.155,
+   "end": 21.354
+  },
+  {
+   "text": "profissional.",
+   "start": 21.475,
+   "end": 22.184
+  },
+  {
+   "text": "Conheça",
+   "start": 22.64,
+   "end": 22.979
+  },
+  {
+   "text": "agora!",
+   "start": 23.06,
+   "end": 23.569
+  }
+ ],
+ "hasChaos": false
+}

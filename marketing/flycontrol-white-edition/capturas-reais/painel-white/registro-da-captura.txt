@@ -1,0 +1,11 @@
+tema ao abrir: {"cls":"dark","saved":null,"bg":"lab(1.94806 1.40133 0.963616)"}
+captura: 00-antes-modo-escuro
+interruptor encontrado: 1 | rótulo: Modo Escuro
+tema depois do clique: {"cls":"light","saved":"light","bg":"lab(97.6948 0.282437 1.88138)"} | rótulo agora: Modo Claro
+captura: 01-depois-modo-claro-computador
+captura: 02-tablet-quadro-de-pedidos
+captura: 03-tablet-detalhes-do-pedido
+escrita simulada (só nesta gravação): PATCH orders ?id=eq.00000000-0000-4000-8000-000000000101&status=eq.novo&select=id%2Cstatus%2Cupdated_at
+captura: 04-tablet-flystatus-em-preparo
+captura: 05-tablet-quadro-atualizado
+tema no fim: {"cls":"light","saved":"light","bg":"lab(97.6948 0.282437 1.88138)"}
