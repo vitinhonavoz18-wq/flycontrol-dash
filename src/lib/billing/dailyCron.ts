@@ -2,48 +2,61 @@
  * Disparo diário do fechamento de ciclos (Cloudflare Cron Trigger, ver
  * wrangler.jsonc).
  *
- * Não repete a lógica de fechamento aqui — chama o próprio endpoint HTTP
- * já protegido pelo segredo, exatamente como qualquer outro agendador
- * externo faria. Um único caminho de fechamento, testado uma vez só.
+ * Chama o fechamento DIRETAMENTE, dentro do próprio Worker.
  *
- * Mora num arquivo próprio porque é usado pelo plugin do Nitro
- * (`src/nitro/billingCron.plugin.ts`) — quem de fato recebe o despertador da
- * Cloudflare no pacote publicado — e pelo `src/server.ts`.
+ * Antes, este despertador fazia uma chamada pela internet para o endereço do
+ * próprio painel (`FLYCONTROL_PUBLIC_URL/api/billing/close-cycles`). A
+ * Cloudflare não entrega uma chamada que o Worker faz para o próprio
+ * endereço workers.dev (nem para uma rota da mesma zona) — devolve um erro
+ * (código 1042) sem nunca chegar ao endpoint. Foi assim que, em 15/10, o
+ * despertador tocou e nenhum ciclo fechou: nenhuma consulta a billing_cycles
+ * chegou ao banco naquele horário.
+ *
+ * É usado pelo plugin do Nitro (`src/nitro/billingCron.plugin.ts`) — quem de
+ * fato recebe o despertador da Cloudflare no pacote publicado — e pelo
+ * `src/server.ts`.
  */
+
+import type { CloseDueCyclesOutcome } from "./closeDueCycles.server";
 
 export type CronEnv = Record<string, unknown>;
 
 export type DailyCronOutcome =
-  { fired: true; status: number } | { fired: false; reason: "missing_config" | "request_failed" };
+  | { ran: true; processed: number; succeeded: number; failed: number }
+  | { ran: false; reason: "query_failed" | "crashed" };
 
-function readString(env: CronEnv, key: string): string {
-  const value = env[key];
-  return typeof value === "string" ? value.trim() : "";
-}
+type CloseFn = () => Promise<CloseDueCyclesOutcome>;
+
+/**
+ * Carregado só na hora do disparo: o plugin é iniciado junto com o Worker em
+ * toda requisição fria, e não há por que carregar o motor de cobrança inteiro
+ * para servir uma página do cardápio.
+ */
+const loadAndClose: CloseFn = async () => {
+  const { closeDueCycles } = await import("./closeDueCycles.server");
+  return closeDueCycles();
+};
 
 export async function runDailyBillingCron(
-  env: CronEnv,
-  fetchImpl: typeof fetch = fetch,
+  _env: CronEnv = {},
+  close: CloseFn = loadAndClose,
 ): Promise<DailyCronOutcome> {
-  const base = readString(env, "FLYCONTROL_PUBLIC_URL").replace(/\/+$/, "");
-  const secret = readString(env, "BILLING_CRON_SECRET");
-
-  if (!base || !secret) {
-    console.error(
-      "[cron] FLYCONTROL_PUBLIC_URL ou BILLING_CRON_SECRET ausente — fechamento de ciclos não disparado.",
-    );
-    return { fired: false, reason: "missing_config" };
-  }
-
+  console.log("[cron] despertador da cobrança tocou — fechando ciclos vencidos");
   try {
-    const resp = await fetchImpl(`${base}/api/billing/close-cycles`, {
-      method: "POST",
-      headers: { "x-billing-cron-secret": secret },
-    });
-    console.log(`[cron] fechamento de ciclos: status ${resp.status}`);
-    return { fired: true, status: resp.status };
+    const outcome = await close();
+    if (!outcome.ok) {
+      console.error(`[cron] fechamento de ciclos não rodou: ${outcome.error} (${outcome.message})`);
+      return { ran: false, reason: "query_failed" };
+    }
+    const { processed, succeeded, failed } = outcome.report;
+    console.log(
+      `[cron] fechamento de ciclos concluído: ${processed} vencido(s), ${succeeded} fechado(s), ${failed} com falha`,
+    );
+    return { ran: true, processed, succeeded, failed };
   } catch (error) {
-    console.error("[cron] falha ao disparar o fechamento de ciclos:", error);
-    return { fired: false, reason: "request_failed" };
+    // Nunca deixar o erro escapar sem registro: um despertador que falha em
+    // silêncio é o mesmo que não ter despertador.
+    console.error("[cron] erro inesperado no fechamento de ciclos:", error);
+    return { ran: false, reason: "crashed" };
   }
 }

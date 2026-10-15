@@ -10,9 +10,10 @@
  * o despertador tocava todo dia numa cozinha vazia, e nenhum ciclo fechava
  * sozinho.
  *
- * Este plugin é a inscrição que faltava. Ele não decide nada — só chama o
- * mesmo endpoint protegido por segredo que qualquer agendador externo
- * chamaria.
+ * Este plugin é a inscrição que faltava. Ele não decide nada — chama a mesma
+ * rotina de fechamento que o endpoint `/api/billing/close-cycles` usa, só que
+ * direto, dentro do Worker (ver `runDailyBillingCron`: a chamada pela
+ * internet para o próprio endereço era barrada pela Cloudflare).
  */
 
 import { definePlugin } from "nitro";
