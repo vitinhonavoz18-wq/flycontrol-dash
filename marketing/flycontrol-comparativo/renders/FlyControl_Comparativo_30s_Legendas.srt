@@ -1,84 +1,25 @@
 1
-00:00:00,320 --> 00:00:01,280
-O mesmo hambúrguer.
+00:00:00,128 --> 00:00:02,191
+Quanto das suas vendas fica nas taxas?
 
 2
-00:00:01,280 --> 00:00:03,136
-Mas quanto sobra da venda?
-(exemplo: pedido de R$ 26,00)
+00:00:04,032 --> 00:00:06,305
+No iFood, ficam R$ 19,19.
 
 3
-00:00:03,547 --> 00:00:04,240
-Exemplo: iFood · Plano Entrega
+00:00:09,086 --> 00:00:12,269
+Na 99Food, R$ 22,85.
 
 4
-00:00:04,240 --> 00:00:05,488
-23% de comissão
-+ 3,2% de pagamento pela plataforma
+00:00:14,000 --> 00:00:16,352
+No FlyControl, R$ 25,30.
 
 5
-00:00:05,488 --> 00:00:06,736
-Total de 26,2% neste cenário:
-R$ 6,81 em taxas
+00:00:18,467 --> 00:00:22,355
+Em 100 pedidos, até R$ 611
+de diferença nas taxas.
 
 6
-00:00:06,736 --> 00:00:08,261
-R$ 26,00 − R$ 6,81 = R$ 19,19
-após essas taxas
-
-7
-00:00:08,743 --> 00:00:09,429
-Exemplo: 99Food · entrega pela 99
-
-8
-00:00:09,429 --> 00:00:10,663
-8,9% de comissão
-+ 3,2% de intermediação de pagamento
-
-9
-00:00:10,663 --> 00:00:11,897
-Total de 12,1% neste cenário:
-R$ 3,15 em taxas
-
-10
-00:00:11,897 --> 00:00:13,063
-R$ 26,00 − R$ 3,15 = R$ 22,85
-após essas taxas
-
-11
-00:00:13,840 --> 00:00:15,120
-FlyControl
-
-12
-00:00:15,120 --> 00:00:16,800
-Exemplo: venda direta · Plano CENTS
-R$ 0,70 por pedido aceito
-
-13
-00:00:16,800 --> 00:00:17,680
-R$ 26,00 − R$ 0,70 = R$ 25,30
-(primeiros 100 do mês, sem mensalidade)
-
-14
-00:00:18,622 --> 00:00:19,789
-100 pedidos
-R$ 2.600,00 em vendas
-
-15
-00:00:19,867 --> 00:00:22,200
-Taxas em 100 pedidos: iFood R$ 681,20
-99Food R$ 314,60 · FlyControl R$ 70,00
-
-16
-00:00:22,356 --> 00:00:24,844
-Até R$ 611,20 de diferença nas taxas
-deste exemplo (R$ 244,60 frente ao 99Food)
-
-17
-00:00:25,667 --> 00:00:27,000
-Mais controle sobre suas vendas.
-Seu cardápio. Sua marca. Seus pedidos.
-
-18
-00:00:27,000 --> 00:00:29,667
-Conheça o FlyControl
+00:00:25,500 --> 00:00:28,788
+FlyControl. Mais controle
+sobre as suas vendas.

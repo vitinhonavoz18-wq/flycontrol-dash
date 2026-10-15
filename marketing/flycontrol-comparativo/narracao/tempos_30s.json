@@ -1,0 +1,50 @@
+[
+ {
+  "cena": "s1",
+  "inicio": 0.128,
+  "fim": 1.991,
+  "atraso": 0.0,
+  "fim_da_cena": 3.2,
+  "escrito": "Quanto das suas vendas fica nas taxas?"
+ },
+ {
+  "cena": "s2",
+  "inicio": 4.032,
+  "fim": 6.105,
+  "atraso": 0.0,
+  "fim_da_cena": 8.4,
+  "escrito": "No iFood, ficam R$ 19,19."
+ },
+ {
+  "cena": "s3",
+  "inicio": 9.086,
+  "fim": 12.069,
+  "atraso": 0.0,
+  "fim_da_cena": 13.2,
+  "escrito": "Na 99Food, R$ 22,85."
+ },
+ {
+  "cena": "s5",
+  "inicio": 14.0,
+  "fim": 16.152,
+  "atraso": 0.0,
+  "fim_da_cena": 18.0,
+  "escrito": "No FlyControl, R$ 25,30."
+ },
+ {
+  "cena": "s6",
+  "inicio": 18.467,
+  "fim": 22.155,
+  "atraso": 0.0,
+  "fim_da_cena": 25.0,
+  "escrito": "Em 100 pedidos, até R$ 611 de diferença nas taxas."
+ },
+ {
+  "cena": "s8",
+  "inicio": 25.5,
+  "fim": 28.588,
+  "atraso": 0.0,
+  "fim_da_cena": 30.0,
+  "escrito": "FlyControl. Mais controle sobre as suas vendas."
+ }
+]

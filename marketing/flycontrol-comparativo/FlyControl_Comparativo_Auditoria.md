@@ -134,11 +134,19 @@ para sobrar R$ 26,00) **não aparece**, porque não haveria tempo de leitura.
   titulares, citadas só para comparação. Sem parceria ou vínculo com o FlyControl".
 
 ## 7. Limitações
-1. **Sem narração.** A ElevenLabs tem 51 créditos e o roteiro precisaria de cerca de 800. Por sua escolha, o vídeo
-   saiu com textos na tela, trilha e efeitos. Por isso o arquivo `_SemVoz` hoje é **igual** ao de 53 s. Quando houver
-   créditos, a locução entra só no de 53 s e o `_SemVoz` continua como está. As trilhas separadas (música e
-   efeitos) ficam em `efeitos-sonoros/stems/` para facilitar a mistura com a voz.
-2. **Legendas** = os textos-chave que aparecem na tela, nos mesmos tempos (não há fala para transcrever).
+1. **Narração masculina feita aqui, sem ElevenLabs.** A conta da ElevenLabs tinha 51 créditos e a locução pedia 790,
+   então usei o **Piper**, um gerador de voz gratuito que roda no próprio computador da produção, com a voz
+   brasileira **"Cadu"** (licença CC0: uso comercial liberado, sem pagar nada e sem citar autor). Cada frase foi
+   gravada 3 vezes e um reconhecedor de fala (Whisper) escolheu a tomada mais clara; depois transcrevi a mistura
+   final inteira e todas as frases e valores foram entendidos. Para a voz acertar a pronúncia, o texto interno usa
+   grafias como "Ifúd", "FláiContról" e "carrdápio" (as legendas usam a grafia normal).
+   **Limite honesto:** é uma voz sintética mais simples que a da ElevenLabs. Soa como locução de máquina boa, não
+   como um locutor humano. Se quiser trocar depois, o texto e os tempos já estão prontos (`narracao/frases.json`).
+   O texto da 30 s é mais curto (só os valores finais), porque a cena passa rápido.
+   O arquivo `_SemVoz` agora é diferente: mesma edição de 53 s, só com trilha e efeitos.
+2. **Legendas:** `FlyControl_Comparativo_Legendas.srt` acompanha a locução, frase a frase. Os textos-chave da tela
+   estão em `..._TextosNaTela.srt`. As legendas não foram gravadas por cima do vídeo, porque a tela já tem muitos
+   números; Instagram e TikTok exibem o .srt como legenda opcional.
 3. O guia de cobranças da 99Food não abriu (bloqueio do site).
 4. Taxas de marketplace mudam com frequência. Antes de publicar daqui a algumas semanas, vale abrir as duas páginas
    de novo e conferir os quatro números (23%, 8,9%, 3,2% e R$ 0,70).
@@ -150,4 +158,4 @@ para sobrar R$ 26,00) **não aparece**, porque não haveria tempo de leitura.
 - [x] Quadros finais revisados: números legíveis e corretos em todas as cenas.
 - [x] Plano, data de consulta e "valores variam por contrato" aparecem em cada cenário.
 - [x] Nenhuma alteração no FlyControl, no site de pedidos ou no banco; nenhum pedido real criado.
-- [x] Áudio a -14 LUFS (padrão das redes), sem distorção.
+- [x] Áudio a -14 LUFS (padrão das redes), sem distorção; música abaixa cerca de 8 dB quando o locutor fala.

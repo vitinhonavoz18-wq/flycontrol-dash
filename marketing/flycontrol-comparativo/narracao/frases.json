@@ -1,0 +1,24 @@
+{
+ "53s": [
+  ["s1", 0.2, "Você sabe quanto das suas vendas fica nas taxas dos aplicativos?", "você sabe quanto das suas vendas fica nas taxas dos aplicativos", "Você sabe quanto das suas vendas fica nas taxas dos aplicativos?"],
+  ["s2", 0.4, "No plano Entrega do Ifúd, as taxas podem somar vinte e seis vírgula dois por cento.", "no plano entrega do ifood as taxas podem somar 26,2%", "No plano Entrega do iFood, as taxas podem somar 26,2%."],
+  ["s2", 5.0, "Ficam dezenove e dezenove.", "ficam 19,19", "Ficam R$ 19,19."],
+  ["s3", 0.4, "Na noventa e nove Fúd, doze vírgula um por cento, fora a entrega.", "na 99food 12,1% fora a entrega", "Na 99Food, 12,1%, fora a entrega."],
+  ["s3", 4.4, "Ficam vinte e dois e oitenta e cinco.", "ficam 22,85", "Ficam R$ 22,85."],
+  ["s4", 0.4, "Mas... e se você vendesse pelo seu próprio carrdápio?", "mas e se você vendesse pelo seu próprio cardápio", "Mas… e se você vendesse pelo seu próprio cardápio?"],
+  ["s5", 0.7, "No FláiContról, são setenta centavos por pedido aceito.", "no flycontrol são 70 centavos por pedido aceito", "No FlyControl, são R$ 0,70 por pedido aceito."],
+  ["s5", 3.6, "Ficam vinte e cinco e trinta.", "ficam 25 e 30", "Ficam R$ 25,30."],
+  ["s6", 0.5, "Em cem pedidos de vinte e seis reais,", "em 100 pedidos de 26 reais", "Em 100 pedidos de R$ 26,"],
+  ["s6", 3.4, "a diferença nas taxas deste exemplo chega a seiscentos e onze reais.", "a diferença nas taxas deste exemplo chega a 611 reais", "a diferença nas taxas deste exemplo chega a R$ 611."],
+  ["s7", 0.3, "E ainda tem um carrdápio com a cara do seu negócio, do jeito que o seu cliente gosta de pedir.", "e ainda tem um cardápio com a cara do seu negócio do jeito que o seu cliente gosta de pedir", "E ainda tem um cardápio com a cara do seu negócio, do jeito que o seu cliente gosta de pedir."],
+  ["s8", 0.6, "FláiContról. Mais controle sobre as suas vendas.", "flycontrol mais controle sobre as suas vendas", "FlyControl. Mais controle sobre as suas vendas."]
+ ],
+ "30s": [
+  ["s1", 0.2, "Quanto das suas vendas fica nas taxas?", "quanto das suas vendas fica nas taxas", "Quanto das suas vendas fica nas taxas?"],
+  ["s2", 1.2, "No Ifúd, ficam dezenove e dezenove.", "no ifood ficam 19,19", "No iFood, ficam R$ 19,19."],
+  ["s3", 1.0, "Na noventa e nove Fúd, vinte e dois e oitenta e cinco.", "na 99food 22,85", "Na 99Food, R$ 22,85."],
+  ["s5", 1.0, "No FláiContról, vinte e cinco e trinta.", "no flycontrol 25 e 30", "No FlyControl, R$ 25,30."],
+  ["s6", 0.6, "Em cem pedidos, até seiscentos e onze reais de diferença nas taxas.", "em 100 pedidos até 611 reais de diferença nas taxas", "Em 100 pedidos, até R$ 611 de diferença nas taxas."],
+  ["s8", 0.6, "FláiContról. Mais controle sobre as suas vendas.", "flycontrol mais controle sobre as suas vendas", "FlyControl. Mais controle sobre as suas vendas."]
+ ]
+}

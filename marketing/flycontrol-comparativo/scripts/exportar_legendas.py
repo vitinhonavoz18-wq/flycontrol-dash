@@ -36,7 +36,7 @@ def ts(x):
     ms = int(round(x * 1000)); h, ms = divmod(ms, 3600000); m, ms = divmod(ms, 60000); s, ms = divmod(ms, 1000)
     return f'{h:02d}:{m:02d}:{s:02d},{ms:03d}'
 
-for versao, nome in [('53s', 'FlyControl_Comparativo_Legendas.srt'), ('30s', 'FlyControl_Comparativo_30s_Legendas.srt')]:
+for versao, nome in [('53s', 'FlyControl_Comparativo_TextosNaTela.srt'), ('30s', 'FlyControl_Comparativo_30s_TextosNaTela.srt')]:
     cen = R['versoes'][versao]['cenas']
     linhas, n = [], 0
     for c, a, b, txt in TEXTOS:
@@ -48,3 +48,17 @@ for versao, nome in [('53s', 'FlyControl_Comparativo_Legendas.srt'), ('30s', 'Fl
         linhas.append(f'{n}\n{ts(a0 + a / k)} --> {ts(a0 + b / k)}\n{txt}\n')
     open(f'{RAIZ}/renders/{nome}', 'w', encoding='utf-8').write('\n'.join(linhas))
     print(nome, n, 'legendas')
+
+# legendas da locução (tempos reais de cada frase, de narracao/tempos_<versão>.json)
+for versao, nome in [('53s', 'FlyControl_Comparativo_Legendas.srt'), ('30s', 'FlyControl_Comparativo_30s_Legendas.srt')]:
+    caminho = f'{RAIZ}/narracao/tempos_{versao}.json'
+    if not os.path.exists(caminho): continue
+    linhas = []
+    for n, x in enumerate(json.load(open(caminho)), 1):
+        txt = x['escrito']
+        if len(txt) > 42:  # quebra em duas linhas perto do meio
+            meio = len(txt) // 2; cortes = [i for i, ch in enumerate(txt) if ch == ' ']
+            c = min(cortes, key=lambda i: abs(i - meio)); txt = txt[:c] + '\n' + txt[c + 1:]
+        linhas.append(f"{n}\n{ts(x['inicio'])} --> {ts(x['fim'] + 0.2)}\n{txt}\n")
+    open(f'{RAIZ}/renders/{nome}', 'w', encoding='utf-8').write('\n'.join(linhas))
+    print(nome, len(linhas), 'legendas (locução)')

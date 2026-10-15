@@ -1,0 +1,98 @@
+[
+ {
+  "cena": "s1",
+  "inicio": 0.2,
+  "fim": 3.543,
+  "atraso": 0.0,
+  "fim_da_cena": 5,
+  "escrito": "Você sabe quanto das suas vendas fica nas taxas dos aplicativos?"
+ },
+ {
+  "cena": "s2",
+  "inicio": 5.4,
+  "fim": 9.72,
+  "atraso": 0.0,
+  "fim_da_cena": 12.5,
+  "escrito": "No plano Entrega do iFood, as taxas podem somar 26,2%."
+ },
+ {
+  "cena": "s2",
+  "inicio": 10.0,
+  "fim": 11.668,
+  "atraso": 0.0,
+  "fim_da_cena": 12.5,
+  "escrito": "Ficam R$ 19,19."
+ },
+ {
+  "cena": "s3",
+  "inicio": 12.9,
+  "fim": 16.665,
+  "atraso": 0.0,
+  "fim_da_cena": 19.5,
+  "escrito": "Na 99Food, 12,1%, fora a entrega."
+ },
+ {
+  "cena": "s3",
+  "inicio": 16.9,
+  "fim": 19.073,
+  "atraso": 0.0,
+  "fim_da_cena": 19.5,
+  "escrito": "Ficam R$ 22,85."
+ },
+ {
+  "cena": "s4",
+  "inicio": 19.9,
+  "fim": 22.219,
+  "atraso": 0.0,
+  "fim_da_cena": 23.5,
+  "escrito": "Mas… e se você vendesse pelo seu próprio cardápio?"
+ },
+ {
+  "cena": "s5",
+  "inicio": 24.2,
+  "fim": 27.407,
+  "atraso": 0.0,
+  "fim_da_cena": 31.0,
+  "escrito": "No FlyControl, são R$ 0,70 por pedido aceito."
+ },
+ {
+  "cena": "s5",
+  "inicio": 27.527,
+  "fim": 29.117,
+  "atraso": 0.43,
+  "fim_da_cena": 31.0,
+  "escrito": "Ficam R$ 25,30."
+ },
+ {
+  "cena": "s6",
+  "inicio": 31.5,
+  "fim": 33.798,
+  "atraso": 0.0,
+  "fim_da_cena": 40.0,
+  "escrito": "Em 100 pedidos de R$ 26,"
+ },
+ {
+  "cena": "s6",
+  "inicio": 34.4,
+  "fim": 38.113,
+  "atraso": 0.0,
+  "fim_da_cena": 40.0,
+  "escrito": "a diferença nas taxas deste exemplo chega a R$ 611."
+ },
+ {
+  "cena": "s7",
+  "inicio": 40.247,
+  "fim": 44.763,
+  "atraso": 0.0,
+  "fim_da_cena": 47,
+  "escrito": "E ainda tem um cardápio com a cara do seu negócio, do jeito que o seu cliente gosta de pedir."
+ },
+ {
+  "cena": "s8",
+  "inicio": 47.6,
+  "fim": 50.89,
+  "atraso": 0.0,
+  "fim_da_cena": 53,
+  "escrito": "FlyControl. Mais controle sobre as suas vendas."
+ }
+]

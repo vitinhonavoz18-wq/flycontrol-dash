@@ -1,4 +1,4 @@
-"""Trilha + efeitos + mix do comparativo "Quanto custa vender?" (sem narração).
+"""Trilha + efeitos + mix do comparativo "Quanto custa vender?" (com e sem narração).
 Tech corporate, 120 bpm: Mi menor (custos) → Sol maior (virada FlyControl).
 Os tempos vêm de composicoes/roteiro.json: cada evento é (cena, tempo nominal) e é convertido para a versão.
 Uso: python3 efeitos-sonoros/trilha_comparativo.py 53s|30s"""
@@ -164,3 +164,17 @@ out(f'{TMP}/mix_{NOME}.wav', f'{A}/comparativo_{NOME}.wav', g)
 ST = f'{RAIZ}/efeitos-sonoros/stems'; os.makedirs(ST, exist_ok=True)
 out(f'{TMP}/musica_{NOME}.wav', f'{ST}/musica_{NOME}.wav', g); out(f'{TMP}/efeitos_{NOME}.wav', f'{ST}/efeitos_{NOME}.wav', g)
 print(NOME, 'mix (LUFS, pico dBTP):', lufs(f'{A}/comparativo_{NOME}.wav'))
+
+# ---------- versão com locução (narracao/voz_<versão>.wav, gerada por narracao/montar_voz.py) ----------
+VOZ = f'{RAIZ}/narracao/voz_{NOME}.wav'
+if os.path.exists(VOZ):
+    v, _ = sf.read(VOZ); voice = np.zeros(N); voice[:min(N, len(v))] = v[:N]
+    e = np.abs(voice); kk = int(0.04 * SR); e = np.convolve(e, np.ones(kk) / kk, 'same')
+    e = np.convolve((e > 0.01).astype(float), np.ones(int(0.25 * SR)) / int(0.25 * SR), 'same'); e = np.clip(e, 0, 1)
+    # a música abaixa ~8 dB enquanto o locutor fala; os efeitos, ~3 dB
+    bed = M_ * (1 - 0.6 * e)[:, None] + S_ * (1 - 0.3 * e)[:, None]
+    Vst = np.stack([voice, voice], 1) * 0.55
+    sf.write(f'{TMP}/mixvoz_{NOME}.wav', bed + Vst, SR, subtype='FLOAT')
+    gv = -14 - lufs(f'{TMP}/mixvoz_{NOME}.wav')[0]
+    out(f'{TMP}/mixvoz_{NOME}.wav', f'{A}/comparativo_{NOME}_voz.wav', gv)
+    print(NOME, 'mix com voz (LUFS, pico dBTP):', lufs(f'{A}/comparativo_{NOME}_voz.wav'))

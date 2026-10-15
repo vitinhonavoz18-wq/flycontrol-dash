@@ -17,6 +17,7 @@ Anúncio comparativo vertical (1080×1920, 30 fps) feito com [Remotion](https://
 ```bash
 npm install
 npx tsx scripts/verificar-calculos.ts
+python3 narracao/gerar_voz.py && python3 narracao/montar_voz.py
 python3 efeitos-sonoros/trilha_comparativo.py 53s && python3 efeitos-sonoros/trilha_comparativo.py 30s
 python3 scripts/exportar_legendas.py
 npx remotion bundle composicoes/index.ts --out-dir renders/bundle --public-dir assets
@@ -24,5 +25,6 @@ npx remotion bundle composicoes/index.ts --out-dir renders/bundle --public-dir a
 ./scripts/renderizar.sh                          # MP4 finais
 ```
 
-Sem narração por enquanto (créditos da ElevenLabs insuficientes). Para acrescentar a voz depois: gere a locução,
-misture com `efeitos-sonoros/stems/` e aponte a composição `Comparativo53s` para o novo áudio em `composicoes/Root.tsx`.
+Locução: `narracao/frases.json` (texto e momento de cada frase) → `python3 narracao/gerar_voz.py` (Piper, voz pt_BR
+"cadu", licença CC0; baixe os modelos em `narracao/vozes/` de huggingface.co/rhasspy/piper-voices) →
+`python3 narracao/montar_voz.py` → rode a trilha de novo (gera `comparativo_<versão>_voz.wav`).

@@ -1,0 +1,168 @@
+{
+ "53s": [
+  {
+   "cena": "s1",
+   "em": 0.2,
+   "texto": "Você sabe quanto das suas vendas fica nas taxas dos aplicativos?",
+   "escrito": "Você sabe quanto das suas vendas fica nas taxas dos aplicativos?",
+   "ouvido": "Você sabe quanto das suas vendas fica nas taxas dos aplicativos.",
+   "nota": 1.0,
+   "duracao": 4.39
+  },
+  {
+   "cena": "s2",
+   "em": 0.4,
+   "texto": "No plano Entrega do Ifúd, as taxas podem somar vinte e seis vírgula dois por cento.",
+   "escrito": "No plano Entrega do iFood, as taxas podem somar 26,2%.",
+   "ouvido": "No plano Entregado e Food, as taxas podem somar 26,2%.",
+   "nota": 0.99,
+   "duracao": 5.55
+  },
+  {
+   "cena": "s2",
+   "em": 5.0,
+   "texto": "Ficam dezenove e dezenove.",
+   "escrito": "Ficam R$ 19,19.",
+   "ouvido": "Ficam 19 e 19.",
+   "nota": 0.917,
+   "duracao": 2.33
+  },
+  {
+   "cena": "s3",
+   "em": 0.4,
+   "texto": "Na noventa e nove Fúd, doze vírgula um por cento, fora a entrega.",
+   "escrito": "Na 99Food, 12,1%, fora a entrega.",
+   "ouvido": "Na 99Food, 12,1% for a entrega.",
+   "nota": 0.982,
+   "duracao": 4.76
+  },
+  {
+   "cena": "s3",
+   "em": 4.4,
+   "texto": "Ficam vinte e dois e oitenta e cinco.",
+   "escrito": "Ficam R$ 22,85.",
+   "ouvido": "Ficam 22,85.",
+   "nota": 1.0,
+   "duracao": 2.83
+  },
+  {
+   "cena": "s4",
+   "em": 0.4,
+   "texto": "Mas... e se você vendesse pelo seu próprio carrdápio?",
+   "escrito": "Mas… e se você vendesse pelo seu próprio cardápio?",
+   "ouvido": "mas se você vendesse pelo seu próprio cardápio.",
+   "nota": 0.979,
+   "duracao": 3.09
+  },
+  {
+   "cena": "s5",
+   "em": 0.7,
+   "texto": "No FláiContról, são setenta centavos por pedido aceito.",
+   "escrito": "No FlyControl, são R$ 0,70 por pedido aceito.",
+   "ouvido": "No Fly Control, são 70 centavos por pedido aceito.",
+   "nota": 1.0,
+   "duracao": 4.24
+  },
+  {
+   "cena": "s5",
+   "em": 3.6,
+   "texto": "Ficam vinte e cinco e trinta.",
+   "escrito": "Ficam R$ 25,30.",
+   "ouvido": "Ficam 25 e 30.",
+   "nota": 1.0,
+   "duracao": 2.33
+  },
+  {
+   "cena": "s6",
+   "em": 0.5,
+   "texto": "Em cem pedidos de vinte e seis reais,",
+   "escrito": "Em 100 pedidos de R$ 26,",
+   "ouvido": "em 100 pedidos de R$ 26.",
+   "nota": 0.87,
+   "duracao": 3.09
+  },
+  {
+   "cena": "s6",
+   "em": 3.4,
+   "texto": "a diferença nas taxas deste exemplo chega a seiscentos e onze reais.",
+   "escrito": "a diferença nas taxas deste exemplo chega a R$ 611.",
+   "ouvido": "A diferença nas taxas deste exemplo chega a R$ 611.",
+   "nota": 0.94,
+   "duracao": 4.7
+  },
+  {
+   "cena": "s7",
+   "em": 0.3,
+   "texto": "E ainda tem um carrdápio com a cara do seu negócio, do jeito que o seu cliente gosta de pedir.",
+   "escrito": "E ainda tem um cardápio com a cara do seu negócio, do jeito que o seu cliente gosta de pedir.",
+   "ouvido": "E ainda tem um cardápio com a cara do seu negócio, do jeito que o seu cliente gosta de pedir.",
+   "nota": 1.0,
+   "duracao": 5.6
+  },
+  {
+   "cena": "s8",
+   "em": 0.6,
+   "texto": "FláiContról. Mais controle sobre as suas vendas.",
+   "escrito": "FlyControl. Mais controle sobre as suas vendas.",
+   "ouvido": "Fly Control. Mais controle sobre as suas vendas.",
+   "nota": 1.0,
+   "duracao": 4.35
+  }
+ ],
+ "30s": [
+  {
+   "cena": "s1",
+   "em": 0.2,
+   "texto": "Quanto das suas vendas fica nas taxas?",
+   "escrito": "Quanto das suas vendas fica nas taxas?",
+   "ouvido": "Quanto das suas vendas fica nas taxas?",
+   "nota": 1.0,
+   "duracao": 2.73
+  },
+  {
+   "cena": "s2",
+   "em": 1.2,
+   "texto": "No Ifúd, ficam dezenove e dezenove.",
+   "escrito": "No iFood, ficam R$ 19,19.",
+   "ouvido": "No eFood, ficam 19 e 19.",
+   "nota": 0.952,
+   "duracao": 2.94
+  },
+  {
+   "cena": "s3",
+   "em": 1.0,
+   "texto": "Na noventa e nove Fúd, vinte e dois e oitenta e cinco.",
+   "escrito": "Na 99Food, R$ 22,85.",
+   "ouvido": "Na 99Food, 22,85.",
+   "nota": 1.0,
+   "duracao": 3.87
+  },
+  {
+   "cena": "s5",
+   "em": 1.0,
+   "texto": "No FláiContról, vinte e cinco e trinta.",
+   "escrito": "No FlyControl, R$ 25,30.",
+   "ouvido": "No Fly Control, 25 e 30.",
+   "nota": 1.0,
+   "duracao": 2.95
+  },
+  {
+   "cena": "s6",
+   "em": 0.6,
+   "texto": "Em cem pedidos, até seiscentos e onze reais de diferença nas taxas.",
+   "escrito": "Em 100 pedidos, até R$ 611 de diferença nas taxas.",
+   "ouvido": "em 100 pedidos até 611 reais de diferença nas taxas.",
+   "nota": 1.0,
+   "duracao": 4.56
+  },
+  {
+   "cena": "s8",
+   "em": 0.6,
+   "texto": "FláiContról. Mais controle sobre as suas vendas.",
+   "escrito": "FlyControl. Mais controle sobre as suas vendas.",
+   "ouvido": "Fly control. Mais controles sobre as suas vendas.",
+   "nota": 0.989,
+   "duracao": 4.09
+  }
+ ]
+}
