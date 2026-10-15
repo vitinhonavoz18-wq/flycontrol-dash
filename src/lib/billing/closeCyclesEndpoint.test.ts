@@ -10,6 +10,9 @@ import { describe, expect, it } from "vitest";
  * comportamento em si depende de banco ativo e não é testável aqui.
  */
 const source = readFileSync("src/routes/api/billing.close-cycles.ts", "utf8");
+// O processamento mora num módulo próprio, chamado pelo endpoint e pelo
+// despertador diário do Worker.
+const work = readFileSync("src/lib/billing/closeDueCycles.server.ts", "utf8");
 
 describe("proteção do endpoint de fechamento", () => {
   it("fica desligado enquanto o segredo não estiver configurado", () => {
@@ -29,6 +32,13 @@ describe("proteção do endpoint de fechamento", () => {
     expect(source).toMatch(/diff \|= a\.charCodeAt\(i\) \^ b\.charCodeAt\(i\)/);
   });
 
+  it("só chama o fechamento depois de conferir o segredo", () => {
+    const auth = source.indexOf("timingSafeEqual(expected, provided)");
+    const call = source.indexOf("await closeDueCycles()");
+    expect(auth).toBeGreaterThan(-1);
+    expect(call).toBeGreaterThan(auth);
+  });
+
   it("aceita apenas POST", () => {
     // GET seria disparável por um link ou pré-carregamento de navegador.
     expect(source).toMatch(/handlers:\s*\{\s*POST:/);
@@ -38,14 +48,14 @@ describe("proteção do endpoint de fechamento", () => {
 
 describe("robustez do processamento", () => {
   it("fecha somente ciclos já vencidos", () => {
-    expect(source).toMatch(/\.eq\("status", "open"\)/);
-    expect(source).toMatch(/\.lte\("cycle_end", nowIso\)/);
+    expect(work).toMatch(/\.eq\("status", "open"\)/);
+    expect(work).toMatch(/\.lte\("cycle_end", nowIso\)/);
   });
 
   it("um ciclo com problema não impede o fechamento dos demais", () => {
     // Sem o try/catch por ciclo, uma empresa com dado inconsistente travaria
     // a cobrança de todas as outras.
-    const loop = source.slice(source.indexOf("for (const cycle of cycles)"));
+    const loop = work.slice(work.indexOf("for (const cycle of cycles)"));
     expect(loop).toContain("try {");
     expect(loop).toContain("} catch (err) {");
   });
@@ -56,14 +66,14 @@ describe("robustez do processamento", () => {
   });
 
   it("delega o cálculo ao motor, sem recalcular preço por conta própria", () => {
-    expect(source).toContain("closeBillingCycle(cycle.id)");
-    expect(source).not.toMatch(/unit_price_cents\s*\*/);
-    expect(source).not.toContain("calculateCycle(");
+    expect(work).toContain("closeBillingCycle(cycle.id)");
+    expect(work).not.toMatch(/unit_price_cents\s*\*/);
+    expect(work).not.toContain("calculateCycle(");
   });
 
   it("trata ciclo já fechado como sucesso, e não como erro", () => {
     // closeBillingCycle é idempotente: rodar o cron duas vezes no mesmo dia
     // não pode virar alarme falso.
-    expect(source).toContain("result.alreadyClosed");
+    expect(work).toContain("result.alreadyClosed");
   });
 });
