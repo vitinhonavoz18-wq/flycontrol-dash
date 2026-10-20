@@ -30,6 +30,7 @@ import {
   type PlanCode,
 } from "@/lib/billing/plans";
 import { PremiumPlanCards } from "@/components/billing/PremiumPlanCards";
+import { TrocaDePlanoAgendada } from "@/components/billing/TrocaDePlanoAgendada";
 import { getPremiumOffer, type PremiumOffer } from "@/lib/billing/premiumCheckout.functions";
 import {
   SUBSCRIPTION_STATUS_LABELS,
@@ -588,6 +589,10 @@ function BillingPage() {
           </dl>
         </CardContent>
       </Card>
+
+      {/* Assinante Premium ativo: troca agendada (mensal ↔ anual) ou oferta
+          de preço novo para quem está numa versão antiga (ex.: R$ 375,00). */}
+      {!isUsageBased && snapshot.status === "active" && <TrocaDePlanoAgendada />}
 
       {/* Período grátis em andamento. */}
       {snapshot.phase === "free_trial" && snapshot.trial && (

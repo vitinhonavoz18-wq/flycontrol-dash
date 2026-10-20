@@ -46,7 +46,7 @@ function setup(opts: {
         status: "active",
       },
     ],
-    plans: [{ id: "plano", code: opts.planCode }],
+    plans: [{ id: "plano", code: opts.planCode, billing_model: "monthly_fixed" }],
     plan_price_versions: [
       { id: "versao", monthly_fee_cents: opts.versionFee, billing_interval_months: opts.interval },
     ],
@@ -135,5 +135,131 @@ describe("fatura de renovação usa o preço contratado", () => {
     });
     await closeBillingCycle("ciclo-1", { openNext: false });
     expect(db.rpcCalls.find((c) => c.fn === "open_billing_cycle")).toBeUndefined();
+  });
+});
+
+describe("troca agendada aplicada na virada do ciclo", () => {
+  function comTroca(status: string, subVersion = "versao") {
+    const db = setup({
+      planCode: "premium",
+      versionFee: 8990,
+      interval: 1,
+      cycleStart: "2026-10-15T15:00:00.000Z",
+      cycleEnd: "2026-11-15T14:59:59.999Z",
+    });
+    db.tables.subscriptions[0].plan_price_version_id = subVersion;
+    db.tables.plans.push({
+      id: "plano-anual",
+      code: "premium_anual",
+      billing_model: "monthly_fixed",
+    });
+    db.tables.plan_price_versions.push({
+      id: "versao-anual",
+      monthly_fee_cents: 59880,
+      billing_interval_months: 12,
+    });
+    db.tables.subscription_plan_changes = [
+      {
+        id: "troca-1",
+        subscription_id: "sub-1",
+        status,
+        source: "customer_switch",
+        from_price_version_id: "versao",
+        to_plan_id: "plano-anual",
+        to_price_version_id: "versao-anual",
+      },
+    ];
+    return db;
+  }
+
+  it("mensal → anual: a fatura da renovação já sai R$ 598,80 e o ciclo novo abre no anual", async () => {
+    const db = comTroca("scheduled");
+    const out = await closeBillingCycle("ciclo-1");
+    expect(out).toMatchObject({ ok: true, totalAmountCents: 59880 });
+    expect(db.tables.invoice_items[0]).toMatchObject({
+      description: "Anuidade do plano Premium Anual (12 meses)",
+      total_amount_cents: 59880,
+    });
+    expect(db.tables.subscriptions[0]).toMatchObject({
+      plan_id: "plano-anual",
+      plan_price_version_id: "versao-anual",
+    });
+    expect(db.tables.subscription_plan_changes[0]).toMatchObject({
+      status: "applied",
+      applied_cycle_id: "ciclo-1",
+    });
+    // O ciclo que fechou era mensal: o próximo começa no mês seguinte (regra
+    // de sempre), e a abertura lê a duração (12 meses) da versão nova.
+    const abertura = db.rpcCalls.find((c) => c.fn === "open_billing_cycle");
+    expect(abertura?.args?.p_cycle_start).toBe("2026-11-15T00:00:00.000Z");
+    expect(
+      db.tables.subscription_events.some((e) => e.event_type === "scheduled_plan_change_applied"),
+    ).toBe(true);
+  });
+
+  it("aplicar duas vezes não cobra nem troca duas vezes", async () => {
+    const db = comTroca("scheduled");
+    await closeBillingCycle("ciclo-1");
+    const again = await closeBillingCycle("ciclo-1");
+    expect(again).toMatchObject({ ok: true, alreadyClosed: true });
+    expect(db.tables.invoices).toHaveLength(1);
+  });
+
+  it("troca 'aguardando a equipe' (cobrança pausada) NUNCA é aplicada pelo robô", async () => {
+    const db = comTroca("awaiting_team");
+    const out = await closeBillingCycle("ciclo-1");
+    expect(out).toMatchObject({ ok: true, totalAmountCents: 8990 });
+    expect(db.tables.subscriptions[0].plan_price_version_id).toBe("versao");
+    expect(db.tables.subscription_plan_changes[0].status).toBe("awaiting_team");
+  });
+
+  it("assinatura mudada por outro caminho: a troca é cancelada e o preço contratado vale", async () => {
+    const db = comTroca("scheduled");
+    db.tables.subscriptions[0].plan_price_version_id = "outra-versao";
+    db.tables.plan_price_versions.push({
+      id: "outra-versao",
+      monthly_fee_cents: 12345,
+      billing_interval_months: 1,
+    });
+    const out = await closeBillingCycle("ciclo-1");
+    expect(out).toMatchObject({ ok: true, totalAmountCents: 12345 });
+    expect(db.tables.subscription_plan_changes[0].status).toBe("canceled");
+  });
+
+  it("na troca de plano por compra (openNext: false) a troca agendada não é tocada", async () => {
+    const db = comTroca("scheduled");
+    await closeBillingCycle("ciclo-1", { openNext: false });
+    expect(db.tables.subscription_plan_changes[0].status).toBe("scheduled");
+  });
+});
+
+describe("oferta aceita pelo assinante antigo (R$ 375 → R$ 89,90)", () => {
+  it("na renovação a fatura passa a R$ 89,90", async () => {
+    const db = setup({
+      planCode: "premium",
+      versionFee: 37500,
+      interval: 1,
+      cycleStart: "2026-10-15T15:00:00.000Z",
+      cycleEnd: "2026-11-15T14:59:59.999Z",
+    });
+    db.tables.plan_price_versions.push({
+      id: "versao-v2",
+      monthly_fee_cents: 8990,
+      billing_interval_months: 1,
+    });
+    db.tables.subscription_plan_changes = [
+      {
+        id: "oferta",
+        subscription_id: "sub-1",
+        status: "scheduled",
+        source: "legacy_offer",
+        from_price_version_id: "versao",
+        to_plan_id: "plano",
+        to_price_version_id: "versao-v2",
+      },
+    ];
+    const out = await closeBillingCycle("ciclo-1");
+    expect(out).toMatchObject({ ok: true, totalAmountCents: 8990 });
+    expect(db.tables.subscriptions[0].plan_price_version_id).toBe("versao-v2");
   });
 });

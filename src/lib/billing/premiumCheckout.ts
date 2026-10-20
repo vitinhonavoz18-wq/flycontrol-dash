@@ -58,8 +58,8 @@ const ENDED_STATUSES = new Set(["canceled", "expired"]);
  * Regras (decididas para não haver cobrança duplicada):
  * - Fatura atrasada (past_due/suspended): primeiro quita, depois troca.
  * - Já paga um Premium (mensal ou anual, inclusive o antigo de R$ 375,00):
- *   não troca sozinho. Quem está no mensal e quer o anual fala com a equipe
- *   — o acerto do mês já pago é decisão comercial pendente.
+ *   não passa por este checkout. A troca é AGENDADA para a próxima
+ *   renovação (ver scheduledPlanChange.ts), sem cobrança agora.
  * - Premium Mensal ainda no período grátis: pode antecipar para o Anual
  *   (paga hoje e o grátis termina); pedir o próprio Mensal de novo não faz
  *   sentido — ele já está contratado.
@@ -117,7 +117,7 @@ export function decidePremiumPurchase(
             ok: false,
             code: "premium_switch_needs_team",
             message:
-              "Você já é assinante Premium. A troca entre mensal e anual é feita com a equipe da FlyControl, para acertar o período já pago sem cobrar duas vezes.",
+              "Você já é assinante Premium. A troca entre mensal e anual é agendada na tela Plano e cobrança: vale a partir da próxima renovação, sem cobrar duas vezes nem cobrar nada agora.",
           };
     }
     return unknownStatus();

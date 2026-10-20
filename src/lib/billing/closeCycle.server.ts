@@ -16,6 +16,8 @@ import { buildInvoiceItems, calculateCycle, determineNextCycleUnitPrice } from "
 import { POLITICA_CENTS_VIGENTE, politicaPorVersao } from "./centsTiers";
 import { computeCycleStartAfter } from "./trial";
 import { getPlanPricing, type PlanCode } from "./plans";
+import { applyScheduledPlanChange } from "./applyScheduledPlanChange.server";
+import type { BillingDb } from "./supabaseBridge";
 
 export type CloseCycleResult =
   | {
@@ -185,7 +187,7 @@ export async function closeBillingCycle(
     .maybeSingle();
   const plan = planRaw as PlanRef | null;
   if (!plan) return { ok: false, error: "Plano da assinatura não encontrado." };
-  const planCode = plan.code;
+  let planCode = plan.code;
 
   // A contagem vem da soma dos eventos, e não do contador da linha: se os
   // dois divergirem, os eventos é que são a verdade auditável.
@@ -197,6 +199,26 @@ export async function closeBillingCycle(
 
   if (isFreeTrial) {
     return closeFreeTrialCycle(db, typedCycle, typedSub, planCode, billableOrderCount, openNext);
+  }
+
+  // Troca de plano agendada pelo cliente (ex.: mensal → anual, ou o preço
+  // antigo de R$ 375,00 → R$ 89,90). Vale exatamente nesta virada: a fatura
+  // que sai agora já é a do plano novo, e o próximo ciclo abre nele. O ciclo
+  // que está fechando, porém, termina com a duração do plano ANTIGO — por
+  // isso a versão dele é guardada antes.
+  const closingVersionId = typedSub.plan_price_version_id;
+  if (openNext && (typedSub.status === "active" || typedSub.status === "past_due")) {
+    const switched = await applyScheduledPlanChange(db as unknown as BillingDb, typedSub, cycleId);
+    if (switched) {
+      typedSub.plan_id = switched.newPlanId;
+      typedSub.plan_price_version_id = switched.newPriceVersionId;
+      const { data: newPlanRaw } = await db
+        .from("plans")
+        .select("code")
+        .eq("id", switched.newPlanId)
+        .maybeSingle();
+      if (newPlanRaw) planCode = (newPlanRaw as PlanRef).code;
+    }
   }
 
   // O preço que esta assinatura CONTRATOU. É daqui — e não do catálogo do
@@ -214,7 +236,16 @@ export async function closeBillingCycle(
     // tabela poderia reajustar um cliente antigo sem autorização.
     return { ok: false, error: "Versão de preço da assinatura não encontrada." };
   }
-  const intervalMonths = Number(price.billing_interval_months ?? 1) || 1;
+  // Duração do ciclo que está FECHANDO (decide quando o próximo começa).
+  let intervalMonths = Number(price.billing_interval_months ?? 1) || 1;
+  if (closingVersionId !== typedSub.plan_price_version_id) {
+    const { data: oldRaw } = await db
+      .from("plan_price_versions")
+      .select("monthly_fee_cents, billing_interval_months")
+      .eq("id", closingVersionId)
+      .maybeSingle();
+    intervalMonths = Number((oldRaw as PriceVersionRef | null)?.billing_interval_months ?? 1) || 1;
+  }
 
   // A taxa de cadastro é decidida por item de fatura já emitido, e não pelo
   // número do ciclo — um ciclo pode ser reprocessado, a taxa é uma só.
