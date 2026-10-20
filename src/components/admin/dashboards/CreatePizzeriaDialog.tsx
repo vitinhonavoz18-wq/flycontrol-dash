@@ -1,3 +1,5 @@
+import { formatCents } from "@/lib/billing/money";
+import { PLAN_PRICING } from "@/lib/billing/plans";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -96,7 +98,8 @@ export function CreatePizzeriaDialog({ onSuccess }: { onSuccess: () => void }) {
                 <div>
                   <div className="font-medium">Plano Premium</div>
                   <div className="text-xs text-muted-foreground">
-                    Mensalidade fixa de R$ 375,00 — pedidos ilimitados, sem Clube CENTS.
+                    Tabela atual: {formatCents(PLAN_PRICING.premium.cycleFeeCents)}/mês (Premium
+                    Mensal) — pedidos ilimitados, sem Clube CENTS.
                   </div>
                 </div>
               </label>

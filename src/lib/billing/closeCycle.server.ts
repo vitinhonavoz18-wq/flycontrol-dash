@@ -47,7 +47,23 @@ type SubscriptionRow = {
   id: string;
   company_id: string;
   plan_id: string;
+  plan_price_version_id: string;
   status: string;
+};
+
+/** O preço CONTRATADO: a versão gravada na assinatura, não a tabela de hoje. */
+type PriceVersionRef = { monthly_fee_cents: number; billing_interval_months: number | null };
+
+export type CloseCycleOptions = {
+  /**
+   * `false` fecha o ciclo SEM abrir o seguinte. Usado só na troca de plano
+   * (ex.: CENTS → Premium): o ciclo do plano velho fecha com os pedidos que
+   * já entraram, e quem abre o próximo é a troca, já no plano novo.
+   *
+   * Padrão `true` — é o que o robô diário usa, e o comportamento dele não
+   * muda.
+   */
+  openNext?: boolean;
 };
 
 type InvoiceRef = { id: string; total_cents: number };
@@ -95,7 +111,11 @@ function buildInvoiceNumber(sequence: number, when: Date): string {
  * vez de emitir a segunda. A trava definitiva é o índice único
  * `invoices_one_per_cycle`.
  */
-export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResult> {
+export async function closeBillingCycle(
+  cycleId: string,
+  options: CloseCycleOptions = {},
+): Promise<CloseCycleResult> {
+  const openNext = options.openNext ?? true;
   const db = client();
 
   const { data: cycle, error: cycleError } = await db
@@ -151,7 +171,7 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
 
   const { data: subscription, error: subError } = await db
     .from("subscriptions")
-    .select("id, company_id, plan_id, status")
+    .select("id, company_id, plan_id, plan_price_version_id, status")
     .eq("id", typedCycle.subscription_id)
     .maybeSingle();
 
@@ -176,8 +196,25 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
   const billableOrderCount = Number(trueCount ?? 0);
 
   if (isFreeTrial) {
-    return closeFreeTrialCycle(db, typedCycle, typedSub, planCode, billableOrderCount);
+    return closeFreeTrialCycle(db, typedCycle, typedSub, planCode, billableOrderCount, openNext);
   }
+
+  // O preço que esta assinatura CONTRATOU. É daqui — e não do catálogo do
+  // código — que sai o valor fixo da fatura. Quem assinou o Premium a
+  // R$ 375,00 continua pagando R$ 375,00 depois que a tabela passou a
+  // R$ 89,90; quem assinou o anual paga R$ 598,80 por ano, não por mês.
+  const { data: priceRaw, error: priceError } = await db
+    .from("plan_price_versions")
+    .select("monthly_fee_cents, billing_interval_months")
+    .eq("id", typedSub.plan_price_version_id)
+    .maybeSingle();
+  const price = priceRaw as PriceVersionRef | null;
+  if (priceError || !price) {
+    // Sem saber o preço contratado, não se emite fatura: chutar o valor da
+    // tabela poderia reajustar um cliente antigo sem autorização.
+    return { ok: false, error: "Versão de preço da assinatura não encontrada." };
+  }
+  const intervalMonths = Number(price.billing_interval_months ?? 1) || 1;
 
   // A taxa de cadastro é decidida por item de fatura já emitido, e não pelo
   // número do ciclo — um ciclo pode ser reprocessado, a taxa é uma só.
@@ -203,6 +240,7 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
     billableOrderCount,
     setupFeeAlreadyCharged: !!setupCharged,
     centsPolicy: politicaDoCiclo.versao,
+    contractedCycleFeeCents: Number(price.monthly_fee_cents),
   });
 
   const now = new Date();
@@ -311,10 +349,11 @@ export async function closeBillingCycle(cycleId: string): Promise<CloseCycleResu
     cycleType: typedCycle.cycle_type,
     cycleStart: new Date(typedCycle.cycle_start),
     cycleEnd: new Date(typedCycle.cycle_end),
+    intervalMonths,
   });
 
   let nextCycleId: string | null = null;
-  if (typedSub.status === "active" || typedSub.status === "past_due") {
+  if (openNext && (typedSub.status === "active" || typedSub.status === "past_due")) {
     const { data: nextId } = await db.rpc("open_billing_cycle", {
       p_subscription_id: typedSub.id,
       p_cycle_start: nextStart.toISOString(),
@@ -398,6 +437,7 @@ async function closeFreeTrialCycle(
   subscription: SubscriptionRow,
   planCode: PlanCode,
   billableOrderCount: number,
+  openNext = true,
 ): Promise<CloseCycleResult> {
   const now = new Date();
 
@@ -421,6 +461,19 @@ async function closeFreeTrialCycle(
 
   if (closeError) {
     return { ok: false, error: `Falha ao fechar o período grátis: ${closeError.message}` };
+  }
+
+  // Troca de plano durante o período grátis: o grátis acaba aqui, sem
+  // fatura, e quem abre o próximo ciclo (já no plano novo) é a troca.
+  if (!openNext) {
+    return {
+      ok: true,
+      invoiceId: null,
+      totalAmountCents: 0,
+      nextCycleId: null,
+      alreadyClosed: false,
+      freeTrial: true,
+    };
   }
 
   // A assinatura deixa de ser "grátis" e passa a ser "ativa". A troca é feita

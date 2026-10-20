@@ -151,9 +151,20 @@ describe("progresso e estimativa", () => {
       billableOrderCount: 300,
     });
     expect(result.percent).toBe(0);
-    // Só a mensalidade entra na estimativa.
-    expect(result.estimatedTotalCents).toBe(37500);
+    // Só a mensalidade entra na estimativa — a de tabela, sem informar contrato.
+    expect(result.estimatedTotalCents).toBe(8990);
     expect(result.nextCycleUnitPriceCents).toBe(0);
+  });
+
+  it("no PREMIUM antigo, a estimativa usa o valor CONTRATADO (R$ 375,00), não a tabela", () => {
+    const result = progress({
+      planCode: "premium",
+      unitPriceCents: 0,
+      promotionThresholdOrders: 0,
+      billableOrderCount: 300,
+      contractedCycleFeeCents: 37500,
+    });
+    expect(result.estimatedTotalCents).toBe(37500);
   });
 });
 

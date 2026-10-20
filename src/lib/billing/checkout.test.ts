@@ -40,7 +40,13 @@ describe("links de retorno", () => {
 
 describe("valor esperado do checkout", () => {
   it("no PREMIUM cobra a mensalidade", () => {
-    expect(checkoutAmountCents("premium")).toBe(PLAN_PRICING.premium.monthlyFeeCents);
+    expect(checkoutAmountCents("premium")).toBe(PLAN_PRICING.premium.cycleFeeCents);
+    expect(checkoutAmountCents("premium")).toBe(8990);
+  });
+
+  it("no PREMIUM ANUAL cobra R$ 598,80 de uma vez — nunca R$ 49,90", () => {
+    expect(checkoutAmountCents("premium_anual")).toBe(59880);
+    expect(checkoutAmountCents("premium_anual")).not.toBe(4990);
   });
 
   it("no CENTS não cobra nada na entrada", () => {

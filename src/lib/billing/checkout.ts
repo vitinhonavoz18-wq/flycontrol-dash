@@ -44,14 +44,15 @@ export function infinityPayWebhookUrl(origin: string): string {
 /**
  * Valor que o checkout daquele plano deve cobrar na entrada.
  *
- * PREMIUM cobra a mensalidade. CENTS não cobra nada na entrada desde que a
+ * PREMIUM cobra o valor do ciclo: R$ 89,90 no mensal, R$ 598,80 no anual
+ * (12 meses de uma vez — nunca R$ 49,90). CENTS não cobra nada na entrada desde que a
  * taxa de cadastro foi zerada — o consumo por pedido é faturado depois, no
  * fechamento do ciclo, e não passa por este checkout. Por isso este número
  * pode ser zero, e quem chama precisa tratar esse caso.
  */
 export function checkoutAmountCents(planCode: PlanCode): Cents {
   const pricing = PLAN_PRICING[planCode];
-  return pricing.billingModel === "monthly_fixed" ? pricing.monthlyFeeCents : pricing.setupFeeCents;
+  return pricing.billingModel === "monthly_fixed" ? pricing.cycleFeeCents : pricing.setupFeeCents;
 }
 
 /**
@@ -71,6 +72,7 @@ export type CheckoutConfig =
 
 const ENV_BY_PLAN: Record<PlanCode, string> = {
   premium: "INFINITYPAY_CHECKOUT_URL_PREMIUM",
+  premium_anual: "INFINITYPAY_CHECKOUT_URL_PREMIUM_ANUAL",
   cents: "INFINITYPAY_CHECKOUT_URL_CENTS",
   teste: "INFINITYPAY_CHECKOUT_URL_TESTE",
 };

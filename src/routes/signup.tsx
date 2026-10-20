@@ -23,7 +23,13 @@ import { useAuth } from "@/lib/auth";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { CHECKOUT_TOKEN_STORAGE_KEY } from "@/lib/billing/checkout";
 import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
+import {
+  PLAN_PRICING,
+  cycleUnitLabel,
+  isKnownPlanCode,
+  monthlyEquivalentCents,
+  type PlanCode,
+} from "@/lib/billing/plans";
 import { PRIVACY_VERSION } from "@/lib/legal/privacy";
 import { TERMS_VERSION } from "@/lib/legal/terms";
 import {
@@ -208,6 +214,8 @@ function SignupWizard() {
   }
 
   const pricing = PLAN_PRICING[planCode];
+  // Premium Anual não tem período grátis: o pagamento único é feito agora.
+  const pagaHoje = pricing.billingIntervalMonths === 12;
 
   function goNext() {
     if (step === 0) {
@@ -376,7 +384,7 @@ function SignupWizard() {
               Nada é cobrado agora nem durante os {TRIAL_DURATION_DAYS} dias. Depois disso,{" "}
               {planCode === "cents"
                 ? `cada pedido válido passa a contar ${formatCents(pricing.defaultOrderUnitPriceCents)}`
-                : `a mensalidade passa a ser ${formatCents(pricing.monthlyFeeCents)}`}
+                : `a mensalidade passa a ser ${formatCents(pricing.cycleFeeCents)}`}
               , e a conta é fechada só no fim do ciclo — em{" "}
               {formatTrialDate(timeline.firstChargeAt)}.
             </p>
@@ -417,7 +425,7 @@ function SignupWizard() {
                 <span className="text-muted-foreground">Cobrança</span>
                 <strong className="text-right">
                   {pricing?.billingModel === "monthly_fixed"
-                    ? `${formatCents(pricing.monthlyFeeCents)} por mês`
+                    ? `${formatCents(pricing.cycleFeeCents)} por ${cycleUnitLabel(pricing.billingIntervalMonths)}`
                     : `${formatCents(PLAN_PRICING.cents.defaultOrderUnitPriceCents)} por pedido, sem taxa de cadastro`}
                 </strong>
               </div>
@@ -714,9 +722,7 @@ function SignupWizard() {
                     className="h-11"
                     value={owner.passwordConfirmation}
                     aria-invalid={!!errors.passwordConfirmation}
-                    onChange={(e) =>
-                      setOwner({ ...owner, passwordConfirmation: e.target.value })
-                    }
+                    onChange={(e) => setOwner({ ...owner, passwordConfirmation: e.target.value })}
                   />
                 </Field>
               </>
@@ -842,50 +848,88 @@ function SignupWizard() {
 
         {step === 3 && (
           <section className="space-y-4">
-            <h1 className="text-xl font-bold sm:text-2xl">Ativar seu período grátis</h1>
+            <h1 className="text-xl font-bold sm:text-2xl">
+              {pagaHoje ? `Contratar o ${pricing.name}` : "Ativar seu período grátis"}
+            </h1>
 
-            <Card className="border-primary/40 bg-primary/5">
-              <CardContent className="space-y-3 p-4 text-sm">
-                <h2 className="flex items-center gap-2 text-base font-black">
-                  <Gift className="h-5 w-5 text-primary" aria-hidden="true" />
-                  {TRIAL_DURATION_DAYS} dias grátis
-                </h2>
-                <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Hoje você paga</span>
-                  <strong className="text-primary">{formatCents(0)}</strong>
-                </div>
-                <div className="flex justify-between gap-2">
-                  <span className="text-muted-foreground">Nos {TRIAL_DURATION_DAYS} dias</span>
-                  <strong className="text-primary">{formatCents(0)}</strong>
-                </div>
-                {pricing.billingModel === "monthly_fixed" ? (
-                  <div className="flex justify-between gap-2 border-t border-primary/20 pt-2">
-                    <span className="text-muted-foreground">Depois disso</span>
-                    <strong>{formatCents(pricing.monthlyFeeCents)} por mês</strong>
+            {/* Premium Anual: pago à vista, sem período grátis. O que sai do
+                bolso hoje vem primeiro e em destaque; o equivalente mensal só
+                aparece explicado como equivalente. */}
+            {pagaHoje && (
+              <Card className="border-primary/60 bg-primary/5">
+                <CardContent className="space-y-3 p-4 text-sm">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Total a pagar hoje</span>
+                    <strong className="text-lg text-primary">
+                      {formatCents(pricing.cycleFeeCents)}
+                    </strong>
                   </div>
-                ) : (
-                  <>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Plano contratado</span>
+                    <strong>{pricing.name}</strong>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Período de acesso</span>
+                    <strong>12 meses</strong>
+                  </div>
+                  <p className="rounded-md bg-background/60 p-2 text-xs text-muted-foreground">
+                    {formatCents(monthlyEquivalentCents(planCode))}/mês é apenas o valor
+                    equivalente: você paga {formatCents(pricing.cycleFeeCents)} uma única vez. Não
+                    há período grátis neste plano. Renovação: não é débito automático — ao fim dos
+                    12 meses você recebe no painel uma nova cobrança de{" "}
+                    {formatCents(pricing.cycleFeeCents)}, e o plano só renova se ela for paga. Para
+                    não renovar, basta não pagar ou pedir o cancelamento à equipe.
+                  </p>
+                </CardContent>
+              </Card>
+            )}
+
+            {!pagaHoje && (
+              <Card className="border-primary/40 bg-primary/5">
+                <CardContent className="space-y-3 p-4 text-sm">
+                  <h2 className="flex items-center gap-2 text-base font-black">
+                    <Gift className="h-5 w-5 text-primary" aria-hidden="true" />
+                    {TRIAL_DURATION_DAYS} dias grátis
+                  </h2>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Hoje você paga</span>
+                    <strong className="text-primary">{formatCents(0)}</strong>
+                  </div>
+                  <div className="flex justify-between gap-2">
+                    <span className="text-muted-foreground">Nos {TRIAL_DURATION_DAYS} dias</span>
+                    <strong className="text-primary">{formatCents(0)}</strong>
+                  </div>
+                  {pricing.billingModel === "monthly_fixed" ? (
                     <div className="flex justify-between gap-2 border-t border-primary/20 pt-2">
-                      <span className="text-muted-foreground">Depois disso, por pedido válido</span>
-                      <strong>{formatCents(pricing.defaultOrderUnitPriceCents)}</strong>
+                      <span className="text-muted-foreground">Depois disso</span>
+                      <strong>{formatCents(pricing.cycleFeeCents)} por mês</strong>
                     </div>
-                    <p className="rounded-md bg-background/60 p-2 text-xs text-muted-foreground">
-                      A partir do fim do período grátis, ao atingir{" "}
-                      {pricing.promotionThresholdOrders} pedidos válidos em um ciclo, o próximo
-                      passa a custar {formatCents(pricing.promotionalOrderUnitPriceCents)} por
-                      pedido. Para manter, é preciso atingir a meta em cada ciclo. A cobrança sai só
-                      no fechamento do ciclo.
-                      {pricing.setupFeeCents > 0 &&
-                        ` A taxa única de cadastro de ${formatCents(pricing.setupFeeCents)} entra nessa primeira conta, e em nenhuma outra.`}
-                    </p>
-                    <p className="text-xs text-amber-600 dark:text-amber-400">
-                      Não inclui Mesas, Garçons e Comissões — recursos do PREMIUM, que você pode
-                      conhecer dentro do painel.
-                    </p>
-                  </>
-                )}
-              </CardContent>
-            </Card>
+                  ) : (
+                    <>
+                      <div className="flex justify-between gap-2 border-t border-primary/20 pt-2">
+                        <span className="text-muted-foreground">
+                          Depois disso, por pedido válido
+                        </span>
+                        <strong>{formatCents(pricing.defaultOrderUnitPriceCents)}</strong>
+                      </div>
+                      <p className="rounded-md bg-background/60 p-2 text-xs text-muted-foreground">
+                        A partir do fim do período grátis, ao atingir{" "}
+                        {pricing.promotionThresholdOrders} pedidos válidos em um ciclo, o próximo
+                        passa a custar {formatCents(pricing.promotionalOrderUnitPriceCents)} por
+                        pedido. Para manter, é preciso atingir a meta em cada ciclo. A cobrança sai
+                        só no fechamento do ciclo.
+                        {pricing.setupFeeCents > 0 &&
+                          ` A taxa única de cadastro de ${formatCents(pricing.setupFeeCents)} entra nessa primeira conta, e em nenhuma outra.`}
+                      </p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400">
+                        Não inclui Mesas, Garçons e Comissões — recursos do PREMIUM, que você pode
+                        conhecer dentro do painel.
+                      </p>
+                    </>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             <Card>
               <CardContent className="space-y-2 p-4 text-sm">
@@ -984,7 +1028,11 @@ function SignupWizard() {
                 disabled={submitting || !acceptedTerms}
               >
                 {submitting && <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />}
-                {submitting ? "Ativando…" : `Ativar meus ${TRIAL_DURATION_DAYS} dias grátis`}
+                {submitting
+                  ? "Ativando…"
+                  : pagaHoje
+                    ? `Ir para o pagamento (${formatCents(pricing.cycleFeeCents)})`
+                    : `Ativar meus ${TRIAL_DURATION_DAYS} dias grátis`}
               </Button>
             )}
           </div>

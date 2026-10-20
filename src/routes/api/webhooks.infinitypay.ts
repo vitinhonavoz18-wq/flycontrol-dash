@@ -13,23 +13,20 @@
  *
  * Dois fluxos diferentes chegam aqui, distinguidos pelo prefixo do
  * `order_nsu` que nós mesmos escolhemos na hora de criar o link:
- *   - sem prefixo → pagamento do checkout de cadastro (checkout_intents);
+ *   - sem prefixo → contratação (checkout_intents): cadastro pago ou
+ *     Premium Mensal/Anual contratado de dentro do painel;
  *   - "invoice:"  → pagamento de uma fatura de ciclo mensal (payment_transactions).
  */
 
 import { createFileRoute } from "@tanstack/react-router";
-import { supabaseAdmin } from "@/integrations/supabase/client.server";
-import { asBillingDb, type BillingDb } from "@/lib/billing/supabaseBridge";
-import { checkInfinityPayPayment } from "@/lib/billing/infinitypay/api";
-import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
-import { validateGatewayConfirmation, validateIntentForReturn } from "@/lib/billing/checkout";
-import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
+import { verifyAndConfirmCheckoutIntent } from "@/lib/billing/intentPayment.server";
 import {
   INVOICE_ORDER_PREFIX,
   verifyAndConfirmInvoicePayment,
 } from "@/lib/billing/invoicePayment.server";
 
 const INVOICE_PREFIX = INVOICE_ORDER_PREFIX;
+const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -47,129 +44,39 @@ function firstAsString(obj: Record<string, unknown> | null, ...keys: string[]): 
   return undefined;
 }
 
-type IntentRow = {
-  id: string;
-  company_id: string;
-  subscription_id: string | null;
-  plan_code: string;
-  status: string;
-  expires_at: string;
-  expected_amount_cents: number;
-};
-
-/** Confirmação do checkout de cadastro — fluxo original, inalterado. */
-async function handleSignupCheckout(
-  db: BillingDb,
+/**
+ * Confirmação de uma contratação: cadastro pago ou Premium contratado pelo
+ * painel. A regra inteira (reconferência, valor, uso único, ativação) mora em
+ * `verifyAndConfirmCheckoutIntent` — a mesma que o retorno do cliente e o
+ * robô diário usam.
+ */
+async function handleCheckoutIntent(
   orderNsu: string,
   transactionNsu: string | undefined,
   slug: string | undefined,
 ): Promise<Response> {
-  const { data: found, error } = await db
-    .from("checkout_intents")
-    .select("id, company_id, subscription_id, plan_code, status, expires_at, expected_amount_cents")
-    .eq("id", orderNsu)
-    .maybeSingle();
+  const outcome = await verifyAndConfirmCheckoutIntent({
+    intentId: orderNsu,
+    transactionNsu,
+    slug,
+  });
 
-  if (error || !found) {
+  if (outcome.ok) return json({ success: true, message: null }, 200);
+
+  if (outcome.reason === "not_found") {
     console.warn(`[infinitypay-webhook] intenção ${orderNsu} não encontrada.`);
     return json({ success: false, message: "pedido não encontrado" }, 400);
   }
-
-  const intent = found as unknown as IntentRow;
-
-  // Reaviso de um pagamento já processado: responder sucesso encerra a
-  // repetição da InfinityPay sem reprocessar nada.
-  if (intent.status === "confirmed") {
-    return json({ success: true, message: null }, 200);
-  }
-
-  // Reusa a mesma régua do retorno por link: recusa intenção cancelada
-  // ou vencida antes de gastar uma chamada de reconferência.
-  const verdict = validateIntentForReturn(
-    { planCode: intent.plan_code, status: intent.status, expiresAt: intent.expires_at },
-    intent.plan_code,
-  );
-  if (!verdict.ok) {
-    console.warn(`[infinitypay-webhook] intenção ${orderNsu} recusada: ${verdict.code}`);
-    return json({ success: false, message: verdict.message }, 400);
-  }
-
-  const check = await checkInfinityPayPayment({ orderNsu, transactionNsu, slug });
-  if (!check.ok) {
-    console.error(`[infinitypay-webhook] reconferência falhou para ${orderNsu}: ${check.error}`);
+  if (outcome.reason === "check_failed") {
+    console.error(
+      `[infinitypay-webhook] reconferência falhou para ${orderNsu}: ${outcome.message}`,
+    );
     return json({ success: false, message: "não foi possível reconferir o pagamento" }, 400);
   }
-
-  const confirmation = validateGatewayConfirmation(
-    { paid: check.paid, paidAmountCents: check.paidAmountCents },
-    intent.expected_amount_cents,
+  console.warn(
+    `[infinitypay-webhook] intenção ${orderNsu} não confirmada (${outcome.reason}): ${outcome.message}`,
   );
-  if (!confirmation.ok) {
-    console.warn(
-      `[infinitypay-webhook] reconferência não confirma pagamento de ${orderNsu}: ${confirmation.code}`,
-    );
-    return json({ success: false, message: confirmation.message }, 400);
-  }
-
-  const nowIso = new Date().toISOString();
-
-  // Condicional ao status atual: se duas chamadas chegarem juntas, só a
-  // primeira reivindica a intenção.
-  const { data: claimed } = await db
-    .from("checkout_intents")
-    .update({ status: "confirmed", returned_at: nowIso, confirmed_at: nowIso, updated_at: nowIso })
-    .eq("id", intent.id)
-    .eq("status", intent.status)
-    .select("id")
-    .maybeSingle();
-
-  if (!claimed) {
-    return json({ success: true, message: null }, 200);
-  }
-
-  if (intent.subscription_id) {
-    await db
-      .from("subscriptions")
-      .update({
-        status: "active",
-        activated_at: nowIso,
-        billing_anchor_day: new Date(nowIso).getUTCDate(),
-        payment_provider: "infinitypay",
-        updated_at: nowIso,
-      })
-      .eq("id", intent.subscription_id);
-
-    await db.from("subscription_events").insert({
-      subscription_id: intent.subscription_id,
-      company_id: intent.company_id,
-      event_type: "checkout_return_activated",
-      new_status: "active",
-      reason: "Pagamento confirmado pela InfinityPay (aviso + reconferência)",
-      metadata: {
-        plan_code: intent.plan_code,
-        checkout_intent_id: intent.id,
-        transaction_nsu: transactionNsu ?? null,
-        capture_method: check.captureMethod,
-        provider_confirmed: true,
-      },
-    });
-
-    // Sem isso, o gatilho que conta pedidos no banco nunca teria onde
-    // lançar o consumo — a conta ficaria ativa e recebendo pedidos sem
-    // nunca ser cobrada por eles.
-    await openFirstCycle(db, intent.subscription_id);
-  }
-
-  await supabaseAdmin
-    .from("pizzerias")
-    .update({ subscription_status: "active" })
-    .eq("id", intent.company_id);
-
-  // Onboarding concluído de verdade: pagamento confirmado pela própria
-  // InfinityPay. Este é o momento de o cardápio nascer.
-  await provisionAndForget(intent.company_id);
-
-  return json({ success: true, message: null }, 200);
+  return json({ success: false, message: outcome.message }, 400);
 }
 
 /** Confirmação de uma fatura de ciclo mensal. */
@@ -222,14 +129,17 @@ export const Route = createFileRoute("/api/webhooks/infinitypay")({
           return json({ success: false, message: "order_nsu ausente" }, 400);
         }
 
-        const db = asBillingDb(supabaseAdmin);
-
         if (orderNsu.startsWith(INVOICE_PREFIX)) {
           const paymentTransactionId = orderNsu.slice(INVOICE_PREFIX.length);
           return handleInvoicePayment(paymentTransactionId, transactionNsu, slug);
         }
 
-        return handleSignupCheckout(db, orderNsu, transactionNsu, slug);
+        // order_nsu das contratações é o id (UUID) da intenção. Qualquer outra
+        // coisa nem chega ao banco.
+        if (!UUID.test(orderNsu)) {
+          return json({ success: false, message: "pedido não encontrado" }, 400);
+        }
+        return handleCheckoutIntent(orderNsu, transactionNsu, slug);
       },
     },
   },

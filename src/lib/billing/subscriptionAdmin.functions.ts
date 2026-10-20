@@ -14,7 +14,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { initialUnitPriceCents } from "./billingEngine";
 import { pizzeriaAccessStatusFor } from "./collections";
-import { COMPANY_BILLING_MODEL, isPublicPlanCode, type PlanCode } from "./plans";
+import { COMPANY_BILLING_MODEL, COMPANY_PLAN_TYPE, isPublicPlanCode, type PlanCode } from "./plans";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import { asBillingDb, type BillingDb } from "./supabaseBridge";
 import { canTransition, isSubscriptionStatus, type SubscriptionStatus } from "./subscriptionStatus";
@@ -252,7 +252,11 @@ export const changeSubscriptionPlan = createServerFn({ method: "POST" })
     // recusada.
     const { error: companyError } = await supabase
       .from("pizzerias")
-      .update({ plan_type: planCode, billing_model: COMPANY_BILLING_MODEL[planCode] })
+      // `premium_anual` grava `premium` na ficha: mesmos recursos (ver COMPANY_PLAN_TYPE).
+      .update({
+        plan_type: COMPANY_PLAN_TYPE[planCode],
+        billing_model: COMPANY_BILLING_MODEL[planCode],
+      })
       .eq("id", subscription.company_id);
 
     if (companyError) {

@@ -12,6 +12,7 @@ const report = (failed = 0): CloseDueCyclesOutcome => ({
     failed,
     results: [],
     recovery: null,
+    intents: null,
     reconciliation: null,
   },
 });

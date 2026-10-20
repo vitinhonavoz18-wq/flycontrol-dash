@@ -58,6 +58,7 @@ import { Route as AppAdminFlydeliveryPagamentosRouteImport } from './routes/_app
 import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizzerias'
 import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
+import { Route as AppAssinarPlanoRouteImport } from './routes/_app/assinar.$plano'
 import { Route as AppFinanceiroRecebimentosRouteImport } from './routes/_app/financeiro.recebimentos'
 import { Route as AppInventoryIndexRouteImport } from './routes/_app/inventory.index'
 import { Route as AppInventoryCountRouteImport } from './routes/_app/inventory.count'
@@ -362,6 +363,11 @@ const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   id: '/users',
   path: '/users',
   getParentRoute: () => AppAdminRoute,
+} as any)
+const AppAssinarPlanoRoute = AppAssinarPlanoRouteImport.update({
+  id: '/assinar/$plano',
+  path: '/assinar/$plano',
+  getParentRoute: () => AppRoute,
 } as any)
 const AppFinanceiroRecebimentosRoute =
   AppFinanceiroRecebimentosRouteImport.update({
@@ -728,6 +734,7 @@ export interface FileRoutesByFullPath {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/assinar/$plano': typeof AppAssinarPlanoRoute
   '/financeiro/recebimentos': typeof AppFinanceiroRecebimentosRoute
   '/inventory/count': typeof AppInventoryCountRoute
   '/inventory/entries': typeof AppInventoryEntriesRoute
@@ -832,6 +839,7 @@ export interface FileRoutesByTo {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/assinar/$plano': typeof AppAssinarPlanoRoute
   '/financeiro/recebimentos': typeof AppFinanceiroRecebimentosRoute
   '/inventory/count': typeof AppInventoryCountRoute
   '/inventory/entries': typeof AppInventoryEntriesRoute
@@ -943,6 +951,7 @@ export interface FileRoutesById {
   '/_app/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
+  '/_app/assinar/$plano': typeof AppAssinarPlanoRoute
   '/_app/financeiro/recebimentos': typeof AppFinanceiroRecebimentosRoute
   '/_app/inventory/count': typeof AppInventoryCountRoute
   '/_app/inventory/entries': typeof AppInventoryEntriesRoute
@@ -1054,6 +1063,7 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/assinar/$plano'
     | '/financeiro/recebimentos'
     | '/inventory/count'
     | '/inventory/entries'
@@ -1158,6 +1168,7 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/assinar/$plano'
     | '/financeiro/recebimentos'
     | '/inventory/count'
     | '/inventory/entries'
@@ -1268,6 +1279,7 @@ export interface FileRouteTypes {
     | '/_app/admin/pizzerias'
     | '/_app/admin/subscriptions'
     | '/_app/admin/users'
+    | '/_app/assinar/$plano'
     | '/_app/financeiro/recebimentos'
     | '/_app/inventory/count'
     | '/_app/inventory/entries'
@@ -1728,6 +1740,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/users'
       preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppAdminRoute
+    }
+    '/_app/assinar/$plano': {
+      id: '/_app/assinar/$plano'
+      path: '/assinar/$plano'
+      fullPath: '/assinar/$plano'
+      preLoaderRoute: typeof AppAssinarPlanoRouteImport
+      parentRoute: typeof AppRoute
     }
     '/_app/financeiro/recebimentos': {
       id: '/_app/financeiro/recebimentos'
@@ -2245,6 +2264,7 @@ interface AppRouteChildren {
   AppSettingsRoute: typeof AppSettingsRoute
   AppTablesRoute: typeof AppTablesRoute
   AppWaitersRoute: typeof AppWaitersRoute
+  AppAssinarPlanoRoute: typeof AppAssinarPlanoRoute
   AppFinanceiroRecebimentosRoute: typeof AppFinanceiroRecebimentosRoute
 }
 
@@ -2266,6 +2286,7 @@ const AppRouteChildren: AppRouteChildren = {
   AppSettingsRoute: AppSettingsRoute,
   AppTablesRoute: AppTablesRoute,
   AppWaitersRoute: AppWaitersRoute,
+  AppAssinarPlanoRoute: AppAssinarPlanoRoute,
   AppFinanceiroRecebimentosRoute: AppFinanceiroRecebimentosRoute,
 }
 

@@ -126,6 +126,20 @@ export type CycleInput = {
    * seria mudar o preço depois de o cliente já ter vendido.
    */
   centsPolicy?: string;
+  /**
+   * Valor fixo do ciclo CONTRATADO — o `monthly_fee_cents` da versão de preço
+   * gravada na assinatura (R$ 375,00 para quem contratou antes, R$ 89,90 ou
+   * R$ 598,80 para quem contrata agora).
+   *
+   * O fechamento de ciclo SEMPRE informa este valor, lido do banco. Ele
+   * existe porque o catálogo (`PLAN_PRICING`) muda quando o preço de tabela
+   * muda, e cobrar pelo catálogo seria reajustar todo assinante antigo no
+   * dia da troca de preço — como reimprimir a comanda de um cliente que já
+   * pediu com o cardápio novo.
+   *
+   * Ausente só em estimativas de tela; aí vale o catálogo.
+   */
+  contractedCycleFeeCents?: Cents;
 };
 
 export type CycleTotals = {
@@ -210,7 +224,13 @@ export function calculateCycle(input: CycleInput): CycleTotals {
   const setupFeeAmountCents =
     !input.setupFeeAlreadyCharged && pricing.setupFeeCents > 0 ? pricing.setupFeeCents : 0;
 
-  const monthlyFeeAmountCents = pricing.monthlyFeeCents;
+  const monthlyFeeAmountCents =
+    pricing.billingModel === "monthly_fixed"
+      ? assertCents(
+          input.contractedCycleFeeCents ?? pricing.cycleFeeCents,
+          "contractedCycleFeeCents",
+        )
+      : 0;
 
   const discountAmountCents = 0; // Sem regra de desconto definida comercialmente.
 
@@ -319,7 +339,12 @@ export function buildInvoiceItems(planCode: PlanCode, totals: CycleTotals): Invo
   if (totals.monthlyFeeAmountCents > 0) {
     items.push({
       itemType: "monthly_fee",
-      description: `Mensalidade do plano ${pricing.name}`,
+      // "Anuidade" no anual: a linha da fatura precisa dizer que aquele valor
+      // vale por 12 meses, e não parecer uma mensalidade de R$ 598,80.
+      description:
+        pricing.billingIntervalMonths === 12
+          ? `Anuidade do plano ${pricing.name} (12 meses)`
+          : `Mensalidade do plano ${pricing.name}`,
       quantity: 1,
       unitAmountCents: totals.monthlyFeeAmountCents,
       totalAmountCents: totals.monthlyFeeAmountCents,

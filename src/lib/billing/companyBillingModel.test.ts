@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { COMPANY_BILLING_MODEL } from "./plans";
+import { COMPANY_BILLING_MODEL, COMPANY_PLAN_TYPE, type PlanCode } from "./plans";
 
 /**
  * O banco recusa a empresa quando `plan_type` e `billing_model` não formam um
@@ -37,11 +37,33 @@ describe("par plano + modelo de cobrança", () => {
   });
 
   it("o mapa do código bate exatamente com o que o banco aceita", () => {
-    expect(paresAceitosNoBanco()).toEqual({ ...COMPANY_BILLING_MODEL });
+    // A constraint fala de `plan_type` (o que a ficha da loja guarda). O
+    // Premium Anual grava `premium` ali, então o par dele é o do Premium.
+    const pares = paresAceitosNoBanco();
+    for (const code of Object.keys(COMPANY_BILLING_MODEL) as PlanCode[]) {
+      expect(pares[COMPANY_PLAN_TYPE[code]], code).toBe(COMPANY_BILLING_MODEL[code]);
+    }
+    expect(Object.keys(pares).sort()).toEqual(
+      [...new Set(Object.values(COMPANY_PLAN_TYPE))].sort(),
+    );
   });
 
   it("cobre todos os planos, públicos e internos", () => {
-    expect(Object.keys(COMPANY_BILLING_MODEL).sort()).toEqual(["cents", "premium", "teste"]);
+    expect(Object.keys(COMPANY_BILLING_MODEL).sort()).toEqual([
+      "cents",
+      "premium",
+      "premium_anual",
+      "teste",
+    ]);
+    expect(Object.keys(COMPANY_PLAN_TYPE).sort()).toEqual(
+      Object.keys(COMPANY_BILLING_MODEL).sort(),
+    );
+  });
+
+  it("mensal e anual liberam as mesmas telas: os dois gravam `premium` na ficha", () => {
+    expect(COMPANY_PLAN_TYPE.premium).toBe("premium");
+    expect(COMPANY_PLAN_TYPE.premium_anual).toBe("premium");
+    expect(COMPANY_BILLING_MODEL.premium_anual).toBe("fixed");
   });
 
   it("CENTS nunca é 'fixed'", () => {

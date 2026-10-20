@@ -3,6 +3,7 @@ import { closeBillingCycle } from "@/lib/billing/closeCycle.server";
 import { createRecurringCharge } from "@/lib/billing/infinitypay/recurringCharge.server";
 import { reconcileOverdueInvoices } from "@/lib/billing/collections.server";
 import { recoverInvoiceCharges } from "@/lib/billing/invoiceRecovery.server";
+import { reconcileOpenCheckoutIntents } from "@/lib/billing/intentPayment.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
 
 /**
@@ -44,6 +45,8 @@ export type CloseDueCyclesReport = {
   failed: number;
   results: Array<{ cycleId: string; ok: boolean; detail: string }>;
   recovery: Awaited<ReturnType<typeof recoverInvoiceCharges>> | null;
+  /** Contratações (cadastro/Premium) pagas cujo aviso não chegou. */
+  intents: Awaited<ReturnType<typeof reconcileOpenCheckoutIntents>> | null;
   reconciliation: Awaited<ReturnType<typeof reconcileOverdueInvoices>> | null;
 };
 
@@ -146,6 +149,21 @@ export async function closeDueCycles(): Promise<CloseDueCyclesOutcome> {
     console.error("[billing-cron] falha na rede de segurança da cobrança:", err);
   }
 
+  // 3b. Contratações pagas sem aviso: quem pagou o Premium (ou o cadastro)
+  // e cujo aviso da InfinityPay se perdeu é ativado aqui. Falhar nesta fase
+  // não atrapalha as outras.
+  let intents: CloseDueCyclesReport["intents"] = null;
+  try {
+    intents = await reconcileOpenCheckoutIntents();
+    console.log(
+      `[billing-cron] contratações: ${intents.checked} em aberto reconferida(s), ` +
+        `${intents.confirmed} confirmada(s) sem aviso`,
+    );
+    for (const e of intents.errors) console.warn(`[billing-cron] ${e}`);
+  } catch (err) {
+    console.error("[billing-cron] falha ao reconferir contratações:", err);
+  }
+
   let reconciliation: CloseDueCyclesReport["reconciliation"] = null;
   try {
     reconciliation = await reconcileOverdueInvoices();
@@ -159,6 +177,14 @@ export async function closeDueCycles(): Promise<CloseDueCyclesOutcome> {
 
   return {
     ok: true,
-    report: { processed: results.length, succeeded, failed, results, recovery, reconciliation },
+    report: {
+      processed: results.length,
+      succeeded,
+      failed,
+      results,
+      recovery,
+      intents,
+      reconciliation,
+    },
   };
 }

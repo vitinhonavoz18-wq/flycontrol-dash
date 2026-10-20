@@ -2,13 +2,14 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Button } from "@/components/ui/button";
 import { LegalDocument, LegalSection } from "@/components/legal/LegalDocument";
 import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING } from "@/lib/billing/plans";
+import { PLAN_PRICING, monthlyEquivalentCents } from "@/lib/billing/plans";
 import { PENDING_LEGAL_SECTIONS, TERMS_LAST_UPDATED, TERMS_VERSION } from "@/lib/legal/terms";
 import { FEATURE_LABELS } from "@/lib/planPermissions";
 
 export const Route = createFileRoute("/terms")({ component: TermsPage });
 
 const premium = PLAN_PRICING.premium;
+const anual = PLAN_PRICING.premium_anual;
 const cents = PLAN_PRICING.cents;
 const restricted = Object.values(FEATURE_LABELS).join(", ");
 
@@ -47,7 +48,7 @@ function TermsPage() {
 
       <LegalSection id="planos" title="2. Planos e preços">
         <p>
-          A FlyControl é oferecida em dois planos. Os valores vigentes na contratação ficam
+          A FlyControl é oferecida nos planos abaixo. Os valores vigentes na contratação ficam
           registrados na assinatura e não são alterados retroativamente por mudanças futuras de
           tabela.
         </p>
@@ -56,9 +57,31 @@ function TermsPage() {
           <div>
             <h3 className="font-bold text-foreground">{premium.name}</h3>
             <p>
-              Mensalidade fixa de <strong>{formatCents(premium.monthlyFeeCents)}</strong>, sem taxa
-              de cadastro e sem cobrança por pedido. Inclui todos os recursos da plataforma, entre
-              eles {restricted}.
+              Mensalidade fixa de <strong>{formatCents(premium.cycleFeeCents)}</strong>, sem taxa de
+              cadastro e sem cobrança por pedido. Inclui todos os recursos da plataforma, entre eles{" "}
+              {restricted}.
+            </p>
+          </div>
+
+          <div className="border-t border-border pt-3">
+            <h3 className="font-bold text-foreground">{anual.name}</h3>
+            <p>
+              Pagamento único de <strong>{formatCents(anual.cycleFeeCents)}</strong> por 12 meses de
+              acesso, com os mesmos recursos do {premium.name}. O valor de{" "}
+              {formatCents(monthlyEquivalentCents("premium_anual"))}/mês é apenas o equivalente
+              mensal, para comparação: não há cobrança mensal neste plano.
+            </p>
+          </div>
+
+          <div className="border-t border-border pt-3">
+            <h3 className="font-bold text-foreground">Renovação dos planos Premium</h3>
+            <p>
+              A renovação não é débito automático. Ao fim de cada período (1 mês no {premium.name},
+              12 meses no {anual.name}) é emitida uma nova cobrança com o mesmo valor contratado,
+              disponível no painel com link de pagamento e 7 dias de prazo. Sem pagamento, o plano
+              não é renovado e o acesso pode ser suspenso após o vencimento. Assinaturas contratadas
+              antes de 15/10/2026 mantêm o valor e o período contratados; qualquer mudança de plano
+              depende de ação e consentimento do cliente.
             </p>
           </div>
 

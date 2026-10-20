@@ -15,6 +15,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb } from "@/lib/billing/supabaseBridge";
 import { isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
 import { openFirstCycle } from "@/lib/billing/activateSubscription.server";
+import { verifyAndConfirmCheckoutIntent } from "@/lib/billing/intentPayment.server";
 import { provisionAndForget } from "@/lib/provisioning/ensureProvisioned.server";
 import {
   hashIntentToken,
@@ -29,6 +30,12 @@ const UNDEFINED_TABLE = "42P01";
 export type ConfirmReturnInput = {
   token: string;
   planCode: string;
+  /**
+   * O que a InfinityPay acrescenta ao endereço de retorno. Não prova nada
+   * sozinho: só ajuda a reconferência (`payment_check`) a achar a transação.
+   */
+  transactionNsu?: string;
+  slug?: string;
 };
 
 export type ConfirmReturnResult =
@@ -38,6 +45,8 @@ export type ConfirmReturnResult =
       planCode: PlanCode;
       /** `true` quando a assinatura já ficou ativa; `false` quando aguarda conferência. */
       activated: boolean;
+      /** Cadastro novo ou Premium contratado de dentro do painel. */
+      kind: "signup" | "upgrade";
     }
   | {
       recognized: false;
@@ -52,6 +61,7 @@ type IntentRow = {
   plan_code: string;
   status: string;
   expires_at: string;
+  kind?: string | null;
 };
 
 export const confirmCheckoutReturn = createServerFn({ method: "POST" })
@@ -61,18 +71,35 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
     if (typeof d?.token !== "string" || !/^[0-9a-f]{64}$/.test(d.token)) {
       throw new Error("Retorno de checkout inválido.");
     }
-    return d;
+    // Campos opcionais da InfinityPay: só texto curto e sem espaços.
+    const safe = (v: unknown) =>
+      typeof v === "string" && /^[A-Za-z0-9._:-]{1,128}$/.test(v) ? v : undefined;
+    return {
+      token: d.token,
+      planCode: d.planCode,
+      transactionNsu: safe(d.transactionNsu),
+      slug: safe(d.slug),
+    };
   })
   .handler(async ({ data }): Promise<ConfirmReturnResult> => {
     const planCode = data.planCode as PlanCode;
     const db = asBillingDb(supabaseAdmin);
     const tokenHash = await hashIntentToken(data.token);
 
-    const { data: found, error } = await db
+    let { data: found, error } = await db
       .from("checkout_intents")
-      .select("id, company_id, subscription_id, plan_code, status, expires_at")
+      .select("id, company_id, subscription_id, plan_code, status, expires_at, kind")
       .eq("token_hash", tokenHash)
       .maybeSingle();
+
+    // Coluna `kind` ainda não existe (migration de 15/10 pendente).
+    if ((error as { code?: string } | null)?.code === "42703") {
+      ({ data: found, error } = await db
+        .from("checkout_intents")
+        .select("id, company_id, subscription_id, plan_code, status, expires_at")
+        .eq("token_hash", tokenHash)
+        .maybeSingle());
+    }
 
     if ((error as { code?: string } | null)?.code === UNDEFINED_TABLE) {
       console.warn("[checkout] tabela checkout_intents ausente: migration não aplicada.");
@@ -84,6 +111,22 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
     }
 
     const intent = (found ?? null) as IntentRow | null;
+
+    // Antes de qualquer outra regra: pergunta à InfinityPay se ESTE checkout
+    // foi pago. Se ela confirmar, a ativação acontece aqui mesmo, pelo mesmo
+    // caminho do aviso de pagamento (e do mesmo jeito: uma vez só). Se não
+    // confirmar — pendente, recusado ou fora do ar —, segue o fluxo de
+    // sempre, que nunca ativa por conta própria.
+    if (intent && (intent.status === "started" || intent.status === "returned")) {
+      const verified = await verifyAndConfirmCheckoutIntent({
+        intentId: intent.id,
+        transactionNsu: data.transactionNsu ?? null,
+        slug: data.slug ?? null,
+      });
+      if (verified.ok && intent.plan_code === planCode) {
+        return reportAlreadyConfirmed(intent, planCode);
+      }
+    }
 
     // Já confirmada e do mesmo plano: quase sempre é o aviso de pagamento
     // (webhook) da InfinityPay, que roda em paralelo e pode terminar antes de
@@ -118,7 +161,10 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
 
     // Sem confirmação da InfinityPay, ativar é uma decisão de risco explícita
     // de quem opera — ver shouldTrustCheckoutReturn.
-    const trustReturn = shouldTrustCheckoutReturn(process.env);
+    // Contratação pelo painel (upgrade) NUNCA ativa pela confiança no
+    // retorno: trocar o plano de uma loja que já opera exige a confirmação
+    // da InfinityPay, que acabou de ser tentada acima.
+    const trustReturn = shouldTrustCheckoutReturn(process.env) && intent.kind !== "upgrade";
     const nowIso = new Date().toISOString();
 
     // Marca a intenção usada. A condição sobre o status é o que impede duas
@@ -150,7 +196,7 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
       const recheckedIntent = recheck as IntentRow | null;
 
       if (recheckedIntent?.status === "confirmed" && recheckedIntent.plan_code === planCode) {
-        return reportAlreadyConfirmed(recheckedIntent, planCode);
+        return reportAlreadyConfirmed({ ...recheckedIntent, kind: intent.kind }, planCode);
       }
 
       return {
@@ -160,7 +206,10 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
       };
     }
 
-    if (intent.subscription_id) {
+    // Só no cadastro: numa contratação pelo painel a assinatura atual (ex.:
+    // CENTS ativo) está funcionando, e marcá-la "aguardando pagamento" aqui
+    // travaria uma loja que opera normalmente.
+    if (intent.subscription_id && intent.kind !== "upgrade") {
       const nextStatus = trustReturn ? "active" : "pending_payment";
 
       await db
@@ -224,7 +273,13 @@ export const confirmCheckoutReturn = createServerFn({ method: "POST" })
       .maybeSingle();
     const companyName = (companyRow as { name?: string } | null)?.name ?? "seu estabelecimento";
 
-    return { recognized: true, companyName, planCode, activated: trustReturn };
+    return {
+      recognized: true,
+      companyName,
+      planCode,
+      activated: trustReturn,
+      kind: intent.kind === "upgrade" ? "upgrade" : "signup",
+    };
   });
 
 /** Monta a resposta de sucesso para uma intenção que já estava confirmada. */
@@ -239,5 +294,11 @@ async function reportAlreadyConfirmed(
     .maybeSingle();
   const companyName = (companyRow as { name?: string } | null)?.name ?? "seu estabelecimento";
 
-  return { recognized: true, companyName, planCode, activated: true };
+  return {
+    recognized: true,
+    companyName,
+    planCode,
+    activated: true,
+    kind: intent.kind === "upgrade" ? "upgrade" : "signup",
+  };
 }

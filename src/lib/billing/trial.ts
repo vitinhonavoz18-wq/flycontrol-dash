@@ -185,10 +185,20 @@ export function computeCycleStartAfter(input: {
   cycleType: string | null | undefined;
   cycleStart: Date;
   cycleEnd: Date;
+  /**
+   * Duração do ciclo contratado, em meses. Ausente = 1 (mensal), o que mantém
+   * exatamente a conta de sempre para todos os planos mensais.
+   *
+   * No anual o próximo ciclo começa logo depois do fim gravado do ciclo que
+   * fechou. Usar a regra do mensal ("mesmo dia do mês seguinte") abriria o
+   * ano novo onze meses antes do fim do ano pago — cobrando duas anuidades
+   * pelo mesmo período.
+   */
+  intervalMonths?: number;
 }): Date {
-  return input.cycleType === "free_trial"
-    ? new Date(input.cycleEnd.getTime() + 1)
-    : computeNextCycleStart(input.cycleStart);
+  if (input.cycleType === "free_trial") return new Date(input.cycleEnd.getTime() + 1);
+  if ((input.intervalMonths ?? 1) > 1) return new Date(input.cycleEnd.getTime() + 1);
+  return computeNextCycleStart(input.cycleStart);
 }
 
 /** Data no formato brasileiro, ou travessão quando não há data. */

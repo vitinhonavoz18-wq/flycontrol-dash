@@ -1,7 +1,8 @@
 /**
  * Retorno do checkout da InfinityPay.
  *
- * São duas URLs, uma por plano — /pagamento/premium e /pagamento/cents — e é
+ * Uma URL por plano — /pagamento/premium, /pagamento/premium_anual e
+ * /pagamento/cents — e é
  * isso que se cola no painel da InfinityPay como link de retorno de cada
  * checkout. Ter uma por plano permite recusar quem pagou um plano e voltou
  * pela URL do outro.
@@ -64,7 +65,18 @@ function CheckoutReturnPage() {
     }
 
     let active = true;
-    void confirmCheckoutReturn({ data: { token: stored.token, planCode: plano } })
+    // A InfinityPay devolve o cliente com estes dados no endereço. Eles não
+    // provam nada sozinhos: o servidor usa para perguntar à própria
+    // InfinityPay se o pagamento existe.
+    const params = new URLSearchParams(window.location.search);
+    void confirmCheckoutReturn({
+      data: {
+        token: stored.token,
+        planCode: plano,
+        transactionNsu: params.get("transaction_nsu") ?? undefined,
+        slug: params.get("slug") ?? params.get("invoice_slug") ?? undefined,
+      },
+    })
       .then((result) => {
         if (!active) return;
         // O token é de uso único. Mantê-lo depois da resposta só criaria
@@ -185,7 +197,11 @@ function ResultState({ result }: { result: ConfirmReturnResult }) {
       </div>
 
       {result.activated ? (
-        <p className="text-sm text-muted-foreground">{nextStepCopy(result.planCode)}</p>
+        <p className="text-sm text-muted-foreground">
+          {result.kind === "upgrade"
+            ? `O ${pricing.name} já está liberado na sua loja. Os detalhes, o vencimento e o histórico do pagamento ficam em Plano e cobrança.`
+            : nextStepCopy(result.planCode)}
+        </p>
       ) : (
         <p className="rounded-lg border border-border bg-muted/30 p-3 text-left text-sm text-muted-foreground">
           Seu pagamento está em conferência. Assim que ele for confirmado, o acesso completo é
@@ -196,9 +212,15 @@ function ResultState({ result }: { result: ConfirmReturnResult }) {
 
       <div className="flex flex-col gap-2">
         <Button asChild className="h-12 w-full">
-          <Link to="/login">
-            Continuar o cadastro <ArrowRight className="h-4 w-4" aria-hidden="true" />
-          </Link>
+          {result.kind === "upgrade" ? (
+            <Link to="/billing">
+              Ver meu plano <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          ) : (
+            <Link to="/login">
+              Continuar o cadastro <ArrowRight className="h-4 w-4" aria-hidden="true" />
+            </Link>
+          )}
         </Button>
       </div>
     </div>
@@ -207,7 +229,7 @@ function ResultState({ result }: { result: ConfirmReturnResult }) {
 
 /** O que vem depois muda com o plano contratado. */
 function nextStepCopy(planCode: PlanCode): string {
-  if (planCode === "premium") {
+  if (planCode === "premium" || planCode === "premium_anual") {
     return "Seu acesso está liberado. Entre no painel para concluir a configuração do estabelecimento e começar a receber pedidos.";
   }
   if (planCode === "cents") {

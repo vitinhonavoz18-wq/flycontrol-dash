@@ -35,8 +35,17 @@ import { ChatAddonActions } from "@/components/admin/ChatAddonActions";
 import { situacaoChatDasLojas } from "@/lib/crm/addonAdmin.functions";
 import { useServerFn } from "@tanstack/react-start";
 
+import { formatCents } from "@/lib/billing/money";
+import { PLAN_PRICING } from "@/lib/billing/plans";
+
 const DEFAULT_CLUB_ID = "00000000-0000-0000-0000-0000000000c1";
-const PREMIUM_PRICE = 375;
+/**
+ * Preço de TABELA do Premium para contratações novas. Não é o valor que cada
+ * loja paga: quem contratou antes mantém o preço contratado (ex.: R$ 375,00),
+ * gravado na assinatura. O valor real de cada loja está na aba de assinaturas
+ * (versão de preço da assinatura).
+ */
+const PREMIUM_TABLE_LABEL = `${formatCents(PLAN_PRICING.premium.cycleFeeCents)}/mês ou ${formatCents(PLAN_PRICING.premium_anual.cycleFeeCents)}/ano (tabela p/ novas contratações)`;
 
 export const SubscriptionsDashboard = () => {
   const queryClient = useQueryClient();
@@ -115,7 +124,8 @@ export const SubscriptionsDashboard = () => {
       subscription_status: editingPizzeria.subscription_status,
       internal_notes: editingPizzeria.internal_notes,
     };
-    if (newPlanType === "premium") update.subscription_price = PREMIUM_PRICE;
+    // `subscription_price` não é mais reescrito aqui: gravar o preço de tabela
+    // por cima apagaria a referência do valor que a loja contratou.
 
     const { error } = await supabase.from("pizzerias").update(update).eq("id", editingPizzeria.id);
 
@@ -220,7 +230,7 @@ export const SubscriptionsDashboard = () => {
                   <TableCell>
                     {isCents
                       ? `R$ ${Number(centsPrice ?? 0).toFixed(2)} por pedido`
-                      : `R$ ${PREMIUM_PRICE.toFixed(2)}`}
+                      : "Premium — valor conforme a assinatura"}
                   </TableCell>
                   <TableCell>
                     <ChatAddonActions
@@ -305,7 +315,7 @@ export const SubscriptionsDashboard = () => {
             <div className="rounded-md border bg-muted/30 p-3 text-sm text-muted-foreground">
               {editingPizzeria?.plan_type === "cents"
                 ? `Cobrança por pedido: R$ ${Number(centsPrice ?? 0).toFixed(2)} (definido globalmente nas configurações do Clube CENTS).`
-                : `Mensalidade fixa: R$ ${PREMIUM_PRICE.toFixed(2)}.`}
+                : `Premium: ${PREMIUM_TABLE_LABEL}. Lojas que já assinam mantêm o valor contratado. Atenção: este formulário muda só as telas liberadas (plan_type), não a assinatura nem a cobrança — para trocar a cobrança use a aba de assinaturas.`}
             </div>
 
             <div className="space-y-2">

@@ -64,7 +64,7 @@ describe("os números vêm do mesmo lugar que a cobrança usa", () => {
     // Se estes valores mudarem em `lib/billing`, a página muda junto — é o
     // motivo de ela ler daqui em vez de ter o número escrito.
     expect(formatCents(PLAN_PRICING.cents.defaultOrderUnitPriceCents)).toMatch(/^R\$/);
-    expect(formatCents(PLAN_PRICING.premium.monthlyFeeCents)).toMatch(/^R\$/);
+    expect(formatCents(PLAN_PRICING.premium.cycleFeeCents)).toMatch(/^R\$/);
     expect(PLAN_PRICING.cents.promotionThresholdOrders).toBeGreaterThan(0);
     expect(TRIAL_DURATION_DAYS).toBeGreaterThan(0);
   });
