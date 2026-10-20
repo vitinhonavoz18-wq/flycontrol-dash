@@ -35,7 +35,8 @@ export type TrialDenialReason =
   | "company_not_found"
   | "missing_email"
   | "billing_not_installed"
-  | "rpc_failed";
+  | "rpc_failed"
+  | "annual_plan_paid_upfront";
 
 /** Postgres: função inexistente — a migration do período grátis não foi aplicada. */
 const UNDEFINED_FUNCTION = "42883";
@@ -48,6 +49,8 @@ export const TRIAL_DENIAL_MESSAGES: Record<TrialDenialReason, string> = {
   missing_email: "É necessário um e-mail para registrar o período gratuito.",
   billing_not_installed: "O período gratuito ainda não está configurado nesta instalação.",
   rpc_failed: "Não foi possível liberar o período gratuito agora.",
+  annual_plan_paid_upfront:
+    "O Premium Anual é pago à vista no início: o pagamento único de 12 meses substitui o período grátis.",
 };
 
 function isDenialReason(value: unknown): value is TrialDenialReason {

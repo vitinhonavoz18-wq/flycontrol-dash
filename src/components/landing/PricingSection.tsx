@@ -1,6 +1,11 @@
 import { Link } from "@tanstack/react-router";
 import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING } from "@/lib/billing/plans";
+import {
+  PLAN_PRICING,
+  annualSavingsCents,
+  annualSavingsPercentLabel,
+  monthlyEquivalentCents,
+} from "@/lib/billing/plans";
 import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial";
 import { Reveal, SectionHeading, SectionLabel, SectionText } from "./primitivos";
 
@@ -19,6 +24,7 @@ import { Reveal, SectionHeading, SectionLabel, SectionText } from "./primitivos"
  */
 
 const premium = PLAN_PRICING.premium;
+const anual = PLAN_PRICING.premium_anual;
 const cents = PLAN_PRICING.cents;
 
 export function PricingSection() {
@@ -134,7 +140,8 @@ export function PricingSection() {
                 {premium.name}
               </h3>
               <p className="mt-2 text-[15px]" style={{ color: "var(--fly-text-secondary)" }}>
-                Mensalidade fixa. Você sabe exatamente quanto paga, entrando o pedido que entrar.
+                Valor fixo, mensal ou anual. Você sabe exatamente quanto paga, entrando o pedido que
+                entrar.
               </p>
 
               <p className="mt-8 flex items-baseline gap-2">
@@ -142,11 +149,23 @@ export function PricingSection() {
                   className="text-[clamp(2.75rem,6vw,3.5rem)] leading-none tracking-[-0.04em]"
                   style={{ color: "var(--fly-text-primary)" }}
                 >
-                  {formatCents(premium.monthlyFeeCents)}
+                  {formatCents(premium.cycleFeeCents)}
                 </span>
                 <span className="text-[15px]" style={{ color: "var(--fly-text-muted)" }}>
                   por mês
                 </span>
+              </p>
+
+              {/* O anual aparece com o valor COBRADO ao lado do equivalente:
+                  o equivalente mensal sozinho pareceria uma mensalidade que não existe. */}
+              <p
+                className="mt-6 rounded-[var(--fly-radius-sm)] px-4 py-3 text-[14px] leading-[1.5]"
+                style={{ background: "var(--fly-surface-02)", color: "var(--fly-text-secondary)" }}
+              >
+                Ou <strong style={{ color: "var(--fly-text-primary)" }}>{anual.name}</strong>:{" "}
+                {formatCents(monthlyEquivalentCents("premium_anual"))}/mês (valor equivalente),
+                cobrado {formatCents(anual.cycleFeeCents)} uma vez por ano — economia de{" "}
+                {formatCents(annualSavingsCents())} ({annualSavingsPercentLabel()}).
               </p>
 
               <ul className="mt-14 space-y-3">

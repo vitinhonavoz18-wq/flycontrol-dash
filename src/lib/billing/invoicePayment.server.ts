@@ -141,11 +141,46 @@ async function markInvoicePaidAndRenew(
     return;
   }
 
-  // Vale também para fatura "overdue": quem pagou atrasado pagou.
+  // Fatura CANCELADA não vira paga, e nada se renova por causa dela.
+  //
+  // Foi assim que a cobrança da ADEGA foi pausada: o ciclo e a fatura foram
+  // cancelados. Se um link antigo dessa fatura ainda circular e alguém pagar,
+  // dar baixa aqui reabriria um ciclo que o dono mandou parar — é o caixa
+  // aceitando o pagamento de uma comanda que já foi rasgada e, por causa
+  // dele, reabrindo a mesa. O dinheiro fica registrado (a cobrança está
+  // marcada como paga acima) e o caso vai para o histórico, para a equipe
+  // decidir entre devolver ou abater.
+  if (invoice.status === "canceled") {
+    console.error(
+      `[billing] cobrança ${tx.id} paga, mas a fatura ${invoice.id} está CANCELADA — ` +
+        "nada foi renovado. Conferir devolução/abatimento.",
+    );
+    await db.from("subscription_events").insert({
+      subscription_id: invoice.subscription_id,
+      company_id: invoice.company_id,
+      event_type: "payment_on_canceled_invoice",
+      reason: "Pagamento confirmado pela InfinityPay para uma fatura cancelada; requer conferência",
+      metadata: {
+        invoice_id: invoice.id,
+        payment_transaction_id: tx.id,
+        amount_cents: tx.amount_cents,
+        transaction_nsu: meta.transactionNsu,
+        capture_method: meta.captureMethod,
+        provider_confirmed: true,
+        requires_manual_review: true,
+      },
+    });
+    return;
+  }
+
+  // Vale também para fatura "overdue": quem pagou atrasado pagou. A condição
+  // de status impede que uma fatura cancelada entre um instante e outro seja
+  // marcada como paga.
   await db
     .from("invoices")
     .update({ status: "paid", paid_at: nowIso, updated_at: nowIso })
-    .eq("id", invoice.id);
+    .eq("id", invoice.id)
+    .neq("status", "canceled");
 
   const { data: subFound } = await db
     .from("subscriptions")

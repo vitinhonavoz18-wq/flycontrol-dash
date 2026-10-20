@@ -60,7 +60,7 @@ function LinkRow({ plan, origin }: { plan: PlanCode; origin: string | null }) {
   const url = origin ? checkoutReturnUrl(origin, plan) : null;
 
   const amountCents =
-    pricing.billingModel === "monthly_fixed" ? pricing.monthlyFeeCents : pricing.setupFeeCents;
+    pricing.billingModel === "monthly_fixed" ? pricing.cycleFeeCents : pricing.setupFeeCents;
 
   async function copy() {
     if (!url) return;

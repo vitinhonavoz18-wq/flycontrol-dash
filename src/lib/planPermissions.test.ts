@@ -44,7 +44,7 @@ describe("clientes anteriores ao modelo de assinatura", () => {
   });
 
   it("não aparece como terceiro plano comercial", () => {
-    expect(PUBLIC_PLAN_CODES).toEqual(["premium", "cents"]);
+    expect(PUBLIC_PLAN_CODES).toEqual(["premium", "premium_anual", "cents"]);
     expect(PUBLIC_PLAN_CODES).not.toContain("legacy_full_access");
     expect(isPublicPlanCode("legacy_full_access")).toBe(false);
   });

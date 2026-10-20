@@ -1,3 +1,4 @@
+import { PLAN_PRICING } from "@/lib/billing/plans";
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { provisionRestaurantInSF } from "@/integrations/sitecreatorfly/provision.server";
@@ -113,7 +114,11 @@ export const Route = createFileRoute("/api/pizzerias/create")({
           plan_type,
           billing_model,
         };
-        if (plan_type === "premium") insertData.subscription_price = 375;
+        // Campo informativo legado (não é usado para cobrar). Preço de tabela
+        // vigente do Premium Mensal, em reais — R$ 89,90 desde 15/10/2026.
+        if (plan_type === "premium") {
+          insertData.subscription_price = PLAN_PRICING.premium.cycleFeeCents / 100;
+        }
         if (owner_id) insertData.owner_id = owner_id;
 
         const { data, error } = await supabaseAdmin

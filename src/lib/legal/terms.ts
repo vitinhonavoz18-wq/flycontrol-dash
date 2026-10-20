@@ -8,9 +8,11 @@
  *
  * Suba a versão sempre que o conteúdo mudar de forma material.
  */
-export const TERMS_VERSION = "2026-08-27.1";
+// 15/10/2026: Premium Mensal a R$ 89,90, Premium Anual a R$ 598,80 por 12 meses,
+// regra de renovação por nova cobrança e preservação do preço contratado.
+export const TERMS_VERSION = "2026-10-15.1";
 
-export const TERMS_LAST_UPDATED = "27 de agosto de 2026";
+export const TERMS_LAST_UPDATED = "15 de outubro de 2026";
 
 /**
  * Seções ainda pendentes de redação jurídica.

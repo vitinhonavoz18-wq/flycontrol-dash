@@ -21,6 +21,8 @@ export type CycleProgressInput = {
   setupFeeAlreadyCharged: boolean;
   cycleEnd: Date;
   now: Date;
+  /** Valor fixo contratado (versão de preço da assinatura). Ausente = catálogo. */
+  contractedCycleFeeCents?: Cents;
 };
 
 export type PromotionState =
@@ -128,7 +130,8 @@ export function calculateCycleProgress(
     ordersRemaining,
     unitPriceCents: input.unitPriceCents,
     nextCycleUnitPriceCents,
-    estimatedTotalCents: usageCents + setupFeeCents + pricing.monthlyFeeCents,
+    estimatedTotalCents:
+      usageCents + setupFeeCents + (input.contractedCycleFeeCents ?? pricing.cycleFeeCents),
     setupFeeCents,
     daysRemaining: daysUntil(input.cycleEnd, input.now),
     state,

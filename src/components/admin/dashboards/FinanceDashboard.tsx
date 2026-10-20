@@ -37,7 +37,10 @@ const STATUS_STYLES: Record<string, string> = {
   past_due: "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30",
 };
 
-type RawPriceVersion = { monthly_fee_cents: number | null };
+type RawPriceVersion = {
+  monthly_fee_cents: number | null;
+  billing_interval_months?: number | null;
+};
 type RawCycle = { total_amount_cents: number | null };
 type RawInvoice = {
   subscription_id: string;
@@ -92,7 +95,7 @@ export const FinanceDashboard = () => {
       .select(
         "id, company_id, status, billing_model, " +
           "pizzerias(name), plans(code, name), " +
-          "plan_price_versions(monthly_fee_cents), " +
+          "plan_price_versions(monthly_fee_cents, billing_interval_months), " +
           "billing_cycles!subscriptions_current_cycle_fkey(total_amount_cents)",
       );
 
@@ -134,7 +137,13 @@ export const FinanceDashboard = () => {
         const priceVersion = firstOf(s.plan_price_versions);
         const cycle = firstOf(s.billing_cycles);
         const lastInvoice = lastInvoiceBySub.get(s.id) ?? null;
-        const monthlyFeeCents = Number(priceVersion?.monthly_fee_cents ?? 0);
+        // `monthly_fee_cents` é o valor POR CICLO. No anual (12 meses) são
+        // R$ 598,80 de uma vez; para somar com os mensais, conta o
+        // equivalente mensal (R$ 49,90). Arredondamento só na exibição.
+        const intervalMonths = Number(priceVersion?.billing_interval_months ?? 1) || 1;
+        const monthlyFeeCents = Math.round(
+          Number(priceVersion?.monthly_fee_cents ?? 0) / intervalMonths,
+        );
         // Plano fixo: o valor mensal é sempre a mensalidade contratada.
         // Plano por pedido (CENTS): não existe "mensalidade fixa" — o valor
         // que mais representa o que a loja está pagando é a última fatura

@@ -1,4 +1,4 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useCallback, useEffect, useState } from "react";
 import {
   AlertTriangle,
@@ -22,7 +22,15 @@ import { Card, CardContent } from "@/components/ui/card";
 import { SectionHeader } from "@/components/layout/SectionHeader";
 import { calculateCycleProgress, type CycleProgress } from "@/lib/billing/cycleProgress";
 import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
+import {
+  COMPANY_PLAN_TYPE,
+  PLAN_PRICING,
+  cycleUnitLabel,
+  isKnownPlanCode,
+  type PlanCode,
+} from "@/lib/billing/plans";
+import { PremiumPlanCards } from "@/components/billing/PremiumPlanCards";
+import { getPremiumOffer, type PremiumOffer } from "@/lib/billing/premiumCheckout.functions";
 import {
   SUBSCRIPTION_STATUS_LABELS,
   type SubscriptionStatus,
@@ -41,7 +49,7 @@ import {
   type SubscriptionPhase,
   type TrialProgress,
 } from "@/lib/billing/trial";
-import { FEATURE_LABELS, featuresForPlan } from "@/lib/planPermissions";
+import { FEATURE_LABELS, featuresForPlan, type PlanType } from "@/lib/planPermissions";
 
 export const Route = createFileRoute("/_app/billing")({ component: BillingPage });
 
@@ -53,6 +61,14 @@ type Snapshot = {
   companyName: string;
   planCode: PlanCode;
   planName: string;
+  /**
+   * O valor fixo que ESTA loja contratou, por ciclo — lido da versão de preço
+   * da assinatura. Quem contratou o Premium antes de 15/10 vê o valor dele
+   * (ex.: R$ 375,00), e não a tabela de hoje. Nulo em plano por pedido.
+   */
+  contractedCycleFeeCents: number | null;
+  /** 1 = mensal, 12 = anual. */
+  intervalMonths: number;
   status: SubscriptionStatus;
   phase: SubscriptionPhase;
   activatedAt: string | null;
@@ -188,9 +204,14 @@ function BillingPage() {
       .from("subscriptions")
       .select(
         "id, status, activated_at, trial_started_at, trial_ends_at, first_charge_at, plans(code, name), " +
+          "plan_price_versions(monthly_fee_cents, billing_interval_months), " +
           "billing_cycles!subscriptions_current_cycle_fkey(cycle_start, cycle_end, cycle_type, unit_price_cents, billable_order_count, promotion_threshold_orders, qualified_from_previous_cycle)",
       )
       .eq("company_id", company.id)
+      // A mais recente. Uma loja pode ter uma assinatura antiga encerrada no
+      // histórico; sem isto a consulta quebraria em vez de mostrar a atual.
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     if (error) {
@@ -213,6 +234,10 @@ function BillingPage() {
       trial_ends_at: string | null;
       first_charge_at: string | null;
       plans: { code: string; name: string } | null;
+      plan_price_versions: {
+        monthly_fee_cents: number;
+        billing_interval_months: number | null;
+      } | null;
       billing_cycles: {
         cycle_start: string;
         cycle_end: string;
@@ -308,6 +333,13 @@ function BillingPage() {
       companyName: company.name,
       planCode,
       planName: row.plans?.name ?? PLAN_PRICING[planCode].name,
+      contractedCycleFeeCents:
+        PLAN_PRICING[planCode].billingModel === "monthly_fixed"
+          ? Number(
+              row.plan_price_versions?.monthly_fee_cents ?? PLAN_PRICING[planCode].cycleFeeCents,
+            )
+          : null,
+      intervalMonths: Number(row.plan_price_versions?.billing_interval_months ?? 1) || 1,
       status: row.status as SubscriptionStatus,
       phase: deriveSubscriptionPhase({
         status: row.status,
@@ -338,6 +370,10 @@ function BillingPage() {
               setupFeeAlreadyCharged: !!setupCharged,
               cycleEnd: new Date(cycle.cycle_end),
               now: new Date(),
+              contractedCycleFeeCents:
+                PLAN_PRICING[planCode].billingModel === "monthly_fixed"
+                  ? Number(row.plan_price_versions?.monthly_fee_cents ?? 0)
+                  : undefined,
             },
             formatCents,
           )
@@ -446,10 +482,16 @@ function BillingPage() {
 
   const pricing = PLAN_PRICING[snapshot.planCode];
   const isUsageBased = snapshot.planCode === "cents";
+  const isAnnual = snapshot.intervalMonths === 12;
+  // "R$ 89,90/mês", "R$ 598,80/ano" ou o valor antigo contratado ("R$ 375,00/mês").
+  const contractedLabel =
+    snapshot.contractedCycleFeeCents !== null
+      ? `${formatCents(snapshot.contractedCycleFeeCents)}/${cycleUnitLabel(snapshot.intervalMonths)}`
+      : null;
   // A conta que vale agora: a mais recente que não foi cancelada. As faturas
   // já vêm ordenadas da mais nova para a mais velha.
   const faturaAtual = snapshot.invoices.find((i) => i.status !== "canceled") ?? null;
-  const includedFeatures = featuresForPlan(snapshot.planCode);
+  const includedFeatures = featuresForPlan(COMPANY_PLAN_TYPE[snapshot.planCode] as PlanType);
   const missingFeatures = (
     Object.keys(FEATURE_LABELS) as Array<keyof typeof FEATURE_LABELS>
   ).filter((f) => !includedFeatures.includes(f));
@@ -521,7 +563,7 @@ function BillingPage() {
               <dt className="text-muted-foreground">Cobrança</dt>
               <dd className="font-medium">
                 {!isUsageBased
-                  ? `${formatCents(pricing.monthlyFeeCents)}/mês`
+                  ? contractedLabel
                   : // Nas faixas, o preço vale para o PRÓXIMO pedido — é o
                     // único número que o lojista pode conferir olhando a tela.
                     comFaixas && cents
@@ -593,7 +635,7 @@ function BillingPage() {
                 <dd className="font-bold">
                   {isUsageBased
                     ? `${formatCents(pricing.defaultOrderUnitPriceCents)} por pedido`
-                    : `${formatCents(pricing.monthlyFeeCents)} por mês`}
+                    : contractedLabel}
                 </dd>
               </div>
             </dl>
@@ -731,8 +773,21 @@ function BillingPage() {
         <Card>
           <CardContent className="space-y-2 p-4 text-sm">
             <p className="font-semibold">
-              Mensalidade fixa de {formatCents(pricing.monthlyFeeCents)}
+              {isAnnual ? "Plano anual" : "Valor fixo mensal"}: {contractedLabel}
             </p>
+            {isAnnual && (
+              <p className="text-muted-foreground">
+                Período pago de {formatDate(snapshot.cycleStart)} a {formatDate(snapshot.cycleEnd)}.
+                No fim dele, você recebe aqui uma nova cobrança de {contractedLabel} — a renovação
+                só acontece se ela for paga. Não existe cobrança mensal neste plano.
+              </p>
+            )}
+            {!isAnnual && (
+              <p className="text-muted-foreground">
+                O valor é o que você contratou e não muda sozinho. A renovação é uma nova cobrança a
+                cada mês, mostrada nesta tela com o link de pagamento.
+              </p>
+            )}
             <p className="text-muted-foreground">
               Não há cobrança por pedido. Os {snapshot.progress.billableOrderCount} pedidos deste
               ciclo aparecem apenas como métrica da sua operação.
@@ -790,51 +845,80 @@ function BillingPage() {
           aqui: quem já usa o sistema sabe o que está comprando, quem acabou de
           chegar não precisa escolher plano antes de ver a ferramenta. */}
       {missingFeatures.length > 0 && (
-        <Card className="border-primary/30 bg-gradient-to-br from-primary/10 to-transparent">
-          <CardContent className="space-y-4 p-4">
-            <div>
-              <h2 className="text-lg font-black">Conheça o FlyControl Premium</h2>
-              <p className="text-sm text-muted-foreground">
-                Mensalidade fixa de {formatCents(PLAN_PRICING.premium.monthlyFeeCents)}, sem
-                cobrança por pedido — o valor não muda em mês de movimento alto.
-              </p>
-            </div>
+        <section className="space-y-4" aria-labelledby="upgrade-premium">
+          <div>
+            <h2 id="upgrade-premium" className="text-lg font-black">
+              Conheça o FlyControl Premium
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Valor fixo, sem cobrança por pedido — o valor não muda em mês de movimento alto.
+            </p>
+          </div>
 
-            <ul className="grid gap-1.5 text-sm sm:grid-cols-2">
-              {missingFeatures.map((feature) => (
-                <li key={feature} className="flex items-center gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
-                  {FEATURE_LABELS[feature]}
-                </li>
-              ))}
-            </ul>
+          <PremiumPlanCards
+            renderCta={(code) => (
+              <Button asChild className="h-12 w-full text-base font-bold">
+                <Link to="/assinar/$plano" params={{ plano: code }}>
+                  Assinar Premium
+                </Link>
+              </Button>
+            )}
+          />
 
-            {/* Medo de perder dados é o que trava upgrade. Dizer o que é
-                preservado, item por item, é mais convincente que "migração
-                sem perdas". */}
-            <div className="rounded-lg border border-border bg-background/70 p-3 text-sm">
-              <p className="flex items-center gap-2 font-semibold">
-                <ShieldCheck
-                  className="h-4 w-4 text-emerald-600 dark:text-emerald-400"
-                  aria-hidden="true"
-                />
-                Ao trocar de plano, nada é perdido
-              </p>
-              <p className="mt-1 text-muted-foreground">
-                Estabelecimento, produtos, pedidos, clientes, configurações, histórico e dados
-                financeiros continuam exatamente como estão. A troca muda o que você pode usar e
-                como é cobrado — não o que você já construiu.
-              </p>
-            </div>
+          {/* Medo de perder dados é o que trava upgrade. Dizer o que é
+              preservado, item por item, é mais convincente que "migração
+              sem perdas". */}
+          <div className="rounded-lg border border-border bg-background/70 p-3 text-sm">
+            <p className="flex items-center gap-2 font-semibold">
+              <ShieldCheck
+                className="h-4 w-4 text-emerald-600 dark:text-emerald-400"
+                aria-hidden="true"
+              />
+              Ao trocar de plano, nada é perdido
+            </p>
+            <p className="mt-1 text-muted-foreground">
+              Estabelecimento, produtos, pedidos, clientes, configurações, histórico e dados
+              financeiros continuam exatamente como estão. A troca muda o que você pode usar e como
+              é cobrado — não o que você já construiu.
+            </p>
+          </div>
 
-            <Button asChild className="h-11 w-full gap-2 sm:w-auto">
-              <a href="/plans" target="_blank" rel="noreferrer">
-                Ver o que muda no PREMIUM <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
-              </a>
-            </Button>
-          </CardContent>
-        </Card>
+          <a
+            href="/plans"
+            target="_blank"
+            rel="noreferrer"
+            className="inline-flex items-center gap-1 text-sm font-medium text-primary underline"
+          >
+            Comparar todos os planos <ArrowUpRight className="h-4 w-4" aria-hidden="true" />
+          </a>
+        </section>
       )}
+
+      {/* Premium Mensal ainda não pago (grátis ou aguardando pagamento): pode
+          ir direto para o anual. Quem já paga o Premium troca com a equipe. */}
+      {!isUsageBased &&
+        !isAnnual &&
+        (snapshot.status === "free_trial" ||
+          snapshot.status === "pending_activation" ||
+          snapshot.status === "pending_payment") && (
+          <Card className="border-primary/30">
+            <CardContent className="flex flex-wrap items-center justify-between gap-3 p-4 text-sm">
+              <p>
+                Prefere pagar uma vez por ano?{" "}
+                <strong>
+                  {PLAN_PRICING.premium_anual.name}:{" "}
+                  {formatCents(PLAN_PRICING.premium_anual.cycleFeeCents)} por 12 meses
+                </strong>
+                .
+              </p>
+              <Button asChild variant="outline" className="h-11">
+                <Link to="/assinar/$plano" params={{ plano: "premium_anual" }}>
+                  Ver o Premium Anual
+                </Link>
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
       {faturaAtual && (
         <Card>
@@ -903,6 +987,8 @@ function BillingPage() {
           </CardContent>
         </Card>
       )}
+
+      <HistoricoDeContratacoes />
 
       <Card>
         <CardContent className="space-y-3 p-4">
@@ -1004,5 +1090,87 @@ function SecaoDaFatura({ titulo, itens }: { titulo: string; itens: ItemDaFatura[
         ))}
       </ul>
     </div>
+  );
+}
+
+const INTENT_STATUS: Record<string, { label: string; className: string }> = {
+  confirmed: INVOICE_STATUS.paid,
+  started: { label: "Aguardando pagamento", className: INVOICE_STATUS.pending.className },
+  returned: { label: "Em conferência", className: INVOICE_STATUS.processing.className },
+  expired: { label: "Expirado", className: INVOICE_STATUS.canceled.className },
+  canceled: INVOICE_STATUS.canceled,
+};
+
+/**
+ * Pagamentos de contratação (cadastro pago e Premium contratado pelo painel):
+ * valor, data, situação e o identificador da transação na InfinityPay. Vem
+ * do servidor porque a tabela não é legível pelo dono diretamente.
+ */
+function HistoricoDeContratacoes() {
+  const [offer, setOffer] = useState<PremiumOffer | undefined>(undefined);
+  useEffect(() => {
+    let active = true;
+    void getPremiumOffer()
+      .then((o) => active && setOffer(o))
+      .catch(() => active && setOffer(null));
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Só pagamentos que chegaram a ser confirmados, ou estão em andamento.
+  const linhas = (offer?.history ?? []).filter((h) => h.expectedAmountCents > 0);
+  if (linhas.length === 0) return null;
+
+  return (
+    <Card>
+      <CardContent className="space-y-3 p-4">
+        <h2 className="flex items-center gap-2 text-sm font-bold">
+          <Receipt className="h-4 w-4" aria-hidden="true" /> Pagamentos de contratação
+        </h2>
+        <ul className="divide-y divide-border">
+          {linhas.map((h) => {
+            const style = INTENT_STATUS[h.status] ?? INVOICE_STATUS.draft;
+            const nome = PLAN_PRICING[h.planCode as PlanCode]?.name ?? h.planCode;
+            return (
+              <li key={h.id} className="py-3">
+                <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{nome}</p>
+                    <p className="text-xs text-muted-foreground">
+                      Iniciado em {formatDate(h.createdAt)}
+                      {h.confirmedAt && ` · Pago em ${formatDate(h.confirmedAt)}`}
+                    </p>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <Badge variant="outline" className={`text-[10px] font-bold ${style.className}`}>
+                      {style.label}
+                    </Badge>
+                    <strong className="text-sm">
+                      {formatCents(h.paidAmountCents ?? h.expectedAmountCents)}
+                    </strong>
+                  </div>
+                </div>
+                {(h.transactionNsu || h.captureMethod) && (
+                  <p className="mt-1 break-all text-xs text-muted-foreground">
+                    {h.captureMethod === "pix"
+                      ? "Pix"
+                      : h.captureMethod === "credit_card"
+                        ? "Cartão de crédito"
+                        : h.captureMethod}
+                    {h.transactionNsu && ` · Transação ${h.transactionNsu}`}
+                  </p>
+                )}
+                {h.note?.startsWith("conferir") && (
+                  <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
+                    Pagamento recebido e em conferência pela equipe da FlyControl.
+                  </p>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      </CardContent>
+    </Card>
   );
 }

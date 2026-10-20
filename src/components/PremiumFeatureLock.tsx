@@ -3,7 +3,7 @@ import { Link } from "@tanstack/react-router";
 import { Check, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING } from "@/lib/billing/plans";
+import { PLAN_PRICING, monthlyEquivalentCents } from "@/lib/billing/plans";
 import { usePlan } from "@/lib/plan-context";
 import {
   FEATURE_LABELS,
@@ -62,7 +62,9 @@ function PremiumFeatureLock({ feature }: { feature?: Feature }) {
       </ul>
 
       <p className="text-sm font-bold text-primary">
-        {formatCents(premium.monthlyFeeCents)} por mês, sem cobrança por pedido
+        A partir de {formatCents(monthlyEquivalentCents("premium_anual"))}/mês no Premium Anual
+        (cobrado {formatCents(PLAN_PRICING.premium_anual.cycleFeeCents)} por ano) ou{" "}
+        {formatCents(premium.cycleFeeCents)}/mês no Premium Mensal — sem cobrança por pedido
       </p>
 
       {vendidosAParte.length > 0 && (

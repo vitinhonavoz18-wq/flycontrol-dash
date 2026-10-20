@@ -31,7 +31,9 @@ function centsCycle(overrides: Partial<Parameters<typeof calculateCycle>[0]> = {
 
 describe("preços comerciais", () => {
   it("guarda todos os valores em centavos inteiros", () => {
-    expect(PLAN_PRICING.premium.monthlyFeeCents).toBe(37500);
+    expect(PLAN_PRICING.premium.cycleFeeCents).toBe(8990);
+    expect(PLAN_PRICING.premium_anual.cycleFeeCents).toBe(59880);
+    expect(PLAN_PRICING.premium_anual.billingIntervalMonths).toBe(12);
     expect(PLAN_PRICING.cents.setupFeeCents).toBe(0);
     expect(PLAN_PRICING.cents.defaultOrderUnitPriceCents).toBe(70);
     expect(PLAN_PRICING.cents.promotionalOrderUnitPriceCents).toBe(45);
@@ -40,7 +42,7 @@ describe("preços comerciais", () => {
     for (const plan of Object.values(PLAN_PRICING)) {
       for (const value of [
         plan.setupFeeCents,
-        plan.monthlyFeeCents,
+        plan.cycleFeeCents,
         plan.defaultOrderUnitPriceCents,
         plan.promotionalOrderUnitPriceCents,
       ]) {
@@ -55,7 +57,7 @@ describe("preços comerciais", () => {
   });
 
   it("não cobra mensalidade fixa no CENTS", () => {
-    expect(PLAN_PRICING.cents.monthlyFeeCents).toBe(0);
+    expect(PLAN_PRICING.cents.cycleFeeCents).toBe(0);
   });
 });
 
@@ -138,26 +140,43 @@ describe("pedido faturável", () => {
 });
 
 describe("PREMIUM", () => {
-  it("cobra apenas a mensalidade de R$ 375,00", () => {
-    const totals = calculateCycle({
+  // O fechamento de ciclo SEMPRE informa o valor contratado, lido da versão
+  // de preço da assinatura. Estes testes usam os dois valores reais: o
+  // contrato antigo (R$ 375,00) e o novo (R$ 89,90).
+  const premiumCycle = (overrides: Partial<Parameters<typeof calculateCycle>[0]> = {}) =>
+    calculateCycle({
       planCode: "premium",
       unitPriceCents: 0,
       promotionThresholdOrders: 0,
       billableOrderCount: 0,
       setupFeeAlreadyCharged: false,
+      ...overrides,
     });
+
+  it("cobra apenas a mensalidade CONTRATADA — R$ 375,00 para quem assinou antes", () => {
+    const totals = premiumCycle({ contractedCycleFeeCents: 37500 });
     expect(totals.totalAmountCents).toBe(37500);
     expect(totals.setupFeeAmountCents).toBe(0);
   });
 
+  it("assinante antigo NÃO é reajustado quando a tabela muda para R$ 89,90", () => {
+    // A tabela de hoje é R$ 89,90…
+    expect(PLAN_PRICING.premium.cycleFeeCents).toBe(8990);
+    // …mas quem contratou a R$ 375,00 continua a R$ 375,00 (sem aumento e
+    // sem redução automática: migração só com autorização).
+    expect(premiumCycle({ contractedCycleFeeCents: 37500 }).monthlyFeeAmountCents).toBe(37500);
+  });
+
+  it("contratação nova do Premium Mensal cobra R$ 89,90", () => {
+    expect(premiumCycle({ contractedCycleFeeCents: 8990 }).totalAmountCents).toBe(8990);
+  });
+
   it("não aumenta a fatura com o volume de pedidos", () => {
     for (const count of [0, 100, 500, 10_000]) {
-      const totals = calculateCycle({
-        planCode: "premium",
-        unitPriceCents: 0,
-        promotionThresholdOrders: 0,
+      const totals = premiumCycle({
         billableOrderCount: count,
         setupFeeAlreadyCharged: true,
+        contractedCycleFeeCents: 37500,
       });
       expect(totals.totalAmountCents).toBe(37500);
       expect(totals.usageAmountCents).toBe(0);
@@ -167,9 +186,7 @@ describe("PREMIUM", () => {
   });
 
   it("nunca qualifica para a promoção do CENTS", () => {
-    const totals = calculateCycle({
-      planCode: "premium",
-      unitPriceCents: 0,
+    const totals = premiumCycle({
       promotionThresholdOrders: 500,
       billableOrderCount: 5000,
       setupFeeAlreadyCharged: true,
@@ -181,16 +198,55 @@ describe("PREMIUM", () => {
   });
 
   it("emite uma fatura só com a mensalidade", () => {
-    const totals = calculateCycle({
-      planCode: "premium",
-      unitPriceCents: 0,
-      promotionThresholdOrders: 0,
+    const totals = premiumCycle({
       billableOrderCount: 300,
       setupFeeAlreadyCharged: true,
+      contractedCycleFeeCents: 37500,
     });
     const items = buildInvoiceItems("premium", totals);
     expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({ itemType: "monthly_fee", totalAmountCents: 37500 });
+    expect(items[0]).toMatchObject({
+      itemType: "monthly_fee",
+      totalAmountCents: 37500,
+      description: "Mensalidade do plano Premium Mensal",
+    });
+  });
+
+  it("recusa valor contratado fracionado (dinheiro é sempre centavo inteiro)", () => {
+    expect(() => premiumCycle({ contractedCycleFeeCents: 89.9 })).toThrow(/centavos/);
+  });
+});
+
+describe("PREMIUM ANUAL", () => {
+  const anualCycle = (overrides: Partial<Parameters<typeof calculateCycle>[0]> = {}) =>
+    calculateCycle({
+      planCode: "premium_anual",
+      unitPriceCents: 0,
+      promotionThresholdOrders: 0,
+      billableOrderCount: 1234,
+      setupFeeAlreadyCharged: true,
+      contractedCycleFeeCents: 59880,
+      ...overrides,
+    });
+
+  it("a renovação cobra R$ 598,80 por ciclo de 12 meses — nunca R$ 49,90", () => {
+    const totals = anualCycle();
+    expect(totals.totalAmountCents).toBe(59880);
+    expect(totals.totalAmountCents).not.toBe(4990);
+    expect(totals.usageAmountCents).toBe(0);
+  });
+
+  it("a linha da fatura diz que é anuidade de 12 meses", () => {
+    const items = buildInvoiceItems("premium_anual", anualCycle());
+    expect(items).toEqual([
+      {
+        itemType: "monthly_fee",
+        description: "Anuidade do plano Premium Anual (12 meses)",
+        quantity: 1,
+        unitAmountCents: 59880,
+        totalAmountCents: 59880,
+      },
+    ]);
   });
 });
 

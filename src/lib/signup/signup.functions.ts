@@ -17,6 +17,7 @@ import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { asBillingDb, type BillingDb } from "@/lib/billing/supabaseBridge";
 import {
   COMPANY_BILLING_MODEL,
+  COMPANY_PLAN_TYPE,
   PLAN_PRICING,
   isKnownPlanCode,
   type PlanCode,
@@ -113,6 +114,7 @@ async function insertCheckoutIntent(params: {
   amountCents: number;
   checkoutUrl: string;
   expiresAt: string;
+  priceVersionId?: string | null;
 }): Promise<boolean> {
   const row: Record<string, unknown> = {
     token_hash: params.tokenHash,
@@ -126,6 +128,9 @@ async function insertCheckoutIntent(params: {
     expires_at: params.expiresAt,
   };
   if (params.id) row.id = params.id;
+  // Só grava quando conhecida: a coluna nasce na migration de 15/10. Antes
+  // dela aplicada, mandar o campo faria a gravação inteira falhar.
+  if (params.priceVersionId) row.plan_price_version_id = params.priceVersionId;
 
   try {
     const { error } = await asBillingDb(supabaseAdmin)
@@ -168,8 +173,13 @@ async function createCheckoutIntent(
   planCode: PlanCode,
   companyId: string,
   subscriptionId: string | null,
+  contracted?: { amountCents: number; priceVersionId: string },
 ): Promise<{ url: string; token: string } | null> {
-  const amountCents = checkoutAmountCents(planCode);
+  // Com assinatura criada, o valor cobrado é o da versão de preço que ELA
+  // contratou — a mesma que vai valer nas renovações. Assim o que se paga
+  // hoje e o que se renova saem da mesma linha do caderno de preços. Sem
+  // assinatura (instalação incompleta), vale a tabela do código.
+  const amountCents = contracted?.amountCents ?? checkoutAmountCents(planCode);
 
   // Plano sem nada a cobrar na entrada (o CENTS, hoje). Mandar alguém para
   // uma tela de pagamento de R$ 0,00 é pior do que não mandar: ele não
@@ -201,6 +211,7 @@ async function createCheckoutIntent(
         amountCents,
         checkoutUrl: link.url,
         expiresAt,
+        priceVersionId: contracted?.priceVersionId ?? null,
       });
       if (inserted) return { url: link.url, token };
       // Falhou ao gravar a intenção com o link já criado: cai para o modo
@@ -224,6 +235,7 @@ async function createCheckoutIntent(
     amountCents,
     checkoutUrl: config.url,
     expiresAt,
+    priceVersionId: contracted?.priceVersionId ?? null,
   });
   return inserted ? { url: config.url, token } : null;
 }
@@ -438,7 +450,9 @@ export const createAccount = createServerFn({ method: "POST" })
           status: "active",
           // O plano já vale para os entitlements desde a criação: uma conta
           // CENTS não enxerga Mesas nem antes da ativação da cobrança.
-          plan_type: planCode,
+          // Mensal e anual liberam os mesmos recursos: os dois gravam
+          // `premium` aqui (ver COMPANY_PLAN_TYPE).
+          plan_type: COMPANY_PLAN_TYPE[planCode],
           // O banco exige o par plan_type + billing_model. Sem esta linha a
           // coluna cai no default 'fixed' e todo cadastro no CENTS é recusado.
           billing_model: COMPANY_BILLING_MODEL[planCode],
@@ -563,7 +577,7 @@ export const createAccount = createServerFn({ method: "POST" })
 
       const { data: priceVersion } = await db
         .from("plan_price_versions")
-        .select("id")
+        .select("id, monthly_fee_cents")
         .eq("plan_id", typedPlan.id)
         .eq("is_active", true)
         .maybeSingle();
@@ -631,11 +645,19 @@ export const createAccount = createServerFn({ method: "POST" })
       // ---- 4. Período gratuito de 30 dias ---------------------------------
       // Quem concede é o banco. Aqui só pedimos e lemos a resposta — o
       // aplicativo não tem como dizer "pode" quando o banco disse "não".
-      const trial = await grantFreeTrial({
-        subscriptionId,
-        ownerEmail: email,
-        document: onlyDigits(data.company.document) || null,
-      });
+      //
+      // O Premium Anual NÃO passa pelo período grátis: a tela de contratação
+      // promete "Total a pagar hoje: R$ 598,80" e "12 meses de acesso". Dar 30
+      // dias grátis e só cobrar no fim abriria um ciclo de 12 meses sem
+      // pagamento — é entregar o ano inteiro fiado.
+      const trial: Awaited<ReturnType<typeof grantFreeTrial>> =
+        PLAN_PRICING[planCode].billingIntervalMonths === 12
+          ? { granted: false, reason: "annual_plan_paid_upfront" }
+          : await grantFreeTrial({
+              subscriptionId,
+              ownerEmail: email,
+              document: onlyDigits(data.company.document) || null,
+            });
 
       if (trial.granted) {
         // Conta ativa desde o primeiro minuto: o cardápio digital nasce junto,
@@ -687,7 +709,10 @@ export const createAccount = createServerFn({ method: "POST" })
         companyName: company.name,
         planCode,
         subscriptionStatus: "pending_activation",
-        checkout: await createCheckoutIntent(planCode, companyId, subscriptionId),
+        checkout: await createCheckoutIntent(planCode, companyId, subscriptionId, {
+          amountCents: Number((priceVersion as { monthly_fee_cents?: number }).monthly_fee_cents),
+          priceVersionId: (priceVersion as { id: string }).id,
+        }),
         trial: null,
         trialDenied: TRIAL_DENIAL_MESSAGES[trial.reason],
       });

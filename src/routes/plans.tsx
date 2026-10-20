@@ -4,24 +4,16 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { formatCents } from "@/lib/billing/money";
-import { PLAN_PRICING } from "@/lib/billing/plans";
+import { PLAN_PRICING, type PremiumPlanCode } from "@/lib/billing/plans";
+import { PremiumPlanCards } from "@/components/billing/PremiumPlanCards";
+import { useAuth } from "@/lib/auth";
 import logo from "@/assets/flycontrol-logo.webp";
 
 export const Route = createFileRoute("/plans")({ component: PlansPage });
 
 const premium = PLAN_PRICING.premium;
+const anual = PLAN_PRICING.premium_anual;
 const cents = PLAN_PRICING.cents;
-
-const PREMIUM_BENEFITS = [
-  "Pedidos sem cobrança por unidade",
-  "Gestão completa de pedidos",
-  "Dashboard operacional",
-  "Cardápio",
-  "Clientes",
-  "Mesas",
-  "Garçons",
-  "Comissões",
-] as const;
 
 const CENTS_BENEFITS = [
   "Gestão de pedidos",
@@ -46,7 +38,11 @@ const COMPARISON: readonly ComparisonRow[] = [
   { feature: "Cardápio", premium: true, cents: true },
   { feature: "Clientes", premium: true, cents: true },
   { feature: "Dashboard operacional", premium: true, cents: true },
-  { feature: "Cobrança fixa mensal", premium: formatCents(premium.monthlyFeeCents), cents: false },
+  {
+    feature: "Valor fixo",
+    premium: `${formatCents(premium.cycleFeeCents)}/mês (Mensal) ou ${formatCents(anual.cycleFeeCents)}/ano (Anual)`,
+    cents: false,
+  },
   { feature: "Cobrança por pedido", premium: false, cents: true },
   { feature: "Taxa de cadastro", premium: false, cents: false },
   { feature: "Mesas", premium: true, cents: false },
@@ -80,6 +76,27 @@ function ComparisonValue({ value }: { value: string | boolean }) {
   return <span className="font-medium text-foreground">{value}</span>;
 }
 
+/**
+ * "Assinar Premium". Logado: vai para o checkout do painel, que identifica a
+ * loja pelo login. Sem login: cadastro com o plano já marcado.
+ */
+function AssinarButton({ code }: { code: PremiumPlanCode }) {
+  const { user } = useAuth();
+  return (
+    <Button asChild className="h-12 w-full text-base font-bold">
+      {user ? (
+        <Link to="/assinar/$plano" params={{ plano: code }}>
+          Assinar Premium
+        </Link>
+      ) : (
+        <Link to="/signup" search={{ plan: code }}>
+          Assinar Premium
+        </Link>
+      )}
+    </Button>
+  );
+}
+
 function PlansPage() {
   return (
     <div className="min-h-dvh bg-background">
@@ -100,52 +117,18 @@ function PlansPage() {
         <div className="mb-8 text-center sm:mb-12">
           <h1 className="text-2xl font-bold tracking-tight sm:text-4xl">Escolha seu plano</h1>
           <p className="mx-auto mt-2 max-w-xl text-sm text-muted-foreground sm:text-base">
-            Dois modelos de cobrança para operações diferentes. Você pode trocar de plano depois.
+            Premium com valor fixo (mensal ou anual) ou CENTS, pago por pedido. Você pode trocar de
+            plano depois.
           </p>
         </div>
 
-        {/* Uma coluna no celular, duas a partir de md. Os cards usam
-            `flex flex-col` + `mt-auto` no rodapé para os botões ficarem
-            alinhados mesmo com listas de tamanhos diferentes. */}
+        {/* Os dois Premium lado a lado (um embaixo do outro no celular). O
+            botão leva quem já tem conta direto ao checkout dentro do painel;
+            quem ainda não tem conta faz o cadastro já com o plano escolhido. */}
+        <PremiumPlanCards renderCta={(code) => <AssinarButton code={code} />} />
+
+        <h2 className="mb-4 mt-10 text-lg font-bold sm:text-xl">Prefere pagar por pedido?</h2>
         <div className="grid gap-4 md:grid-cols-2 md:gap-6">
-          <Card className="flex flex-col border-primary/40">
-            <CardHeader className="space-y-3">
-              <div className="flex items-center justify-between gap-2">
-                <h2 className="text-xl font-black">{premium.name}</h2>
-                <Badge className="bg-primary text-primary-foreground">Plano completo</Badge>
-              </div>
-              <div>
-                <span className="text-3xl font-black text-primary">
-                  {formatCents(premium.monthlyFeeCents)}
-                </span>
-                <span className="text-sm text-muted-foreground">/mês</span>
-              </div>
-              <p className="text-sm text-muted-foreground">{premium.description}</p>
-            </CardHeader>
-
-            <CardContent className="flex-1">
-              <ul className="space-y-2 text-sm">
-                {PREMIUM_BENEFITS.map((benefit) => (
-                  <li key={benefit} className="flex items-start gap-2">
-                    <Check
-                      className="mt-0.5 h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400"
-                      aria-hidden="true"
-                    />
-                    {benefit}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-
-            <CardFooter>
-              <Button asChild className="h-12 w-full text-base font-bold">
-                <Link to="/signup" search={{ plan: "premium" }}>
-                  Escolher {premium.name}
-                </Link>
-              </Button>
-            </CardFooter>
-          </Card>
-
           <Card className="flex flex-col">
             <CardHeader className="space-y-3">
               <div className="flex items-center justify-between gap-2">
@@ -231,7 +214,7 @@ function PlansPage() {
                 <p className="mb-2 text-sm font-semibold">{row.feature}</p>
                 <dl className="grid grid-cols-2 gap-2 text-xs">
                   <div>
-                    <dt className="mb-0.5 text-muted-foreground">{premium.name}</dt>
+                    <dt className="mb-0.5 text-muted-foreground">Premium (Mensal/Anual)</dt>
                     <dd>
                       <ComparisonValue value={row.premium} />
                     </dd>
@@ -255,7 +238,7 @@ function PlansPage() {
                     Funcionalidade
                   </th>
                   <th scope="col" className="px-4 py-3 text-left font-semibold">
-                    {premium.name}
+                    Premium (Mensal/Anual)
                   </th>
                   <th scope="col" className="px-4 py-3 text-left font-semibold">
                     {cents.name}
