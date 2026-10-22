@@ -1,7 +1,7 @@
 # Fotografia do banco antes da trava de segurança — 22/10/2026
 
 > **O que é isto.** O "retrato" de tudo que a migração
-> `supabase/migrations/20261022120000_tranca_funcoes_e_visoes_expostas.sql`
+> `supabase/migrations/20261022160000_tranca_funcoes_e_visoes_expostas.sql`
 > vai mudar, tirado do banco de produção (projeto FLYCONTROL,
 > `knhenchgntttraaeewlj`) em **22/10/2026, 14:51 UTC**, só com consultas de
 > leitura.
@@ -280,4 +280,4 @@ menos.
 - Plano do Supabase: **gratuito** — sem backup automático disponível.
 - Histórico de migrações do banco: 177 registros, o último é
   `20261001120000` (`pagamentos_online_mercado_pago`). A trava será
-  registrada como `20261022120000`.
+  registrada como `20261022160000` (o número `20261022120000` ficou com a migração do Chat CRM 2.0, que entrou junto).

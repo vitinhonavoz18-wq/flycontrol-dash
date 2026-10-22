@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 
@@ -100,7 +100,7 @@ describe("endereço antigo de pedidos sem senha (webhook-orders)", () => {
 });
 
 describe("migração que tranca funções e visões do banco", () => {
-  const sql = soSql("supabase/migrations/20261022120000_tranca_funcoes_e_visoes_expostas.sql");
+  const sql = soSql("supabase/migrations/20261022160000_tranca_funcoes_e_visoes_expostas.sql");
 
   const SO_SERVIDOR = [
     "crm_next_outbox(uuid, integer, text, integer)",
@@ -148,5 +148,18 @@ describe("migração que tranca funções e visões do banco", () => {
     expect(sql).toContain(
       'ALTER POLICY "Public can read session lifecycle" ON public.table_sessions TO anon;',
     );
+  });
+});
+
+describe("numeração das migrações", () => {
+  it("nenhum número de migração se repete", () => {
+    // O banco anota cada mudança pelo número do arquivo. Dois arquivos com o
+    // mesmo número são duas receitas com o mesmo código no caderno da
+    // cozinha: uma delas nunca é feita, e ninguém percebe.
+    const numeros = readdirSync(join(RAIZ, "supabase/migrations"))
+      .filter((nome) => nome.endsWith(".sql"))
+      .map((nome) => nome.split("_")[0]);
+    const repetidos = numeros.filter((n, i) => numeros.indexOf(n) !== i);
+    expect(repetidos).toEqual([]);
   });
 });
