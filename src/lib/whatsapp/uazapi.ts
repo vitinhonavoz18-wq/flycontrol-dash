@@ -27,6 +27,7 @@
  *   POST /instance/disconnect  (cabeçalho `token`)
  *   POST /webhook              (cabeçalho `token`)
  *   POST /send/text            (cabeçalho `token`)
+ *   POST /message/download     (cabeçalho `token`)  → endereço do arquivo
  */
 
 /** Quanto tempo esperar a UAZAPI antes de desistir de uma chamada. */
@@ -58,6 +59,8 @@ async function chamar<T>(
     token?: string;
     adminToken?: string;
     corpo?: Record<string, unknown>;
+    /** Converter um áudio longo para MP3 demora mais que um pedido comum. */
+    tempoLimiteMs?: number;
   } = {},
 ): Promise<RespostaUazapi<T>> {
   const cfg = configUazapi();
@@ -82,7 +85,7 @@ async function chamar<T>(
 
   // Sem um limite de tempo, uma UAZAPI lenta prenderia o pedido do lojista até
   // a tela dele desistir sozinha, sem explicação nenhuma.
-  const cancelar = AbortSignal.timeout(TEMPO_LIMITE_MS);
+  const cancelar = AbortSignal.timeout(opcoes.tempoLimiteMs ?? TEMPO_LIMITE_MS);
 
   try {
     const r = await fetch(`${cfg.baseUrl}${caminho}`, {
@@ -267,6 +270,54 @@ export function traduzirStatusInstancia(
   if (v === "connecting" || v === "qrcode" || v === "pairing") return "connecting";
   if (v === "error" || v === "banned" || v === "removed") return "error";
   return "disconnected";
+}
+
+/**
+ * Pede à UAZAPI o arquivo de uma mensagem (áudio, foto, vídeo, PDF).
+ *
+ * O WhatsApp não manda o arquivo junto do aviso de mensagem nova: manda um
+ * bilhete dizendo "tem um áudio guardado ali", e o arquivo vem criptografado.
+ * Este pedido faz a UAZAPI buscar, abrir e devolver um endereço de onde baixar
+ * o arquivo já pronto. É a MESMA chamada que os fluxos do n8n já usam em
+ * produção (`POST /message/download` com `{ id }`).
+ *
+ * ÁUDIO VEM EM MP3 (`generate_mp3`). O áudio de voz do WhatsApp é .ogg, e o
+ * Safari do iPhone/Mac não toca .ogg em todas as versões. MP3 toca em
+ * qualquer navegador — o lojista que atende pelo iPhone também ouve.
+ */
+export type MidiaDaMensagemUazapi = {
+  /** Endereço temporário do arquivo pronto, no servidor da UAZAPI. */
+  fileURL: string | null;
+  mimetype: string | null;
+  /** Algumas versões devolvem o arquivo direto, em base64. */
+  base64: string | null;
+};
+
+export async function baixarMidiaDaMensagem(
+  token: string,
+  messageId: string,
+  opcoes: { mp3?: boolean } = {},
+): Promise<RespostaUazapi<MidiaDaMensagemUazapi>> {
+  const corpo: Record<string, unknown> = { id: messageId };
+  if (opcoes.mp3) corpo.generate_mp3 = true;
+
+  const r = await chamar<Record<string, unknown>>("/message/download", {
+    token,
+    corpo,
+    tempoLimiteMs: 30_000,
+  });
+  if (!r.ok) return r;
+
+  const d = (r.dados ?? {}) as Record<string, unknown>;
+  const texto = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : null);
+  return {
+    ok: true,
+    dados: {
+      fileURL: texto(d.fileURL) ?? texto(d.fileUrl) ?? texto(d.url),
+      mimetype: texto(d.mimetype) ?? texto(d.mimeType),
+      base64: texto(d.base64Data) ?? texto(d.base64),
+    },
+  };
 }
 
 /**

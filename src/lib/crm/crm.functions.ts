@@ -4,7 +4,12 @@ import { crm, crmRpc } from "./db";
 import { assertOwnsTenantWithAddon } from "@/lib/server/plan-guard";
 import { normalizePhone } from "@/lib/marketing/phone";
 import { podeSerAlteradoPelaIa } from "./pedidoStatus";
-import { enderecosAssinados, guardarArquivoDoPainel } from "./midiaServidor";
+import {
+  enderecosAssinados,
+  guardarArquivoDoPainel,
+  recuperarMidiaDaMensagem,
+} from "./midiaServidor";
+import { nomeNoCaminho } from "./midiaRecuperada";
 import { ROTULO_MIDIA, ehTipoMidia } from "./midia";
 
 /* As tabelas do CRM ainda não constam do arquivo de tipos gerado (ver
@@ -64,6 +69,10 @@ export type ConversaCrm = {
     total_spent_cents: number;
     last_order_at: string | null;
     marketing_opt_in: boolean;
+    /** As MESMAS etiquetas que o Marketing usa para separar clientes. */
+    tags: string[] | null;
+    /** Anotação livre da loja sobre o cliente ("alérgico a amendoim"). */
+    notes: string | null;
   } | null;
 };
 
@@ -79,6 +88,8 @@ export const listarConversas = createServerFn({ method: "POST" })
       tenantId: string;
       busca?: string;
       status?: "open" | "pending" | "closed" | "todas";
+      /** Só as que têm mensagem sem ler — a fila de quem está esperando. */
+      naoLidas?: boolean;
       pagina?: number;
       porPagina?: number;
     }) => d,
@@ -90,16 +101,50 @@ export const listarConversas = createServerFn({ method: "POST" })
     const pagina = Math.max(data.pagina ?? 1, 1);
     const de = (pagina - 1) * porPagina;
 
+    // A BUSCA É FEITA NO BANCO, NA LOJA INTEIRA.
+    //
+    // Antes ela filtrava só as 30 conversas que já estavam na tela: procurar
+    // um cliente que falou semana passada devolvia "nada encontrado" mesmo
+    // com ele lá. Era procurar a comanda só na primeira gaveta do arquivo.
+    const busca = (data.busca ?? "").trim();
+    let clientesDaBusca: string[] | null = null;
+    if (busca) {
+      const digitos = busca.replace(/[^0-9]/g, "");
+      // Vírgula, parênteses e afins quebrariam o filtro: viram espaço.
+      const termo = busca
+        .replace(/[%_,().*:"\\]/g, " ")
+        .trim()
+        .slice(0, 60);
+      const filtros: string[] = [];
+      if (termo) filtros.push(`name.ilike.%${termo}%`);
+      if (digitos.length >= 3) filtros.push(`phone_e164.like.%${digitos}%`);
+      if (filtros.length === 0)
+        return { conversas: [], total: 0, pagina, porPagina, temMais: false };
+
+      const { data: achados, error: erroBusca } = await crm("marketing_customers")
+        .select("id")
+        .eq("tenant_id", tenantId)
+        .or(filtros.join(","))
+        .limit(200);
+      if (erroBusca) throw new Error(erroBusca.message);
+      clientesDaBusca = ((achados ?? []) as Array<{ id: string }>).map((c) => c.id);
+      if (clientesDaBusca.length === 0) {
+        return { conversas: [], total: 0, pagina, porPagina, temMais: false };
+      }
+    }
+
     let q = crm("crm_conversations")
       .select(
         "id, customer_id, status, assigned_to, last_message_at, last_message_preview, unread_count, " +
           "contato:marketing_customers!crm_conversations_customer_id_fkey" +
-          "(id, name, phone_e164, avatar_url, orders_count, total_spent_cents, last_order_at, marketing_opt_in)",
+          "(id, name, phone_e164, avatar_url, orders_count, total_spent_cents, last_order_at, marketing_opt_in, tags, notes)",
         { count: "exact" },
       )
       .eq("tenant_id", tenantId);
 
     if (data.status && data.status !== "todas") q = q.eq("status", data.status);
+    if (data.naoLidas) q = q.gt("unread_count", 0);
+    if (clientesDaBusca) q = q.in("customer_id", clientesDaBusca);
 
     const {
       data: linhas,
@@ -111,23 +156,13 @@ export const listarConversas = createServerFn({ method: "POST" })
 
     if (error) throw new Error(error.message);
 
-    let conversas = (linhas ?? []) as ConversaCrm[];
+    const conversas = (linhas ?? []) as ConversaCrm[];
+    const total = count ?? conversas.length;
 
-    // A busca por nome/telefone é feita aqui em cima, e não no banco, porque
-    // o nome mora na tabela do contato. Para as listas de hoje (dezenas de
-    // conversas por página) isso é de graça. Se um dia uma loja tiver
-    // milhares, vira uma busca no banco de verdade.
-    const busca = (data.busca ?? "").trim().toLowerCase();
-    if (busca) {
-      const digitos = busca.replace(/[^0-9]/g, "");
-      conversas = conversas.filter(
-        (c) =>
-          (c.contato?.name ?? "").toLowerCase().includes(busca) ||
-          (digitos.length >= 3 && (c.contato?.phone_e164 ?? "").includes(digitos)),
-      );
-    }
-
-    return { conversas, total: count ?? conversas.length, pagina, porPagina };
+    // `temMais` é o que faz aparecer o "carregar mais conversas". Sem ele, a
+    // loja só enxergava as 30 mais recentes — o cliente da semana passada
+    // ficava inalcançável na tela.
+    return { conversas, total, pagina, porPagina, temMais: de + conversas.length < total };
   });
 
 export type MensagemCrm = {
@@ -150,6 +185,13 @@ export type MensagemCrm = {
   media_type: string | null;
   /** Onde o arquivo mora na pasta. Serve para reassinar o endereço depois. */
   media_path?: string | null;
+  /**
+   * Tem arquivo, mas ele ainda não foi trazido do WhatsApp. A tela pede com
+   * `carregarMidia` quando a pessoa for ver/ouvir.
+   */
+  media_pendente?: boolean;
+  /** O nome do arquivo, para o PDF e o download. */
+  media_nome?: string | null;
   status: string;
   error_message: string | null;
   created_at: string;
@@ -164,25 +206,56 @@ export type MensagemCrm = {
  */
 export const listarMensagens = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: { tenantId: string; conversationId: string; limite?: number }) => d)
+  .inputValidator(
+    (d: {
+      tenantId: string;
+      conversationId: string;
+      limite?: number;
+      /**
+       * "As mensagens de ANTES desta hora." É o "carregar anteriores": o
+       * histórico inteiro fica alcançável, em pedaços, sem baixar três meses
+       * de conversa de uma vez só para ler a última frase.
+       */
+      antesDe?: string;
+    }) => d,
+  )
   .handler(async ({ data, context }) => {
     const { tenantId } = await porteiro(context, data.tenantId);
     if (!data.conversationId) throw new Error("Conversa não informada.");
 
     const limite = Math.min(Math.max(data.limite ?? 100, 1), 300);
 
-    const { data: linhas, error } = await crm("crm_messages")
+    let q = crm("crm_messages")
       .select(
-        "id, direction, sent_by, origin, body, media_url, media_type, media_path, status, error_message, created_at",
+        "id, direction, sent_by, origin, body, media_url, media_type, media_path, external_id, status, error_message, created_at",
       )
       .eq("tenant_id", tenantId)
-      .eq("conversation_id", data.conversationId)
-      .order("created_at", { ascending: false })
-      .limit(limite);
+      .eq("conversation_id", data.conversationId);
+
+    if (data.antesDe) {
+      const corte = new Date(data.antesDe);
+      if (Number.isNaN(corte.getTime())) throw new Error("Data inválida.");
+      q = q.lt("created_at", corte.toISOString());
+    }
+
+    const { data: linhas, error } = await q.order("created_at", { ascending: false }).limit(limite);
 
     if (error) throw new Error(error.message);
 
-    const mensagens = ((linhas ?? []) as MensagemCrm[]).slice().reverse();
+    const brutas = ((linhas ?? []) as Array<MensagemCrm & { external_id?: string | null }>)
+      .slice()
+      .reverse();
+
+    // O endereço antigo da UAZAPI NÃO vai para o navegador: ele vence, e o
+    // arquivo passa a ser servido só a partir da pasta da loja. O número da
+    // mensagem no WhatsApp também fica aqui dentro — a tela não precisa dele.
+    const mensagens: MensagemCrm[] = brutas.map(({ external_id, ...m }) => ({
+      ...m,
+      media_url: null,
+      media_nome: nomeNoCaminho(m.media_path),
+      media_pendente:
+        ehTipoMidia(m.media_type) && !m.media_path && Boolean(external_id || m.media_url),
+    }));
 
     // O ENDEREÇO DO ARQUIVO É MONTADO AGORA, e vence em uma hora. Guardá-lo
     // pronto no banco seria guardar o cupom do estacionamento: vale hoje,
@@ -192,11 +265,11 @@ export const listarMensagens = createServerFn({ method: "POST" })
     );
     for (const m of mensagens) {
       if (m.media_path && assinados.has(m.media_path)) {
-        m.media_url = assinados.get(m.media_path) ?? m.media_url;
+        m.media_url = assinados.get(m.media_path) ?? null;
       }
     }
 
-    return { mensagens };
+    return { mensagens, temMais: brutas.length === limite };
   });
 
 /**
@@ -276,6 +349,7 @@ export const enviarMensagem = createServerFn({ method: "POST" })
     if (mensagem.media_path) {
       const mapa = await enderecosAssinados([mensagem.media_path]);
       mensagem.media_url = mapa.get(mensagem.media_path) ?? null;
+      mensagem.media_nome = nomeNoCaminho(mensagem.media_path);
     }
 
     const resumo = texto
@@ -611,4 +685,122 @@ export const cancelarPedidoDoChat = createServerFn({ method: "POST" })
     if (erroCancela) throw new Error(erroCancela.message);
 
     return { numero: (pedido.order_number as number) ?? null };
+  });
+
+/**
+ * O ARQUIVO DE UMA MENSAGEM: ouvir o áudio, ver a foto, abrir o PDF.
+ *
+ * Se o arquivo ainda não estiver na pasta da loja, é buscado no WhatsApp
+ * AGORA e guardado — a segunda pessoa que abrir já recebe da pasta. Assim os
+ * milhares de áudios e fotos que chegaram sem arquivo voltam a abrir sem
+ * ninguém precisar mexer em fluxo nenhum.
+ *
+ * Nada aqui devolve erro técnico: a resposta é sempre uma frase que o
+ * lojista entende, e `definitivo` diz se vale a pena tentar de novo.
+ */
+export const carregarMidia = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { tenantId: string; messageId: string }) => {
+    if (!d?.messageId || typeof d.messageId !== "string")
+      throw new Error("Mensagem não informada.");
+    return d;
+  })
+  .handler(async ({ data, context }) => {
+    const { tenantId } = await porteiro(context, data.tenantId);
+    return recuperarMidiaDaMensagem(tenantId, data.messageId);
+  });
+
+/**
+ * "Tentar de novo" numa mensagem que não saiu.
+ *
+ * A mensagem volta para a fila e o n8n leva na próxima passada (de minuto em
+ * minuto). Não nasce mensagem nova: é a MESMA, para não ficar no histórico
+ * uma falhada e outra igual logo abaixo.
+ *
+ * Só mensagem DA LOJA, desta loja, e que esteja de fato marcada como falha —
+ * reenviar o que já saiu mandaria a resposta duas vezes ao cliente.
+ */
+export const reenviarMensagem = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: { tenantId: string; messageId: string }) => {
+    if (!d?.messageId || typeof d.messageId !== "string")
+      throw new Error("Mensagem não informada.");
+    return d;
+  })
+  .handler(async ({ data, context }) => {
+    const { tenantId } = await porteiro(context, data.tenantId);
+
+    const { data: linhas, error } = await crm("crm_messages")
+      .update({
+        status: "queued",
+        error_message: null,
+        lease_until: null,
+        lease_worker: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", data.messageId)
+      .eq("tenant_id", tenantId)
+      .eq("direction", "out")
+      .eq("status", "failed")
+      .select("id, status");
+
+    if (error) throw new Error(error.message);
+    if (!linhas || linhas.length === 0) {
+      throw new Error("Esta mensagem não está marcada como falha — não há o que reenviar.");
+    }
+    return { ok: true };
+  });
+
+/**
+ * Etiquetas e anotação do cliente, pela tela do Chat.
+ *
+ * É a MESMA ficha do Marketing: a etiqueta "vip" posta aqui aparece lá para
+ * montar campanha, e vice-versa. Uma ficha só, para não descobrir no fim do
+ * mês que o "Seu João" do delivery e o do WhatsApp eram duas fichas.
+ */
+export const atualizarFichaDoCliente = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator(
+    (d: { tenantId: string; customerId: string; tags?: string[]; notes?: string }) => d,
+  )
+  .handler(async ({ data, context }) => {
+    const { tenantId } = await porteiro(context, data.tenantId);
+    if (!data.customerId) throw new Error("Cliente não informado.");
+
+    const mudanca: Record<string, unknown> = { updated_at: new Date().toISOString() };
+    if (Array.isArray(data.tags)) {
+      // As etiquetas são as MESMAS do Marketing, e lá a busca diferencia
+      // maiúscula de minúscula. Por isso nada é "padronizado" aqui: mudar
+      // "VIP" para "vip" tiraria o cliente do filtro de campanha que já existe.
+      // Repetida (mesmo escrita diferente) entra uma vez só.
+      const vistas = new Set<string>();
+      mudanca.tags = data.tags
+        .map((t) =>
+          String(t ?? "")
+            .trim()
+            .slice(0, 30),
+        )
+        .filter((t) => {
+          const chave = t.toLowerCase();
+          if (!t || vistas.has(chave)) return false;
+          vistas.add(chave);
+          return true;
+        })
+        .slice(0, 20);
+    }
+    if (data.notes !== undefined) mudanca.notes = String(data.notes ?? "").slice(0, 2000) || null;
+
+    const { data: linhas, error } = await crm("marketing_customers")
+      .update(mudanca)
+      .eq("id", data.customerId)
+      // Sem a loja aqui, o número de um cliente de outra loja seria alterado.
+      .eq("tenant_id", tenantId)
+      .select("id, tags, notes");
+
+    if (error) throw new Error(error.message);
+    if (!linhas || linhas.length === 0) throw new Error("Cliente não encontrado nesta loja.");
+    return {
+      tags: (linhas[0].tags ?? []) as string[],
+      notes: (linhas[0].notes ?? null) as string | null,
+    };
   });

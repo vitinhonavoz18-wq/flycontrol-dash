@@ -29,6 +29,20 @@ const FAIXA_STATUS: Record<string, string> = {
   closed: "bg-muted-foreground/40",
 };
 
+/**
+ * Os filtros do atendimento. "Não lidas" é a fila de quem está esperando
+ * resposta — o primeiro lugar para olhar quando o movimento aperta.
+ */
+export type FiltroConversas = "todas" | "nao_lidas" | "open" | "pending" | "closed";
+
+const FILTROS: Array<{ valor: FiltroConversas; rotulo: string }> = [
+  { valor: "todas", rotulo: "Todas" },
+  { valor: "nao_lidas", rotulo: "Não lidas" },
+  { valor: "open", rotulo: "Abertas" },
+  { valor: "pending", rotulo: "Aguardando" },
+  { valor: "closed", rotulo: "Resolvidas" },
+];
+
 function quando(iso: string | null): string {
   if (!iso) return "";
   const data = new Date(iso);
@@ -51,7 +65,18 @@ export function ListaConversas({
   onBusca,
   onSelecionar,
   onNova,
+  filtro = "todas",
+  onFiltro,
+  temMais = false,
+  carregandoMais = false,
+  onCarregarMais,
 }: {
+  filtro?: FiltroConversas;
+  onFiltro?: (f: FiltroConversas) => void;
+  /** Há conversas mais antigas no servidor além das que estão na tela. */
+  temMais?: boolean;
+  carregandoMais?: boolean;
+  onCarregarMais?: () => void;
   conversas: ConversaCrm[];
   carregando: boolean;
   selecionada: string | null;
@@ -100,6 +125,30 @@ export function ListaConversas({
             <MessageSquarePlus className="h-4 w-4" />
           </Button>
         </div>
+        {onFiltro && (
+          <div
+            className="-mx-1 mt-2 flex gap-1 overflow-x-auto px-1 pb-0.5"
+            role="tablist"
+            aria-label="Filtrar conversas"
+          >
+            {FILTROS.map((f) => (
+              <button
+                key={f.valor}
+                type="button"
+                role="tab"
+                aria-selected={filtro === f.valor}
+                onClick={() => onFiltro(f.valor)}
+                className={`shrink-0 rounded-full border px-2.5 py-1 text-[11px] font-bold transition-colors ${
+                  filtro === f.valor
+                    ? "border-primary bg-primary text-primary-foreground"
+                    : "border-border bg-background text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {f.rotulo}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* ------- NOMES: a única parte que rola ------- */}
@@ -115,10 +164,21 @@ export function ListaConversas({
             <div className="mx-auto grid h-12 w-12 place-items-center rounded-2xl border border-border bg-muted">
               <Bot className="h-5 w-5 text-muted-foreground" aria-hidden="true" />
             </div>
-            <p className="mt-3 text-sm font-semibold text-foreground">Nenhuma conversa ainda</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Quando um cliente mandar mensagem no WhatsApp da loja, ela aparece aqui.
-            </p>
+            {busca.trim() || filtro !== "todas" ? (
+              <>
+                <p className="mt-3 text-sm font-semibold text-foreground">Nada encontrado</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Nenhuma conversa com essa busca ou filtro.
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="mt-3 text-sm font-semibold text-foreground">Nenhuma conversa ainda</p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Quando um cliente mandar mensagem no WhatsApp da loja, ela aparece aqui.
+                </p>
+              </>
+            )}
           </div>
         )}
 
@@ -210,6 +270,19 @@ export function ListaConversas({
             </button>
           );
         })}
+        {temMais && onCarregarMais && (
+          <div className="p-3">
+            <Button
+              variant="outline"
+              className="w-full border-2 text-xs font-semibold"
+              onClick={onCarregarMais}
+              disabled={carregandoMais}
+            >
+              {carregandoMais && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+              Carregar mais conversas
+            </Button>
+          </div>
+        )}
       </div>
     </div>
   );

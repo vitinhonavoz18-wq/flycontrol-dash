@@ -102,7 +102,10 @@ export function GravadorDeAudio({
           onErro("A gravação saiu vazia. Tente de novo.");
           return;
         }
-        const ext = mimeLimpo(formato).split("/")[1] || "webm";
+        // "audio/mp4" vira .m4a: é a extensão que o celular reconhece como
+        // áudio (".mp4" ele tenta abrir como vídeo).
+        const sub = mimeLimpo(formato).split("/")[1] || "webm";
+        const ext = sub === "mp4" ? "m4a" : sub;
         onPronto({
           nome: `audio-${Date.now()}.${ext}`,
           mime: mimeLimpo(formato),
@@ -160,6 +163,10 @@ export function GravadorDeAudio({
       <span className="h-2.5 w-2.5 animate-pulse rounded-full bg-destructive" aria-hidden="true" />
       <span className="font-mono text-sm font-bold tabular-nums text-destructive">
         {duracaoLegivel(segundos)}
+        <span className="sr-only sm:not-sr-only sm:font-sans sm:text-[11px] sm:font-semibold">
+          {" "}
+          / {duracaoLegivel(LIMITE_SEGUNDOS)}
+        </span>
       </span>
       <Button
         type="button"
