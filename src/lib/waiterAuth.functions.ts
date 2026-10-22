@@ -230,20 +230,54 @@ export const deleteWaiter = createServerFn({ method: "POST" })
 // ============================================================
 // Public: waiter login + actions in their portal
 // ============================================================
+/**
+ * LIMITE DE TENTATIVAS NO LOGIN DO GARÇOM
+ *
+ * A senha do garçom pode ter só 4 caracteres e o usuário costuma ser o
+ * primeiro nome ("joao"). Sem limite, um programa testava milhares de senhas
+ * por minuto até acertar e entrava no salão como aquele garçom.
+ *
+ * Agora, em 15 minutos: no máximo 10 erros para o mesmo usuário e 30 erros
+ * vindos do mesmo endereço de internet. Passou disso, espera. Acertar a senha
+ * não conta como tentativa.
+ */
+const JANELA_LOGIN_GARCOM_MS = 15 * 60 * 1000;
+const MAX_FALHAS_POR_USUARIO = 10;
+const MAX_FALHAS_POR_IP = 30;
+
 export const waiterLogin = createServerFn({ method: "POST" })
-  .inputValidator((d: { username: string; password: string }) => d)
+  .inputValidator((d: { username: string; password: string }) => ({
+    username: String(d?.username ?? "").slice(0, 100),
+    password: String(d?.password ?? "").slice(0, 200),
+  }))
   .handler(async ({ data }) => {
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { contarFalhasRecentes, registrarFalha, currentRequestIp } =
+      await import("@/lib/signup/rateLimit.server");
     const username = data.username.trim().toLowerCase();
     if (!username || !data.password) throw new Error("Informe usuário e senha");
+
+    const chaveUsuario = `garcom-login:user:${username}`;
+    const chaveIp = `garcom-login:ip:${currentRequestIp()}`;
+    const [falhasUsuario, falhasIp] = await Promise.all([
+      contarFalhasRecentes(chaveUsuario, JANELA_LOGIN_GARCOM_MS),
+      contarFalhasRecentes(chaveIp, JANELA_LOGIN_GARCOM_MS),
+    ]);
+    if (falhasUsuario >= MAX_FALHAS_POR_USUARIO || falhasIp >= MAX_FALHAS_POR_IP) {
+      throw new Error("Muitas tentativas erradas. Aguarde 15 minutos e tente de novo.");
+    }
+    const falhou = async () => {
+      await Promise.all([registrarFalha(chaveUsuario), registrarFalha(chaveIp)]);
+      return new Error("Usuário ou senha inválidos");
+    };
 
     // username is unique per-tenant; allow login by listing matches and trying each
     const { data: rows, error } = await supabaseAdmin
       .from("waiters")
       .select("id, tenant_id, full_name, password_hash, is_active")
       .eq("username", username);
-    if (error) throw new Error(error.message);
-    if (!rows || rows.length === 0) throw new Error("Usuário ou senha inválidos");
+    if (error) throw new Error("Não foi possível entrar agora. Tente novamente.");
+    if (!rows || rows.length === 0) throw await falhou();
 
     for (const row of rows) {
       if (!row.is_active) continue;
@@ -257,7 +291,7 @@ export const waiterLogin = createServerFn({ method: "POST" })
         };
       }
     }
-    throw new Error("Usuário ou senha inválidos");
+    throw await falhou();
   });
 
 // ============================================================
@@ -265,9 +299,22 @@ export const waiterLogin = createServerFn({ method: "POST" })
 // ============================================================
 
 async function authed(token: string) {
-  const auth = await verifyWaiterToken(token);
+  const auth = await verifyWaiterToken(String(token ?? ""));
   if (!auth) throw new Error("Sessão de garçom expirada");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+
+  // O crachá vale 12 horas, mas o garçom pode ser desligado no meio do turno.
+  // Sem esta conferência, quem foi desativado (ou apagado) continuava
+  // entrando no salão até o crachá vencer — como o funcionário demitido que
+  // ainda tem a chave da porta dos fundos até o fim do dia.
+  const { data: garcom } = await supabaseAdmin
+    .from("waiters")
+    .select("id, tenant_id, is_active")
+    .eq("id", auth.waiterId)
+    .maybeSingle();
+  if (!garcom || !garcom.is_active || garcom.tenant_id !== auth.tenantId) {
+    throw new Error("Sessão de garçom expirada");
+  }
   return { auth, supabaseAdmin };
 }
 

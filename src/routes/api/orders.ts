@@ -182,7 +182,6 @@ export const Route = createFileRoute("/api/orders")({
                 success: false,
                 error: "db_error",
                 message: "Erro de banco de dados interno",
-                details: pErr.message,
               }),
               { status: 500, headers: cors },
             );
@@ -710,7 +709,6 @@ export const Route = createFileRoute("/api/orders")({
                 success: false,
                 error: "save_error",
                 message: "Erro ao salvar pedido no FlyControl",
-                details: orderError.message,
               }),
               { status: 500, headers: cors },
             );
@@ -1009,9 +1007,16 @@ async function logExternalOrder(
 ) {
   try {
     const partialKey = apiKey ? `${apiKey.substring(0, 4)}***${apiKey.slice(-4)}` : "N/A";
+    // O site às vezes manda a chave da loja DENTRO do corpo. A chave inteira
+    // não pode ir para o registro: quem lê o registro passaria a ter a chave
+    // de todas as lojas. Fica só o pedaço acima, que serve para identificar.
+    const semChave =
+      payload && typeof payload === "object" && !Array.isArray(payload)
+        ? { ...payload, api_key: undefined }
+        : payload;
     await supabaseAdmin.from("external_order_logs").insert({
       api_key_partial: partialKey,
-      payload: payload,
+      payload: semChave,
       status_code: statusCode,
       error_message: errorMessage,
     });
