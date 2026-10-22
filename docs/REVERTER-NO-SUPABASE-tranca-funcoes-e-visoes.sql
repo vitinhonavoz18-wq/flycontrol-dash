@@ -8,6 +8,10 @@
 -- corrigir o ponto específico que quebrou.
 --
 -- Como usar: Supabase > SQL Editor > colar tudo > Run.
+-- Conferido contra docs/backup/FOTOGRAFIA-ANTES-DA-TRANCA-2026-10-22.md:
+-- depois de rodar, as permissões voltam a ser exatamente as daquele arquivo.
+
+BEGIN;
 -- ============================================================================
 
 -- 1. Funções de servidor voltam a aceitar chamada pública.
@@ -21,7 +25,9 @@ GRANT EXECUTE ON FUNCTION public.club_check_achievements(uuid, uuid) TO PUBLIC, 
 GRANT EXECUTE ON FUNCTION public.club_get_or_create_active_cycle(uuid, uuid) TO PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.club_recalculate_level(uuid, uuid) TO PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.club_resolve_price(uuid, uuid) TO PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.flycourier_purge_old_locations(integer) TO PUBLIC, anon, authenticated;
+-- Esta já não tinha permissão própria para anon/authenticated antes da trava:
+-- o acesso vinha só de PUBLIC (fotografia de 22/10/2026).
+GRANT EXECUTE ON FUNCTION public.flycourier_purge_old_locations(integer) TO PUBLIC;
 GRANT EXECUTE ON FUNCTION public.expire_stale_checkout_intents() TO PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.recalculate_table_session_totals(uuid) TO PUBLIC, anon, authenticated;
 GRANT EXECUTE ON FUNCTION public.sync_order_to_table_session_logic(uuid) TO PUBLIC, anon, authenticated;
@@ -77,9 +83,11 @@ GRANT EXECUTE ON FUNCTION public.generate_default_restaurant_tables(uuid) TO PUB
 -- 3. Relatórios voltam a usar a chave mestra.
 ALTER VIEW public.pizzeria_financial_metrics RESET (security_invoker);
 ALTER VIEW public.admin_global_financial_metrics RESET (security_invoker);
-GRANT SELECT ON public.pizzeria_financial_metrics TO anon;
-GRANT SELECT ON public.admin_global_financial_metrics TO anon;
-GRANT SELECT ON public.subscription_setup_fee_charged TO anon;
+-- Antes da trava, anon tinha TODAS as permissões nas três visões
+-- (arwdDxtm na fotografia de 22/10/2026), não só leitura.
+GRANT ALL ON public.pizzeria_financial_metrics TO anon;
+GRANT ALL ON public.admin_global_financial_metrics TO anon;
+GRANT ALL ON public.subscription_setup_fee_charged TO anon;
 
 -- 4. Regras de acesso antigas.
 CREATE POLICY "Enable all for authenticated users" ON public.pizzeria_pizza_sizes
@@ -87,3 +95,5 @@ CREATE POLICY "Enable all for authenticated users" ON public.pizzeria_pizza_size
 CREATE POLICY "user_roles_read_policy" ON public.user_roles
   FOR SELECT TO authenticated USING (true);
 ALTER POLICY "Public can read session lifecycle" ON public.table_sessions TO anon, authenticated;
+
+COMMIT;

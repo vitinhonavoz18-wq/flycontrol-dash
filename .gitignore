@@ -41,3 +41,13 @@ dist-ssr
 # cache da máquina de quem roda, não do projeto — nunca devem ir para o
 # repositório.
 supabase/.temp/
+
+# Backups do banco NUNCA vão para o repositório: têm dados de clientes e
+# chaves das lojas (ver docs/backup/COMO-FAZER-BACKUP-DO-BANCO.md).
+backup-flycontrol-*/
+backups/
+roles.sql
+schema.sql
+data.sql
+*.dump
+*.7z
