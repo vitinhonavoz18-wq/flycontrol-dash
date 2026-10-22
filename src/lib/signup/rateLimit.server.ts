@@ -70,3 +70,31 @@ export async function checkAndRecordSignupAttempt(ip: string): Promise<{ allowed
 
   return { allowed: (count ?? 0) < MAX_ATTEMPTS_PER_WINDOW };
 }
+
+/**
+ * Contador genérico de tentativas FALHAS, guardado na mesma tabela do
+ * cadastro com um prefixo na chave (ex.: "garcom-login:ip:1.2.3.4") para não
+ * misturar com os IPs do cadastro.
+ *
+ * Diferente do cadastro, aqui só a falha conta: o garçom que acerta a senha
+ * não gasta tentativa. É o cofre que só trava depois de vários números
+ * errados seguidos — quem sabe o segredo abre sempre.
+ */
+export async function contarFalhasRecentes(chave: string, janelaMs: number): Promise<number> {
+  const db = supabaseAdmin as unknown as SignupAttemptsDb;
+  const since = new Date(Date.now() - janelaMs).toISOString();
+  const { count, error } = await db
+    .from("signup_attempts")
+    .select("id", { count: "exact", head: true })
+    .eq("ip_address", chave)
+    .gte("created_at", since);
+  // Se a contagem falhar, não travamos o garçom no meio do expediente: a
+  // senha continua sendo conferida normalmente.
+  if (error) return 0;
+  return count ?? 0;
+}
+
+export async function registrarFalha(chave: string): Promise<void> {
+  const db = supabaseAdmin as unknown as SignupAttemptsDb;
+  await db.from("signup_attempts").insert({ ip_address: chave });
+}

@@ -14,6 +14,25 @@ const cors = (request?: Request) => ({
 const SELECT =
   "id, dining_session_id, customer_token, status, closed_at, restaurant_id, table_number, table_name, opened_at, subtotal_amount, service_fee_amount, total_amount";
 
+/**
+ * O que as consultas ANTIGAS podem devolver: tudo, menos as duas "senhas" da
+ * comanda (dining_session_id e customer_token).
+ *
+ * POR QUÊ
+ *
+ * A consulta antiga por "nome da loja + número da mesa" não pede prova
+ * nenhuma — o nome da loja está no link do cardápio e as mesas são 01, 02,
+ * 03... Ela devolvia a senha da comanda aberta, e com essa senha dá para pedir
+ * o fechamento da mesa de outra pessoa. É o garçom que entrega a comanda a
+ * quem só disse "sou da mesa 7".
+ *
+ * Quem já tem a senha (consulta pelo dining_session_id ou customer_token)
+ * continua recebendo tudo, como antes. O SiteCreatorFly não usa as consultas
+ * antigas.
+ */
+const SELECT_LEGADO =
+  "id, status, closed_at, restaurant_id, table_number, table_name, opened_at, subtotal_amount, service_fee_amount, total_amount";
+
 async function resolveStatus(params: {
   dining_session_id?: string | null;
   customer_token?: string | null;
@@ -54,7 +73,7 @@ async function resolveStatus(params: {
     );
     const { data, error } = await supabaseAdmin
       .from("table_sessions")
-      .select(SELECT)
+      .select(SELECT_LEGADO)
       .eq("id", session_id)
       .maybeSingle();
     if (error) throw error;
@@ -80,7 +99,7 @@ async function resolveStatus(params: {
 
   const { data, error } = await supabaseAdmin
     .from("table_sessions")
-    .select(SELECT)
+    .select(SELECT_LEGADO)
     .eq("restaurant_id", pz.id)
     .eq("table_number", String(table_number))
     .order("opened_at", { ascending: false })

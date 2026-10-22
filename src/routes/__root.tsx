@@ -5,6 +5,7 @@ import {
   createRootRouteWithContext,
   HeadContent,
   Scripts,
+  type ErrorComponentProps,
 } from "@tanstack/react-router";
 
 import appCss from "../styles.css?url";
@@ -61,7 +62,9 @@ function NotFoundComponent() {
   );
 }
 
-function ErrorComponent({ error }: { error: Error }) {
+function ErrorComponent({ error: erro }: ErrorComponentProps) {
+  // A versão nova do roteador não garante que o erro seja um `Error`.
+  const error = erro instanceof Error ? erro : new Error(String(erro));
   console.error(error);
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">

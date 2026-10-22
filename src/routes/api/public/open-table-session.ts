@@ -49,7 +49,7 @@ export const Route = createFileRoute("/api/public/open-table-session")({
           console.log("OPEN_TABLE_SESSION_REQUEST:", {
             restaurant_slug,
             table_number,
-            table_token,
+            table_token: table_token ? String(table_token).slice(0, 4) + "…" : null,
             incoming_dining: incomingDiningSessionId || null,
             incoming_token: incomingCustomerToken
               ? String(incomingCustomerToken).slice(0, 6) + "…"
