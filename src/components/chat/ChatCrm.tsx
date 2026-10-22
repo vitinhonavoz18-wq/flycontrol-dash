@@ -25,12 +25,19 @@ import {
   pedidoDaConversa,
   cancelarPedidoDoChat,
   statusDaIntegracao,
+  carregarMidia,
+  reenviarMensagem,
+  atualizarFichaDoCliente,
   type ConversaCrm,
   type MensagemCrm,
   type PedidoDoChat,
 } from "@/lib/crm/crm.functions";
 import type { ArquivoParaEnviar } from "@/lib/crm/midiaNavegador";
-import { ListaConversas } from "./ListaConversas";
+import { criarMemoriaDeMidia, type ResultadoMidia } from "@/lib/crm/filaDeMidia";
+import { mesclarMensagens } from "@/lib/crm/historico";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { ListaConversas, type FiltroConversas } from "./ListaConversas";
+import { PainelCliente } from "./PainelCliente";
 import { JanelaConversa } from "./JanelaConversa";
 import { AvisoIntegracao, type StatusIntegracao } from "./AvisoIntegracao";
 
@@ -53,6 +60,28 @@ import { AvisoIntegracao, type StatusIntegracao } from "./AvisoIntegracao";
  */
 
 const INTERVALO_STATUS_MS = 60_000;
+const POR_PAGINA = 30;
+
+/** As conversas em ordem: quem falou por último em cima, igual ao WhatsApp. */
+function ordenarConversas(lista: ConversaCrm[]): ConversaCrm[] {
+  return lista.slice().sort((a, b) => {
+    const ta = a.last_message_at ? new Date(a.last_message_at).getTime() : 0;
+    const tb = b.last_message_at ? new Date(b.last_message_at).getTime() : 0;
+    return tb - ta;
+  });
+}
+
+function passaNoFiltro(c: ConversaCrm, filtro: FiltroConversas): boolean {
+  if (filtro === "nao_lidas") return c.unread_count > 0;
+  if (filtro === "todas") return true;
+  return c.status === filtro;
+}
+
+function paramsDoFiltro(filtro: FiltroConversas) {
+  if (filtro === "nao_lidas") return { naoLidas: true };
+  if (filtro === "todas") return {};
+  return { status: filtro };
+}
 
 export function ChatCrm({ tenantId }: { tenantId: string }) {
   const { user } = useAuth();
@@ -66,6 +95,19 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   const renomear = useServerFn(renomearContato);
   const buscarPedido = useServerFn(pedidoDaConversa);
   const cancelarPedido = useServerFn(cancelarPedidoDoChat);
+  const buscarMidia = useServerFn(carregarMidia);
+  const reenviar = useServerFn(reenviarMensagem);
+  const salvarFicha = useServerFn(atualizarFichaDoCliente);
+
+  // Um "pegador de arquivos" por loja: cada arquivo é pedido uma vez só e no
+  // máximo três ao mesmo tempo (ver `filaDeMidia.ts`).
+  const obterMidia = useMemo(
+    () =>
+      criarMemoriaDeMidia(
+        (messageId) => buscarMidia({ data: { tenantId, messageId } }) as Promise<ResultadoMidia>,
+      ),
+    [buscarMidia, tenantId],
+  );
 
   // AMPLIAR: a conversa toma a tela inteira, por cima do painel. Não muda
   // nada do que está guardado — é só o tamanho da janela, como abrir o mapa
@@ -89,12 +131,24 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   const [nomeEditado, setNomeEditado] = useState("");
   const [salvandoNome, setSalvandoNome] = useState(false);
   const [pedido, setPedido] = useState<PedidoDoChat | null>(null);
+  const [filtro, setFiltro] = useState<FiltroConversas>("todas");
+  const [pagina, setPagina] = useState(1);
+  const [temMaisConversas, setTemMaisConversas] = useState(false);
+  const [carregandoMaisConversas, setCarregandoMaisConversas] = useState(false);
+  const [temMaisAntigas, setTemMaisAntigas] = useState(false);
+  const [carregandoAntigas, setCarregandoAntigas] = useState(false);
+  const [fichaAberta, setFichaAberta] = useState(false);
+  const qtdConversas = useRef(0);
+  qtdConversas.current = conversas.length;
 
   // A conversa aberta agora, guardada fora do estado da tela: os avisos do
   // banco em tempo real chegam de fora do React e precisam saber qual
   // conversa está na frente sem virar dependência de efeito.
   const selecionadaRef = useRef<string | null>(null);
   selecionadaRef.current = selecionada;
+  const temporizador = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pendenteMensagens = useRef<string | null>(null);
+  const marcarAoVer = useRef(false);
 
   // Esperar a pessoa parar de digitar antes de buscar. Sem isso, "João" vira
   // quatro consultas ao servidor, uma por letra.
@@ -107,10 +161,35 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
     async (silencioso = false) => {
       if (!silencioso) setCarregandoLista(true);
       try {
+        // A atualização silenciosa (chegou mensagem) recarrega TUDO o que já
+        // está na tela, até 100 — senão quem clicou em "carregar mais" veria
+        // a lista encolher de volta para 30 a cada mensagem nova.
+        const porPagina = silencioso
+          ? Math.min(Math.max(qtdConversas.current, POR_PAGINA), 100)
+          : POR_PAGINA;
         const r = await buscarConversas({
-          data: { tenantId, busca: buscaAplicada || undefined },
+          data: {
+            tenantId,
+            busca: buscaAplicada || undefined,
+            porPagina,
+            ...paramsDoFiltro(filtro),
+          },
         });
-        setConversas(r.conversas);
+        if (silencioso) {
+          setConversas((atual) => {
+            const porId = new Map(atual.map((c) => [c.id, c]));
+            for (const c of r.conversas) porId.set(c.id, c);
+            return ordenarConversas(
+              Array.from(porId.values()).filter(
+                (c) => c.id === selecionadaRef.current || passaNoFiltro(c, filtro),
+              ),
+            );
+          });
+        } else {
+          setConversas(r.conversas);
+          setPagina(1);
+          setTemMaisConversas(r.temMais);
+        }
       } catch (e: unknown) {
         // Falha ao atualizar não apaga o que já está na tela. O lojista
         // continua lendo o histórico enquanto a rede não volta.
@@ -121,15 +200,51 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
         setCarregandoLista(false);
       }
     },
-    [buscarConversas, tenantId, buscaAplicada],
+    [buscarConversas, tenantId, buscaAplicada, filtro],
   );
+
+  async function carregarMaisConversas() {
+    setCarregandoMaisConversas(true);
+    try {
+      const proxima = pagina + 1;
+      const r = await buscarConversas({
+        data: {
+          tenantId,
+          busca: buscaAplicada || undefined,
+          pagina: proxima,
+          porPagina: POR_PAGINA,
+          ...paramsDoFiltro(filtro),
+        },
+      });
+      setConversas((atual) => {
+        const ids = new Set(atual.map((c) => c.id));
+        return [...atual, ...r.conversas.filter((c) => !ids.has(c.id))];
+      });
+      setPagina(proxima);
+      setTemMaisConversas(r.temMais);
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível carregar mais conversas.");
+    } finally {
+      setCarregandoMaisConversas(false);
+    }
+  }
 
   const carregarMensagens = useCallback(
     async (conversationId: string, silencioso = false) => {
       if (!silencioso) setCarregandoMensagens(true);
       try {
         const r = await buscarMensagens({ data: { tenantId, conversationId } });
-        setMensagens(r.mensagens);
+        // A pessoa trocou de conversa enquanto a resposta vinha: a resposta
+        // antiga não pode cair por cima da conversa nova.
+        if (selecionadaRef.current !== conversationId) return;
+        if (silencioso) {
+          // Mesclar, e não substituir: as mensagens antigas que a pessoa
+          // carregou continuam na tela, e nada aparece duas vezes.
+          setMensagens((atual) => mesclarMensagens(atual, r.mensagens));
+        } else {
+          setMensagens(r.mensagens);
+          setTemMaisAntigas(r.temMais);
+        }
       } catch (e: unknown) {
         if (!silencioso) {
           toast.error(e instanceof Error ? e.message : "Não foi possível abrir a conversa.");
@@ -140,6 +255,28 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
     },
     [buscarMensagens, tenantId],
   );
+
+  async function carregarAntigas() {
+    const conversationId = selecionada;
+    const maisAntiga = mensagens[0];
+    if (!conversationId || !maisAntiga) return;
+    setCarregandoAntigas(true);
+    try {
+      const r = await buscarMensagens({
+        data: { tenantId, conversationId, antesDe: maisAntiga.created_at },
+      });
+      if (selecionadaRef.current !== conversationId) return;
+      setMensagens((atual) => mesclarMensagens(atual, r.mensagens));
+      setTemMaisAntigas(r.temMais);
+    } catch (e: unknown) {
+      toast.error(
+        e instanceof Error ? e.message : "Não foi possível carregar mensagens anteriores.",
+      );
+      throw e;
+    } finally {
+      setCarregandoAntigas(false);
+    }
+  }
 
   useEffect(() => {
     void carregarConversas();
@@ -162,8 +299,9 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
   );
 
   useEffect(() => {
+    setMensagens([]);
+    setTemMaisAntigas(false);
     if (!selecionada) {
-      setMensagens([]);
       setPedido(null);
       return;
     }
@@ -195,11 +333,42 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
           filter: `tenant_id=eq.${tenantId}`,
         },
         (payload) => {
-          const linha = (payload.new ?? {}) as { conversation_id?: string };
-          if (linha.conversation_id && linha.conversation_id === selecionadaRef.current) {
-            void carregarMensagens(linha.conversation_id, true);
+          const linha = (payload.new ?? {}) as { conversation_id?: string; direction?: string };
+          const aberta = selecionadaRef.current;
+          const ehAberta = Boolean(linha.conversation_id && linha.conversation_id === aberta);
+
+          // O cliente escreveu NA CONVERSA QUE ESTÁ ABERTA na frente do
+          // atendente: ele já está vendo, então não pode virar "não lida".
+          // Sem isso a bolinha acendia numa conversa que a pessoa estava lendo.
+          if (
+            ehAberta &&
+            payload.eventType === "INSERT" &&
+            linha.direction === "in" &&
+            typeof document !== "undefined" &&
+            document.visibilityState === "visible"
+          ) {
+            marcarAoVer.current = true;
           }
-          void carregarConversas(true);
+
+          // VÁRIOS AVISOS JUNTOS VIRAM UMA ATUALIZAÇÃO SÓ. Abrir uma conversa
+          // antiga traz várias fotos do WhatsApp, e cada uma gera um aviso;
+          // sem juntar, a tela recarregaria dez vezes seguidas.
+          if (ehAberta) pendenteMensagens.current = linha.conversation_id ?? null;
+          if (temporizador.current) clearTimeout(temporizador.current);
+          temporizador.current = setTimeout(() => {
+            const conv = pendenteMensagens.current;
+            pendenteMensagens.current = null;
+            if (conv && conv === selecionadaRef.current) void carregarMensagens(conv, true);
+            if (marcarAoVer.current && selecionadaRef.current) {
+              marcarAoVer.current = false;
+              const alvo = selecionadaRef.current;
+              void marcarLida({ data: { tenantId, conversationId: alvo } })
+                .catch(() => undefined)
+                .finally(() => void carregarConversas(true));
+            } else {
+              void carregarConversas(true);
+            }
+          }, 400);
         },
       )
       .subscribe();
@@ -223,10 +392,11 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
       .subscribe();
 
     return () => {
+      if (temporizador.current) clearTimeout(temporizador.current);
       supabase.removeChannel(canal);
       supabase.removeChannel(canalPedidos);
     };
-  }, [tenantId, carregarMensagens, carregarConversas, carregarPedido]);
+  }, [tenantId, carregarMensagens, carregarConversas, carregarPedido, marcarLida]);
 
   // A saúde da conexão é conferida de minuto em minuto. É barato e é o que
   // permite avisar cedo que o WhatsApp caiu.
@@ -251,10 +421,16 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
     };
   }, [buscarStatus, tenantId]);
 
-  const conversaAberta = useMemo(
-    () => conversas.find((c) => c.id === selecionada) ?? null,
-    [conversas, selecionada],
-  );
+  // A conversa aberta NÃO some da frente da pessoa porque saiu do filtro
+  // (ex.: em "Não lidas", ela vira lida assim que é aberta). A lista pode
+  // escondê-la; a janela da conversa continua com ela.
+  const ultimaAberta = useRef<ConversaCrm | null>(null);
+  const conversaAberta = useMemo(() => {
+    const achada = conversas.find((c) => c.id === selecionada) ?? null;
+    if (achada) return achada;
+    return ultimaAberta.current?.id === selecionada ? ultimaAberta.current : null;
+  }, [conversas, selecionada]);
+  ultimaAberta.current = conversaAberta;
 
   async function aoEnviar(texto: string, arquivo?: ArquivoParaEnviar | null) {
     if (!selecionada) return;
@@ -270,7 +446,9 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
             : null,
         },
       });
-      setMensagens((atual) => [...atual, r.mensagem]);
+      // Mesclar pelo número da mensagem: se o aviso em tempo real chegou antes
+      // desta resposta, a mensagem já está na tela e não aparece duas vezes.
+      setMensagens((atual) => mesclarMensagens(atual, [r.mensagem]));
       void carregarConversas(true);
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Não foi possível enviar.");
@@ -278,6 +456,34 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
     } finally {
       setEnviando(false);
     }
+  }
+
+  async function aoReenviar(messageId: string) {
+    try {
+      await reenviar({ data: { tenantId, messageId } });
+      setMensagens((atual) =>
+        atual.map((m) =>
+          m.id === messageId ? { ...m, status: "queued", error_message: null } : m,
+        ),
+      );
+      toast.success("Mensagem de volta na fila. Sai em até 1 minuto.");
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : "Não foi possível reenviar.");
+    }
+  }
+
+  async function aoSalvarFicha(mudanca: { tags?: string[]; notes?: string }) {
+    const customerId = conversaAberta?.contato?.id;
+    if (!customerId) return;
+    const r = await salvarFicha({ data: { tenantId, customerId, ...mudanca } });
+    setConversas((atual) =>
+      atual.map((c) =>
+        c.contato?.id === customerId
+          ? { ...c, contato: { ...c.contato, tags: r.tags, notes: r.notes } }
+          : c,
+      ),
+    );
+    if (mudanca.notes !== undefined) toast.success("Anotação salva.");
   }
 
   async function aoMudarStatus(status: "open" | "pending" | "closed") {
@@ -369,7 +575,11 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
           altura fixa, quem cresce demais é obrigado a rolar por dentro. */}
       <div
         className={`grid min-h-0 flex-1 grid-rows-[1fr] overflow-hidden ${
-          ampliado ? "" : "md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)]"
+          ampliado
+            ? ""
+            : `md:grid-cols-[minmax(260px,320px)_minmax(0,1fr)] ${
+                conversaAberta ? "2xl:grid-cols-[minmax(260px,320px)_minmax(0,1fr)_300px]" : ""
+              }`
         }`}
       >
         {/* No celular, uma tela de cada vez. */}
@@ -386,6 +596,11 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
             onBusca={setBusca}
             onSelecionar={setSelecionada}
             onNova={() => setNovaAberta(true)}
+            filtro={filtro}
+            onFiltro={setFiltro}
+            temMais={temMaisConversas}
+            carregandoMais={carregandoMaisConversas}
+            onCarregarMais={() => void carregarMaisConversas()}
           />
         </div>
 
@@ -425,10 +640,42 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
               onCancelarPedido={aoCancelarPedido}
               ampliado={ampliado}
               onAmpliar={() => setAmpliado((a) => !a)}
+              obterMidia={obterMidia}
+              onReenviar={aoReenviar}
+              temMaisAntigas={temMaisAntigas}
+              carregandoAntigas={carregandoAntigas}
+              onCarregarAntigas={carregarAntigas}
+              onAbrirFicha={conversaAberta ? () => setFichaAberta(true) : undefined}
             />
           </div>
         </div>
+
+        {/* A FICHA fica aberta ao lado na tela bem larga. Em telas menores ela
+            abre como gaveta pelo botão do cabeçalho (ver abaixo). */}
+        {conversaAberta && !ampliado && (
+          <div className="hidden min-h-0 border-l-2 border-border 2xl:block">
+            <PainelCliente
+              conversa={conversaAberta}
+              onSalvar={aoSalvarFicha}
+              onCorrigirNome={abrirCorrecaoDeNome}
+            />
+          </div>
+        )}
       </div>
+
+      <Sheet open={fichaAberta && Boolean(conversaAberta)} onOpenChange={setFichaAberta}>
+        <SheetContent side="right" className="w-[92vw] max-w-sm p-0 sm:max-w-sm">
+          <SheetTitle className="sr-only">Ficha do cliente</SheetTitle>
+          {conversaAberta && (
+            <PainelCliente
+              conversa={conversaAberta}
+              onSalvar={aoSalvarFicha}
+              onCorrigirNome={abrirCorrecaoDeNome}
+              onFechar={() => setFichaAberta(false)}
+            />
+          )}
+        </SheetContent>
+      </Sheet>
 
       <Dialog open={nomeAberto} onOpenChange={setNomeAberto}>
         <DialogContent>

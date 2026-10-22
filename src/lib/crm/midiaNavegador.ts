@@ -31,11 +31,19 @@ export function duracaoLegivel(segundos: number): string {
  * aparelho aceitar.
  */
 export const FORMATOS_DE_GRAVACAO = [
-  "audio/webm;codecs=opus",
-  "audio/webm",
+  // ORDEM = PREFERÊNCIA DO WHATSAPP, não do navegador.
+  //
+  // O WhatsApp aceita oficialmente áudio AAC/MP4, OGG (Opus), MP3 e AMR — e
+  // NÃO lista o webm. Por isso o webm, que é o padrão do Chrome, ficou por
+  // último: só é usado em navegador que não sabe gravar outra coisa. Gravar
+  // no formato que o destino aceita é melhor do que torcer para alguém
+  // converter no caminho.
+  "audio/mp4;codecs=mp4a.40.2", // AAC: Safari e Chrome novos
+  "audio/ogg;codecs=opus", // Firefox
   "audio/mp4",
-  "audio/ogg;codecs=opus",
   "audio/ogg",
+  "audio/webm;codecs=opus", // Chrome antigo: último recurso
+  "audio/webm",
 ];
 
 export function escolherFormato(aceita: (mime: string) => boolean): string | null {
@@ -86,4 +94,14 @@ export function lerArquivoComoBase64(arquivo: File): Promise<ArquivoParaEnviar> 
     };
     leitor.readAsDataURL(arquivo);
   });
+}
+
+/**
+ * Endereço que faz o navegador BAIXAR o arquivo em vez de abrir, já com o
+ * nome certo. A pasta do Supabase entende o `download=` no fim do endereço
+ * assinado.
+ */
+export function enderecoParaBaixar(url: string, nome: string): string {
+  const separador = url.includes("?") ? "&" : "?";
+  return `${url}${separador}download=${encodeURIComponent(nome || "arquivo")}`;
 }

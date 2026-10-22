@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   Loader2,
   Send,
@@ -13,6 +13,9 @@ import {
   X,
   Maximize2,
   Minimize2,
+  RotateCw,
+  ArrowDown,
+  IdCard,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,7 +38,10 @@ import type { ConversaCrm, MensagemCrm, PedidoDoChat } from "@/lib/crm/crm.funct
 import { CartaoPedido } from "./CartaoPedido";
 import { BalaoMidia } from "./BalaoMidia";
 import { GravadorDeAudio } from "./GravadorDeAudio";
-import { conferirArquivo, ROTULO_MIDIA, ehTipoMidia } from "@/lib/crm/midia";
+import { PlayerDeAudio } from "./PlayerDeAudio";
+import { conferirArquivo, ehTipoMidia } from "@/lib/crm/midia";
+import type { ResultadoMidia } from "@/lib/crm/filaDeMidia";
+import { estaNoFim } from "@/lib/crm/historico";
 import {
   lerArquivoComoBase64,
   tamanhoLegivel,
@@ -64,9 +70,14 @@ import {
  * O QUE CADA MARQUINHA QUER DIZER
  *
  *   relógio  — está na fila, ainda não saiu
- *   ✓        — o WhatsApp pegou para entregar
- *   ✓✓       — entregue
- *   triângulo — não deu certo; o motivo aparece ao lado
+ *   relógio girando — o n8n pegou e está enviando
+ *   ✓        — o WhatsApp aceitou a mensagem
+ *   triângulo — não deu certo; o motivo aparece ao lado, com "tentar de novo"
+ *
+ * Antes o ✓✓ ("entregue") aparecia assim que o WhatsApp ACEITAVA a mensagem.
+ * Aceitar não é entregar: o celular do cliente pode estar desligado. Mostrar
+ * ✓✓ ali era prometer o que ninguém confirmou — hoje o sistema ainda não
+ * recebe o aviso de entregue/lido do WhatsApp, então a marca honesta é ✓.
  *
  * Sem isso, uma mensagem que falhou fica igual a uma entregue, e o lojista só
  * descobre o problema quando o cliente reclama que nunca respondeu.
@@ -119,8 +130,12 @@ function MarcaDeEnvio({ status, erro }: { status: string; erro: string | null })
       </span>
     );
   }
-  if (status === "sent") return <CheckCheck className="h-3.5 w-3.5" aria-label="entregue" />;
-  if (status === "sending") return <Check className="h-3.5 w-3.5" aria-label="saindo" />;
+  if (status === "read")
+    return <CheckCheck className="h-3.5 w-3.5 text-sky-300" aria-label="lida" />;
+  if (status === "delivered") return <CheckCheck className="h-3.5 w-3.5" aria-label="entregue" />;
+  if (status === "sent") return <Check className="h-3.5 w-3.5" aria-label="enviada" />;
+  if (status === "sending")
+    return <Loader2 className="h-3.5 w-3.5 animate-spin" aria-label="enviando" />;
   return <Clock className="h-3.5 w-3.5" aria-label="na fila" />;
 }
 
@@ -169,6 +184,12 @@ export function JanelaConversa({
   onCancelarPedido,
   ampliado = false,
   onAmpliar,
+  obterMidia,
+  onReenviar,
+  temMaisAntigas = false,
+  carregandoAntigas = false,
+  onCarregarAntigas,
+  onAbrirFicha,
 }: {
   conversa: ConversaCrm | null;
   mensagens: MensagemCrm[];
@@ -183,12 +204,30 @@ export function JanelaConversa({
   /** Tela cheia: some a lista da esquerda e o painel em volta. */
   ampliado?: boolean;
   onAmpliar?: () => void;
+  /** Busca o arquivo de uma mensagem (no WhatsApp, se ainda não foi guardado). */
+  obterMidia?: (messageId: string, forcar?: boolean) => Promise<ResultadoMidia>;
+  /** "Tentar de novo" numa mensagem que não saiu. */
+  onReenviar?: (messageId: string) => Promise<void>;
+  /** Ainda há mensagens mais antigas no servidor. */
+  temMaisAntigas?: boolean;
+  carregandoAntigas?: boolean;
+  onCarregarAntigas?: () => Promise<void>;
+  /** Abre a ficha do cliente (no celular e em telas médias). */
+  onAbrirFicha?: () => void;
 }) {
   const [texto, setTexto] = useState("");
   const [anexo, setAnexo] = useState<ArquivoParaEnviar | null>(null);
   const [erroAnexo, setErroAnexo] = useState<string | null>(null);
+  const [reenviando, setReenviando] = useState<string | null>(null);
+  const [temNovaAbaixo, setTemNovaAbaixo] = useState(false);
   const seletor = useRef<HTMLInputElement | null>(null);
   const fim = useRef<HTMLDivElement | null>(null);
+  const rolagem = useRef<HTMLDivElement | null>(null);
+  // Onde a pessoa estava antes de entrarem mensagens antigas por cima.
+  const alturaAntesDasAntigas = useRef<number | null>(null);
+  const noFim = useRef(true);
+  const ultimaVista = useRef<string | null>(null);
+  const conversaVista = useRef<string | null>(null);
 
   // Cada mensagem já sai daqui sabendo quem falou, se precisa de faixa de dia
   // e se é continuação da anterior — a tela só desenha.
@@ -208,11 +247,66 @@ export function JanelaConversa({
     });
   }, [mensagens, meuUserId]);
 
-  // Toda conversa abre no fim, onde está o que acabou de chegar — e não no
-  // começo, de meses atrás.
-  useEffect(() => {
-    fim.current?.scrollIntoView({ block: "end" });
-  }, [mensagens.length, conversa?.id]);
+  // A ROLAGEM, com educação:
+  //
+  //   - toda conversa ABRE no fim, onde está o que acabou de chegar;
+  //   - mensagem nova só arrasta a tela para baixo se a pessoa JÁ estava no
+  //     fim (ou se foi ela mesma quem mandou). Quem subiu para reler uma
+  //     mensagem antiga não é puxado de volta — aparece um botão "novas
+  //     mensagens" para descer quando quiser;
+  //   - ao carregar mensagens antigas por cima, a tela fica parada onde a
+  //     pessoa estava, em vez de pular para o topo.
+  useLayoutEffect(() => {
+    const el = rolagem.current;
+    if (!el) return;
+
+    if (alturaAntesDasAntigas.current !== null) {
+      el.scrollTop = el.scrollHeight - alturaAntesDasAntigas.current;
+      alturaAntesDasAntigas.current = null;
+      return;
+    }
+
+    const ultima = mensagens[mensagens.length - 1];
+    const trocouDeConversa = conversaVista.current !== (conversa?.id ?? null);
+    const chegouNova = Boolean(ultima && ultima.id !== ultimaVista.current);
+    conversaVista.current = conversa?.id ?? null;
+    ultimaVista.current = ultima?.id ?? null;
+
+    if (trocouDeConversa) {
+      fim.current?.scrollIntoView({ block: "end" });
+      setTemNovaAbaixo(false);
+      return;
+    }
+    if (!chegouNova) return;
+    const minha = ultima?.direction === "out" && ultima?.sent_by === meuUserId;
+    if (noFim.current || minha) {
+      fim.current?.scrollIntoView({ block: "end" });
+      setTemNovaAbaixo(false);
+    } else {
+      setTemNovaAbaixo(true);
+    }
+  }, [mensagens, conversa?.id, meuUserId]);
+
+  async function carregarAntigas() {
+    if (!onCarregarAntigas || carregandoAntigas) return;
+    const el = rolagem.current;
+    alturaAntesDasAntigas.current = el ? el.scrollHeight - el.scrollTop : null;
+    try {
+      await onCarregarAntigas();
+    } catch {
+      alturaAntesDasAntigas.current = null;
+    }
+  }
+
+  async function reenviar(id: string) {
+    if (!onReenviar) return;
+    setReenviando(id);
+    try {
+      await onReenviar(id);
+    } finally {
+      setReenviando(null);
+    }
+  }
 
   if (!conversa) {
     return (
@@ -345,6 +439,22 @@ export function JanelaConversa({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {/* A FICHA DO CLIENTE: etiquetas, anotações, pedidos. Na tela
+                grande ela já fica aberta ao lado; aqui é o botão para quem
+                atende pelo celular ou notebook pequeno. */}
+            {onAbrirFicha && (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={onAbrirFicha}
+                className="h-9 w-9 shrink-0 border-2 p-0 2xl:hidden"
+                aria-label="Ficha do cliente"
+                title="Ficha do cliente"
+              >
+                <IdCard className="h-4 w-4" aria-hidden="true" />
+              </Button>
+            )}
             {/* AMPLIAR: a conversa toma a tela inteira.
                 Numa tela de notebook, a coluna da conversa fica com menos de
                 metade da largura e uma mensagem de cinco linhas vira quinze. É
@@ -393,121 +503,169 @@ export function JanelaConversa({
       </div>
 
       {/* ------- MENSAGENS: a ÚNICA parte que rola ------- */}
-      <div className="fundo-conversa min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 py-4 sm:px-4">
-        {carregando && mensagens.length === 0 && (
-          <div className="grid place-items-center py-10 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
-          </div>
-        )}
+      <div className="relative min-h-0 flex-1">
+        <div
+          ref={rolagem}
+          onScroll={(e) => {
+            noFim.current = estaNoFim(e.currentTarget);
+            if (noFim.current) setTemNovaAbaixo(false);
+          }}
+          className="fundo-conversa h-full overflow-y-auto overscroll-contain px-3 py-4 sm:px-4"
+          aria-live="polite"
+        >
+          {temMaisAntigas && (
+            <div className="mb-3 flex justify-center">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => void carregarAntigas()}
+                disabled={carregandoAntigas}
+                className="border-2 bg-card text-xs font-semibold"
+              >
+                {carregandoAntigas && <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />}
+                Carregar mensagens anteriores
+              </Button>
+            </div>
+          )}
 
-        {!carregando && mensagens.length === 0 && (
-          <p className="py-10 text-center text-sm font-medium text-muted-foreground">
-            Nenhuma mensagem nesta conversa ainda.
-          </p>
-        )}
+          {carregando && mensagens.length === 0 && (
+            <div className="grid place-items-center py-10 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
+            </div>
+          )}
 
-        <div className="mx-auto flex max-w-3xl flex-col gap-1.5">
-          {linhas.map(({ m, autor, dia, abreDia, continuacao }) => {
-            const direita = ladoDireito(autor);
-            return (
-              <div key={m.id}>
-                {abreDia && (
-                  <div className="my-3 flex items-center gap-3">
-                    <span className="h-px flex-1 bg-border" aria-hidden="true" />
-                    <span className="rounded-full border border-border bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground shadow-sm">
-                      {dia}
-                    </span>
-                    <span className="h-px flex-1 bg-border" aria-hidden="true" />
-                  </div>
-                )}
+          {!carregando && mensagens.length === 0 && (
+            <p className="py-10 text-center text-sm font-medium text-muted-foreground">
+              Nenhuma mensagem nesta conversa ainda.
+            </p>
+          )}
 
-                <div
-                  className={`flex items-end gap-2 ${direita ? "flex-row-reverse" : "flex-row"} ${
-                    continuacao ? "mt-0.5" : "mt-2.5"
-                  }`}
-                >
-                  {/* O avatar só aparece na primeira de uma sequência; nas
-                      seguintes fica um vão do mesmo tamanho, para os balões
-                      continuarem alinhados. */}
-                  {continuacao ? (
-                    <span className="h-8 w-8 shrink-0" aria-hidden="true" />
-                  ) : (
-                    <span
-                      className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-bold shadow-sm ${ESTILO_AVATAR[autor]}`}
-                      aria-hidden="true"
-                    >
-                      {autor === "ia" ? <Bot className="h-4 w-4" /> : INICIAL_AUTORIA[autor]}
-                    </span>
+          <div className="mx-auto flex max-w-3xl flex-col gap-1.5">
+            {linhas.map(({ m, autor, dia, abreDia, continuacao }) => {
+              const direita = ladoDireito(autor);
+              return (
+                <div key={m.id}>
+                  {abreDia && (
+                    <div className="my-3 flex items-center gap-3">
+                      <span className="h-px flex-1 bg-border" aria-hidden="true" />
+                      <span className="rounded-full border border-border bg-card px-3 py-1 text-[11px] font-bold uppercase tracking-wide text-muted-foreground shadow-sm">
+                        {dia}
+                      </span>
+                      <span className="h-px flex-1 bg-border" aria-hidden="true" />
+                    </div>
                   )}
 
-                  <div className={`min-w-0 max-w-[82%] sm:max-w-[68%]`}>
-                    {!continuacao && (
-                      <p
-                        className={`mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground ${
-                          direita ? "justify-end" : "justify-start"
-                        }`}
+                  <div
+                    className={`flex items-end gap-2 ${direita ? "flex-row-reverse" : "flex-row"} ${
+                      continuacao ? "mt-0.5" : "mt-2.5"
+                    }`}
+                  >
+                    {/* O avatar só aparece na primeira de uma sequência; nas
+                      seguintes fica um vão do mesmo tamanho, para os balões
+                      continuarem alinhados. */}
+                    {continuacao ? (
+                      <span className="h-8 w-8 shrink-0" aria-hidden="true" />
+                    ) : (
+                      <span
+                        className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-[11px] font-bold shadow-sm ${ESTILO_AVATAR[autor]}`}
+                        aria-hidden="true"
                       >
-                        <span
-                          className={`h-2 w-2 rounded-full ${ESTILO_PONTO[autor]}`}
-                          aria-hidden="true"
-                        />
-                        {NOME_AUTORIA[autor]}
-                      </p>
+                        {autor === "ia" ? <Bot className="h-4 w-4" /> : INICIAL_AUTORIA[autor]}
+                      </span>
                     )}
 
-                    <div
-                      className={`rounded-2xl px-3.5 py-2.5 text-sm shadow-md ${ESTILO_BALAO[autor]} ${
-                        direita ? "rounded-br-md" : "rounded-bl-md"
-                      }`}
-                    >
-                      {m.body && (
-                        <p className="whitespace-pre-wrap break-words leading-relaxed">{m.body}</p>
+                    <div className={`min-w-0 max-w-[82%] sm:max-w-[68%]`}>
+                      {!continuacao && (
+                        <p
+                          className={`mb-1 flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-muted-foreground ${
+                            direita ? "justify-end" : "justify-start"
+                          }`}
+                        >
+                          <span
+                            className={`h-2 w-2 rounded-full ${ESTILO_PONTO[autor]}`}
+                            aria-hidden="true"
+                          />
+                          {NOME_AUTORIA[autor]}
+                        </p>
                       )}
-                      {/* O ARQUIVO VEM ANTES DO TEXTO, como no WhatsApp: a foto
-                          em cima, a legenda embaixo. */}
-                      {m.media_url ? (
-                        <BalaoMidia
-                          url={m.media_url}
-                          tipo={m.media_type}
-                          claro={autor !== "cliente"}
-                        />
-                      ) : (
-                        // Chegou arquivo mas o endereço ainda não veio (o fluxo
-                        // está baixando). Dizer "Áudio" é melhor que um balão
-                        // em branco, que foi justamente o defeito relatado.
-                        ehTipoMidia(m.media_type) && (
-                          <p className="mb-1 flex items-center gap-1.5 text-xs font-semibold italic opacity-90">
-                            <Paperclip className="h-3.5 w-3.5" aria-hidden="true" />
-                            {ROTULO_MIDIA[m.media_type]}
-                          </p>
-                        )
-                      )}
+
                       <div
-                        className={`mt-1 flex items-center justify-end gap-1.5 text-[11px] font-medium ${
-                          autor === "cliente" ? "text-muted-foreground" : "text-white/85"
+                        className={`rounded-2xl px-3.5 py-2.5 text-sm shadow-md ${ESTILO_BALAO[autor]} ${
+                          direita ? "rounded-br-md" : "rounded-bl-md"
                         }`}
                       >
-                        <span>{horario(m.created_at)}</span>
-                        {direita && <MarcaDeEnvio status={m.status} erro={m.error_message} />}
+                        {/* O ARQUIVO VEM ANTES DO TEXTO, como no WhatsApp: a foto
+                          em cima, a legenda (ou a transcrição) embaixo. */}
+                        {ehTipoMidia(m.media_type) && (
+                          <BalaoMidia
+                            mensagem={m}
+                            claro={autor !== "cliente"}
+                            obterMidia={obterMidia}
+                          />
+                        )}
+                        {m.body && (
+                          <p className="whitespace-pre-wrap break-words leading-relaxed">
+                            {m.body}
+                          </p>
+                        )}
+                        <div
+                          className={`mt-1 flex items-center justify-end gap-1.5 text-[11px] font-medium ${
+                            autor === "cliente" ? "text-muted-foreground" : "text-white/85"
+                          }`}
+                        >
+                          <span>{horario(m.created_at)}</span>
+                          {direita && <MarcaDeEnvio status={m.status} erro={m.error_message} />}
+                        </div>
                       </div>
-                    </div>
 
-                    {m.status === "failed" && m.error_message && (
-                      <p
-                        className={`mt-1 text-[11px] font-semibold text-destructive ${
-                          direita ? "text-right" : "text-left"
-                        }`}
-                      >
-                        {m.error_message}
-                      </p>
-                    )}
+                      {m.status === "failed" && (
+                        <div
+                          className={`mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] font-semibold text-destructive ${
+                            direita ? "justify-end text-right" : "justify-start text-left"
+                          }`}
+                        >
+                          {m.error_message && <span>{m.error_message}</span>}
+                          {/* A mesma mensagem volta para a fila — não nasce outra
+                            igual embaixo. */}
+                          {onReenviar && m.direction === "out" && (
+                            <button
+                              type="button"
+                              onClick={() => void reenviar(m.id)}
+                              disabled={reenviando === m.id}
+                              className="inline-flex items-center gap-1 rounded-md border border-destructive/40 px-2 py-0.5 hover:bg-destructive/10"
+                            >
+                              {reenviando === m.id ? (
+                                <Loader2 className="h-3 w-3 animate-spin" aria-hidden="true" />
+                              ) : (
+                                <RotateCw className="h-3 w-3" aria-hidden="true" />
+                              )}
+                              Tentar de novo
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })}
+          </div>
+          <div ref={fim} />
         </div>
-        <div ref={fim} />
+        {temNovaAbaixo && (
+          <button
+            type="button"
+            onClick={() => {
+              fim.current?.scrollIntoView({ block: "end", behavior: "smooth" });
+              setTemNovaAbaixo(false);
+            }}
+            className="absolute bottom-3 left-1/2 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground shadow-lg"
+          >
+            <ArrowDown className="h-3.5 w-3.5" aria-hidden="true" />
+            Novas mensagens
+          </button>
+        )}
       </div>
 
       {pedido && <CartaoPedido pedido={pedido} onCancelar={onCancelarPedido} />}
@@ -518,11 +676,26 @@ export function JanelaConversa({
             tamanho do arquivo evita o clássico "mandei a foto errada". */}
         {anexo && (
           <div className="mx-auto mb-2 flex max-w-3xl items-center gap-2 rounded-xl border-2 border-border bg-muted/50 px-3 py-2">
-            <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            {/* A PRÉVIA: ouvir o áudio gravado (ou ver a foto) ANTES de mandar.
+                Mandar um áudio sem ouvir é descobrir depois que o microfone
+                pegou só o barulho da chapa. */}
+            {anexo.mime.startsWith("audio/") ? (
+              <PlayerDeAudio src={`data:${anexo.mime};base64,${anexo.base64}`} />
+            ) : anexo.mime.startsWith("image/") ? (
+              <img
+                src={`data:${anexo.mime};base64,${anexo.base64}`}
+                alt="Prévia da foto"
+                className="h-12 w-12 shrink-0 rounded-md object-cover"
+              />
+            ) : (
+              <Paperclip className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+            )}
             <div className="min-w-0 flex-1">
-              <p className="truncate text-xs font-bold text-foreground">{anexo.nome}</p>
+              <p className="truncate text-xs font-bold text-foreground">
+                {anexo.mime.startsWith("audio/") ? "Áudio gravado" : anexo.nome}
+              </p>
               <p className="text-[11px] font-medium text-muted-foreground">
-                {tamanhoLegivel(anexo.tamanho)} · vai junto com o que você escrever
+                {tamanhoLegivel(anexo.tamanho)} · ouça/confira e aperte enviar
               </p>
             </div>
             <Button
