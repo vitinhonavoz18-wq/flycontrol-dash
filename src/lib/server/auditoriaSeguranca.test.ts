@@ -163,3 +163,56 @@ describe("numeração das migrações", () => {
     expect(repetidos).toEqual([]);
   });
 });
+
+describe("validação e contenção acompanham a trava", () => {
+  const trava = soSql("supabase/migrations/20261022160000_tranca_funcoes_e_visoes_expostas.sql");
+  const validar = readFileSync(join(RAIZ, "docs/VALIDAR-NO-SUPABASE-tranca.sql"), "utf8");
+  const contencao = soSql("docs/CONTENCAO-IMEDIATA-faturamento-e-whatsapp.sql");
+
+  /** Funções que a trava tira do público, no formato "nome(tipos)". */
+  const funcoesTrancadas = [
+    ...trava.matchAll(
+      /REVOKE ALL ON FUNCTION public\.([a-z_]+)\(([^)]*)\) FROM PUBLIC, anon, authenticated;/g,
+    ),
+  ].map(([, nome, tipos]) => `${nome}(${tipos.replace(/\s+/g, "")})`);
+
+  it("a validação confere cada função que a trava fecha", () => {
+    expect(funcoesTrancadas.length).toBe(14);
+    for (const fn of funcoesTrancadas) expect(validar).toContain(`'public.${fn}'`);
+  });
+
+  it("a validação nunca grava: tudo termina em ROLLBACK", () => {
+    expect(validar.trim().endsWith("ROLLBACK;")).toBe(true);
+    expect(validar).not.toMatch(/^\s*COMMIT/m);
+  });
+
+  it("toda linha da contenção existe igual na trava completa", () => {
+    // Assim, aplicar a trava depois da contenção nunca desfaz nem contradiz nada.
+    const linhas = contencao
+      .split("\n")
+      .map((l) => l.trim())
+      .filter((l) => /^(REVOKE|GRANT|ALTER VIEW)/.test(l));
+    expect(linhas.length).toBeGreaterThan(0);
+    for (const linha of linhas) expect(trava).toContain(linha);
+  });
+});
+
+describe("arquivo de aplicação no SQL Editor", () => {
+  it("contém a migração 20261022160000 sem nenhuma alteração", () => {
+    const migracao = readFileSync(
+      join(RAIZ, "supabase/migrations/20261022160000_tranca_funcoes_e_visoes_expostas.sql"),
+      "utf8",
+    );
+    const aplicar = readFileSync(
+      join(RAIZ, "docs/APLICAR-NO-SUPABASE-tranca-de-seguranca.sql"),
+      "utf8",
+    );
+    const inicio = "-- >>> INÍCIO DO CONTEÚDO DA MIGRAÇÃO 20261022160000 (não editar aqui)\n";
+    const fim = "-- <<< FIM DO CONTEÚDO DA MIGRAÇÃO 20261022160000";
+    const miolo = aplicar.slice(aplicar.indexOf(inicio) + inicio.length, aplicar.indexOf(fim));
+    expect(miolo).toBe(migracao);
+    expect(aplicar).toContain("BEGIN;");
+    expect(aplicar.trim().endsWith("COMMIT;")).toBe(true);
+    expect(aplicar).toContain("VALUES ('20261022160000'");
+  });
+});
