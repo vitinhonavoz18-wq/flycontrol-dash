@@ -12,6 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { LIMITE_CAPA, LIMITE_LOGO } from "@/lib/imagem/medidas";
 import { VideoUpload } from "@/components/ui/video-upload";
 import {
   Store,
@@ -496,6 +497,7 @@ function StoreEditor({
                     value={pizzeria.logo_url || ""}
                     onChange={(url) => handleUpdate("logo_url", url)}
                     folder="logos"
+                    maxDimension={LIMITE_LOGO}
                     disabled={saving}
                   />
                 </div>
@@ -966,6 +968,7 @@ function StoreEditor({
                   value={pizzeria.hero_image_url}
                   onChange={(url) => handleUpdate("hero_image_url", url)}
                   folder="hero"
+                  maxDimension={LIMITE_CAPA}
                   disabled={saving}
                 />
               )}

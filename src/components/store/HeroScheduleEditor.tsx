@@ -24,6 +24,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { ImageUpload } from "@/components/ui/image-upload";
+import { LIMITE_CAPA } from "@/lib/imagem/medidas";
 import { VideoUpload } from "@/components/ui/video-upload";
 import { AlertTriangle, Clock, Pencil, Plus, Trash2 } from "lucide-react";
 import {
@@ -562,6 +563,7 @@ function EditorDePeriodo({
                 value={p.url || null}
                 onChange={(url) => setP({ ...p, url: url ?? "" })}
                 folder="hero"
+                maxDimension={LIMITE_CAPA}
                 disabled={salvando}
               />
             )}
