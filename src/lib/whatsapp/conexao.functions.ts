@@ -40,6 +40,8 @@ export type EstadoConexao = {
   status: "connected" | "connecting" | "disconnected" | "error";
   telefone: string | null;
   nomePerfil: string | null;
+  fotoPerfil: string | null;
+  business: boolean;
   avisoWebhook: boolean;
   ultimaVerificacao: string | null;
   mensagem: string | null;
@@ -99,6 +101,8 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
         status: "disconnected",
         telefone: null,
         nomePerfil: null,
+        fotoPerfil: null,
+        business: false,
         avisoWebhook: false,
         ultimaVerificacao: null,
         mensagem: "A integração com o WhatsApp ainda não foi configurada neste ambiente.",
@@ -113,6 +117,8 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
         status: "disconnected",
         telefone: null,
         nomePerfil: null,
+        fotoPerfil: null,
+        business: false,
         avisoWebhook: false,
         ultimaVerificacao: null,
         mensagem: null,
@@ -127,6 +133,8 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
         status: traduzirStatusInstancia(ficha?.status),
         telefone: (ficha?.phone_e164 as string | undefined) ?? null,
         nomePerfil: null,
+        fotoPerfil: null,
+        business: false,
         avisoWebhook: !ficha?.webhook_configured_at,
         ultimaVerificacao: null,
         mensagem: r.erro,
@@ -181,6 +189,8 @@ export const estadoConexaoWhatsApp = createServerFn({ method: "POST" })
       status,
       telefone,
       nomePerfil: r.dados.instance?.profileName ?? null,
+      fotoPerfil: r.dados.instance?.profilePicUrl || null,
+      business: Boolean(r.dados.instance?.isBusiness),
       // Só sobra o aviso quando NÃO há endereço cadastrado — aí é mesmo coisa
       // do suporte, e não algo que o lojista possa resolver.
       avisoWebhook: avisoPendente,

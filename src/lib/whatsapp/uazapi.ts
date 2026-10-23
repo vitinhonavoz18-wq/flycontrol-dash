@@ -150,6 +150,10 @@ export type InstanciaUazapi = {
   paircode?: string;
   name?: string;
   profileName?: string;
+  /** A foto de perfil do WhatsApp da loja (link temporário do próprio WhatsApp). */
+  profilePicUrl?: string;
+  /** Se o número é um WhatsApp Business. */
+  isBusiness?: boolean;
   owner?: string;
   lastDisconnect?: string;
   lastDisconnectReason?: string;

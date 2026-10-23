@@ -8,7 +8,8 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
-  Power,
+  LogOut,
+  BadgeCheck,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -189,6 +190,7 @@ export function ConexaoWhatsApp({ tenantId }: { tenantId: string }) {
   const status = estado?.status ?? "disconnected";
   const t = TEXTOS[status];
   const conectado = status === "connected";
+  const nomeExibido = estado?.nomePerfil?.trim() || "WhatsApp da loja";
 
   return (
     <div className="space-y-4">
@@ -204,37 +206,99 @@ export function ConexaoWhatsApp({ tenantId }: { tenantId: string }) {
         </Card>
       )}
 
-      <Card>
-        <CardContent className="space-y-4 p-5 md:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-4">
+      <Card className="relative overflow-hidden">
+        {/* A faixa de fogo no topo: a assinatura visual do FlyControl. */}
+        <div className="absolute inset-x-0 top-0 h-1 bg-gradient-fire" aria-hidden="true" />
+
+        <CardContent className="space-y-5 p-5 md:p-6">
+          {/* ── Cabeçalho ──────────────────────────────────────────────── */}
+          <div className="flex items-start justify-between gap-4">
             <div className="flex items-start gap-3">
-              {conectado ? (
-                <CheckCircle2 className={`mt-0.5 h-6 w-6 ${t.cor}`} aria-hidden="true" />
-              ) : (
-                <Smartphone className={`mt-0.5 h-6 w-6 ${t.cor}`} aria-hidden="true" />
-              )}
+              <span
+                className="mt-1 h-5 w-1 shrink-0 rounded-full bg-gradient-fire"
+                aria-hidden="true"
+              />
               <div>
-                <h3 className={`font-semibold ${t.cor}`}>{t.titulo}</h3>
-                <p className="mt-1 max-w-md text-sm text-muted-foreground">{t.explicacao}</p>
-                {conectado && estado?.telefone && (
-                  <p className="mt-1 text-sm font-medium">
-                    {formatPhoneForDisplay(estado.telefone)}
-                    {estado.nomePerfil ? ` — ${estado.nomePerfil}` : ""}
-                  </p>
-                )}
+                <h3 className="text-lg font-semibold">Conexão do WhatsApp</h3>
+                <p className="mt-0.5 text-sm text-muted-foreground">
+                  Conecte o número da loja para o Chat e as mensagens automáticas funcionarem.
+                </p>
               </div>
             </div>
 
             <Button
               variant="outline"
-              size="sm"
+              size="icon"
               onClick={() => void conferir()}
               disabled={carregando}
+              title="Atualizar"
+              aria-label="Atualizar estado da conexão"
+              className="shrink-0 border-primary/30 text-primary hover:bg-primary/10 hover:text-primary"
             >
-              <RefreshCw className={`mr-1 h-3.5 w-3.5 ${carregando ? "animate-spin" : ""}`} />
-              Atualizar
+              <RefreshCw className={`h-4 w-4 ${carregando ? "animate-spin" : ""}`} />
             </Button>
           </div>
+
+          {/* ── O cartão de status ─────────────────────────────────────── */}
+          {conectado ? (
+            <div className="relative overflow-hidden rounded-xl bg-gradient-fire p-4 text-white shadow-[var(--shadow-glow)] md:p-5">
+              {/* Bolha decorativa, como no cartão de crédito. */}
+              <div
+                className="pointer-events-none absolute -right-10 -top-16 h-44 w-44 rounded-full bg-white/10"
+                aria-hidden="true"
+              />
+              <div className="relative flex items-center gap-4">
+                <AvatarLoja foto={estado?.fotoPerfil ?? null} nome={nomeExibido} />
+                <div className="min-w-0">
+                  <p className="flex items-center gap-1.5 text-base font-bold md:text-lg">
+                    {t.titulo}
+                    <CheckCircle2 className="h-4 w-4" aria-hidden="true" />
+                  </p>
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
+                    <span className="font-semibold">{nomeExibido}</span>
+                    {estado?.telefone && (
+                      <span className="text-white/90">
+                        {formatPhoneForDisplay(estado.telefone)}
+                      </span>
+                    )}
+                    {estado?.business && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/20 px-2 py-0.5 text-[11px] font-semibold">
+                        <BadgeCheck className="h-3 w-3" aria-hidden="true" />
+                        Business
+                      </span>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-white/85">{t.explicacao}</p>
+                </div>
+              </div>
+            </div>
+          ) : (
+            <div
+              className={`flex items-start gap-3 rounded-xl border p-4 md:p-5 ${
+                status === "error"
+                  ? "border-destructive/40 bg-destructive/5"
+                  : status === "connecting"
+                    ? "border-amber-500/40 bg-amber-500/5"
+                    : "border-dashed border-primary/30 bg-primary/5"
+              }`}
+            >
+              <span
+                className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full ${
+                  status === "error" ? "bg-destructive/10" : "bg-primary/10"
+                }`}
+              >
+                {status === "error" ? (
+                  <AlertTriangle className={`h-6 w-6 ${t.cor}`} aria-hidden="true" />
+                ) : (
+                  <Smartphone className="h-6 w-6 text-primary" aria-hidden="true" />
+                )}
+              </span>
+              <div>
+                <h4 className={`font-semibold ${t.cor}`}>{t.titulo}</h4>
+                <p className="mt-1 max-w-md text-sm text-muted-foreground">{t.explicacao}</p>
+              </div>
+            </div>
+          )}
 
           {estado?.mensagem && (
             <p className="rounded-md border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
@@ -254,13 +318,13 @@ export function ConexaoWhatsApp({ tenantId }: { tenantId: string }) {
 
           {/* ── O código, quando está esperando leitura ─────────────────── */}
           {(qrcode || paircode) && !conectado && (
-            <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed border-border p-5">
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-primary/40 p-5">
               {qrcode && (
                 <>
                   <img
                     src={qrcode.startsWith("data:") ? qrcode : `data:image/png;base64,${qrcode}`}
                     alt="QR Code para conectar o WhatsApp"
-                    className="h-56 w-56 rounded-md bg-white p-2"
+                    className="h-56 w-56 rounded-lg bg-white p-2 ring-2 ring-primary/40"
                   />
                   <ol className="max-w-sm list-decimal space-y-1 pl-5 text-xs text-muted-foreground">
                     <li>Abra o WhatsApp no celular da loja</li>
@@ -279,7 +343,9 @@ export function ConexaoWhatsApp({ tenantId }: { tenantId: string }) {
               {paircode && (
                 <div className="text-center">
                   <p className="text-xs text-muted-foreground">Digite este código no celular:</p>
-                  <p className="mt-1 font-mono text-2xl font-bold tracking-widest">{paircode}</p>
+                  <p className="mt-1 font-mono text-2xl font-bold tracking-widest text-primary">
+                    {paircode}
+                  </p>
                 </div>
               )}
 
@@ -291,12 +357,13 @@ export function ConexaoWhatsApp({ tenantId }: { tenantId: string }) {
           )}
 
           {/* ── Os botões ───────────────────────────────────────────────── */}
-          <div className="flex flex-wrap gap-2 border-t pt-4">
+          <div className="flex flex-wrap gap-2">
             {!conectado && (
               <>
                 <Button
                   onClick={() => void pedirCodigo()}
                   disabled={pedindo || !estado?.configurado}
+                  className="bg-gradient-fire text-white shadow-[var(--shadow-glow)] hover:opacity-90"
                 >
                   {pedindo ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -319,15 +386,17 @@ export function ConexaoWhatsApp({ tenantId }: { tenantId: string }) {
             {conectado && (
               <Button
                 variant="outline"
+                size="sm"
                 onClick={() => void aoDesconectar()}
                 disabled={desconectando}
+                className="border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
               >
                 {desconectando ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
                 ) : (
-                  <Power className="mr-2 h-4 w-4" />
+                  <LogOut className="mr-2 h-3.5 w-3.5" />
                 )}
-                Desconectar
+                Desconectar WhatsApp
               </Button>
             )}
           </div>
@@ -372,5 +441,37 @@ export function ConexaoWhatsApp({ tenantId }: { tenantId: string }) {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/**
+ * A foto do WhatsApp da loja. O link da foto vem do próprio WhatsApp e expira
+ * de tempos em tempos; quando não abre, mostramos as iniciais no lugar — como
+ * o crachá sem foto que ainda tem o nome bordado.
+ */
+function AvatarLoja({ foto, nome }: { foto: string | null; nome: string }) {
+  const [falhou, setFalhou] = useState(false);
+  const iniciais =
+    nome
+      .split(/\s+/)
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((p) => p[0]?.toUpperCase())
+      .join("") || "W";
+
+  return (
+    <span className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-full bg-white/20 text-lg font-bold ring-2 ring-white/70">
+      {foto && !falhou ? (
+        <img
+          src={foto}
+          alt={`Foto do WhatsApp ${nome}`}
+          className="h-full w-full object-cover"
+          referrerPolicy="no-referrer"
+          onError={() => setFalhou(true)}
+        />
+      ) : (
+        iniciais
+      )}
+    </span>
   );
 }
