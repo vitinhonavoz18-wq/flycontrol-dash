@@ -365,3 +365,59 @@ export async function detalhesDoContato(
     },
   };
 }
+
+// ---------------------------------------------------------------------------
+// Envio direto, sem esperar o n8n passar
+// ---------------------------------------------------------------------------
+
+/**
+ * Prazo do envio direto. Menor que o geral de propósito: quem clicou em enviar
+ * está olhando a tela. Se a UAZAPI não responder nesse tempo, a mensagem volta
+ * para a fila e o n8n leva na próxima passada — atrasa, mas não se perde.
+ */
+const TEMPO_LIMITE_ENVIO_MS = 8_000;
+
+export type EnvioUazapi = { messageId: string | null };
+
+function idDaMensagemEnviada(dados: unknown): string | null {
+  const d = (dados ?? {}) as Record<string, unknown>;
+  const v = d.messageid ?? d.messageId ?? d.id;
+  return typeof v === "string" && v.trim() ? v.trim() : null;
+}
+
+/** POST /send/text — o mesmo que o fluxo do n8n usa. */
+export async function enviarTexto(
+  token: string,
+  numero: string,
+  texto: string,
+): Promise<RespostaUazapi<EnvioUazapi>> {
+  const r = await chamar<unknown>("/send/text", {
+    token,
+    corpo: { number: numero, text: texto, linkPreview: false },
+    tempoLimiteMs: TEMPO_LIMITE_ENVIO_MS,
+  });
+  if (!r.ok) return r;
+  return { ok: true, dados: { messageId: idDaMensagemEnviada(r.dados) } };
+}
+
+/**
+ * POST /send/media — foto, áudio, vídeo ou documento, com o texto como
+ * legenda. `endereco` precisa ser público por alguns minutos (o endereço
+ * assinado da pasta do Chat serve).
+ */
+export async function enviarMidia(
+  token: string,
+  numero: string,
+  tipo: "image" | "audio" | "video" | "document",
+  endereco: string,
+  legenda: string,
+): Promise<RespostaUazapi<EnvioUazapi>> {
+  const r = await chamar<unknown>("/send/media", {
+    token,
+    corpo: { number: numero, type: tipo, file: endereco, text: legenda },
+    // Arquivo demora mais: a UAZAPI baixa antes de mandar.
+    tempoLimiteMs: TEMPO_LIMITE_ENVIO_MS * 2,
+  });
+  if (!r.ok) return r;
+  return { ok: true, dados: { messageId: idDaMensagemEnviada(r.dados) } };
+}

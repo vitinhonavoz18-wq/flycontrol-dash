@@ -153,9 +153,30 @@ export const Route = createFileRoute("/api/crm/inbox")({
             ? { baseUrl: cfg.baseUrl, instanceToken: String(cofre.instance_token) }
             : null;
 
+        // A EQUIPE ESTÁ ATENDENDO ESTA CONVERSA?
+        //
+        // A resposta do painel agora sai direto do FlyControl, sem passar pelo
+        // n8n — e era o n8n que, ao entregá-la, calava a IA por uma hora. Sem
+        // este aviso, o cliente receberia a resposta do atendente e, logo em
+        // seguida, a da IA por cima: dois garçons anotando o mesmo pedido.
+        // O fluxo já confere este campo antes de deixar a IA responder.
+        let iaPausada = false;
+        if (linha?.conversation_id && !doRestaurante) {
+          const umaHoraAtras = new Date(Date.now() - 60 * 60 * 1000).toISOString();
+          const { count } = await crm("crm_messages")
+            .select("id", { count: "exact", head: true })
+            .eq("tenant_id", loja.tenantId)
+            .eq("conversation_id", linha.conversation_id)
+            .eq("direction", "out")
+            .eq("origin", "painel")
+            .gte("created_at", umaHoraAtras);
+          iaPausada = (count ?? 0) > 0;
+        }
+
         return new Response(
           JSON.stringify({
             success: true,
+            ia_pausada: iaPausada,
             message_id: linha?.message_id ?? null,
             conversation_id: linha?.conversation_id ?? null,
             duplicada: Boolean(linha?.duplicada),

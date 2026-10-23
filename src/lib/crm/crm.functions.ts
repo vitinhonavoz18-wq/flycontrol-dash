@@ -11,6 +11,7 @@ import {
 } from "./midiaServidor";
 import { nomeNoCaminho } from "./midiaRecuperada";
 import { ROTULO_MIDIA, ehTipoMidia } from "./midia";
+import { entregarAgora } from "./envioImediato";
 
 /* As tabelas do CRM ainda não constam do arquivo de tipos gerado (ver
    `db.ts`), então as linhas chegam sem tipo. Depois de regerar os tipos,
@@ -275,10 +276,9 @@ export const listarMensagens = createServerFn({ method: "POST" })
 /**
  * O restaurante responde.
  *
- * A mensagem NÃO é enviada aqui: ela entra na fila e o n8n vem buscar. Quem
- * clicou em enviar não fica com a tela travada esperando o WhatsApp responder,
- * e se o n8n estiver fora do ar a mensagem espera na fila em vez de se perder.
- * É deixar o pedido pronto no balcão para o entregador levar.
+ * A mensagem entra na fila e, em seguida, é entregue NA HORA pelo próprio
+ * FlyControl (`entregarAgora`). A fila continua sendo a rede de segurança: se
+ * o WhatsApp não responder, o n8n leva na passada seguinte, como antes.
  */
 export const enviarMensagem = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -370,6 +370,19 @@ export const enviarMensagem = createServerFn({ method: "POST" })
       })
       .eq("id", conversa.id)
       .eq("tenant_id", tenantId);
+
+    // Sai agora, sem esperar o n8n passar. A tela recebe a mensagem já com o
+    // status novo (enviada, ou de volta na fila se o WhatsApp não respondeu).
+    await entregarAgora(tenantId, conversa.id);
+    const { data: depois } = await crm("crm_messages")
+      .select("status, error_message")
+      .eq("id", mensagem.id)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+    if (depois) {
+      mensagem.status = depois.status;
+      mensagem.error_message = depois.error_message;
+    }
 
     return { mensagem };
   });
@@ -713,8 +726,8 @@ export const carregarMidia = createServerFn({ method: "POST" })
 /**
  * "Tentar de novo" numa mensagem que não saiu.
  *
- * A mensagem volta para a fila e o n8n leva na próxima passada (de minuto em
- * minuto). Não nasce mensagem nova: é a MESMA, para não ficar no histórico
+ * A mensagem volta para a fila e é entregue na hora; se o WhatsApp não
+ * responder, o n8n leva na próxima passada. Não nasce mensagem nova: é a MESMA, para não ficar no histórico
  * uma falhada e outra igual logo abaixo.
  *
  * Só mensagem DA LOJA, desta loja, e que esteja de fato marcada como falha —
@@ -742,13 +755,25 @@ export const reenviarMensagem = createServerFn({ method: "POST" })
       .eq("tenant_id", tenantId)
       .eq("direction", "out")
       .eq("status", "failed")
-      .select("id, status");
+      .select("id, status, conversation_id");
 
     if (error) throw new Error(error.message);
     if (!linhas || linhas.length === 0) {
       throw new Error("Esta mensagem não está marcada como falha — não há o que reenviar.");
     }
-    return { ok: true };
+
+    await entregarAgora(tenantId, String(linhas[0].conversation_id));
+    const { data: depois } = await crm("crm_messages")
+      .select("status, error_message")
+      .eq("id", data.messageId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle();
+
+    return {
+      ok: true,
+      status: (depois?.status as string | undefined) ?? "queued",
+      error_message: (depois?.error_message as string | null | undefined) ?? null,
+    };
   });
 
 /**

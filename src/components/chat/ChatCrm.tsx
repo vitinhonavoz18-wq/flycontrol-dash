@@ -460,13 +460,15 @@ export function ChatCrm({ tenantId }: { tenantId: string }) {
 
   async function aoReenviar(messageId: string) {
     try {
-      await reenviar({ data: { tenantId, messageId } });
+      const r = await reenviar({ data: { tenantId, messageId } });
       setMensagens((atual) =>
         atual.map((m) =>
-          m.id === messageId ? { ...m, status: "queued", error_message: null } : m,
+          m.id === messageId ? { ...m, status: r.status, error_message: r.error_message } : m,
         ),
       );
-      toast.success("Mensagem de volta na fila. Sai em até 1 minuto.");
+      if (r.status === "sent") toast.success("Mensagem enviada.");
+      else if (r.status === "failed") toast.error(r.error_message ?? "O WhatsApp recusou de novo.");
+      else toast.success("Mensagem de volta na fila. Sai em até 1 minuto.");
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : "Não foi possível reenviar.");
     }
