@@ -181,68 +181,92 @@
             {
               "id": "cfg-igContaId",
               "name": "igContaId",
-              "value": "17841477661592200",
-              "type": "string"
+              "type": "string",
+              "value": "17841477661592200"
             },
             {
               "id": "cfg-graphVersao",
               "name": "graphVersao",
-              "value": "v22.0",
-              "type": "string"
+              "type": "string",
+              "value": "v22.0"
             },
             {
               "id": "cfg-modoAssinatura",
               "name": "modoAssinatura",
-              "value": "avisar",
-              "type": "string"
+              "type": "string",
+              "value": "avisar"
             },
             {
               "id": "cfg-segundosAgrupar",
               "name": "segundosAgrupar",
-              "value": 8,
-              "type": "number"
+              "type": "number",
+              "value": 8
             },
             {
               "id": "cfg-segundosEsperaEco",
               "name": "segundosEsperaEco",
-              "value": 6,
-              "type": "number"
+              "type": "number",
+              "value": 6
             },
             {
               "id": "cfg-horasPausaHumano",
               "name": "horasPausaHumano",
-              "value": 6,
-              "type": "number"
+              "type": "number",
+              "value": 6
             },
             {
               "id": "cfg-maxMensagensPorMinuto",
               "name": "maxMensagensPorMinuto",
-              "value": 8,
-              "type": "number"
+              "type": "number",
+              "value": 8
             },
             {
               "id": "cfg-comandoVoltarMaya",
               "name": "comandoVoltarMaya",
-              "value": "#maya",
-              "type": "string"
+              "type": "string",
+              "value": "#maya"
             },
             {
               "id": "cfg-horaAbre",
               "name": "horaAbre",
-              "value": 7,
-              "type": "number"
+              "type": "number",
+              "value": 7
             },
             {
               "id": "cfg-horaFecha",
               "name": "horaFecha",
-              "value": 23,
-              "type": "number"
+              "type": "number",
+              "value": 23
             },
             {
               "id": "cfg-emailEquipe",
               "name": "emailEquipe",
-              "value": "",
-              "type": "string"
+              "type": "string",
+              "value": ""
+            },
+            {
+              "id": "cfg-palavrasComentario",
+              "name": "palavrasComentario",
+              "type": "string",
+              "value": "preço,preco,valor,valores,quanto,quero,info,informação,informacao,interesse,como funciona,cadastro,teste,link,plano,me chama,direct,dm"
+            },
+            {
+              "id": "cfg-mensagemComentario",
+              "name": "mensagemComentario",
+              "type": "string",
+              "value": "Oi! 😊 Vi seu comentário e te chamei aqui no Direct. Sou a MAYA, do FlyControl. Quer que eu te explique como funciona e os valores?"
+            },
+            {
+              "id": "cfg-responderComentarioPublico",
+              "name": "responderComentarioPublico",
+              "type": "boolean",
+              "value": true
+            },
+            {
+              "id": "cfg-respostaPublicaComentario",
+              "name": "respostaPublicaComentario",
+              "type": "string",
+              "value": "Te chamei no Direct! 💬"
             }
           ]
         }
@@ -259,7 +283,7 @@
       ],
       "parameters": {
         "mode": "runOnceForAllItems",
-        "jsCode": "// Lê o pacote que a Meta mandou, confere a assinatura e separa cada evento\n// (uma chamada pode trazer várias mensagens) em um item padronizado.\nconst cfg = $('Configurações').first().json;\n// O Webhook tem duas saídas (GET e POST); a mensagem chega pela segunda.\n// A etapa da assinatura repassa o pedido inteiro, então lemos dela.\nconst req = $('Calcular Assinatura da Meta').first().json;\nconst headers = req.headers || {};\nconst body = req.body || {};\n\nconst assinaturaRecebida = String(headers['x-hub-signature-256'] || '');\nlet assinaturaCalculada = '';\ntry {\n  assinaturaCalculada = String($('Calcular Assinatura da Meta').first().json.assinaturaCalculada || '');\n} catch (e) {\n  assinaturaCalculada = '';\n}\nconst assinaturaValida = !!assinaturaCalculada && assinaturaRecebida === 'sha256=' + assinaturaCalculada;\nconst modoAssinatura = String(cfg.modoAssinatura || 'avisar').toLowerCase();\n\nif (modoAssinatura === 'bloquear' && !assinaturaValida) {\n  return [{ json: { tipo: 'ignorar', motivo: 'assinatura_invalida', assinaturaValida } }];\n}\n\nconst eventos = [];\nfor (const entry of body.entry || []) {\n  for (const ev of entry.messaging || []) eventos.push({ ev, contaEntrada: entry.id });\n  for (const ch of entry.changes || []) {\n    if (ch.field === 'messages' && ch.value) eventos.push({ ev: ch.value, contaEntrada: entry.id });\n  }\n}\neventos.sort((a, b) => Number(a.ev.timestamp || 0) - Number(b.ev.timestamp || 0));\n\nconst comandoVoltar = String(cfg.comandoVoltarMaya || '#maya').toLowerCase().trim();\nconst ttlPausa = Math.max(60, Math.round(Number(cfg.horasPausaHumano || 6) * 3600));\nconst saida = [];\n\nfor (const { ev, contaEntrada } of eventos) {\n  const msg = ev.message;\n  if (!msg && !ev.postback) {\n    const motivo = ev.read ? 'leitura' : ev.reaction ? 'reacao' : ev.message_edit ? 'edicao' : ev.delivery ? 'entrega' : 'outro_evento';\n    saida.push({ json: { tipo: 'ignorar', motivo, assinaturaValida } });\n    continue;\n  }\n  if (msg && (msg.is_deleted || msg.is_unsupported)) {\n    saida.push({ json: { tipo: 'ignorar', motivo: msg.is_deleted ? 'mensagem_apagada' : 'nao_suportada', assinaturaValida } });\n    continue;\n  }\n\n  // Em mensagens \"from me\" (eco) a Meta inverte os papéis: quem envia é a\n  // conta do FlyControl e o cliente aparece como destinatário.\n  const ehEco = msg?.is_echo === true;\n  const clienteId = String(ehEco ? (ev.recipient?.id || '') : (ev.sender?.id || ''));\n  const contaId = String((ehEco ? ev.sender?.id : ev.recipient?.id) || contaEntrada || cfg.igContaId || '');\n  if (!clienteId) {\n    saida.push({ json: { tipo: 'ignorar', motivo: 'sem_cliente', assinaturaValida } });\n    continue;\n  }\n\n  const timestamp = Number(ev.timestamp || Date.now());\n  const mid = String(msg?.mid || ev.postback?.mid || `${clienteId}-${timestamp}`);\n  const anexo = (msg?.attachments || [])[0] || null;\n  const tipoAnexo = String(anexo?.type || '');\n  const anexoUrl = String(anexo?.payload?.url || '');\n  let texto = String(msg?.text || ev.postback?.title || '').trim();\n\n  let tipo = 'texto';\n  if (ehEco) tipo = 'eco';\n  else if (tipoAnexo === 'audio' && anexoUrl) tipo = 'audio';\n  else if (tipoAnexo === 'image' && anexoUrl) tipo = 'imagem';\n\n  if (!ehEco) {\n    const complemento = texto ? ' ' + texto : '';\n    if (tipoAnexo === 'story_mention') texto = '[O cliente mencionou o perfil do FlyControl em um story dele]' + complemento;\n    else if (['share', 'ig_reel', 'reel', 'ig_post'].includes(tipoAnexo)) texto = '[O cliente compartilhou uma publicação ou reel do Instagram]' + complemento;\n    else if (tipoAnexo === 'video') texto = '[O cliente enviou um vídeo, que não consigo assistir]' + complemento;\n    else if (tipoAnexo === 'file') texto = '[O cliente enviou um arquivo, que não consigo abrir]' + complemento;\n    else if (tipoAnexo && tipo === 'texto') texto = '[O cliente enviou uma figurinha ou curtida]' + complemento;\n    if (msg?.reply_to?.story) texto = '[Resposta a um story do FlyControl] ' + texto;\n    if (tipo === 'texto' && !texto) texto = '[O cliente enviou uma mensagem sem texto]';\n    texto = texto.slice(0, 3000);\n  }\n\n  saida.push({\n    json: {\n      tipo,\n      clienteId,\n      contaId,\n      mid,\n      timestamp,\n      texto,\n      tipoAnexo,\n      anexoUrl,\n      comando: ehEco && comandoVoltar && texto.toLowerCase().includes(comandoVoltar) ? 'liberar' : '',\n      assinaturaValida,\n      ttlPausa,\n      chaveMid: `ig:mid:${mid}`,\n      chaveMarcaMaya: `ig:maya_mid:${mid}`,\n      chaveHumano: `ig:humano:${clienteId}`,\n      chaveRate: `ig:rate:${clienteId}`,\n      chaveBuffer: `ig:buffer:${clienteId}`,\n      chaveUltima: `ig:ultima:${clienteId}`,\n      chaveMemoria: `ig:memoria:${clienteId}`,\n      chaveLead: `ig:lead:${clienteId}`\n    }\n  });\n}\n\nreturn saida;\n"
+        "jsCode": "// Lê o pacote que a Meta mandou, confere a assinatura e separa cada evento\n// (uma chamada pode trazer várias mensagens) em um item padronizado.\nconst cfg = $('Configurações').first().json;\n// O Webhook tem duas saídas (GET e POST); a mensagem chega pela segunda.\n// A etapa da assinatura repassa o pedido inteiro, então lemos dela.\nconst req = $('Calcular Assinatura da Meta').first().json;\nconst headers = req.headers || {};\nconst body = req.body || {};\n\nconst assinaturaRecebida = String(headers['x-hub-signature-256'] || '');\nlet assinaturaCalculada = '';\ntry {\n  assinaturaCalculada = String($('Calcular Assinatura da Meta').first().json.assinaturaCalculada || '');\n} catch (e) {\n  assinaturaCalculada = '';\n}\nconst assinaturaValida = !!assinaturaCalculada && assinaturaRecebida === 'sha256=' + assinaturaCalculada;\nconst modoAssinatura = String(cfg.modoAssinatura || 'avisar').toLowerCase();\n\nif (modoAssinatura === 'bloquear' && !assinaturaValida) {\n  return [{ json: { tipo: 'ignorar', motivo: 'assinatura_invalida', assinaturaValida } }];\n}\n\nconst comandoVoltar = String(cfg.comandoVoltarMaya || '#maya').toLowerCase().trim();\nconst ttlPausa = Math.max(60, Math.round(Number(cfg.horasPausaHumano || 6) * 3600));\nconst saida = [];\n\n// Palavras que fazem um comentário virar conversa no Direct. \"*\" = qualquer comentário.\nconst semAcento = (t) => String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');\nconst palavras = String(cfg.palavrasComentario || '').split(',').map(semAcento).map(p => p.trim()).filter(Boolean);\nconst contaPropria = String(cfg.igContaId || '');\n\nconst eventos = [];\nfor (const entry of body.entry || []) {\n  for (const ev of entry.messaging || []) eventos.push({ ev, contaEntrada: entry.id });\n  for (const ch of entry.changes || []) {\n    if (ch.field === 'messages' && ch.value) eventos.push({ ev: ch.value, contaEntrada: entry.id });\n    if (ch.field === 'comments' && ch.value) {\n      const c = ch.value;\n      const autor = String(c.from?.id || '');\n      const textoComentario = String(c.text || '').trim();\n      const casou = palavras.includes('*') || palavras.some(p => semAcento(textoComentario).includes(p));\n      if (!c.id || !autor || autor === String(entry.id) || autor === contaPropria) {\n        saida.push({ json: { tipo: 'ignorar', motivo: 'comentario_da_propria_conta', assinaturaValida } });\n      } else if (!casou) {\n        saida.push({ json: { tipo: 'ignorar', motivo: 'comentario_sem_palavra_chave', assinaturaValida } });\n      } else {\n        saida.push({\n          json: {\n            tipo: 'comentario',\n            clienteId: autor,\n            contaId: String(entry.id || contaPropria),\n            comentarioId: String(c.id),\n            username: String(c.from?.username || ''),\n            texto: textoComentario.slice(0, 1000),\n            assinaturaValida,\n            ttlPausa,\n            chaveComentario: `ig:coment:${c.id}`,\n            chaveMemoria: `ig:memoria:${autor}`,\n            chaveHumano: `ig:humano:${autor}`\n          }\n        });\n      }\n    }\n  }\n}\neventos.sort((a, b) => Number(a.ev.timestamp || 0) - Number(b.ev.timestamp || 0));\n\nfor (const { ev, contaEntrada } of eventos) {\n  const msg = ev.message;\n  if (!msg && !ev.postback) {\n    const motivo = ev.read ? 'leitura' : ev.reaction ? 'reacao' : ev.message_edit ? 'edicao' : ev.delivery ? 'entrega' : 'outro_evento';\n    saida.push({ json: { tipo: 'ignorar', motivo, assinaturaValida } });\n    continue;\n  }\n  if (msg && (msg.is_deleted || msg.is_unsupported)) {\n    saida.push({ json: { tipo: 'ignorar', motivo: msg.is_deleted ? 'mensagem_apagada' : 'nao_suportada', assinaturaValida } });\n    continue;\n  }\n\n  // Em mensagens \"from me\" (eco) a Meta inverte os papéis: quem envia é a\n  // conta do FlyControl e o cliente aparece como destinatário.\n  const ehEco = msg?.is_echo === true;\n  const clienteId = String(ehEco ? (ev.recipient?.id || '') : (ev.sender?.id || ''));\n  const contaId = String((ehEco ? ev.sender?.id : ev.recipient?.id) || contaEntrada || cfg.igContaId || '');\n  if (!clienteId) {\n    saida.push({ json: { tipo: 'ignorar', motivo: 'sem_cliente', assinaturaValida } });\n    continue;\n  }\n\n  const timestamp = Number(ev.timestamp || Date.now());\n  const mid = String(msg?.mid || ev.postback?.mid || `${clienteId}-${timestamp}`);\n  const anexo = (msg?.attachments || [])[0] || null;\n  const tipoAnexo = String(anexo?.type || '');\n  const anexoUrl = String(anexo?.payload?.url || '');\n  let texto = String(msg?.text || ev.postback?.title || '').trim();\n\n  let tipo = 'texto';\n  if (ehEco) tipo = 'eco';\n  else if (tipoAnexo === 'audio' && anexoUrl) tipo = 'audio';\n  else if (tipoAnexo === 'image' && anexoUrl) tipo = 'imagem';\n\n  if (!ehEco) {\n    const complemento = texto ? ' ' + texto : '';\n    if (tipoAnexo === 'story_mention') texto = '[O cliente mencionou o perfil do FlyControl em um story dele]' + complemento;\n    else if (['share', 'ig_reel', 'reel', 'ig_post'].includes(tipoAnexo)) texto = '[O cliente compartilhou uma publicação ou reel do Instagram]' + complemento;\n    else if (tipoAnexo === 'video') texto = '[O cliente enviou um vídeo, que não consigo assistir]' + complemento;\n    else if (tipoAnexo === 'file') texto = '[O cliente enviou um arquivo, que não consigo abrir]' + complemento;\n    else if (tipoAnexo && tipo === 'texto') texto = '[O cliente enviou uma figurinha ou curtida]' + complemento;\n    if (msg?.reply_to?.story) texto = '[Resposta a um story do FlyControl] ' + texto;\n    if (tipo === 'texto' && !texto) texto = '[O cliente enviou uma mensagem sem texto]';\n    texto = texto.slice(0, 3000);\n  }\n\n  saida.push({\n    json: {\n      tipo,\n      clienteId,\n      contaId,\n      mid,\n      timestamp,\n      texto,\n      tipoAnexo,\n      anexoUrl,\n      comando: ehEco && comandoVoltar && texto.toLowerCase().includes(comandoVoltar) ? 'liberar' : '',\n      assinaturaValida,\n      ttlPausa,\n      chaveMid: `ig:mid:${mid}`,\n      chaveMarcaMaya: `ig:maya_mid:${mid}`,\n      chaveHumano: `ig:humano:${clienteId}`,\n      chaveRate: `ig:rate:${clienteId}`,\n      chaveBuffer: `ig:buffer:${clienteId}`,\n      chaveUltima: `ig:ultima:${clienteId}`,\n      chaveMemoria: `ig:memoria:${clienteId}`,\n      chaveLead: `ig:lead:${clienteId}`\n    }\n  });\n}\n\nreturn saida;\n"
       }
     },
     {
@@ -276,92 +300,114 @@
         "rules": {
           "values": [
             {
-              "outputKey": "Eco (from me)",
-              "renameOutput": true,
               "conditions": {
-                "options": {
-                  "caseSensitive": true,
-                  "leftValue": "",
-                  "typeValidation": "strict"
-                },
+                "combinator": "and",
                 "conditions": [
                   {
                     "leftValue": "={{ $json.tipo }}",
                     "operator": {
-                      "type": "string",
-                      "operation": "equals"
+                      "operation": "equals",
+                      "type": "string"
                     },
                     "rightValue": "eco"
                   }
                 ],
-                "combinator": "and"
-              }
-            },
-            {
-              "outputKey": "Mensagem do cliente",
-              "renameOutput": true,
-              "conditions": {
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
                   "typeValidation": "strict"
-                },
+                }
+              },
+              "outputKey": "Eco (from me)",
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "combinator": "and",
                 "conditions": [
                   {
                     "leftValue": "={{ $json.tipo }}",
                     "operator": {
-                      "type": "string",
-                      "operation": "equals"
+                      "operation": "equals",
+                      "type": "string"
                     },
                     "rightValue": "texto"
                   }
                 ],
-                "combinator": "and"
-              }
-            },
-            {
-              "outputKey": "Áudio do cliente",
-              "renameOutput": true,
-              "conditions": {
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
                   "typeValidation": "strict"
-                },
+                }
+              },
+              "outputKey": "Mensagem do cliente",
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "combinator": "and",
                 "conditions": [
                   {
                     "leftValue": "={{ $json.tipo }}",
                     "operator": {
-                      "type": "string",
-                      "operation": "equals"
+                      "operation": "equals",
+                      "type": "string"
                     },
                     "rightValue": "audio"
                   }
                 ],
-                "combinator": "and"
-              }
-            },
-            {
-              "outputKey": "Imagem do cliente",
-              "renameOutput": true,
-              "conditions": {
                 "options": {
                   "caseSensitive": true,
                   "leftValue": "",
                   "typeValidation": "strict"
-                },
+                }
+              },
+              "outputKey": "Áudio do cliente",
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "combinator": "and",
                 "conditions": [
                   {
                     "leftValue": "={{ $json.tipo }}",
                     "operator": {
-                      "type": "string",
-                      "operation": "equals"
+                      "operation": "equals",
+                      "type": "string"
                     },
                     "rightValue": "imagem"
                   }
                 ],
-                "combinator": "and"
-              }
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                }
+              },
+              "outputKey": "Imagem do cliente",
+              "renameOutput": true
+            },
+            {
+              "conditions": {
+                "combinator": "and",
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.tipo }}",
+                    "operator": {
+                      "operation": "equals",
+                      "type": "string"
+                    },
+                    "rightValue": "comentario"
+                  }
+                ],
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict"
+                }
+              },
+              "outputKey": "Comentário em post",
+              "renameOutput": true
             }
           ]
         },
@@ -1627,6 +1673,232 @@
         "width": 1504,
         "height": 416
       }
+    },
+    {
+      "id": "bf499a1a-ec61-46d0-aafa-34c56f0c16bf",
+      "name": "Evitar Comentário Duplicado",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        1568,
+        1180
+      ],
+      "parameters": {
+        "expire": true,
+        "key": "={{ $('Separar Eventos').item.json.chaveComentario }}",
+        "operation": "incr",
+        "ttl": 604800
+      },
+      "credentials": {
+        "redis": {
+          "id": "e2eRXUcbgqilvX05",
+          "name": "ivaodonto"
+        }
+      }
+    },
+    {
+      "id": "b1f21365-93e6-4602-af4f-76bc98aca5d8",
+      "name": "Comentário Novo?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1792,
+        1180
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ Number($json[$('Separar Eventos').item.json.chaveComentario] ?? 1) }}",
+              "operator": {
+                "operation": "equals",
+                "type": "number"
+              },
+              "rightValue": 1
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          }
+        },
+        "looseTypeValidation": true
+      }
+    },
+    {
+      "id": "73b86b6e-3fb3-40b7-9125-6f92e3fc0410",
+      "name": "Fim - Comentário Já Respondido",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [
+        2016,
+        1360
+      ],
+      "parameters": {}
+    },
+    {
+      "id": "94714012-b23a-4392-be57-27f413022af3",
+      "name": "Chamar no Direct (Resposta Privada)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2016,
+        1180
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "jsonBody": "={{ JSON.stringify({ recipient: { comment_id: $('Separar Eventos').item.json.comentarioId }, message: { text: $('Configurações').first().json.mensagemComentario } }) }}",
+        "method": "POST",
+        "options": {
+          "timeout": 20000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "=https://graph.instagram.com/{{ $('Configurações').first().json.graphVersao }}/{{ $('Configurações').first().json.igContaId }}/messages"
+      },
+      "onError": "continueRegularOutput",
+      "retryOnFail": true,
+      "maxTries": 3,
+      "waitBetweenTries": 2000,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iZqrTGljfgrsPx7I",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "id": "cc793139-6dfc-4719-aef3-a043ee51ec6c",
+      "name": "Registrar Direct como da Maya",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2240,
+        1180
+      ],
+      "parameters": {
+        "expire": true,
+        "key": "=ig:maya_mid:{{ $json.message_id }}",
+        "keyType": "string",
+        "operation": "set",
+        "ttl": 86400,
+        "value": "1"
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "redis": {
+          "id": "e2eRXUcbgqilvX05",
+          "name": "ivaodonto"
+        }
+      }
+    },
+    {
+      "id": "4332e66a-cd32-4fab-964b-e824b3d0f98f",
+      "name": "Memória: Comentário do Cliente",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2464,
+        1180
+      ],
+      "parameters": {
+        "list": "={{ $('Separar Eventos').item.json.chaveMemoria }}",
+        "messageData": "={{ JSON.stringify({ type: 'human', data: { content: '[O cliente comentou em um post do FlyControl: \"' + $('Separar Eventos').item.json.texto + '\". A Maya chamou o cliente no Direct.]', additional_kwargs: {}, response_metadata: {} } }) }}",
+        "operation": "push",
+        "tail": false
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "redis": {
+          "id": "e2eRXUcbgqilvX05",
+          "name": "ivaodonto"
+        }
+      }
+    },
+    {
+      "id": "2752c757-975b-4c4e-bcb8-5b800f738142",
+      "name": "Memória: Mensagem da Maya",
+      "type": "n8n-nodes-base.redis",
+      "typeVersion": 1,
+      "position": [
+        2688,
+        1180
+      ],
+      "parameters": {
+        "list": "={{ $('Separar Eventos').item.json.chaveMemoria }}",
+        "messageData": "={{ JSON.stringify({ type: 'ai', data: { content: $('Configurações').first().json.mensagemComentario, tool_calls: [], invalid_tool_calls: [], additional_kwargs: {}, response_metadata: {} } }) }}",
+        "operation": "push",
+        "tail": false
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "redis": {
+          "id": "e2eRXUcbgqilvX05",
+          "name": "ivaodonto"
+        }
+      }
+    },
+    {
+      "id": "f8c4b2f9-4439-46a4-9ce3-a26eba78458c",
+      "name": "Responder Comentário em Público?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        2912,
+        1180
+      ],
+      "parameters": {
+        "conditions": {
+          "combinator": "and",
+          "conditions": [
+            {
+              "leftValue": "={{ $('Configurações').first().json.responderComentarioPublico }}",
+              "operator": {
+                "operation": "true",
+                "type": "boolean"
+              }
+            }
+          ],
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose"
+          }
+        },
+        "looseTypeValidation": true
+      }
+    },
+    {
+      "id": "acb6849c-9d79-431e-a1df-6afea2816311",
+      "name": "Responder no Post: Te Chamei no Direct",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        3136,
+        1180
+      ],
+      "parameters": {
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "jsonBody": "={{ JSON.stringify({ message: $('Configurações').first().json.respostaPublicaComentario }) }}",
+        "method": "POST",
+        "options": {
+          "timeout": 20000
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "url": "=https://graph.instagram.com/{{ $('Configurações').first().json.graphVersao }}/{{ $('Separar Eventos').item.json.comentarioId }}/replies"
+      },
+      "onError": "continueRegularOutput",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "iZqrTGljfgrsPx7I",
+          "name": "Header Auth account"
+        }
+      }
     }
   ],
   "connections": {
@@ -1754,6 +2026,13 @@
         [
           {
             "node": "Evitar Mensagem Duplicada",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Evitar Comentário Duplicado",
             "type": "main",
             "index": 0
           }
@@ -2263,6 +2542,90 @@
           }
         ]
       ]
+    },
+    "Evitar Comentário Duplicado": {
+      "main": [
+        [
+          {
+            "node": "Comentário Novo?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Comentário Novo?": {
+      "main": [
+        [
+          {
+            "node": "Chamar no Direct (Resposta Privada)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fim - Comentário Já Respondido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chamar no Direct (Resposta Privada)": {
+      "main": [
+        [
+          {
+            "node": "Registrar Direct como da Maya",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Registrar Direct como da Maya": {
+      "main": [
+        [
+          {
+            "node": "Memória: Comentário do Cliente",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória: Comentário do Cliente": {
+      "main": [
+        [
+          {
+            "node": "Memória: Mensagem da Maya",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Memória: Mensagem da Maya": {
+      "main": [
+        [
+          {
+            "node": "Responder Comentário em Público?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Responder Comentário em Público?": {
+      "main": [
+        [
+          {
+            "node": "Responder no Post: Te Chamei no Direct",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
     }
   },
   "settings": {
@@ -2332,6 +2695,22 @@
         "Avisar Equipe por E-mail"
       ],
       "description": "Salva a ficha do lead e, se precisar de atendente, cala a Maya e avisa a equipe por e-mail."
+    },
+    {
+      "id": "c5912fc5-3722-40f1-947a-4af082f96f7b",
+      "name": "5. Comentário vira Direct",
+      "nodeNames": [
+        "Evitar Comentário Duplicado",
+        "Comentário Novo?",
+        "Fim - Comentário Já Respondido",
+        "Chamar no Direct (Resposta Privada)",
+        "Registrar Direct como da Maya",
+        "Memória: Comentário do Cliente",
+        "Memória: Mensagem da Maya",
+        "Responder Comentário em Público?",
+        "Responder no Post: Te Chamei no Direct"
+      ],
+      "description": "Comentou com palavra-chave (preço, quero, info...)? A Maya chama no Direct e responde no post."
     }
   ]
 }

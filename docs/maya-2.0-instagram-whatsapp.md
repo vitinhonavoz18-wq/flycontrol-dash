@@ -3,10 +3,9 @@
 | Canal | Fluxo no n8n | Situação |
 |---|---|---|
 | Instagram | **instagram mensagens - MAYA 2.0** (`tFGrw9RxPg2OLolo`) | **No ar** desde 26/10/2026. A v3 foi desligada (continua guardada). |
-| WhatsApp | **whatsapp mensagens - MAYA 2.0** (`LsrPRHQiKBhtus7K`) | Ligado em **modo simulado**: pensa e responde, mas não envia nada. Falta a conexão da UAZAPI. |
+| WhatsApp | **whatsapp mensagens - MAYA 2.0** (`LsrPRHQiKBhtus7K`) | **Desligado** a pedido do dono: o WhatsApp já tem fluxo próprio. Fica guardado no n8n. |
 
-Cópias de segurança (sem endereços nem senhas): `docs/fluxo-n8n-instagram-maya-2.0.json` e
-`docs/fluxo-n8n-whatsapp-maya-2.0.json`.
+Cópia de segurança (sem endereço nem senhas): `docs/fluxo-n8n-instagram-maya-2.0.json`.
 
 ## O que a 2.0 faz (nos dois canais)
 
@@ -27,6 +26,35 @@ Cópias de segurança (sem endereços nem senhas): `docs/fluxo-n8n-instagram-may
 - Instagram: mostra "digitando...". WhatsApp: divide a resposta em até 4 balões, com tempo de
   digitação.
 
+## Novo: comentário vira conversa no Direct (Instagram)
+
+Quando alguém comenta num post com uma palavra como *preço, valor, quanto, quero, info, cadastro,
+teste, link, plano, direct*, a Maya:
+
+1. manda uma mensagem no Direct da pessoa (resposta privada; uma por comentário);
+2. responde no post: "Te chamei no Direct! 💬";
+3. anota na memória que chamou a pessoa, para continuar a conversa quando ela responder.
+
+Comentário sem palavra-chave ("que lindo!") e comentário da própria conta são ignorados. A lista de
+palavras, a mensagem do Direct e a resposta pública ficam no nó **Configurações**
+(`palavrasComentario`, `mensagemComentario`, `respostaPublicaComentario`). Use `*` na lista para
+responder qualquer comentário. Para não responder no post, troque `responderComentarioPublico` para
+`false`.
+
+**Para funcionar de verdade**, no app da Meta (Webhooks → Instagram) o campo **comments** precisa estar
+assinado, e o acesso precisa ter a permissão de gerenciar comentários. Enquanto o campo não estiver
+assinado, a Meta não manda os comentários e essa parte simplesmente não roda.
+
+## Confirmado com cliente real (26/10/2026, 15:19)
+
+Alguém da equipe respondeu um cliente pelo app do Instagram ("fazemos a implementação grátis") e a
+Maya se travou sozinha naquela conversa, como deveria.
+
+Na mesma mensagem real, a conferência de assinatura da Meta deu **inválida**: a chave guardada na
+credencial "Meta App Secret (Crypto)" não é a do app do Instagram. Por isso `modoAssinatura` continua
+em `avisar`. Troque a chave pela "Chave secreta do app do Instagram" (painel da Meta → Instagram →
+Configuração da API com login do Instagram) e só depois mude para `bloquear`.
+
 ## Testes feitos em 26/10/2026 (clientes fictícios, nenhum cliente real recebeu nada)
 
 | Teste | Instagram | WhatsApp |
@@ -39,6 +67,9 @@ Cópias de segurança (sem endereços nem senhas): `docs/fluxo-n8n-instagram-may
 | `#maya` devolve a conversa | ✅ | ✅ |
 | Cliente pede atendente → transfere e trava | ✅ | ✅ |
 | Grupo e aviso de conexão ignorados | — | ✅ |
+| Comentário com "preço" → chama no Direct | ✅ (caminho certo; falhou só por ser comentário fictício) | — |
+| Comentário "que lindo" / repetido | ✅ ignorados | — |
+| Cliente responde o Direct do comentário | ✅ Maya continuou a conversa | — |
 | Verificação da Meta com senha errada → recusa | ✅ (403) | — |
 
 ## Problemas encontrados e corrigidos durante os testes
