@@ -11,6 +11,8 @@ import { ProductList } from "./ProductList";
 import { ExtraList } from "./ExtraList";
 import { PizzaSizeList } from "./PizzaSizeList";
 import { PizzeriaConfig } from "./PizzeriaConfig";
+import { PizzariaPremium } from "./PizzariaPremium";
+import { ehPizzaria } from "@/lib/pizza/catalogoDoPainel";
 import { MenuSyncSection } from "./MenuSyncSection";
 import { MenuTemplatePicker } from "./MenuTemplatePicker";
 import { MenuImportDialog } from "./MenuImportDialog";
@@ -29,11 +31,17 @@ interface MenuManagerProps {
  * eles que a tela sabe qual lista abrir, então trocar a placa não troca a
  * prateleira.
  */
-function abasDoCardapio(v: ReturnType<typeof vocabularioDaLoja>): readonly ScrollableTabItem[] {
+function abasDoCardapio(
+  v: ReturnType<typeof vocabularioDaLoja>,
+  pizzaria: boolean,
+): readonly ScrollableTabItem[] {
   return [
     { value: "categories", label: "Categorias" },
     { value: "products", label: v.abaProdutos },
     { value: "pizza_sizes", label: v.abaTamanhos },
+    // Só aparece para quem usa o layout de pizzaria: uma farmácia não tem
+    // meio a meio nem borda.
+    ...(pizzaria ? [{ value: "pizzaria", label: "Pizzaria" }] : []),
     { value: "beverages", label: "Bebidas" },
     { value: "extras", label: v.abaExtras },
     { value: "config", label: "Config.", emphasis: true },
@@ -136,6 +144,7 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
   }
 
   const vocabulario = vocabularioDaLoja(pizzeria);
+  const pizzaria = ehPizzaria(pizzeria);
 
   return (
     <div className="space-y-4">
@@ -156,7 +165,11 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <ScrollableTabs items={abasDoCardapio(vocabulario)} value={activeTab} className="mb-2" />
+        <ScrollableTabs
+          items={abasDoCardapio(vocabulario, pizzaria)}
+          value={activeTab}
+          className="mb-2"
+        />
 
         <div className="mt-6">
           <TabsContent value="categories" className="m-0 focus-visible:outline-none">
@@ -196,6 +209,18 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
               onRefresh={handleLocalRefresh}
             />
           </TabsContent>
+
+          {pizzaria && (
+            <TabsContent value="pizzaria" className="m-0 focus-visible:outline-none">
+              <PizzariaPremium
+                key={`pizzaria-${refreshKey}`}
+                pizzeriaId={pizzeriaId}
+                pizzeria={pizzeria}
+                categories={categories}
+                onRefresh={loadPizzeria}
+              />
+            </TabsContent>
+          )}
 
           <TabsContent value="beverages" className="m-0 focus-visible:outline-none">
             <ProductList

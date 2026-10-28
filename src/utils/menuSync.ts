@@ -424,6 +424,12 @@ function prepareDataForExternal(type: MenuType, data: any) {
       active: data.active !== undefined ? data.active : true,
       category_id: normalizedCategoryId,
       max_extras: data.max_extras ?? null,
+      // Campos da Pizzaria Premium. Só viajam quando a aba "Pizzaria" manda
+      // (`null`/ausente vira `undefined` e some do pacote). Assim o salvar de
+      // sempre — e a sincronização em massa — não depende de o banco do site
+      // já ter estas colunas.
+      pizza_size_prices_cents: data.pizza_size_prices_cents ?? undefined,
+      ingredients: data.ingredients ?? undefined,
     };
   }
 
@@ -452,6 +458,9 @@ function prepareDataForExternal(type: MenuType, data: any) {
       category_ids: Array.isArray(data.category_ids)
         ? data.category_ids.map(normalizeExternalId)
         : undefined,
+      // Pizzaria Premium — mesmo cuidado dos produtos: só quando informados.
+      pizza_size_prices_cents: data.pizza_size_prices_cents ?? undefined,
+      max_quantity: data.max_quantity ?? undefined,
     };
   }
 
