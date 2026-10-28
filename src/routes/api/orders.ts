@@ -331,6 +331,35 @@ export const Route = createFileRoute("/api/orders")({
             );
           }
 
+          // Pizzas montadas no configurador chegam com a "fotografia" da
+          // pizza (sabores, frações, borda, adicionais e preços). Conferimos
+          // se a conta dela fecha antes de gravar — ver
+          // `lib/pizza/conferirItensRecebidos.ts`. Pedidos sem pizza do
+          // configurador seguem exatamente como antes.
+          {
+            const { conferirItensRecebidos } = await import("@/lib/pizza/conferirItensRecebidos");
+            const conferencia = conferirItensRecebidos({
+              itens: items,
+              subtotalEnviado: orderData.subtotal ?? body.subtotal,
+            });
+            if (!conferencia.ok) {
+              console.warn(`❌ [API/Orders] Pizza recusada: ${conferencia.motivo}`);
+              await logExternalOrder(apiKey, body, 422, `Pizza recusada: ${conferencia.motivo}`);
+              return new Response(
+                JSON.stringify({
+                  success: false,
+                  error: conferencia.motivo,
+                  message:
+                    conferencia.motivo === "subtotal_inconsistente"
+                      ? "O subtotal do pedido não confere com a soma dos itens."
+                      : "A conta de uma das pizzas não fecha. O pedido não foi gravado.",
+                  details: conferencia,
+                }),
+                { status: 422, headers: cors },
+              );
+            }
+          }
+
           // 3. Detecção/validação de Mesa (detecta por presença de table_number/token OU dining_session_id)
           const rawDeliveryType = (
             orderData.delivery_type ||
@@ -849,7 +878,10 @@ export const Route = createFileRoute("/api/orders")({
                 quantity: Number(it.quantity || 1),
                 unit_price: parseMoney(it.unit_price || it.price || 0),
                 total_price: Number(it.quantity || 1) * parseMoney(it.unit_price || it.price || 0),
-                observations: it.notes || it.observacao || it.item_notes || null,
+                // Pizza do configurador: a descrição completa (frações, borda,
+                // adicionais, "sem cebola", observação) é o que a cozinha lê.
+                observations:
+                  it.pizza?.descricao || it.notes || it.observacao || it.item_notes || null,
               }));
               await (supabaseAdmin.from("order_items") as any).insert(orderItemsToInsert);
             } catch (err) {

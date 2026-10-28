@@ -1,3 +1,5 @@
+import type { RegistroDaPizza } from "@/lib/pizza/motorDePreco";
+
 export type OrderItem = {
   name?: string;
   title?: string;
@@ -22,6 +24,12 @@ export type OrderItem = {
   observations?: string;
   observacao?: string;
   item_notes?: string;
+  /**
+   * Fotografia da pizza montada no configurador: sabores com fração, borda,
+   * adicionais, retirados, regra e preços em centavos, como estavam na hora
+   * do pedido. Pedidos antigos não têm. Ver `lib/pizza/motorDePreco.ts`.
+   */
+  pizza?: RegistroDaPizza;
 };
 
 export type Order = {
