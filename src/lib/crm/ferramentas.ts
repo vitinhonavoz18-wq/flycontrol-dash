@@ -60,13 +60,19 @@ export function procurarProdutos(
   for (const item of itensDoCatalogo(catalogo)) {
     const nome = normalizar(item.nome);
     const descricao = normalizar(item.descricao ?? "");
+    // O nome com a seção na frente: "Cuscuz Manteiga", "Tapioca Salgada
+    // Manteiga". Existe porque há lojas com o MESMO nome em seções diferentes,
+    // e cada um com seu preço — é o garçom que precisa ouvir "manteiga DO
+    // CUSCUZ" para não lançar a tapioca de manteiga na comanda.
+    const comSecao = normalizar(`${item.categoria ?? ""} ${item.nome}`);
 
     let pontos = 0;
-    if (nome === alvo) pontos = 100;
+    if (nome === alvo || comSecao === alvo) pontos = 100;
     else if (nome.startsWith(alvo)) pontos = 80;
     else if (nome.includes(alvo)) pontos = 60;
     else if (palavras.length > 0 && palavras.every((p) => nome.includes(p))) pontos = 40;
     else if (descricao.includes(alvo)) pontos = 20;
+    else if (palavras.length > 0 && palavras.every((p) => comSecao.includes(p))) pontos = 15;
     else if (palavras.length > 0 && palavras.every((p) => descricao.includes(p))) pontos = 10;
 
     if (pontos > 0) achados.push({ ...item, pontos });
@@ -75,6 +81,24 @@ export function procurarProdutos(
   return achados
     .sort((a, b) => b.pontos - a.pontos || a.nome.localeCompare(b.nome, "pt-BR"))
     .slice(0, Math.max(1, Math.min(limite, 25)));
+}
+
+/**
+ * Uma SEÇÃO inteira do cardápio, quando a busca é o nome dela.
+ *
+ * Cardápio grande chega à IA resumido (só exemplos de cada seção). Sem isto,
+ * "quais tapiocas salgadas vocês têm?" virava uma busca que devolve 8 de 24 —
+ * o garçom que lê só a primeira página do cardápio. Com isto, a IA pede
+ * "Tapioca Salgada" e recebe a seção completa.
+ *
+ * Devolve `null` quando o termo não é o nome de nenhuma seção, para quem
+ * chama seguir com a busca normal.
+ */
+export function itensDaSecao(catalogo: Catalogo, termo: string): ItemCardapio[] | null {
+  const alvo = normalizar(termo);
+  if (!alvo) return null;
+  const secao = catalogo.cardapio.find((c) => normalizar(c.categoria) === alvo);
+  return secao && secao.itens.length > 0 ? secao.itens : null;
 }
 
 export type ItemPedido = { nome: string; quantidade: number; observacao?: string | null };
