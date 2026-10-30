@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   procurarProdutos,
+  itensDaSecao,
   casarItens,
   taxaDoBairro,
   taxaParaCentavos,
@@ -94,6 +95,56 @@ describe("procurar produto no cardápio", () => {
 
   it("produto que não existe não é inventado", () => {
     expect(procurarProdutos(catalogo, "sushi de salmão")).toHaveLength(0);
+  });
+});
+
+describe("mesmo nome em seções diferentes (tapiocaria)", () => {
+  const tapiocaria = {
+    ...catalogo,
+    cardapio: [
+      {
+        categoria: "Tapioca Salgada",
+        itens: [
+          {
+            id: "t1",
+            nome: "Manteiga",
+            descricao: null,
+            preco_cents: 500,
+            categoria: "Tapioca Salgada",
+          },
+        ],
+      },
+      {
+        categoria: "Cuscuz",
+        itens: [
+          { id: "c1", nome: "Manteiga", descricao: null, preco_cents: 600, categoria: "Cuscuz" },
+        ],
+      },
+    ],
+  } as unknown as Catalogo;
+
+  it("a seção na frente do nome escolhe o item certo", () => {
+    expect(procurarProdutos(tapiocaria, "Cuscuz Manteiga")[0]?.id).toBe("c1");
+    expect(procurarProdutos(tapiocaria, "Tapioca Salgada Manteiga")[0]?.id).toBe("t1");
+    expect(procurarProdutos(tapiocaria, "tapioca manteiga")[0]?.id).toBe("t1");
+  });
+
+  it("o pedido sai com o preço da seção pedida", () => {
+    const r = casarItens(tapiocaria, [{ nome: "Cuscuz Manteiga", quantidade: 2 }]);
+    expect(r.itens[0]?.menu_product_id).toBe("c1");
+    expect(r.subtotal_cents).toBe(1200);
+  });
+
+  it("buscar pelo nome da seção traz a seção inteira", () => {
+    expect(itensDaSecao(tapiocaria, "cuscuz")?.map((i) => i.id)).toEqual(["c1"]);
+    expect(itensDaSecao(tapiocaria, "TAPIOCA SALGADA")?.map((i) => i.id)).toEqual(["t1"]);
+    expect(itensDaSecao(tapiocaria, "manteiga")).toBeNull();
+    expect(itensDaSecao(tapiocaria, "  ")).toBeNull();
+  });
+
+  it("a seção sozinha não tira o lugar de quem bate pelo nome", () => {
+    expect(procurarProdutos(catalogo, "pasteis")).toHaveLength(3);
+    expect(procurarProdutos(catalogo, "Pastel Misto")[0]?.id).toBe("p3");
   });
 });
 

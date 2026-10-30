@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { montarCatalogo } from "@/lib/crm/catalogo";
-import { procurarProdutos, listarCardapio, emReais } from "@/lib/crm/ferramentas";
+import { procurarProdutos, itensDaSecao, listarCardapio, emReais } from "@/lib/crm/ferramentas";
 import { rotaDoCrm, respostaCrm, textoOpcional } from "@/lib/crm/rotaCrm";
 
 /**
@@ -59,7 +59,8 @@ export const Route = createFileRoute("/api/crm/products")({
           });
         }
 
-        const achados = procurarProdutos(catalogo, busca, 8);
+        const secao = itensDaSecao(catalogo, busca);
+        const achados = secao ?? procurarProdutos(catalogo, busca, 8);
 
         const linhas = achados.map((p) => ({
           nome: p.nome,
@@ -73,7 +74,10 @@ export const Route = createFileRoute("/api/crm/products")({
           ? [
               `Produtos encontrados para "${busca}":`,
               ...linhas.map(
-                (l) => `- ${l.nome} — ${l.preco}${l.descricao ? ` (${l.descricao})` : ""}`,
+                // A seção vai junto: "Manteiga" da tapioca e do cuscuz têm
+                // preços diferentes, e a IA precisa saber qual é qual.
+                (l) =>
+                  `- ${l.nome} [${l.categoria}] — ${l.preco}${l.descricao ? ` (${l.descricao})` : ""}`,
               ),
               "",
               "Use EXATAMENTE estes nomes e preços. Não invente valor.",
