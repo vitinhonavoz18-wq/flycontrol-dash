@@ -62,6 +62,7 @@ type Pizzeria = {
   status_text_preparando?: string | null;
   status_text_saiu?: string | null;
   status_text_entregue?: string | null;
+  status_auto_send?: boolean | null;
 };
 
 type PizzeriaForm = {
@@ -462,7 +463,16 @@ function Dashboard() {
 
   function openStatusArtModal(order: Order, status: string) {
     const kind = getFlyStatusKind(status);
-    if (kind) setFlyStatus({ open: true, kind, order });
+    if (!kind) return;
+    // Com o envio automático ligado, o aviso já entrou na fila pelo banco.
+    // Abrir a janela aqui convidaria o dono a mandar a mesma mensagem de novo.
+    if (active?.status_auto_send) {
+      if (order.customer_phone) {
+        toast.success("O cliente será avisado pelo WhatsApp automaticamente.");
+      }
+      return;
+    }
+    setFlyStatus({ open: true, kind, order });
   }
 
   async function createPizzeria(form: PizzeriaForm) {

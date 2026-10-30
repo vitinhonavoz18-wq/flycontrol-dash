@@ -82,6 +82,7 @@ import { Route as ApiCrmDeliveryFeeRouteImport } from './routes/api/crm.delivery
 import { Route as ApiCrmInboxRouteImport } from './routes/api/crm.inbox'
 import { Route as ApiCrmMessageMediaRouteImport } from './routes/api/crm.message-media'
 import { Route as ApiCrmOrderRouteImport } from './routes/api/crm.order'
+import { Route as ApiCrmOrderNotificationsRouteImport } from './routes/api/crm.order-notifications'
 import { Route as ApiCrmOrderStatusRouteImport } from './routes/api/crm.order-status'
 import { Route as ApiCrmOutboxRouteImport } from './routes/api/crm.outbox'
 import { Route as ApiCrmPingRouteImport } from './routes/api/crm.ping'
@@ -107,6 +108,7 @@ import { Route as AppAdminAffiliatesCommissionsRouteImport } from './routes/_app
 import { Route as AppAdminAffiliatesReferralsRouteImport } from './routes/_app/admin/affiliates.referrals'
 import { Route as AppAdminAffiliatesSettingsRouteImport } from './routes/_app/admin/affiliates.settings'
 import { Route as AppAdminAffiliatesWithdrawalsRouteImport } from './routes/_app/admin/affiliates.withdrawals'
+import { Route as ApiCrmOrderNotificationsResultRouteImport } from './routes/api/crm.order-notifications.result'
 import { Route as ApiCrmOutboxResultRouteImport } from './routes/api/crm.outbox.result'
 import { Route as ApiFlydeliveryPagamentosConciliarRouteImport } from './routes/api/flydelivery.pagamentos.conciliar'
 import { Route as ApiFlydeliveryPagamentosPixRouteImport } from './routes/api/flydelivery.pagamentos.pix'
@@ -491,6 +493,12 @@ const ApiCrmOrderRoute = ApiCrmOrderRouteImport.update({
   path: '/api/crm/order',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiCrmOrderNotificationsRoute =
+  ApiCrmOrderNotificationsRouteImport.update({
+    id: '/api/crm/order-notifications',
+    path: '/api/crm/order-notifications',
+    getParentRoute: () => rootRouteImport,
+  } as any)
 const ApiCrmOrderStatusRoute = ApiCrmOrderStatusRouteImport.update({
   id: '/api/crm/order-status',
   path: '/api/crm/order-status',
@@ -624,6 +632,12 @@ const AppAdminAffiliatesWithdrawalsRoute =
     path: '/withdrawals',
     getParentRoute: () => AppAdminAffiliatesRoute,
   } as any)
+const ApiCrmOrderNotificationsResultRoute =
+  ApiCrmOrderNotificationsResultRouteImport.update({
+    id: '/result',
+    path: '/result',
+    getParentRoute: () => ApiCrmOrderNotificationsRoute,
+  } as any)
 const ApiCrmOutboxResultRoute = ApiCrmOutboxResultRouteImport.update({
   id: '/result',
   path: '/result',
@@ -756,6 +770,7 @@ export interface FileRoutesByFullPath {
   '/api/crm/inbox': typeof ApiCrmInboxRoute
   '/api/crm/message-media': typeof ApiCrmMessageMediaRoute
   '/api/crm/order': typeof ApiCrmOrderRoute
+  '/api/crm/order-notifications': typeof ApiCrmOrderNotificationsRouteWithChildren
   '/api/crm/order-status': typeof ApiCrmOrderStatusRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
@@ -783,6 +798,7 @@ export interface FileRoutesByFullPath {
   '/admin/affiliates/referrals': typeof AppAdminAffiliatesReferralsRoute
   '/admin/affiliates/settings': typeof AppAdminAffiliatesSettingsRoute
   '/admin/affiliates/withdrawals': typeof AppAdminAffiliatesWithdrawalsRoute
+  '/api/crm/order-notifications/result': typeof ApiCrmOrderNotificationsResultRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/flydelivery/pagamentos/conciliar': typeof ApiFlydeliveryPagamentosConciliarRoute
   '/api/flydelivery/pagamentos/pix': typeof ApiFlydeliveryPagamentosPixRoute
@@ -861,6 +877,7 @@ export interface FileRoutesByTo {
   '/api/crm/inbox': typeof ApiCrmInboxRoute
   '/api/crm/message-media': typeof ApiCrmMessageMediaRoute
   '/api/crm/order': typeof ApiCrmOrderRoute
+  '/api/crm/order-notifications': typeof ApiCrmOrderNotificationsRouteWithChildren
   '/api/crm/order-status': typeof ApiCrmOrderStatusRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
@@ -888,6 +905,7 @@ export interface FileRoutesByTo {
   '/admin/affiliates/referrals': typeof AppAdminAffiliatesReferralsRoute
   '/admin/affiliates/settings': typeof AppAdminAffiliatesSettingsRoute
   '/admin/affiliates/withdrawals': typeof AppAdminAffiliatesWithdrawalsRoute
+  '/api/crm/order-notifications/result': typeof ApiCrmOrderNotificationsResultRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/flydelivery/pagamentos/conciliar': typeof ApiFlydeliveryPagamentosConciliarRoute
   '/api/flydelivery/pagamentos/pix': typeof ApiFlydeliveryPagamentosPixRoute
@@ -973,6 +991,7 @@ export interface FileRoutesById {
   '/api/crm/inbox': typeof ApiCrmInboxRoute
   '/api/crm/message-media': typeof ApiCrmMessageMediaRoute
   '/api/crm/order': typeof ApiCrmOrderRoute
+  '/api/crm/order-notifications': typeof ApiCrmOrderNotificationsRouteWithChildren
   '/api/crm/order-status': typeof ApiCrmOrderStatusRoute
   '/api/crm/outbox': typeof ApiCrmOutboxRouteWithChildren
   '/api/crm/ping': typeof ApiCrmPingRoute
@@ -1000,6 +1019,7 @@ export interface FileRoutesById {
   '/_app/admin/affiliates/referrals': typeof AppAdminAffiliatesReferralsRoute
   '/_app/admin/affiliates/settings': typeof AppAdminAffiliatesSettingsRoute
   '/_app/admin/affiliates/withdrawals': typeof AppAdminAffiliatesWithdrawalsRoute
+  '/api/crm/order-notifications/result': typeof ApiCrmOrderNotificationsResultRoute
   '/api/crm/outbox/result': typeof ApiCrmOutboxResultRoute
   '/api/flydelivery/pagamentos/conciliar': typeof ApiFlydeliveryPagamentosConciliarRoute
   '/api/flydelivery/pagamentos/pix': typeof ApiFlydeliveryPagamentosPixRoute
@@ -1085,6 +1105,7 @@ export interface FileRouteTypes {
     | '/api/crm/inbox'
     | '/api/crm/message-media'
     | '/api/crm/order'
+    | '/api/crm/order-notifications'
     | '/api/crm/order-status'
     | '/api/crm/outbox'
     | '/api/crm/ping'
@@ -1112,6 +1133,7 @@ export interface FileRouteTypes {
     | '/admin/affiliates/referrals'
     | '/admin/affiliates/settings'
     | '/admin/affiliates/withdrawals'
+    | '/api/crm/order-notifications/result'
     | '/api/crm/outbox/result'
     | '/api/flydelivery/pagamentos/conciliar'
     | '/api/flydelivery/pagamentos/pix'
@@ -1190,6 +1212,7 @@ export interface FileRouteTypes {
     | '/api/crm/inbox'
     | '/api/crm/message-media'
     | '/api/crm/order'
+    | '/api/crm/order-notifications'
     | '/api/crm/order-status'
     | '/api/crm/outbox'
     | '/api/crm/ping'
@@ -1217,6 +1240,7 @@ export interface FileRouteTypes {
     | '/admin/affiliates/referrals'
     | '/admin/affiliates/settings'
     | '/admin/affiliates/withdrawals'
+    | '/api/crm/order-notifications/result'
     | '/api/crm/outbox/result'
     | '/api/flydelivery/pagamentos/conciliar'
     | '/api/flydelivery/pagamentos/pix'
@@ -1301,6 +1325,7 @@ export interface FileRouteTypes {
     | '/api/crm/inbox'
     | '/api/crm/message-media'
     | '/api/crm/order'
+    | '/api/crm/order-notifications'
     | '/api/crm/order-status'
     | '/api/crm/outbox'
     | '/api/crm/ping'
@@ -1328,6 +1353,7 @@ export interface FileRouteTypes {
     | '/_app/admin/affiliates/referrals'
     | '/_app/admin/affiliates/settings'
     | '/_app/admin/affiliates/withdrawals'
+    | '/api/crm/order-notifications/result'
     | '/api/crm/outbox/result'
     | '/api/flydelivery/pagamentos/conciliar'
     | '/api/flydelivery/pagamentos/pix'
@@ -1368,6 +1394,7 @@ export interface RootRouteChildren {
   ApiCrmInboxRoute: typeof ApiCrmInboxRoute
   ApiCrmMessageMediaRoute: typeof ApiCrmMessageMediaRoute
   ApiCrmOrderRoute: typeof ApiCrmOrderRoute
+  ApiCrmOrderNotificationsRoute: typeof ApiCrmOrderNotificationsRouteWithChildren
   ApiCrmOrderStatusRoute: typeof ApiCrmOrderStatusRoute
   ApiCrmOutboxRoute: typeof ApiCrmOutboxRouteWithChildren
   ApiCrmPingRoute: typeof ApiCrmPingRoute
@@ -1909,6 +1936,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiCrmOrderRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/crm/order-notifications': {
+      id: '/api/crm/order-notifications'
+      path: '/api/crm/order-notifications'
+      fullPath: '/api/crm/order-notifications'
+      preLoaderRoute: typeof ApiCrmOrderNotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/crm/order-status': {
       id: '/api/crm/order-status'
       path: '/api/crm/order-status'
@@ -2083,6 +2117,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/affiliates/withdrawals'
       preLoaderRoute: typeof AppAdminAffiliatesWithdrawalsRouteImport
       parentRoute: typeof AppAdminAffiliatesRoute
+    }
+    '/api/crm/order-notifications/result': {
+      id: '/api/crm/order-notifications/result'
+      path: '/result'
+      fullPath: '/api/crm/order-notifications/result'
+      preLoaderRoute: typeof ApiCrmOrderNotificationsResultRouteImport
+      parentRoute: typeof ApiCrmOrderNotificationsRoute
     }
     '/api/crm/outbox/result': {
       id: '/api/crm/outbox/result'
@@ -2333,6 +2374,20 @@ const AffiliatesRouteWithChildren = AffiliatesRoute._addFileChildren(
   AffiliatesRouteChildren,
 )
 
+interface ApiCrmOrderNotificationsRouteChildren {
+  ApiCrmOrderNotificationsResultRoute: typeof ApiCrmOrderNotificationsResultRoute
+}
+
+const ApiCrmOrderNotificationsRouteChildren: ApiCrmOrderNotificationsRouteChildren =
+  {
+    ApiCrmOrderNotificationsResultRoute: ApiCrmOrderNotificationsResultRoute,
+  }
+
+const ApiCrmOrderNotificationsRouteWithChildren =
+  ApiCrmOrderNotificationsRoute._addFileChildren(
+    ApiCrmOrderNotificationsRouteChildren,
+  )
+
 interface ApiCrmOutboxRouteChildren {
   ApiCrmOutboxResultRoute: typeof ApiCrmOutboxResultRoute
 }
@@ -2382,6 +2437,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCrmInboxRoute: ApiCrmInboxRoute,
   ApiCrmMessageMediaRoute: ApiCrmMessageMediaRoute,
   ApiCrmOrderRoute: ApiCrmOrderRoute,
+  ApiCrmOrderNotificationsRoute: ApiCrmOrderNotificationsRouteWithChildren,
   ApiCrmOrderStatusRoute: ApiCrmOrderStatusRoute,
   ApiCrmOutboxRoute: ApiCrmOutboxRouteWithChildren,
   ApiCrmPingRoute: ApiCrmPingRoute,

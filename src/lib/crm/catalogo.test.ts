@@ -155,6 +155,36 @@ describe("o que a IA NÃO pode oferecer", () => {
     expect(c.cardapio[0].itens).toHaveLength(1);
   });
 
+  it("produto de seção desligada some da lista, em vez de virar 'Outros'", async () => {
+    const banco = bancoFalso(
+      {
+        ...BASE,
+        menu_categories: [
+          ...BASE.menu_categories,
+          { id: "cat-2", name: "Tapioca Salgada", active: false, order_index: 2 },
+        ],
+        menu_products: [
+          ...BASE.menu_products,
+          {
+            id: "p9",
+            category_id: "cat-2",
+            name: "Manteiga",
+            description: null,
+            price: 5,
+            active: true,
+            available: true,
+          },
+        ],
+      },
+      LOJA,
+    );
+    const c = await montarCatalogo(banco, "loja-1");
+    const nomes = c.cardapio.flatMap((s) => s.itens.map((i) => i.nome));
+    expect(nomes).toEqual(["Calabresa"]);
+    expect(c.cardapio.map((s) => s.categoria)).not.toContain("Outros");
+    expect(c.indisponiveis.join(" ")).toContain("Tapioca Salgada");
+  });
+
   it("o indisponível NÃO aparece no texto que a IA lê", async () => {
     // De propósito: modelo que lê "indisponível" acaba oferecendo assim mesmo.
     const dados = {

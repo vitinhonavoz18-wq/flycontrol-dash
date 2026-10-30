@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { Upload, Trash2, Loader2, Image as ImageIcon, Sparkles, ShieldCheck } from "lucide-react";
 import { FLYSTATUS_META, type FlyStatusKind, pickArt } from "./FlyStatusModal";
@@ -15,6 +16,7 @@ type Pz = {
   status_text_preparando?: string | null;
   status_text_saiu?: string | null;
   status_text_entregue?: string | null;
+  status_auto_send?: boolean | null;
 };
 
 const FIELDS: Record<FlyStatusKind, { urlCol: keyof Pz; textCol: keyof Pz }> = {
@@ -47,11 +49,52 @@ export function FlyStatusSettings({ pizzeria, onUpdated }: { pizzeria: Pz; onUpd
           : "Personalize a arte e a mensagem enviada ao cliente. Se deixar vazio, usará o padrão ConnectFly."}
         {" "}Use <code className="rounded bg-muted px-1">{"{NUMERO}"}</code> para o número do pedido.
       </p>
+      {!isGlobalAdmin && <EnvioAutomatico pizzeria={pizzeria} onUpdated={onUpdated} />}
       <div className="grid gap-4 md:grid-cols-3">
         {(Object.keys(FLYSTATUS_META) as FlyStatusKind[]).map((k) => (
           <StatusArtCard key={k} kind={k} pizzeria={pizzeria} onUpdated={onUpdated} />
         ))}
       </div>
+    </div>
+  );
+}
+
+/**
+ * A chave do envio automático.
+ *
+ * Ligada, o cliente recebe o aviso sozinho a cada etapa do pedido, pelo
+ * WhatsApp conectado no Chat — sem a janela de "Enviar ao cliente". Exige o
+ * fluxo de avisos de pedido ativo no n8n desta loja.
+ */
+function EnvioAutomatico({ pizzeria, onUpdated }: { pizzeria: Pz; onUpdated: (patch: Partial<Pz>) => void }) {
+  const [salvando, setSalvando] = useState(false);
+  const ligado = pizzeria.status_auto_send === true;
+
+  async function alternar(valor: boolean) {
+    setSalvando(true);
+    const { error } = await supabase
+      .from("pizzerias")
+      .update({ status_auto_send: valor } as any)
+      .eq("id", pizzeria.id);
+    setSalvando(false);
+    if (error) {
+      toast.error("Não consegui salvar. Tente de novo.");
+      return;
+    }
+    onUpdated({ status_auto_send: valor });
+    toast.success(valor ? "Avisos automáticos ligados." : "Avisos automáticos desligados.");
+  }
+
+  return (
+    <div className="mb-4 flex items-start justify-between gap-4 rounded-lg border border-border p-3">
+      <div>
+        <Label className="text-sm font-medium">Avisar o cliente automaticamente</Label>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Quando o pedido muda para em preparo, saiu ou entregue, o cliente recebe a mensagem
+          sozinho pelo WhatsApp da loja — sem precisar clicar em enviar.
+        </p>
+      </div>
+      <Switch checked={ligado} onCheckedChange={alternar} disabled={salvando} />
     </div>
   );
 }
