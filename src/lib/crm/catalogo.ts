@@ -105,10 +105,11 @@ export async function montarCatalogo(supabase: any, tenantId: string): Promise<C
       .select("name, business_type, is_open, delivery_enabled")
       .eq("id", tenantId)
       .maybeSingle(),
+    // As seções DESLIGADAS também vêm, de propósito: sem elas, os produtos de
+    // uma seção desligada caíam em "Outros" e continuavam à venda.
     db("menu_categories")
       .select("id, name, active, order_index")
       .eq("pizzeria_id", tenantId)
-      .eq("active", true)
       .order("order_index"),
     db("menu_products")
       .select("id, category_id, name, description, price, active, available")
@@ -154,12 +155,27 @@ export async function montarCatalogo(supabase: any, tenantId: string): Promise<C
     }
   }
 
+  // ── A SEÇÃO DESLIGADA LEVA OS PRODUTOS JUNTO ─────────────────────────────
+  //
+  // Quando o lojista desliga a seção "Tapioca Salgada" no site, ninguém
+  // consegue pedir tapioca salgada por lá. Antes, os produtos dela chegavam
+  // aqui como "Outros" e a atendente seguia vendendo o que a loja tirou do ar
+  // — o garçom oferecendo o prato que a cozinha avisou que acabou.
   const nomeCategoria = new Map<string, string>();
-  for (const c of (categorias?.data ?? []) as any[])
-    nomeCategoria.set(String(c.id), String(c.name));
+  const secaoDesligada = new Map<string, string>();
+  for (const c of (categorias?.data ?? []) as any[]) {
+    if (c.active === false) secaoDesligada.set(String(c.id), String(c.name).trim());
+    else nomeCategoria.set(String(c.id), String(c.name));
+  }
 
   const porCategoria = new Map<string, ItemCardapio[]>();
   for (const p of (produtos?.data ?? []) as any[]) {
+    const desligada = secaoDesligada.get(String(p.category_id));
+    if (desligada) {
+      indisponiveis.push(`${p.name} (seção "${desligada}" desligada)`);
+      continue;
+    }
+
     const categoria = nomeCategoria.get(String(p.category_id)) ?? "Outros";
 
     if (p.available === false) {

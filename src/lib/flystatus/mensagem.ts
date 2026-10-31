@@ -114,3 +114,52 @@ export function montarMensagem(
     .trim();
   return { url, texto };
 }
+
+/**
+ * Textos neutros para o aviso AUTOMÁTICO, quando a loja não escreveu os seus.
+ *
+ * Os padrões do botão manual falam de forno e pizza. Para o envio automático
+ * isso não serve: uma tapiocaria receberia "seu pedido entrou no forno 🍕" em
+ * nome dela, sem ninguém ter visto antes. Aqui o texto serve para qualquer
+ * cozinha.
+ */
+const TEXTO_NEUTRO: Record<FlyStatusKind, string> = {
+  preparando:
+    "Seu pedido já está sendo preparado! 🔥\n\nLogo logo fica pronto.\n\nPedido #{NUMERO}",
+  saiu: "Seu pedido saiu para entrega! 🛵💨\n\nAgora falta pouco.\n\nPedido #{NUMERO}",
+  entregue:
+    "Pedido entregue! ❤️\n\nBom apetite! Se puder, conta pra gente o que achou.\n\nPedido #{NUMERO}",
+};
+
+const COLUNAS: Record<
+  FlyStatusKind,
+  { arte: keyof FlyStatusPizzeria; texto: keyof FlyStatusPizzeria }
+> = {
+  preparando: { arte: "status_art_preparando_url", texto: "status_text_preparando" },
+  saiu: { arte: "status_art_saiu_url", texto: "status_text_saiu" },
+  entregue: { arte: "status_art_entregue_url", texto: "status_text_entregue" },
+};
+
+/**
+ * O aviso que sai sozinho, sem ninguém olhar antes.
+ *
+ * Por isso só usa o que A PRÓPRIA LOJA definiu: o texto dela (ou o neutro) e a
+ * arte dela. A arte de fábrica, que é de pizzaria, não vai — sem arte própria,
+ * o aviso sai só com texto.
+ */
+export function montarAvisoAutomatico(
+  loja: FlyStatusPizzeria | null | undefined,
+  kind: FlyStatusKind,
+  numeroDoPedido: number | string,
+  nomeDoCliente: string,
+): { texto: string; imagemUrl: string | null } {
+  const col = COLUNAS[kind];
+  const textoDaLoja = String(loja?.[col.texto] ?? "").trim();
+  const arteDaLoja = String(loja?.[col.arte] ?? "").trim();
+  const texto = (textoDaLoja || TEXTO_NEUTRO[kind])
+    .replace(/\{NUMERO\}/g, String(numeroDoPedido))
+    .replace(/#NUMERO/g, `#${numeroDoPedido}`)
+    .replace(/\{NOME\}/g, nomeDoCliente || "")
+    .trim();
+  return { texto, imagemUrl: arteDaLoja || null };
+}
