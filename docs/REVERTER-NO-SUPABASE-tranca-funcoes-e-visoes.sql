@@ -1,5 +1,5 @@
 -- ============================================================================
--- REVERSÃO de supabase/migrations/20261022120000_tranca_funcoes_e_visoes_expostas.sql
+-- REVERSÃO de supabase/migrations/20261022160000_tranca_funcoes_e_visoes_expostas.sql
 -- ============================================================================
 --
 -- Só use se a trava quebrar algo que não deu para corrigir de outro jeito.
