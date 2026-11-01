@@ -32,13 +32,30 @@ import { rotaDoCrm, respostaCrm, erroCrm, telefoneDoCorpo, textoOpcional } from 
  *   Authorization: Bearer <CRM_N8N_SECRET>
  *   {
  *     "tenant_id": "...", "token": "...", "phone": "5571999999999",
- *     "itens": [{ "nome": "Calabresa", "quantidade": 2 }],
+ *     "itens": [{ "nome": "Calabresa", "quantidade": 2, "adicionais": ["Borda Catupiry"] }],
  *     "endereco": "Rua X, 100", "bairro": "Brotas",
  *     "forma_pagamento": "pix", "observacoes": "sem cebola"
  *   }
  */
 
 const MAX_ITENS = 40;
+
+/** ["Borda Catupiry", "Bacon"] ou "Borda Catupiry, Bacon" viram a mesma lista. */
+function listaDeNomes(valor: unknown): string[] {
+  const partes = Array.isArray(valor)
+    ? valor
+    : typeof valor === "string"
+      ? valor.split(/[,;\n]/)
+      : [];
+  return partes
+    .map((p) =>
+      String(p ?? "")
+        .trim()
+        .slice(0, 80),
+    )
+    .filter(Boolean)
+    .slice(0, 10);
+}
 
 /** Centavos inteiros viram reais só na fronteira com a tabela de pedidos. */
 function reais(cents: number): number {
@@ -98,6 +115,10 @@ export const Route = createFileRoute("/api/crm/order")({
               nome: String(o.nome ?? o.name ?? o.produto ?? ""),
               quantidade: Number(o.quantidade ?? o.quantity ?? 1),
               observacao: textoOpcional(o.observacao ?? o.obs ?? o.notes, 200),
+              // Bordas e adicionais do item. Aceita lista ou texto separado
+              // por vírgula — a ferramenta do n8n às vezes manda um, às vezes
+              // o outro.
+              adicionais: listaDeNomes(o.adicionais ?? o.extras ?? o.complementos_pagos),
             };
           }),
         );
@@ -231,7 +252,14 @@ export const Route = createFileRoute("/api/crm/order")({
           podeAtualizar
             ? `Pedido #${pedido.order_number} ATUALIZADO:`
             : `Pedido #${pedido.order_number} feito e já enviado para a loja:`,
-          ...casado.itens.map((i) => `- ${i.quantidade}x ${i.nome} — ${emReais(i.total_cents)}`),
+          ...casado.itens.map(
+            (i) =>
+              `- ${i.quantidade}x ${i.nome}` +
+              (i.adicionais.length
+                ? ` (+ ${i.adicionais.map((a) => `${a.nome} ${emReais(a.preco_cents)}`).join(", ")})`
+                : "") +
+              ` — ${emReais(i.total_cents)}`,
+          ),
           taxa_cents > 0
             ? `Entrega${bairroAchado ? ` (${bairroAchado})` : ""}: ${emReais(taxa_cents)}`
             : "",

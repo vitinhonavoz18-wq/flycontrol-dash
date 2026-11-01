@@ -1,7 +1,13 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { montarCatalogo } from "@/lib/crm/catalogo";
-import { procurarProdutos, itensDaSecao, listarCardapio, emReais } from "@/lib/crm/ferramentas";
+import {
+  procurarProdutos,
+  itensDaSecao,
+  listarCardapio,
+  emReais,
+  procurarAdicionais,
+} from "@/lib/crm/ferramentas";
 import { rotaDoCrm, respostaCrm, textoOpcional } from "@/lib/crm/rotaCrm";
 
 /**
@@ -70,33 +76,48 @@ export const Route = createFileRoute("/api/crm/products")({
           preco: emReais(p.preco_cents),
         }));
 
-        const texto = achados.length
+        // Bordas e adicionais que batem com a busca vão junto ("tem borda?").
+        const adicionais = procurarAdicionais(catalogo, busca).slice(0, 10);
+        const textoAdicionais = adicionais.length
           ? [
-              `Produtos encontrados para "${busca}":`,
-              ...linhas.map(
-                // A seção vai junto: "Manteiga" da tapioca e do cuscuz têm
-                // preços diferentes, e a IA precisa saber qual é qual.
-                (l) =>
-                  `- ${l.nome} [${l.categoria}] — ${l.preco}${l.descricao ? ` (${l.descricao})` : ""}`,
-              ),
               "",
-              "Use EXATAMENTE estes nomes e preços. Não invente valor.",
+              "Adicionais (bordas, complementos e extras) que batem com a busca:",
+              ...adicionais.map((a) => `- ${a.nome}: ${emReais(a.preco_cents)}`),
             ].join("\n")
-          : [
-              `Nenhum produto encontrado para "${busca}".`,
-              catalogo.indisponiveis.length
-                ? `Fora do ar hoje: ${catalogo.indisponiveis.slice(0, 8).join("; ")}.`
-                : "",
-              "Diga ao cliente que hoje não tem esse item e ofereça algo parecido do cardápio.",
-            ]
-              .filter(Boolean)
-              .join("\n");
+          : "";
+
+        const texto =
+          achados.length || adicionais.length
+            ? [
+                achados.length ? `Produtos encontrados para "${busca}":` : "",
+                ...linhas.map(
+                  // A seção vai junto: "Manteiga" da tapioca e do cuscuz têm
+                  // preços diferentes, e a IA precisa saber qual é qual.
+                  (l) =>
+                    `- ${l.nome} [${l.categoria}] — ${l.preco}${l.descricao ? ` (${l.descricao})` : ""}`,
+                ),
+                textoAdicionais,
+                "",
+                "Use EXATAMENTE estes nomes e preços. Não invente valor.",
+              ]
+                .filter((l, i) => l !== "" || i > 0)
+                .join("\n")
+            : [
+                `Nenhum produto encontrado para "${busca}".`,
+                catalogo.indisponiveis.length
+                  ? `Fora do ar hoje: ${catalogo.indisponiveis.slice(0, 8).join("; ")}.`
+                  : "",
+                "Diga ao cliente que hoje não tem esse item e ofereça algo parecido do cardápio.",
+              ]
+                .filter(Boolean)
+                .join("\n");
 
         return respostaCrm({
           success: true,
           loja: catalogo.loja,
           busca,
           encontrados: linhas,
+          adicionais: adicionais.map((a) => ({ ...a, preco: emReais(a.preco_cents) })),
           texto,
         });
       }),

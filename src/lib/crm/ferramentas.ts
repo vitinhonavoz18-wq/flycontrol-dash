@@ -101,15 +101,29 @@ export function itensDaSecao(catalogo: Catalogo, termo: string): ItemCardapio[] 
   return secao && secao.itens.length > 0 ? secao.itens : null;
 }
 
-export type ItemPedido = { nome: string; quantidade: number; observacao?: string | null };
+export type ItemPedido = {
+  nome: string;
+  quantidade: number;
+  observacao?: string | null;
+  /**
+   * Bordas e adicionais DESTE item, só pelo nome ("Borda Catupiry", "Bacon").
+   * O preço de cada um sai do cadastro de adicionais da loja, nunca da IA.
+   * Opcional: quem não manda (açaí, pastel) continua exatamente como antes.
+   */
+  adicionais?: string[] | null;
+};
+
+export type AdicionalResolvido = { nome: string; preco_cents: number };
 
 export type ItemResolvido = {
   menu_product_id: string;
   nome: string;
   quantidade: number;
+  /** Preço do produto + preço dos adicionais escolhidos, por unidade. */
   preco_unitario_cents: number;
   total_cents: number;
   observacao: string | null;
+  adicionais: AdicionalResolvido[];
 };
 
 export type ResultadoDoCasamento = {
@@ -123,6 +137,33 @@ function quantidadeSegura(v: unknown): number {
   const n = Math.floor(Number(v));
   if (!Number.isFinite(n) || n < 1) return 1;
   return Math.min(n, 99);
+}
+
+/**
+ * Acha um adicional (borda, bacon extra...) no cadastro da loja pelo nome.
+ *
+ * Primeiro o nome exato. Se não houver, aceita um nome parecido SÓ quando
+ * todos os parecidos custam o mesmo — "catupiry" que bate em duas bordas com
+ * preços diferentes não é escolhido no chute: volta como não encontrado, e a
+ * IA é mandada usar o nome certo. Cobrar a borda errada é cobrar errado.
+ */
+export function acharAdicional(catalogo: Catalogo, nome: string): AdicionalResolvido | null {
+  const alvo = normalizar(nome);
+  if (!alvo) return null;
+  const lista = (catalogo.adicionais ?? []).filter((a) => normalizar(a.nome));
+
+  const exato = lista.find((a) => normalizar(a.nome) === alvo);
+  if (exato) return { nome: exato.nome, preco_cents: exato.preco_cents };
+
+  const palavras = alvo.split(" ").filter((p) => p.length >= 2);
+  const parecidos = lista.filter((a) => {
+    const n = normalizar(a.nome);
+    return n.includes(alvo) || (palavras.length > 0 && palavras.every((p) => n.includes(p)));
+  });
+  if (parecidos.length === 0) return null;
+  const precos = new Set(parecidos.map((a) => a.preco_cents));
+  if (precos.size > 1) return null;
+  return { nome: parecidos[0].nome, preco_cents: parecidos[0].preco_cents };
 }
 
 /**
@@ -147,7 +188,25 @@ export function casarItens(catalogo: Catalogo, pedidos: ItemPedido[]): Resultado
     }
 
     const quantidade = quantidadeSegura(pedido.quantidade);
-    const observacao = String(pedido.observacao ?? "").trim() || null;
+
+    // Bordas e adicionais: o nome vem da IA, o PREÇO vem do cadastro. O que
+    // não existir não é cobrado no chute — vai para a lista de "não temos".
+    const adicionais: AdicionalResolvido[] = [];
+    for (const bruto of (Array.isArray(pedido.adicionais) ? pedido.adicionais : []).slice(0, 10)) {
+      const nomeAdicional = String(bruto ?? "").trim();
+      if (!nomeAdicional) continue;
+      const adicional = acharAdicional(catalogo, nomeAdicional);
+      if (adicional) adicionais.push(adicional);
+      else nao_encontrados.push(`${nomeAdicional} (adicional de ${achado.nome})`);
+    }
+
+    const textoDosAdicionais = adicionais.length
+      ? `+ ${adicionais.map((a) => a.nome).join(", ")}`
+      : "";
+    const observacao =
+      [textoDosAdicionais, String(pedido.observacao ?? "").trim()].filter(Boolean).join(" | ") ||
+      null;
+    const unitario = achado.preco_cents + adicionais.reduce((t, a) => t + a.preco_cents, 0);
 
     // Duas vezes o mesmo produto viram uma linha só, somando a quantidade.
     // Senão a comanda sai com "1 pastel" escrito três vezes e a cozinha
@@ -163,9 +222,10 @@ export function casarItens(catalogo: Catalogo, pedidos: ItemPedido[]): Resultado
       menu_product_id: achado.id,
       nome: achado.nome,
       quantidade,
-      preco_unitario_cents: achado.preco_cents,
-      total_cents: achado.preco_cents * quantidade,
+      preco_unitario_cents: unitario,
+      total_cents: unitario * quantidade,
       observacao,
+      adicionais,
     });
   }
 
@@ -297,12 +357,57 @@ export function listarCardapio(catalogo: Catalogo, teto = 60): string {
     linhas.push("");
   }
 
+  // Bordas, complementos e adicionais. Sem esta lista a atendente não sabia
+  // que a borda de catupiry existia nem quanto custava — o garçom que não sabe
+  // que a casa tem borda recheada deixa de vender a borda.
+  const adicionais = adicionaisSemRepetir(catalogo);
+  if (adicionais.length > 0) {
+    linhas.push("## Adicionais (bordas, complementos e extras)");
+    for (const a of adicionais) linhas.push(`- ${a.nome}: ${emReais(a.preco_cents)}`);
+    linhas.push("");
+  }
+
   linhas.push(
     "Ofereça SOMENTE o que está escrito acima, com ESTES preços.",
     "Não mande a lista inteira de uma vez: sugira 3 ou 4 e pergunte.",
   );
 
   return linhas.join("\n");
+}
+
+/** Os adicionais da loja sem repetir o mesmo nome com o mesmo preço. */
+export function adicionaisSemRepetir(
+  catalogo: Catalogo,
+): Array<{ nome: string; preco_cents: number }> {
+  const vistos = new Set<string>();
+  const saida: Array<{ nome: string; preco_cents: number }> = [];
+  for (const a of catalogo.adicionais ?? []) {
+    const nome = String(a?.nome ?? "").trim();
+    if (!nome) continue;
+    const chave = `${normalizar(nome)}|${a.preco_cents}`;
+    if (vistos.has(chave)) continue;
+    vistos.add(chave);
+    saida.push({ nome, preco_cents: a.preco_cents });
+  }
+  return saida;
+}
+
+/**
+ * Os adicionais cujo nome bate com a busca ("borda", "catupiry", "bacon").
+ * Uma busca por "borda" que só olhasse os pratos voltaria vazia, e a
+ * atendente diria que a casa não tem borda.
+ */
+export function procurarAdicionais(
+  catalogo: Catalogo,
+  termo: string,
+): Array<{ nome: string; preco_cents: number }> {
+  const alvo = normalizar(termo);
+  if (!alvo) return [];
+  const palavras = alvo.split(" ").filter((p) => p.length >= 3);
+  return adicionaisSemRepetir(catalogo).filter((a) => {
+    const n = normalizar(a.nome);
+    return n.includes(alvo) || alvo.includes(n) || palavras.some((p) => n.includes(p));
+  });
 }
 
 /** Os bairros onde a loja entrega, com a taxa de cada um. */

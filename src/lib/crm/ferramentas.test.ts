@@ -10,6 +10,7 @@ import {
   listarCardapio,
   listarBairros,
   textoDosBairros,
+  procurarAdicionais,
 } from "./ferramentas";
 import type { Catalogo } from "./catalogo";
 
@@ -315,5 +316,99 @@ describe("os bairros de entrega", () => {
     const texto = textoDosBairros([]);
     expect(texto).toContain("NÃO cadastrou nenhum bairro");
     expect(texto).toContain("NÃO invente taxa");
+  });
+});
+
+describe("bordas e adicionais cobrados pelo cadastro (pizzaria)", () => {
+  const pizzaria = {
+    ...catalogo,
+    cardapio: [
+      {
+        categoria: "Pizzas Salgadas Tradicionais",
+        itens: [
+          {
+            id: "z1",
+            nome: "Calabresa",
+            descricao: null,
+            preco_cents: 2690,
+            categoria: "Pizzas Salgadas Tradicionais",
+          },
+        ],
+      },
+    ],
+    adicionais: [
+      { nome: "Catupiry", preco_cents: 600 },
+      { nome: "Borda Recheada com Catupiry", preco_cents: 800 },
+      { nome: "Bacon", preco_cents: 600 },
+    ],
+  } as unknown as Catalogo;
+
+  it("soma o preço do cadastro, não o que a IA disser", () => {
+    const r = casarItens(pizzaria, [
+      { nome: "Calabresa", quantidade: 2, adicionais: ["Bacon"], observacao: "sem cebola" },
+    ]);
+    expect(r.itens[0].preco_unitario_cents).toBe(3290);
+    expect(r.itens[0].total_cents).toBe(6580);
+    expect(r.subtotal_cents).toBe(6580);
+    expect(r.itens[0].observacao).toBe("+ Bacon | sem cebola");
+  });
+
+  it("nome exato ganha do parecido", () => {
+    const r = casarItens(pizzaria, [
+      { nome: "Calabresa", quantidade: 1, adicionais: ["catupiry"] },
+    ]);
+    expect(r.itens[0].adicionais).toEqual([{ nome: "Catupiry", preco_cents: 600 }]);
+  });
+
+  it("parecido com preços diferentes não é cobrado no chute", () => {
+    const r = casarItens(pizzaria, [
+      { nome: "Calabresa", quantidade: 1, adicionais: ["borda catupiry", "cheddar"] },
+    ]);
+    // "borda catupiry" só bate na borda de 8,00 — um único preço, pode cobrar.
+    expect(r.itens[0].adicionais).toEqual([
+      { nome: "Borda Recheada com Catupiry", preco_cents: 800 },
+    ]);
+    expect(r.nao_encontrados).toEqual(["cheddar (adicional de Calabresa)"]);
+    expect(r.itens[0].preco_unitario_cents).toBe(3490);
+  });
+
+  it("quem não manda adicionais continua exatamente como antes", () => {
+    const r = casarItens(pizzaria, [
+      { nome: "Calabresa", quantidade: 1 },
+      { nome: "Calabresa", quantidade: 1 },
+    ]);
+    expect(r.itens).toHaveLength(1);
+    expect(r.itens[0].quantidade).toBe(2);
+    expect(r.itens[0].adicionais).toEqual([]);
+    expect(r.subtotal_cents).toBe(5380);
+  });
+});
+
+describe("a atendente enxerga bordas e adicionais", () => {
+  const comAdicionais = {
+    ...catalogo,
+    adicionais: [
+      { nome: "Catupiry", preco_cents: 600 },
+      { nome: "Catupiry", preco_cents: 600 },
+      { nome: "Bacon", preco_cents: 600 },
+    ],
+  } as unknown as Catalogo;
+
+  it("o cardápio inteiro lista os adicionais com preço, sem repetir", () => {
+    const t = listarCardapio(comAdicionais);
+    expect(t).toContain("## Adicionais");
+    expect(t).toContain("- Catupiry: R$");
+    expect(t.match(/- Catupiry:/g)).toHaveLength(1);
+  });
+
+  it("loja sem adicionais continua com o cardápio de sempre", () => {
+    expect(listarCardapio(catalogo)).not.toContain("## Adicionais");
+  });
+
+  it("busca por 'borda de catupiry' acha o adicional", () => {
+    expect(procurarAdicionais(comAdicionais, "borda de catupiry").map((a) => a.nome)).toEqual([
+      "Catupiry",
+    ]);
+    expect(procurarAdicionais(comAdicionais, "pastel")).toEqual([]);
   });
 });
