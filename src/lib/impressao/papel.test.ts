@@ -140,15 +140,15 @@ describe("a impressão espera a logo", () => {
 describe("a página da comanda", () => {
   const pagina = readFileSync("src/routes/print.$orderId.tsx", "utf8");
 
-  it('o "Tipo" não depende de fundo preto para aparecer', () => {
+  it("não depende de fundo preto com letra branca", () => {
     // O navegador não imprime fundo por padrão: letra branca em fundo preto
-    // virava branco no branco.
+    // virava branco no branco. A comanda agora é só texto preto.
     expect(pagina).not.toMatch(/bg-black[^"]*text-white[^"]*uppercase/);
-    expect(pagina).toContain("border-2 border-black");
   });
 
   it("não abre a impressão num tempo fixo antes da logo chegar", () => {
     expect(pagina).not.toMatch(/setTimeout\(\(\) => window\.print\(\), 800\)/);
-    expect(pagina).toContain("esperarConteudoCarregar");
+    // `imprimirPeloNavegador` espera a logo e as letras (`esperarConteudoCarregar`).
+    expect(pagina).toContain("imprimirPeloNavegador");
   });
 });

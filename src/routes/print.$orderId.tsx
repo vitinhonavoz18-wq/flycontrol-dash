@@ -1,322 +1,165 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useEffect, useRef, useState } from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeOrderType } from "@/utils/order-utils";
-import { extrairAdicionaisDoItem, notaDoItemSemAdicionais } from "@/components/orders/orderDisplay";
-// Só o símbolo, recortado do logo completo: aquele arquivo já vem com
-// "FlyControl" escrito dentro da imagem, e a comanda também escreve o nome
-// embaixo — usar o arquivo inteiro repetiria o nome duas vezes (uma ilegível,
-// pequena demais na imagem; outra no texto).
-import flycontrolLogo from "@/assets/flycontrol-mark.png";
-import {
-  PAPEIS,
-  esperarConteudoCarregar,
-  estiloDeImpressao,
-  larguraDaPrevia,
-  lerPapelSalvo,
-  salvarPapel,
-  type Papel,
-} from "@/lib/impressao/papel";
+import { ComandaImpressa } from "@/components/impressao/ComandaImpressa";
+import { usePerfisDeImpressao } from "@/components/impressao/usePerfisDeImpressao";
+import { PAPEIS, type Papel } from "@/lib/impressao/papel";
+import { trocarPapel } from "@/lib/impressao/perfil";
+import { dadosDoPedido, montarComanda } from "@/lib/impressao/comanda";
+import { validarDados, validarLinhas } from "@/lib/impressao/validar";
+import { imprimirPeloNavegador } from "@/lib/impressao/transporte";
 
 export const Route = createFileRoute("/print/$orderId")({ component: Print });
 
+/**
+ * A comanda do pedido.
+ *
+ * O PROBLEMA QUE ISTO RESOLVE
+ *
+ * A comanda era uma página "de site" (caixas, colunas, letras de vários
+ * tamanhos). Isso só sai certo quando o driver da impressora desenha a página
+ * como imagem. Muitas térmicas, porém, estão instaladas no Windows como
+ * "Genérica / Somente texto": esse driver lê só o texto da página e tenta
+ * adivinhar onde cada linha termina. Com letras de tamanhos diferentes e
+ * preço "flutuando" à direita, ele junta pedaços de linhas diferentes — e a
+ * comanda sai toda emendada. Além disso, as quebras de linha que o cliente
+ * digitava na observação ("sem cebola" ⏎ "bem passada") eram engolidas pela
+ * página e saíam numa linha só.
+ *
+ * Agora a comanda é uma grade de letras de mesma largura, uma linha por vez,
+ * do tamanho exato do papel (ver `lib/impressao`). O driver que desenha
+ * imagem imprime igual à tela; o driver "Somente texto" recebe linhas que já
+ * cabem e não tem o que adivinhar.
+ */
 function Print() {
   const { orderId } = Route.useParams();
-  const [o, setO] = useState<any>(null);
-  const [pz, setPz] = useState<any>(null);
+  const [o, setO] = useState<Record<string, unknown> | null>(null);
+  const [pz, setPz] = useState<Record<string, unknown> | null>(null);
+  const [erro, setErro] = useState<string | null>(null);
   const [pronto, setPronto] = useState(false);
-  const [papel, setPapel] = useState<Papel>("auto");
+  const [mensagem, setMensagem] = useState<string | null>(null);
   const areaRef = useRef<HTMLDivElement>(null);
-
-  // A escolha de papel fica no computador (cada um tem a sua impressora).
-  // Lida depois de abrir a página porque o servidor não tem acesso a ela.
-  useEffect(() => {
-    setPapel(lerPapelSalvo());
-  }, []);
 
   useEffect(() => {
     (async () => {
-      const { data } = await supabase.from("orders").select("*").eq("id", orderId).maybeSingle();
-      if (data) {
-        setO(data);
-        const { data: p } = await supabase
-          .from("pizzerias")
-          .select("name, phone, address, logo_url")
-          .eq("id", data.tenant_id)
-          .maybeSingle();
-        setPz(p);
-        setPronto(true);
+      // A leitura respeita as regras de acesso do banco: só abre o pedido de
+      // quem é da loja dele.
+      const { data, error } = await supabase
+        .from("orders")
+        .select("*")
+        .eq("id", orderId)
+        .maybeSingle();
+      if (error || !data) {
+        setErro("Pedido não encontrado, ou você não tem acesso a ele.");
+        return;
       }
+      setO(data as Record<string, unknown>);
+      const { data: p } = await supabase
+        .from("pizzerias")
+        .select("name, phone, address, logo_url")
+        .eq("id", data.tenant_id)
+        .maybeSingle();
+      setPz((p as Record<string, unknown>) ?? null);
+      setPronto(true);
     })();
   }, [orderId]);
 
-  // Abre a impressão só depois que a comanda está desenhada, com a logo e
-  // as letras carregadas — ver `esperarConteudoCarregar`.
+  const lojaId = typeof o?.tenant_id === "string" ? o.tenant_id : null;
+  const { dados, perfil, gravar } = usePerfisDeImpressao(lojaId);
+
+  const dadosDaComanda = useMemo(() => (o ? dadosDoPedido(o, pz) : null), [o, pz]);
+  const linhas = useMemo(
+    () =>
+      dadosDaComanda && perfil
+        ? montarComanda(dadosDaComanda, {
+            colunas: perfil.colunas,
+            acentos: perfil.acentos,
+            linhasNoFinal: perfil.linhasNoFinal,
+          })
+        : [],
+    [dadosDaComanda, perfil],
+  );
+  const avisos = useMemo(
+    () =>
+      dadosDaComanda && perfil
+        ? [...validarLinhas(linhas, perfil), ...validarDados(dadosDaComanda)]
+        : [],
+    [linhas, dadosDaComanda, perfil],
+  );
+
+  // Abre a impressão uma vez, sozinha, quando a comanda está desenhada — com
+  // a logo e as letras carregadas. Trocar o papel depois NÃO reimprime: o
+  // lojista aperta o botão quando quiser.
+  const jaAbriu = useRef(false);
+  const desenhada = pronto && !!perfil;
   useEffect(() => {
-    if (!pronto) return;
+    if (!desenhada || jaAbriu.current) return;
     let cancelado = false;
     const espera = setTimeout(async () => {
-      await esperarConteudoCarregar(areaRef.current);
-      if (!cancelado) window.print();
+      if (cancelado) return;
+      jaAbriu.current = true;
+      const r = await imprimirPeloNavegador(areaRef.current);
+      if (!r.ok) setMensagem(r.mensagem);
     }, 150);
     return () => {
       cancelado = true;
       clearTimeout(espera);
     };
-  }, [pronto]);
+  }, [desenhada]);
 
-  function escolherPapel(novo: Papel) {
-    setPapel(novo);
-    salvarPapel(novo);
+  async function imprimirDeNovo() {
+    setMensagem(null);
+    const r = await imprimirPeloNavegador(areaRef.current);
+    if (!r.ok) setMensagem(r.mensagem);
   }
 
-  if (!o) return <div className="p-6 text-center text-sm">Carregando pedido...</div>;
+  function escolherPapel(papel: Papel) {
+    if (!dados || !perfil) return;
+    gravar({
+      ...dados,
+      perfis: dados.perfis.map((p) => (p.id === perfil.id ? trocarPapel(p, papel) : p)),
+    });
+  }
 
-  const items = Array.isArray(o.items) ? o.items : [];
-  const orderType = normalizeOrderType(o);
+  if (erro) return <div className="p-6 text-center text-sm">{erro}</div>;
+  if (!o || !perfil || !dados) {
+    return <div className="p-6 text-center text-sm">Carregando pedido...</div>;
+  }
 
-  const formatCurrency = (value: any) => {
-    const num = Number(value || 0);
-    return num.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
-  };
-
-  // Testado primeiro só na Emily Burguer; aprovado, agora vale para
-  // qualquer loja que já tenha uma logo cadastrada em "Minha Loja". Sem
-  // logo cadastrada, a comanda cai sozinha para o nome em texto — nenhuma
-  // loja fica com o cabeçalho quebrado ou vazio.
-  const logoParaImprimir = pz?.logo_url || null;
+  const logo = typeof pz?.logo_url === "string" ? pz.logo_url : null;
+  const nomeDaLoja = typeof pz?.name === "string" ? pz.name : undefined;
+  const avisosVisiveis = avisos.filter((a) => a.nivel !== "info");
 
   return (
     <div className="pagina-da-comanda">
-      <div ref={areaRef} className="print-area" style={{ width: larguraDaPrevia(papel) }}>
-        {/* CABEÇALHO DA PIZZARIA */}
-        <div className="mb-4 text-center">
-          {logoParaImprimir ? (
-            // Com a logo, o cabeçalho fica só ela: nem telefone, nem endereço,
-            // nem a linha divisória — a marca já basta, e menos texto em cima
-            // parece mais premium do que empilhar tudo junto.
-            <img
-              src={logoParaImprimir}
-              alt={pz?.name ?? "Logo da loja"}
-              className="comanda-logo mx-auto mb-2 max-h-24 max-w-[80%] object-contain"
-            />
-          ) : (
-            <>
-              <div className="text-xl font-bold uppercase leading-none">
-                {pz?.name ?? "Pizzaria"}
-              </div>
-              {pz?.phone && <div className="mt-1 text-base">{pz.phone}</div>}
-              {pz?.address && <div className="text-xs">{pz.address}</div>}
-              <div className="my-2 border-t-2 border-dashed border-black"></div>
-            </>
-          )}
-          <div className="text-lg font-bold">PEDIDO #{o.order_number}</div>
-          <div className="text-sm">{new Date(o.created_at).toLocaleString("pt-BR")}</div>
-        </div>
-
-        <div className="my-2 border-t border-dashed border-black"></div>
-
-        {/* DADOS DO CLIENTE */}
-        <div className="space-y-1">
-          <div>
-            <span className="font-bold">Cliente:</span>{" "}
-            <span className="text-base">{o.customer_name}</span>
-          </div>
-          <div>
-            <span className="font-bold">Telefone:</span>{" "}
-            <span className="text-base">{o.customer_phone}</span>
-          </div>
-          {o.customer_address && (
-            <div>
-              <span className="font-bold">Endereço:</span>{" "}
-              <span className="text-base">{o.customer_address}</span>
-            </div>
-          )}
-          {o.neighborhood && (
-            <div>
-              <span className="font-bold">Bairro:</span>{" "}
-              <span className="text-base">{o.neighborhood}</span>
-            </div>
-          )}
-          {/* Borda preta em vez de fundo preto com letra branca: o navegador
-            não imprime fundos por padrão, e o "Tipo" saía branco no branco —
-            invisível em boa parte das impressoras. */}
-          <div className="mt-1 inline-block border-2 border-black px-2 py-0.5 text-xs font-bold uppercase text-black">
-            Tipo:{" "}
-            {orderType === "delivery"
-              ? "Entrega"
-              : orderType === "pickup"
-                ? "Retirada"
-                : orderType === "table"
-                  ? "Mesa"
-                  : "Pedido"}
-          </div>
-          {orderType === "pickup" && o.ticket_number && (
-            <div className="mt-1 text-lg font-black uppercase">FICHA: {o.ticket_number}</div>
-          )}
-          {orderType === "table" && (
-            <div className="mt-1 text-lg font-black uppercase">
-              {o.table_number || o.tableNumber || o.mesa
-                ? `MESA: ${o.table_number || o.tableNumber || o.mesa}`
-                : "MESA NÃO IDENTIFICADA"}
-            </div>
-          )}
-        </div>
-
-        <div className="my-3 border-t-2 border-dashed border-black"></div>
-
-        {/* ITENS DO PEDIDO */}
-        <div className="mb-2 font-bold uppercase">Itens do Pedido:</div>
-        <div className="space-y-4">
-          {items.map((it: any, i: number) => {
-            const qty = it.qty ?? it.quantity ?? 1;
-            const name = it.product_name ?? it.name ?? it.title ?? it.nome ?? "Item";
-            const price = Number(it.unit_price ?? it.price ?? 0);
-            const subtotal = Number(it.total_price ?? it.total ?? it.subtotal ?? price * qty);
-
-            // Sabores (para pizzas)
-            const flavors = Array.isArray(it.flavors) ? it.flavors : [];
-            const selectedFlavors = Array.isArray(it.selected_flavors) ? it.selected_flavors : [];
-            const allFlavors = [...new Set([...flavors, ...selectedFlavors])];
-
-            // Ingredientes/Adicionais
-            const ingredients = Array.isArray(it.ingredients)
-              ? it.ingredients
-              : typeof it.ingredients === "string"
-                ? [it.ingredients]
-                : [];
-            // O site guarda o adicional escolhido dentro do texto do item
-            // (`notes`) quando não manda uma lista pronta — por isso a extração
-            // olha os dois formatos, e a observação livre abaixo mostra só o
-            // que sobra depois de tirar esse trecho, pra não repetir a mesma
-            // informação duas vezes na comanda.
-            const additions = extrairAdicionaisDoItem(it);
-            const notaLivreDoItem = notaDoItemSemAdicionais(it);
-
-            return (
-              <div key={i} className="border-b border-gray-100 pb-2 last:border-0">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="font-bold">
-                    {qty}x {name}
-                    {it.size && <span className="text-sm font-normal"> ({it.size})</span>}
-                  </span>
-                  <span className="whitespace-nowrap font-bold">{formatCurrency(subtotal)}</span>
-                </div>
-
-                {/* Detalhes da Pizza */}
-                {allFlavors.length > 0 && (
-                  <div className="ml-4 mt-1">
-                    <div className="text-xs font-bold uppercase">Sabores:</div>
-                    {allFlavors.map((f: string, idx: number) => (
-                      <div key={idx} className="text-sm leading-tight">
-                        • {f}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Borda */}
-                {(it.crust || it.borda) && (
-                  <div className="ml-4 mt-1">
-                    <span className="text-xs font-bold uppercase">Borda:</span>{" "}
-                    <span className="text-sm">{it.crust || it.borda}</span>
-                  </div>
-                )}
-
-                {/* Ingredientes */}
-                {ingredients.length > 0 && (
-                  <div className="ml-4 mt-1">
-                    <div className="text-xs font-bold uppercase">Ingredientes:</div>
-                    <div className="text-xs italic">{ingredients.join(", ")}</div>
-                  </div>
-                )}
-
-                {/* Adicionais */}
-                {additions.length > 0 && (
-                  <div className="ml-4 mt-1">
-                    <div className="text-xs font-bold uppercase">Adicionais:</div>
-                    {additions.map((add: any, idx: number) => (
-                      <div key={idx} className="text-sm">
-                        + {typeof add === "string" ? add : add.name || add.nome}
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {/* Observação do Item */}
-                {notaLivreDoItem && (
-                  <div className="ml-4 mt-1 rounded bg-gray-50 p-1 text-xs">
-                    <span className="font-bold">Obs Item:</span> {notaLivreDoItem}
-                  </div>
-                )}
-
-                {qty > 1 && (
-                  <div className="mt-1 text-right text-[10px] text-gray-500">
-                    Valor unitário: {formatCurrency(price)}
-                  </div>
-                )}
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="my-3 border-t-2 border-dashed border-black"></div>
-
-        {/* TOTAIS */}
-        <div className="space-y-1">
-          <div className="flex justify-between text-sm">
-            <span>Subtotal</span>
-            <span>{formatCurrency(o.subtotal || Number(o.total) - Number(o.delivery_fee))}</span>
-          </div>
-          <div className="flex justify-between text-sm">
-            <span>Taxa de Entrega</span>
-            <span>{formatCurrency(o.delivery_fee)}</span>
-          </div>
-          <div className="flex justify-between border-t border-black pt-1 text-lg font-bold">
-            <span>TOTAL</span>
-            <span>{formatCurrency(o.total)}</span>
-          </div>
-        </div>
-
-        <div className="my-3 border-t border-dashed border-black"></div>
-
-        {/* PAGAMENTO E OBS GERAIS */}
-        <div className="space-y-2">
-          {o.payment_method && (
-            <div>
-              <span className="font-bold">Forma de Pagamento:</span>
-              <div className="text-base uppercase">{o.payment_method}</div>
-            </div>
-          )}
-          {o.change_for && Number(o.change_for) > 0 && (
-            <div className="bg-gray-100 p-1">
-              <span className="font-bold">Troco para:</span>{" "}
-              <span className="text-base font-bold">{formatCurrency(o.change_for)}</span>
-            </div>
-          )}
-          {o.notes && (
-            <div className="mt-2 border-l-4 border-black pl-2">
-              <span className="font-bold">Observações Gerais:</span>
-              <div className="text-sm italic">{o.notes}</div>
-            </div>
-          )}
-        </div>
-
-        <div className="print-footer mt-6 border-t border-gray-200 pt-2 text-center text-[10px] text-gray-400">
-          <img
-            src={flycontrolLogo}
-            alt="FlyControl"
-            className="flycontrol-footer-logo mx-auto mb-1 max-h-6 object-contain opacity-80"
-          />
-          {/* "Delivery" em vez de "Pizzarias": o FlyControl atende vários tipos
-            de negócio, não só pizzaria — a logo acima já diz "FlyControl",
-            então aqui só precisa da linha que serve pra qualquer nicho. */}
-          <div>Sistema de Gestão para Delivery</div>
-          <div>Impressão em {new Date().toLocaleString("pt-BR")}</div>
-        </div>
-      </div>
+      <ComandaImpressa
+        ref={areaRef}
+        linhas={linhas}
+        perfil={perfil}
+        logoUrl={logo}
+        nomeDaLoja={nomeDaLoja}
+      />
 
       <div className="no-print controles-da-comanda">
+        {dados.perfis.length > 1 && (
+          <div className="space-y-1">
+            <label htmlFor="perfil-da-comanda" className="text-sm font-bold">
+              Impressora
+            </label>
+            <select
+              id="perfil-da-comanda"
+              className="w-full rounded-md border border-gray-300 bg-white px-2 py-2 text-sm"
+              value={perfil.id}
+              onChange={(ev) => gravar({ ...dados, ativoId: ev.target.value })}
+            >
+              {dados.perfis.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.nome}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
         <div className="space-y-2">
           <div className="text-sm font-bold">Papel da impressora</div>
           <div className="grid grid-cols-2 gap-2">
@@ -325,9 +168,9 @@ function Print() {
                 key={p.id}
                 type="button"
                 onClick={() => escolherPapel(p.id)}
-                aria-pressed={papel === p.id}
+                aria-pressed={perfil.papel === p.id}
                 className={`rounded-md border px-2 py-2 text-xs font-semibold ${
-                  papel === p.id
+                  perfil.papel === p.id
                     ? "border-black bg-black text-white"
                     : "border-gray-300 bg-white text-gray-800"
                 }`}
@@ -336,14 +179,33 @@ function Print() {
               </button>
             ))}
           </div>
-          <p className="text-xs text-gray-600">{PAPEIS.find((p) => p.id === papel)?.ajuda}</p>
+          <p className="text-xs text-gray-600">
+            {PAPEIS.find((p) => p.id === perfil.papel)?.ajuda}
+          </p>
           <p className="text-xs text-gray-500">
-            Saiu cortada ou em branco? Escolha o papel da sua impressora e imprima de novo. Este
-            computador lembra a escolha.
+            Saiu cortada, emendada ou com símbolos estranhos? Ajuste a impressora em{" "}
+            <Link to="/my-store" search={{ aba: "impressao" }} className="underline">
+              Minha Loja › Impressão
+            </Link>{" "}
+            e imprima o teste de alinhamento. Este computador lembra a escolha.
           </p>
         </div>
+
+        {avisosVisiveis.length > 0 && (
+          <ul className="list-disc space-y-1 rounded-md border border-amber-300 bg-amber-50 py-2 pl-6 pr-2 text-xs text-amber-900">
+            {avisosVisiveis.map((a) => (
+              <li key={a.codigo}>{a.mensagem}</li>
+            ))}
+          </ul>
+        )}
+        {mensagem && (
+          <p className="rounded-md border border-red-300 bg-red-50 p-2 text-xs text-red-800">
+            {mensagem}
+          </p>
+        )}
+
         <button
-          onClick={() => window.print()}
+          onClick={imprimirDeNovo}
           className="w-full rounded-md bg-black py-3 font-bold text-white transition-opacity hover:opacity-90"
         >
           IMPRIMIR COMANDA
@@ -373,18 +235,6 @@ function Print() {
           box-sizing: border-box;
         }
 
-        .print-area {
-          max-width: 100%;
-          background: white;
-          padding: 16px;
-          box-sizing: border-box;
-          box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
-          font-family: sans-serif;
-          color: black;
-          line-height: 1.25;
-          overflow-wrap: anywhere;
-        }
-
         .controles-da-comanda {
           width: 80mm;
           max-width: 100%;
@@ -394,8 +244,6 @@ function Print() {
           gap: 8px;
         }
 
-        ${estiloDeImpressao(papel)}
-
         @media print {
           .pagina-da-comanda {
             display: block !important;
@@ -404,28 +252,9 @@ function Print() {
           }
 
           .comanda-logo {
-            max-height: 26mm !important;
+            max-height: 24mm !important;
             max-width: 80% !important;
             margin: 0 auto 2mm auto !important;
-          }
-
-          .flycontrol-footer-logo {
-            max-height: 6mm !important;
-            margin: 0 auto 1mm auto !important;
-          }
-
-          .print-area p,
-          .print-area div {
-            margin-top: 0 !important;
-            margin-bottom: 1mm !important;
-          }
-
-          .print-footer {
-            margin-top: 2mm !important;
-            padding-bottom: 0 !important;
-            font-size: 8px !important;
-            line-height: 1.1 !important;
-            text-align: center !important;
           }
 
           .no-print {

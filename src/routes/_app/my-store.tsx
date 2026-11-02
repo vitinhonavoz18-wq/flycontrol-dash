@@ -28,7 +28,9 @@ import {
   ShoppingBag,
   ShieldCheck,
   Type,
+  Printer,
 } from "lucide-react";
+import { ConfiguracaoDeImpressao } from "@/components/impressao/ConfiguracaoDeImpressao";
 import { FlyStatusSettings } from "@/components/flystatus/FlyStatusSettings";
 import { PizzeriaPromotion } from "@/components/pizzerias/PizzeriaPromotion";
 import { PizzeriaSelector } from "@/components/pizzerias/PizzeriaSelector";
@@ -400,7 +402,7 @@ function StoreEditor({
           guardado nos favoritos. Sem `?aba=`, abre em "Identidade", como
           sempre abriu. */}
       <Tabs value={aba} onValueChange={trocarAba} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 mb-8 h-auto">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-3 lg:grid-cols-8 mb-8 h-auto">
           <TabsTrigger value="identity" className="gap-2">
             <Store className="h-4 w-4" /> Identidade
           </TabsTrigger>
@@ -422,7 +424,21 @@ function StoreEditor({
           <TabsTrigger value="hero" className="gap-2">
             <ImageIcon className="h-4 w-4" /> Capa (Hero)
           </TabsTrigger>
+          <TabsTrigger value="impressao" className="gap-2">
+            <Printer className="h-4 w-4" /> Impressão
+          </TabsTrigger>
         </TabsList>
+
+        {/* A impressora é configurada por computador (cada um tem a sua), e
+            por isso nada aqui é salvo no botão "Salvar" da loja: cada escolha
+            já vale na hora, só neste computador. */}
+        <TabsContent value="impressao" className="space-y-6">
+          <ConfiguracaoDeImpressao
+            lojaId={pizzeria.id}
+            logoUrl={pizzeria.logo_url}
+            nomeDaLoja={pizzeria.name}
+          />
+        </TabsContent>
 
         <TabsContent value="identity" className="space-y-6">
           {/* `data-guia` é a marca que o guia de configuração procura para

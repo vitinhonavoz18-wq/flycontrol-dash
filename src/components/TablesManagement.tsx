@@ -48,6 +48,12 @@ import { toast } from "sonner";
 
 // Helpers para processamento de pedidos (compatível com Dashboard.tsx)
 import { formatItemName, getItemPrice } from "@/utils/order-utils";
+import { itemDoPedido, montarComandaDaMesa } from "@/lib/impressao/comanda";
+import { lerPerfisDaLoja, perfilAtivo } from "@/lib/impressao/perfil";
+import { paraHtml } from "@/lib/impressao/renderizar";
+import { limparTexto } from "@/lib/impressao/texto";
+import { imprimirDocumento } from "@/lib/impressao/transporte";
+import { reaisParaCentavos } from "@/lib/pizza/motorDePreco";
 
 interface TablesManagementProps {
   tenantId: string;
@@ -299,10 +305,17 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
     }
   }
 
-  function handlePrintComanda(session: TableSession, orders: any[]) {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
-
+  /**
+   * Comanda da mesa (a conta com todos os pedidos da sessão).
+   *
+   * Montada pelo mesmo formatador da comanda do pedido (`lib/impressao`), no
+   * perfil de impressora escolhido neste computador. Antes era uma página
+   * escrita à mão aqui, com o nome e a observação do cliente colados direto
+   * no meio do código da página — uma observação escrita como código seria
+   * executada na tela da loja. Agora todo texto passa pela "peneira" de
+   * `paraHtml`.
+   */
+  async function handlePrintComanda(session: TableSession, orders: any[]) {
     // Recalcular totais reais dos pedidos válidos
     const validOrders = orders.filter((o) => {
       if (!o) return false;
@@ -312,120 +325,40 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
         (!o.items || (Array.isArray(o.items) && o.items.length === 0));
       return !isGhost;
     });
-    const subtotal = validOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-    const feeAmount = session.service_fee_enabled
-      ? subtotal * (session.service_fee_percent / 100)
+    // Dinheiro em centavos inteiros, para a soma não errar no arredondamento.
+    const subtotalCentavos = validOrders.reduce((acc, o) => acc + reaisParaCentavos(o.total), 0);
+    const percentual = Number(session.service_fee_percent) || 0;
+    const taxaCentavos = session.service_fee_enabled
+      ? Math.round((subtotalCentavos * percentual) / 100)
       : 0;
-    const total = subtotal + feeAmount;
 
-    const itemsHtml = validOrders
-      .map((order) => {
-        const orderItems = Array.isArray(order.items) ? order.items : [];
-        return `
-        <div class="order-block">
-          <div class="order-header">Pedido #${order.order_number || order.id.substring(0, 8)} - ${new Date(order.created_at).toLocaleTimeString()}</div>
-          <div class="customer">${order.customer_name || "Cliente"}</div>
-          <div class="items">
-            ${
-              orderItems.length > 0
-                ? orderItems
-                    .map(
-                      (item: any) => `
-              <div class="item">
-                <span class="qty">${item.qty ?? item.quantity ?? 1}x</span>
-                <span class="name">${formatItemName(item)}</span>
-                <span class="price">${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(getItemPrice(item))}</span>
-              </div>
-              ${item.notes || item.observations ? `<div class="item-notes">Obs: ${item.notes || item.observations}</div>` : ""}
-            `,
-                    )
-                    .join("")
-                : `
-              <div class="item">
-                <span class="name">Itens não detalhados (Pedido #${order.order_number})</span>
-                <span class="price">${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(order.total)}</span>
-              </div>
-            `
-            }
-          </div>
-          ${order.notes ? `<div class="notes">Geral: ${order.notes}</div>` : ""}
-        </div>
-      `;
-      })
-      .join("<hr/>");
+    const perfil = perfilAtivo(lerPerfisDaLoja(tenantId));
+    const linhas = montarComandaDaMesa(
+      {
+        loja: restaurantSlug,
+        mesa: String(session.table_number),
+        sessao: session.id.substring(0, 8),
+        abertaEm: session.opened_at ? new Date(session.opened_at) : null,
+        fechadaEm: session.status === "closed" ? new Date() : null,
+        pedidos: validOrders.map((order) => ({
+          numero: String(order.order_number || order.id.substring(0, 8)),
+          hora: order.created_at ? new Date(order.created_at) : null,
+          cliente: limparTexto(order.customer_name || "Cliente"),
+          itens: (Array.isArray(order.items) ? order.items : []).map(itemDoPedido),
+          totalCentavos: reaisParaCentavos(order.total),
+          observacoes: limparTexto(order.notes) || undefined,
+        })),
+        subtotalCentavos,
+        taxaDeServico: session.service_fee_enabled ? { percentual, centavos: taxaCentavos } : null,
+        totalCentavos: subtotalCentavos + taxaCentavos,
+      },
+      { colunas: perfil.colunas, acentos: perfil.acentos, linhasNoFinal: perfil.linhasNoFinal },
+    );
 
-    printWindow.document.write(`
-      <html>
-        <head>
-          <title>Comanda Mesa ${session.table_number}</title>
-          <style>
-            body { font-family: 'Courier New', Courier, monospace; width: 300px; padding: 10px; font-size: 12px; }
-            .header { text-align: center; margin-bottom: 20px; border-bottom: 1px dashed #000; padding-bottom: 10px; }
-            .restaurant { font-weight: bold; font-size: 16px; margin-bottom: 5px; }
-            .title { font-size: 14px; font-weight: bold; }
-            .order-block { margin-bottom: 10px; }
-            .order-header { font-weight: bold; margin-bottom: 3px; }
-            .customer { font-style: italic; margin-bottom: 5px; }
-            .item { display: flex; justify-content: space-between; margin-bottom: 2px; }
-            .qty { width: 30px; }
-            .name { flex: 1; }
-            .price { width: 70px; text-align: right; }
-            .item-notes { font-size: 9px; color: #666; margin-left: 30px; margin-bottom: 5px; }
-            .notes { font-size: 10px; color: #555; margin-top: 3px; }
-            .summary { margin-top: 20px; border-top: 1px dashed #000; pt-5; }
-            .summary-row { display: flex; justify-content: space-between; margin-bottom: 5px; font-size: 14px; }
-            .total-row { font-weight: bold; font-size: 18px; border-top: 1px solid #000; padding-top: 5px; }
-            .footer { text-align: center; margin-top: 30px; border-top: 1px dashed #000; padding-top: 10px; font-weight: bold; }
-            hr { border: none; border-top: 1px dotted #ccc; margin: 10px 0; }
-            @media print { .no-print { display: none; } }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <div class="restaurant">${restaurantSlug.toUpperCase()}</div>
-            <div class="title">MESA ${session.table_number}</div>
-            <div>Sessão: ${session.id.substring(0, 8)}</div>
-            <div>Abertura: ${new Date(session.opened_at).toLocaleString()}</div>
-            ${session.status === "closed" ? `<div>Fechamento: ${new Date().toLocaleString()}</div>` : ""}
-          </div>
-          
-          <div class="content">
-            ${itemsHtml}
-          </div>
-
-          <div class="summary">
-            <div class="summary-row">
-              <span>Subtotal:</span>
-              <span>${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(subtotal)}</span>
-            </div>
-            ${
-              session.service_fee_enabled
-                ? `
-              <div class="summary-row">
-                <span>Taxa de Serviço (${session.service_fee_percent}%):</span>
-                <span>${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(feeAmount)}</span>
-              </div>
-              <div style="font-size: 9px; text-align: right; margin-bottom: 5px;">Taxa de serviço de ${session.service_fee_percent}% aplicada ao total.</div>
-            `
-                : ""
-            }
-
-            <div class="summary-row total-row">
-              <span>TOTAL FINAL:</span>
-              <span>${new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(total)}</span>
-            </div>
-          </div>
-
-          <div class="footer">
-            Obrigado pela preferência!
-          </div>
-          <script>
-            setTimeout(() => { window.print(); window.close(); }, 500);
-          </script>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
+    const r = await imprimirDocumento(
+      paraHtml(linhas, perfil, { titulo: `Comanda Mesa ${session.table_number}` }),
+    );
+    if (!r.ok) toast.error(r.mensagem);
   }
 
   async function handleSyncTables() {

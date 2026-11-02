@@ -1,0 +1,154 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`regressão: comanda de exemplo > 58 mm continua igual 1`] = `
+"================================
+        PIZZARIA EXEMPLO
+         (71) 3333-4444
+================================
+
+PEDIDO: #1258
+DATA: 01/11/2026     HORA: 20:35
+ORIGEM: Site
+
+TIPO: ENTREGA
+
+--------------------------------
+            CLIENTE
+--------------------------------
+Nome: João Silva
+Tel: (71) 99999-9999
+
+ENDEREÇO:
+Rua Exemplo, 150, Apto 302,
+Bloco B
+Bairro: Stella Maris
+Referência: Próximo à praça,
+            portão azul
+
+================================
+        ITENS DO PEDIDO
+================================
+
+2x PIZZA GRANDE         R$ 90,00
+   Tamanho: Grande
+   Sabor: Calabresa
+   + Adicional: Queijo extra
+
+   *** OBSERVAÇÃO ***
+   Sem cebola
+   Bem assada, por favor
+   (valor unitário)     R$ 45,00
+
+--------------------------------
+
+1x REFRIGERANTE 2L      R$ 12,00
+
+   *** OBSERVAÇÃO ***
+   Coca-Cola
+
+================================
+             RESUMO
+================================
+
+Subtotal:              R$ 102,00
+Entrega:                 R$ 5,00
+Desconto:               -R$ 7,00
+
+TOTAL:                 R$ 100,00
+
+PAGAMENTO: DINHEIRO
+SITUAÇÃO: A RECEBER
+Troco para:            R$ 150,00
+Levar de troco:         R$ 50,00
+
+********************************
+     OBSERVAÇÕES DO PEDIDO
+********************************
+Interfone quebrado: ligar quando
+chegar.
+********************************
+
+================================
+      FIM DO PEDIDO #1258
+================================
+  Impresso em 01/11/2026 20:40
+           FlyControl
+
+
+"
+`;
+
+exports[`regressão: comanda de exemplo > 80 mm continua igual 1`] = `
+"================================================
+                PIZZARIA EXEMPLO
+                 (71) 3333-4444
+================================================
+
+PEDIDO: #1258
+DATA: 01/11/2026                     HORA: 20:35
+ORIGEM: Site
+
+TIPO: ENTREGA
+
+------------------------------------------------
+                    CLIENTE
+------------------------------------------------
+Nome: João Silva
+Tel: (71) 99999-9999
+
+ENDEREÇO:
+Rua Exemplo, 150, Apto 302, Bloco B
+Bairro: Stella Maris
+Referência: Próximo à praça, portão azul
+
+================================================
+                ITENS DO PEDIDO
+================================================
+
+2x PIZZA GRANDE                         R$ 90,00
+   Tamanho: Grande
+   Sabor: Calabresa
+   + Adicional: Queijo extra
+
+   *** OBSERVAÇÃO ***
+   Sem cebola
+   Bem assada, por favor
+   (valor unitário)                     R$ 45,00
+
+------------------------------------------------
+
+1x REFRIGERANTE 2L                      R$ 12,00
+
+   *** OBSERVAÇÃO ***
+   Coca-Cola
+
+================================================
+                     RESUMO
+================================================
+
+Subtotal:                              R$ 102,00
+Entrega:                                 R$ 5,00
+Desconto:                               -R$ 7,00
+
+TOTAL:                                 R$ 100,00
+
+PAGAMENTO: DINHEIRO
+SITUAÇÃO: A RECEBER
+Troco para:                            R$ 150,00
+Levar de troco:                         R$ 50,00
+
+************************************************
+             OBSERVAÇÕES DO PEDIDO
+************************************************
+Interfone quebrado: ligar quando chegar.
+************************************************
+
+================================================
+              FIM DO PEDIDO #1258
+================================================
+          Impresso em 01/11/2026 20:40
+                   FlyControl
+
+
+"
+`;

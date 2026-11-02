@@ -175,10 +175,82 @@ export function larguraDaPrevia(papel: Papel): string {
   return "80mm";
 }
 
-/** O CSS de impressão da comanda para o papel escolhido. */
-export function estiloDeImpressao(papel: Papel): string {
-  const m = medidasDoPapel(papel);
+/**
+ * A grade de letras da comanda (ver `perfil.ts`): quantas letras por linha,
+ * o respiro lateral e a altura de cada linha.
+ */
+export type Grade = { colunas: number; margemMm: number; espacamento: number };
+
+/**
+ * Nas fontes de largura fixa (Courier New, Liberation Mono…) cada letra mede
+ * 0,6 da altura da fonte. Os 2% a mais são folga para fontes que medem 0,602
+ * — sem ela, a última letra da linha podia pular para baixo.
+ */
+export const PROPORCAO_DA_LETRA = 0.6 * 1.02;
+
+/** A área (em mm) que a comanda ocupa em cada papel, com as margens dentro. */
+export function larguraDaAreaMm(papel: Papel): number {
+  if (papel === "58") return 52;
+  if (papel === "a4") return 110;
+  return 76;
+}
+
+/**
+ * Fontes de largura fixa, todas com letra de 0,6. Courier New vem no Windows
+ * e no Mac; Liberation Mono e DejaVu no Linux; "monospace" é a reserva.
+ */
+export const FONTES_DA_COMANDA =
+  '"Courier New", Courier, "Liberation Mono", "DejaVu Sans Mono", "Cousine", monospace';
+
+/**
+ * O tamanho da letra para caberem exatamente `colunas` letras na largura
+ * útil. No automático a largura do papel só é conhecida na hora de imprimir
+ * (100vw é a largura da folha), por isso a conta fica para o navegador.
+ */
+export function tamanhoDaLetraCss(papel: Papel, grade: Grade): string {
+  const divisor = (grade.colunas * PROPORCAO_DA_LETRA).toFixed(4);
+  if (papel === "auto") {
+    return `calc((min(100vw, 76mm) - ${grade.margemMm * 2}mm) / ${divisor})`;
+  }
+  const mm =
+    Math.max(0.5, larguraDaAreaMm(papel) - grade.margemMm * 2) /
+    (grade.colunas * PROPORCAO_DA_LETRA);
+  return `${mm.toFixed(3)}mm`;
+}
+
+/**
+ * O CSS da grade de letras — vale na tela E no papel, para a prévia ser o
+ * que sai. Cada linha é um bloco próprio, com quebra explícita: nada depende
+ * de o driver da impressora "adivinhar" onde uma linha termina.
+ */
+export function estiloDaGrade(papel: Papel, grade: Grade): string {
   return `
+.comanda-texto {
+  font-family: ${FONTES_DA_COMANDA} !important;
+  font-size: ${tamanhoDaLetraCss(papel, grade)} !important;
+  line-height: ${grade.espacamento} !important;
+  letter-spacing: 0 !important;
+  font-variant-ligatures: none;
+  color: #000;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+.comanda-texto .l {
+  display: block;
+  white-space: pre;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: hidden;
+}
+.comanda-texto .l-negrito, .comanda-texto .l-titulo, .comanda-texto .l-destaque { font-weight: 700; }
+`;
+}
+
+/** O CSS de impressão da comanda para o papel escolhido. */
+export function estiloDeImpressao(papel: Papel, grade?: Grade): string {
+  const m = medidasDoPapel(papel);
+  const respiro = grade ? `${grade.margemMm}mm` : m.respiro;
+  return `${grade ? estiloDaGrade(papel, grade) : ""}
 @media print {
   @page { ${m.pagina} }
 
@@ -211,7 +283,7 @@ export function estiloDeImpressao(papel: Papel): string {
     width: ${m.larguraDaComanda} !important;
     max-width: ${m.larguraMaxima} !important;
     margin: ${m.centralizar ? "0 auto" : "0"} !important;
-    padding: ${m.respiro} !important;
+    padding: ${respiro} !important;
     box-sizing: border-box !important;
     box-shadow: none !important;
     background: #fff !important;
