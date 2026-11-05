@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { medidasFinais } from "@/lib/imagem/medidas";
+import { comprimirParaWebp, LIMITE_PRODUTO } from "@/lib/imagem/comprimir";
 
 const BUCKET = "menu-images";
 const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
@@ -31,7 +31,7 @@ const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
  * ficavam borradas, como ampliar uma foto 3x4 para virar pôster. Por isso
  * quem envia capa e logo passa um limite maior (`maxDimension`).
  */
-const MAX_DIMENSION = 900;
+const MAX_DIMENSION = LIMITE_PRODUTO;
 
 const SIGNED_URL_TTL = 60 * 60 * 24 * 365 * 50; // ~50 years
 // Cada foto enviada ganha um nome único, então o arquivo de um endereço nunca
@@ -54,47 +54,7 @@ interface ImageUploadProps {
   maxDimension?: number;
 }
 
-async function compressIfNeeded(file: File, limite: number): Promise<Blob> {
-  // A decisão é pelo TAMANHO DA FOTO, não pelo peso do arquivo.
-  //
-  // Antes, um arquivo WebP com menos de 800 KB passava direto — mesmo tendo
-  // 4000 pontos de largura. E é justamente esse o caso que pesa: WebP comprime
-  // tão bem que uma foto enorme cabe em poucos KB no disco, mas ao ser aberta
-  // na tela do cliente ela volta a ocupar o tamanho original na memória. É a
-  // barraca de camping: dobrada cabe na mochila, montada ocupa a sala inteira.
-  const bitmap = await createImageBitmap(file);
-  const maiorLado = Math.max(bitmap.width, bitmap.height);
-  if (file.type === "image/webp" && maiorLado <= limite) {
-    bitmap.close();
-    return file;
-  }
-  const { largura: w, altura: h } = medidasFinais(bitmap.width, bitmap.height, limite);
-  const canvas = document.createElement("canvas");
-  canvas.width = w;
-  canvas.height = h;
-  const ctx = canvas.getContext("2d");
-  if (!ctx) {
-    bitmap.close();
-    return file;
-  }
-  // Encolher com a suavização no máximo evita o serrilhado nas bordas das
-  // letras da logo e nos contornos da foto.
-  ctx.imageSmoothingEnabled = true;
-  ctx.imageSmoothingQuality = "high";
-  ctx.drawImage(bitmap, 0, 0, w, h);
-  // Libera a foto aberta na memória; num envio em lote isso evita a aba
-  // engasgar depois da décima imagem.
-  bitmap.close();
-  return await new Promise<Blob>((resolve) => {
-    canvas.toBlob(
-      (blob) => resolve(blob ?? file),
-      "image/webp",
-      // Imagem grande (capa, logo) aparece em destaque: um pouco mais de
-      // qualidade custa pouco peso e evita manchas no degradê do céu da foto.
-      limite > MAX_DIMENSION ? 0.9 : 0.85
-    );
-  });
-}
+const compressIfNeeded = (file: File, limite: number) => comprimirParaWebp(file, limite);
 
 export function ImageUpload({
   value,
@@ -126,13 +86,11 @@ export function ImageUpload({
         setProgress(40);
         const ext = blob.type === "image/webp" ? "webp" : file.name.split(".").pop() || "jpg";
         const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from(BUCKET)
-          .upload(path, blob, {
-            contentType: blob.type,
-            upsert: false,
-            cacheControl: CACHE_UM_ANO,
-          });
+        const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, blob, {
+          contentType: blob.type,
+          upsert: false,
+          cacheControl: CACHE_UM_ANO,
+        });
         if (upErr) throw upErr;
         setProgress(80);
         const { data: signed, error: signErr } = await supabase.storage
@@ -150,7 +108,7 @@ export function ImageUpload({
         setTimeout(() => setProgress(0), 500);
       }
     },
-    [folder, onChange, maxDimension]
+    [folder, onChange, maxDimension],
   );
 
   const onDrop = (e: React.DragEvent) => {
@@ -172,8 +130,10 @@ export function ImageUpload({
         onClick={() => !disabled && !uploading && inputRef.current?.click()}
         className={cn(
           "relative flex min-h-32 cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed p-4 transition-colors",
-          dragOver ? "border-primary bg-primary/5" : "border-muted-foreground/30 hover:border-primary/50",
-          disabled && "opacity-50 cursor-not-allowed"
+          dragOver
+            ? "border-primary bg-primary/5"
+            : "border-muted-foreground/30 hover:border-primary/50",
+          disabled && "opacity-50 cursor-not-allowed",
         )}
       >
         {value ? (

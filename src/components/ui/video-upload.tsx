@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { formatarPeso, PESO_DE_VIDEO_RECOMENDADO } from "@/lib/midia/peso";
 
 const BUCKET = "menu-images";
 // Mesmo limite que o SiteCreatorFly já usa para o vídeo de capa — um vídeo
@@ -46,17 +47,27 @@ export function VideoUpload({
         toast.error("Vídeo maior que 25MB. Comprima antes de enviar.");
         return;
       }
+      if (file.size > PESO_DE_VIDEO_RECOMENDADO) {
+        // Não bloqueia: o lojista pode ter um bom motivo. Mas avisa, porque
+        // é o arquivo que mais atrasa a abertura do cardápio — medido em
+        // 05/11/2026, um vídeo de capa de 18 MB fez o celular baixar 13 MB
+        // nos primeiros 10 segundos, disputando a internet com as fotos.
+        toast.warning(
+          `Este vídeo tem ${formatarPeso(file.size)}. Num celular com 4G fraco ele leva cerca de ` +
+            `${Math.round(file.size / (200 * 1024))} segundos para baixar. Para o cardápio abrir ` +
+            "rápido, prefira um vídeo de até 5 MB (10 a 15 segundos, sem som).",
+          { duration: 15000 },
+        );
+      }
       setUploading(true);
       try {
         const ext = file.name.split(".").pop() || "mp4";
         const path = `${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-        const { error: upErr } = await supabase.storage
-          .from(BUCKET)
-          .upload(path, file, {
-            contentType: file.type,
-            upsert: false,
-            cacheControl: CACHE_UM_ANO,
-          });
+        const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, file, {
+          contentType: file.type,
+          upsert: false,
+          cacheControl: CACHE_UM_ANO,
+        });
         if (upErr) throw upErr;
         const { data: signed, error: signErr } = await supabase.storage
           .from(BUCKET)
@@ -117,7 +128,7 @@ export function VideoUpload({
           <div className="flex flex-col items-center gap-2 text-muted-foreground">
             <VideoIcon className="h-8 w-8" />
             <span className="text-sm font-medium">Clique para enviar um vídeo</span>
-            <span className="text-xs">MP4, WEBM ou MOV • até 25MB</span>
+            <span className="text-xs">MP4, WEBM ou MOV • até 25MB (ideal: até 5MB)</span>
             <span className="text-xs">Resolução ideal: 1920×1080 (Full HD), na horizontal</span>
           </div>
         )}

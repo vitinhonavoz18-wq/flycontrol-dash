@@ -8,8 +8,9 @@ import { montarReenvio, reenviarTarefas } from "@/lib/midia/reenviarFotos";
  * Botão "Reenviar fotos" do Cardápio.
  *
  * Passa todas as fotos que o site de pedidos já tinha para o endereço com
- * cache do Cloudflare — o que não gasta a franquia do Supabase. Pode apertar
- * quantas vezes quiser: o que já foi trocado não é reenviado.
+ * cache do Cloudflare — o que não gasta a franquia do Supabase — e encolhe as
+ * fotos pesadas, que deixavam o cardápio lento para abrir no celular. Pode
+ * apertar quantas vezes quiser: o que já foi trocado não é reenviado.
  */
 export function ReenviarFotosButton({ pizzeriaId }: { pizzeriaId: string }) {
   const [andamento, setAndamento] = useState<{ feitos: number; total: number } | null>(null);
@@ -17,18 +18,32 @@ export function ReenviarFotosButton({ pizzeriaId }: { pizzeriaId: string }) {
   async function reenviar() {
     setAndamento({ feitos: 0, total: 0 });
     try {
-      const { tarefas, erro } = await montarReenvio(pizzeriaId);
+      const {
+        tarefas,
+        erro,
+        pesadas = 0,
+        avisos = [],
+      } = await montarReenvio(pizzeriaId, {
+        otimizar: true,
+      });
       if (erro) {
         toast.error(erro);
         return;
       }
+      for (const aviso of avisos) toast.warning(aviso, { duration: 15000 });
       if (tarefas.length === 0) {
-        toast.success("Todas as fotos do site já estão atualizadas. Nada a reenviar.");
+        toast.success("Todas as fotos do site já estão atualizadas e leves. Nada a reenviar.");
         return;
       }
+      const sobrePesadas =
+        pesadas > 0
+          ? `${pesadas} ${pesadas === 1 ? "foto está pesada e será encolhida" : "fotos estão pesadas e serão encolhidas"} ` +
+            "(fica igual na tela, só abre mais rápido no celular).\n\n"
+          : "";
       const ok = window.confirm(
         `Vou reenviar ${tarefas.length} ${tarefas.length === 1 ? "item" : "itens"} com foto para o site de pedidos.\n\n` +
-          "Nada muda no que o cliente vê — só o caminho por onde a foto chega, que fica mais rápido e mais barato.\n\nContinuar?",
+          sobrePesadas +
+          "Nada muda no cardápio além disso: nomes, preços e descrições continuam os mesmos.\n\nContinuar?",
       );
       if (!ok) return;
 

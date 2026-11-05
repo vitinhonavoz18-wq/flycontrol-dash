@@ -3,6 +3,7 @@ import "./lib/error-capture";
 import { consumeLastCapturedError } from "./lib/error-capture";
 import { runDailyBillingCron } from "./lib/billing/dailyCron";
 import { renderErrorPage } from "./lib/error-page";
+import { ehPedidoDeMidia, entregarMidia } from "./lib/midia/entregarMidia";
 
 type ServerEntry = {
   fetch: (request: Request, env: unknown, ctx: unknown) => Promise<Response> | Response;
@@ -74,6 +75,16 @@ async function normalizeCatastrophicSsrResponse(response: Response): Promise<Res
 
 export default {
   async fetch(request: Request, env: unknown, ctx: unknown) {
+    // Fotos e vídeos do cardápio: atalho direto para a "geladeira", sem
+    // montar o sistema inteiro de páginas. É o pedido mais repetido do
+    // servidor — cada cliente que abre o cardápio pede dezenas deles.
+    if (ehPedidoDeMidia(request)) {
+      try {
+        return await entregarMidia(request);
+      } catch (error) {
+        console.error("[midia] atalho falhou, seguindo pelo caminho normal:", error);
+      }
+    }
     try {
       const handler = await getServerEntry();
       const response = await handler.fetch(request, env, ctx);
