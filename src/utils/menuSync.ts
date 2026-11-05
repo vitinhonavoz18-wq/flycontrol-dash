@@ -1,3 +1,5 @@
+import { paraEnderecoComCache } from "@/lib/midia/enderecoComCache";
+
 type MenuType =
   | "category"
   | "product"
@@ -408,7 +410,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
     return {
       name: data.name,
       description: data.description ?? null,
-      image_url: data.image_url ?? null,
+      image_url: paraEnderecoComCache(data.image_url ?? null),
       active: data.active !== undefined ? data.active : true,
       sort_order: data.order_index, // FlyControl uses order_index, SiteCreatorFly expects sort_order
     };
@@ -420,7 +422,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
       name: data.name,
       description: data.description,
       price: data.price,
-      image_url: data.image_url,
+      image_url: paraEnderecoComCache(data.image_url),
       active: data.active !== undefined ? data.active : true,
       category_id: normalizedCategoryId,
       max_extras: data.max_extras ?? null,
@@ -437,7 +439,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
     return {
       name: data.name,
       price: data.price,
-      image_url: data.image_url,
+      image_url: paraEnderecoComCache(data.image_url),
       active: data.active !== undefined ? data.active : true,
     };
   }
@@ -477,7 +479,7 @@ function prepareDataForExternal(type: MenuType, data: any) {
       description: data.description,
       original_price: data.original_price,
       price: data.combo_price,
-      image_url: data.image_url,
+      image_url: paraEnderecoComCache(data.image_url),
       is_active: data.active !== undefined ? data.active : true,
       is_highlighted: data.highlight ?? false,
       available_days: data.available_days,
@@ -523,10 +525,10 @@ function prepareDataForExternal(type: MenuType, data: any) {
       opening_hours: data.opening_hours,
       hours: data.opening_hours,
       description: data.description,
-      logo_url: data.logo_url,
-      hero_image_url: data.hero_image_url,
+      logo_url: paraEnderecoComCache(data.logo_url),
+      hero_image_url: paraEnderecoComCache(data.hero_image_url),
       hero_media_type: data.hero_media_type,
-      hero_video_url: data.hero_video_url,
+      hero_video_url: paraEnderecoComCache(data.hero_video_url),
       business_type: data.business_type,
       tagline: data.tagline,
       city: data.city,

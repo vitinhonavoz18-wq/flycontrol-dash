@@ -16,6 +16,7 @@ import { ehPizzaria } from "@/lib/pizza/catalogoDoPainel";
 import { MenuSyncSection } from "./MenuSyncSection";
 import { MenuTemplatePicker } from "./MenuTemplatePicker";
 import { MenuImportDialog } from "./MenuImportDialog";
+import { ReenviarFotosButton } from "./ReenviarFotosButton";
 import { vocabularioDaLoja } from "@/lib/menu/vocabulario";
 import { useAuth } from "@/lib/auth";
 
@@ -150,7 +151,8 @@ export function MenuManager({ pizzeriaId }: MenuManagerProps) {
     <div className="space-y-4">
       {isSuperAdmin && <MenuSyncSection pizzeriaId={pizzeriaId} onSyncSuccess={loadCategories} />}
 
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
+        <ReenviarFotosButton pizzeriaId={pizzeriaId} />
         <MenuImportDialog
           pizzeriaId={pizzeriaId}
           pizzeriaSlug={pizzeria?.slug}

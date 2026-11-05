@@ -118,6 +118,7 @@ import { Route as ApiPizzeriasIdDeactivateRouteImport } from './routes/api/pizze
 import { Route as ApiPizzeriasIdDeleteRouteImport } from './routes/api/pizzerias.$id.delete'
 import { Route as ApiPizzeriasIdProvisionRouteImport } from './routes/api/pizzerias.$id.provision'
 import { Route as ApiPizzeriasIdReactivateRouteImport } from './routes/api/pizzerias.$id.reactivate'
+import { Route as ApiPublicMidiaSplatRouteImport } from './routes/api/public/midia.$'
 import { Route as AppAdminAffiliatesPartnersIndexRouteImport } from './routes/_app/admin/affiliates.partners.index'
 import { Route as AppAdminAffiliatesPartnersAffiliateIdRouteImport } from './routes/_app/admin/affiliates.partners.$affiliateId'
 
@@ -687,6 +688,11 @@ const ApiPizzeriasIdReactivateRoute =
     path: '/api/pizzerias/$id/reactivate',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicMidiaSplatRoute = ApiPublicMidiaSplatRouteImport.update({
+  id: '/api/public/midia/$',
+  path: '/api/public/midia/$',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AppAdminAffiliatesPartnersIndexRoute =
   AppAdminAffiliatesPartnersIndexRouteImport.update({
     id: '/partners/',
@@ -808,6 +814,7 @@ export interface FileRoutesByFullPath {
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
   '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
+  '/api/public/midia/$': typeof ApiPublicMidiaSplatRoute
   '/admin/affiliates/': typeof AppAdminAffiliatesIndexRoute
   '/admin/affiliates/partners/$affiliateId': typeof AppAdminAffiliatesPartnersAffiliateIdRoute
   '/admin/affiliates/partners/': typeof AppAdminAffiliatesPartnersIndexRoute
@@ -915,6 +922,7 @@ export interface FileRoutesByTo {
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
   '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
+  '/api/public/midia/$': typeof ApiPublicMidiaSplatRoute
   '/admin/affiliates': typeof AppAdminAffiliatesIndexRoute
   '/admin/affiliates/partners/$affiliateId': typeof AppAdminAffiliatesPartnersAffiliateIdRoute
   '/admin/affiliates/partners': typeof AppAdminAffiliatesPartnersIndexRoute
@@ -1029,6 +1037,7 @@ export interface FileRoutesById {
   '/api/pizzerias/$id/delete': typeof ApiPizzeriasIdDeleteRoute
   '/api/pizzerias/$id/provision': typeof ApiPizzeriasIdProvisionRoute
   '/api/pizzerias/$id/reactivate': typeof ApiPizzeriasIdReactivateRoute
+  '/api/public/midia/$': typeof ApiPublicMidiaSplatRoute
   '/_app/admin/affiliates/': typeof AppAdminAffiliatesIndexRoute
   '/_app/admin/affiliates/partners/$affiliateId': typeof AppAdminAffiliatesPartnersAffiliateIdRoute
   '/_app/admin/affiliates/partners/': typeof AppAdminAffiliatesPartnersIndexRoute
@@ -1143,6 +1152,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
     | '/api/pizzerias/$id/reactivate'
+    | '/api/public/midia/$'
     | '/admin/affiliates/'
     | '/admin/affiliates/partners/$affiliateId'
     | '/admin/affiliates/partners/'
@@ -1250,6 +1260,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
     | '/api/pizzerias/$id/reactivate'
+    | '/api/public/midia/$'
     | '/admin/affiliates'
     | '/admin/affiliates/partners/$affiliateId'
     | '/admin/affiliates/partners'
@@ -1363,6 +1374,7 @@ export interface FileRouteTypes {
     | '/api/pizzerias/$id/delete'
     | '/api/pizzerias/$id/provision'
     | '/api/pizzerias/$id/reactivate'
+    | '/api/public/midia/$'
     | '/_app/admin/affiliates/'
     | '/_app/admin/affiliates/partners/$affiliateId'
     | '/_app/admin/affiliates/partners/'
@@ -1421,6 +1433,7 @@ export interface RootRouteChildren {
   ApiPizzeriasIdDeleteRoute: typeof ApiPizzeriasIdDeleteRoute
   ApiPizzeriasIdProvisionRoute: typeof ApiPizzeriasIdProvisionRoute
   ApiPizzeriasIdReactivateRoute: typeof ApiPizzeriasIdReactivateRoute
+  ApiPublicMidiaSplatRoute: typeof ApiPublicMidiaSplatRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -2188,6 +2201,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPizzeriasIdReactivateRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/midia/$': {
+      id: '/api/public/midia/$'
+      path: '/api/public/midia/$'
+      fullPath: '/api/public/midia/$'
+      preLoaderRoute: typeof ApiPublicMidiaSplatRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/_app/admin/affiliates/partners/': {
       id: '/_app/admin/affiliates/partners/'
       path: '/partners'
@@ -2465,6 +2485,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPizzeriasIdDeleteRoute: ApiPizzeriasIdDeleteRoute,
   ApiPizzeriasIdProvisionRoute: ApiPizzeriasIdProvisionRoute,
   ApiPizzeriasIdReactivateRoute: ApiPizzeriasIdReactivateRoute,
+  ApiPublicMidiaSplatRoute: ApiPublicMidiaSplatRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
