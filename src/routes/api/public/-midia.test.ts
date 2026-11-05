@@ -56,7 +56,7 @@ describe("/api/public/midia", () => {
     expect(await primeira.text()).toBe("bytes-da-foto");
     expect(primeira.headers.get("cache-control")).toContain("max-age=31536000");
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock.mock.calls[0][0]).toBe(
+    expect((fetchMock.mock.calls[0] as unknown[])[0]).toBe(
       "https://knhenchgntttraaeewlj.supabase.co/storage/v1/object/sign/menu-images/p/1.webp?token=abc",
     );
 
