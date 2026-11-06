@@ -90,6 +90,9 @@ import { Route as ApiCrmProductsRouteImport } from './routes/api/crm.products'
 import { Route as ApiCrmReplyRouteImport } from './routes/api/crm.reply'
 import { Route as ApiCrmWhatsappDeviceRouteImport } from './routes/api/crm.whatsapp-device'
 import { Route as ApiMarketingQueueRouteImport } from './routes/api/marketing.queue'
+import { Route as ApiMayaEntradaRouteImport } from './routes/api/maya.entrada'
+import { Route as ApiMayaRespostaRouteImport } from './routes/api/maya.resposta'
+import { Route as ApiMayaTurnoRouteImport } from './routes/api/maya.turno'
 import { Route as ApiPizzeriasCreateRouteImport } from './routes/api/pizzerias.create'
 import { Route as ApiPizzeriasFiqonTestRouteImport } from './routes/api/pizzerias.fiqon-test'
 import { Route as ApiPizzeriasSyncMenuRouteImport } from './routes/api/pizzerias.sync-menu'
@@ -535,6 +538,21 @@ const ApiMarketingQueueRoute = ApiMarketingQueueRouteImport.update({
   path: '/api/marketing/queue',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ApiMayaEntradaRoute = ApiMayaEntradaRouteImport.update({
+  id: '/api/maya/entrada',
+  path: '/api/maya/entrada',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMayaRespostaRoute = ApiMayaRespostaRouteImport.update({
+  id: '/api/maya/resposta',
+  path: '/api/maya/resposta',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ApiMayaTurnoRoute = ApiMayaTurnoRouteImport.update({
+  id: '/api/maya/turno',
+  path: '/api/maya/turno',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiPizzeriasCreateRoute = ApiPizzeriasCreateRouteImport.update({
   id: '/api/pizzerias/create',
   path: '/api/pizzerias/create',
@@ -784,6 +802,9 @@ export interface FileRoutesByFullPath {
   '/api/crm/reply': typeof ApiCrmReplyRoute
   '/api/crm/whatsapp-device': typeof ApiCrmWhatsappDeviceRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
+  '/api/maya/entrada': typeof ApiMayaEntradaRoute
+  '/api/maya/resposta': typeof ApiMayaRespostaRoute
+  '/api/maya/turno': typeof ApiMayaTurnoRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -892,6 +913,9 @@ export interface FileRoutesByTo {
   '/api/crm/reply': typeof ApiCrmReplyRoute
   '/api/crm/whatsapp-device': typeof ApiCrmWhatsappDeviceRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
+  '/api/maya/entrada': typeof ApiMayaEntradaRoute
+  '/api/maya/resposta': typeof ApiMayaRespostaRoute
+  '/api/maya/turno': typeof ApiMayaTurnoRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -1007,6 +1031,9 @@ export interface FileRoutesById {
   '/api/crm/reply': typeof ApiCrmReplyRoute
   '/api/crm/whatsapp-device': typeof ApiCrmWhatsappDeviceRoute
   '/api/marketing/queue': typeof ApiMarketingQueueRouteWithChildren
+  '/api/maya/entrada': typeof ApiMayaEntradaRoute
+  '/api/maya/resposta': typeof ApiMayaRespostaRoute
+  '/api/maya/turno': typeof ApiMayaTurnoRoute
   '/api/pizzerias/create': typeof ApiPizzeriasCreateRoute
   '/api/pizzerias/fiqon-test': typeof ApiPizzeriasFiqonTestRoute
   '/api/pizzerias/sync-menu': typeof ApiPizzeriasSyncMenuRoute
@@ -1122,6 +1149,9 @@ export interface FileRouteTypes {
     | '/api/crm/reply'
     | '/api/crm/whatsapp-device'
     | '/api/marketing/queue'
+    | '/api/maya/entrada'
+    | '/api/maya/resposta'
+    | '/api/maya/turno'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -1230,6 +1260,9 @@ export interface FileRouteTypes {
     | '/api/crm/reply'
     | '/api/crm/whatsapp-device'
     | '/api/marketing/queue'
+    | '/api/maya/entrada'
+    | '/api/maya/resposta'
+    | '/api/maya/turno'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -1344,6 +1377,9 @@ export interface FileRouteTypes {
     | '/api/crm/reply'
     | '/api/crm/whatsapp-device'
     | '/api/marketing/queue'
+    | '/api/maya/entrada'
+    | '/api/maya/resposta'
+    | '/api/maya/turno'
     | '/api/pizzerias/create'
     | '/api/pizzerias/fiqon-test'
     | '/api/pizzerias/sync-menu'
@@ -1414,6 +1450,9 @@ export interface RootRouteChildren {
   ApiCrmReplyRoute: typeof ApiCrmReplyRoute
   ApiCrmWhatsappDeviceRoute: typeof ApiCrmWhatsappDeviceRoute
   ApiMarketingQueueRoute: typeof ApiMarketingQueueRouteWithChildren
+  ApiMayaEntradaRoute: typeof ApiMayaEntradaRoute
+  ApiMayaRespostaRoute: typeof ApiMayaRespostaRoute
+  ApiMayaTurnoRoute: typeof ApiMayaTurnoRoute
   ApiPizzeriasCreateRoute: typeof ApiPizzeriasCreateRoute
   ApiPizzeriasFiqonTestRoute: typeof ApiPizzeriasFiqonTestRoute
   ApiPizzeriasSyncMenuRoute: typeof ApiPizzeriasSyncMenuRoute
@@ -2005,6 +2044,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiMarketingQueueRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/maya/entrada': {
+      id: '/api/maya/entrada'
+      path: '/api/maya/entrada'
+      fullPath: '/api/maya/entrada'
+      preLoaderRoute: typeof ApiMayaEntradaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/maya/resposta': {
+      id: '/api/maya/resposta'
+      path: '/api/maya/resposta'
+      fullPath: '/api/maya/resposta'
+      preLoaderRoute: typeof ApiMayaRespostaRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/api/maya/turno': {
+      id: '/api/maya/turno'
+      path: '/api/maya/turno'
+      fullPath: '/api/maya/turno'
+      preLoaderRoute: typeof ApiMayaTurnoRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/pizzerias/create': {
       id: '/api/pizzerias/create'
       path: '/api/pizzerias/create'
@@ -2465,6 +2525,9 @@ const rootRouteChildren: RootRouteChildren = {
   ApiCrmReplyRoute: ApiCrmReplyRoute,
   ApiCrmWhatsappDeviceRoute: ApiCrmWhatsappDeviceRoute,
   ApiMarketingQueueRoute: ApiMarketingQueueRouteWithChildren,
+  ApiMayaEntradaRoute: ApiMayaEntradaRoute,
+  ApiMayaRespostaRoute: ApiMayaRespostaRoute,
+  ApiMayaTurnoRoute: ApiMayaTurnoRoute,
   ApiPizzeriasCreateRoute: ApiPizzeriasCreateRoute,
   ApiPizzeriasFiqonTestRoute: ApiPizzeriasFiqonTestRoute,
   ApiPizzeriasSyncMenuRoute: ApiPizzeriasSyncMenuRoute,
