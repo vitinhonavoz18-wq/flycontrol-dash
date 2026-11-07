@@ -32,7 +32,7 @@ export const LIMITE_DOWNLOAD_BYTES = 20 * 1024 * 1024;
  * Os tipos que a pasta aceita, já com os documentos do dia a dia.
  *
  * Os de Word/Excel/texto só funcionam depois de aplicar a migração
- * `20261022120000_chat_crm_2_tipos_de_documento.sql`. Sem ela, o arquivo é
+ * `20261022150000_chat_crm_2_tipos_de_documento.sql`. Sem ela, o arquivo é
  * recusado pela pasta e a tela diz isso com clareza — nada quebra.
  */
 const MIMES_DE_DOCUMENTO = new Set([
