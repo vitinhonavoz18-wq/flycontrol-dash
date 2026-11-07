@@ -401,3 +401,20 @@ nesses pontos, e o **Uma de cada vez** manda um por um, com `delay: 4000` — o
 que faz aparecer "digitando..." antes de cada parte, como uma pessoa faria.
 Sem o "um por um", as três partes podem chegar embaralhadas no celular do
 cliente.
+
+### Porteiro na entrada (todo fluxo com IA deve ter)
+
+A UAZAPI manda para o mesmo endereço de entrada **dois tipos** de aviso:
+`messages` (mensagem) e `connection` (o aparelho conectou ou caiu). O aviso de
+conexão chega toda vez que o lojista lê o QR Code de novo — e não tem telefone
+nem texto.
+
+Sem um filtro, o fluxo tratava esse aviso como se fosse um cliente falando:
+chamava a IA (custo de OpenAI à toa) e quebrava no nó de memória com
+`input values have 3 keys`. Ninguém recebia nada errado, mas a execução saía
+vermelha e o dinheiro da IA ia embora.
+
+O nó **"É mensagem de cliente?"** (logo depois de *Dados da mensagem*) só deixa
+passar quando há telefone **e** conteúdo (texto, ou áudio/foto/arquivo). Foi
+colocado primeiro na Cozinha Gourmet da Dri em 07/11/2026; os fluxos das outras
+lojas com IA têm o mesmo desenho e merecem o mesmo porteiro.
