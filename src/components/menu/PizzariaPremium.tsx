@@ -40,6 +40,7 @@ import {
   type RegraDeSabores,
   type RegraSemCombinacao,
 } from "@/lib/pizza/motorDePreco";
+import { avisosDaPizzaria } from "@/lib/pizza/avisos";
 import {
   gradeParaPrecos,
   montarCatalogoDoPainel,
@@ -192,6 +193,17 @@ export function PizzariaPremium({ pizzeriaId, pizzeria, categories, onRefresh }:
     [tamanhos, sabores, complementos, pizzeria?.site_settings, config],
   );
   const problemas = useMemo(() => validarConfigPizzaria(catalogo), [catalogo]);
+  const avisos = useMemo(
+    () =>
+      avisosDaPizzaria(catalogo, {
+        categoriasSemSite: conectada
+          ? categories
+              .filter((c) => categoriasPizza.includes(c.id) && !c.external_id)
+              .map((c) => c.name)
+          : [],
+      }),
+    [catalogo, categories, categoriasPizza, conectada],
+  );
 
   // ── Sincronização ─────────────────────────────────────────────────────
   async function publicar(
@@ -232,6 +244,18 @@ export function PizzariaPremium({ pizzeriaId, pizzeria, categories, onRefresh }:
       return;
     }
     setSalvandoRegras(true);
+    // Reenvia também quais categorias são de pizza. Lojas que marcaram as
+    // categorias antes desta correção ficaram com a marcação só no painel —
+    // e o site, sem ela, mostrava cada sabor como produto solto. Publicar as
+    // regras conserta isso de uma vez.
+    for (const c of categories) {
+      if (!c.external_id) continue;
+      const okCategoria = await publicarCategoria(c, categoriasPizza.includes(c.id));
+      if (!okCategoria) {
+        setSalvandoRegras(false);
+        return;
+      }
+    }
     const siteSettings = { ...(pizzeria?.site_settings ?? {}), [CHAVE_DA_CONFIG]: config };
     const ok = await publicar("restaurant", { site_settings: { [CHAVE_DA_CONFIG]: config } });
     if (ok) {
@@ -249,8 +273,35 @@ export function PizzariaPremium({ pizzeriaId, pizzeria, categories, onRefresh }:
     setSalvandoRegras(false);
   }
 
-  // ── 2. Categorias de pizza (só organização do painel) ─────────────────
+  // ── 2. Categorias de pizza ────────────────────────────────────────────
+  /**
+   * Manda ao site se a categoria é de pizza. Vai a ficha inteira (nome,
+   * descrição, foto, ordem, ativa): mandar só a marcação faria o site entender
+   * os campos ausentes como "em branco" e apagar a descrição da categoria.
+   */
+  async function publicarCategoria(c: any, marcada: boolean): Promise<boolean> {
+    if (!conectada) return true;
+    if (!c.external_id) return true; // aviso aparece na Conferência
+    return publicar("category", {
+      id: c.id,
+      external_id: c.external_id,
+      name: c.name,
+      description: c.description,
+      image_url: c.image_url,
+      order_index: c.order_index,
+      active: c.active,
+      is_pizza: marcada,
+    });
+  }
+
+  // Antes a marcação ficava SÓ no painel e o site nunca sabia quais
+  // categorias eram de pizza: o montador (tamanho → sabores → borda) não
+  // aparecia, e cada sabor ia para o cardápio como produto comum, com um
+  // preço só. Agora vai primeiro ao site e, se ele aceitar, grava no painel —
+  // os dois ficam sempre iguais.
   async function alternarCategoria(id: string, marcada: boolean) {
+    const categoria = categories.find((c) => c.id === id);
+    if (categoria && !(await publicarCategoria(categoria, marcada))) return;
     const { error } = await (supabase as any)
       .from("menu_categories")
       .update({ is_pizza: marcada })
@@ -286,6 +337,13 @@ export function PizzariaPremium({ pizzeriaId, pizzeria, categories, onRefresh }:
       if (error) toast.error("Erro ao salvar: " + error.message);
       else {
         toast.success(`“${s.name}” salvo`);
+        if (config.regra === "tamanho_e_especiais" && Object.keys(precos).length > 0) {
+          toast.warning(
+            "Atenção: a regra de preço atual (“tamanho + especiais”) não usa o preço por sabor. " +
+              "Para o site cobrar estes valores, escolha “Maior preço” ou “Média proporcional” e publique as regras.",
+            { duration: 12000 },
+          );
+        }
         setProdutos((cur) =>
           cur.map((p) =>
             p.id === s.id ? { ...p, pizza_size_prices_cents: precos, ingredients } : p,
@@ -622,6 +680,25 @@ export function PizzariaPremium({ pizzeriaId, pizzeria, categories, onRefresh }:
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-3">
+          {avisos.length > 0 && (
+            <ul className="list-disc pl-5 text-sm space-y-2 text-amber-700 dark:text-amber-400">
+              {avisos.map((a) => (
+                <li key={a.codigo}>
+                  {a.mensagem}
+                  {a.codigo === "precos_ignorados_pela_regra" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="ml-2 mt-1"
+                      onClick={() => setConfig((c) => ({ ...c, regra: "maior_preco" }))}
+                    >
+                      Usar “Maior preço”
+                    </Button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
           {problemas.length === 0 ? (
             <p className="text-sm">Tudo certo para publicar estas regras.</p>
           ) : (
@@ -647,7 +724,10 @@ export function PizzariaPremium({ pizzeriaId, pizzeria, categories, onRefresh }:
         <CardHeader>
           <CardTitle className="text-base">Categorias de pizza</CardTitle>
           <CardDescription>
-            Os produtos destas categorias aparecem como sabores na tabela abaixo.
+            Os produtos destas categorias aparecem como sabores na tabela abaixo e, no site, viram o
+            montador de pizza (tamanho, sabores e borda). Sabores de categorias diferentes não se
+            misturam na mesma pizza: para vender meio a meio entre tradicional e especial, deixe os
+            dois na mesma categoria.
           </CardDescription>
         </CardHeader>
         <CardContent className="flex flex-wrap gap-4">

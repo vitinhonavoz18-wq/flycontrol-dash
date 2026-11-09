@@ -413,6 +413,12 @@ function prepareDataForExternal(type: MenuType, data: any) {
       image_url: paraEnderecoComCache(data.image_url ?? null),
       active: data.active !== undefined ? data.active : true,
       sort_order: data.order_index, // FlyControl uses order_index, SiteCreatorFly expects sort_order
+      // "É categoria de pizza": é o que faz o site abrir o montador (tamanho,
+      // sabores, borda) em vez de listar cada sabor como produto solto, com
+      // um preço só. Antes esta marcação ficava só no painel e nunca chegava
+      // ao site. Só viaja quando a tela informa (`undefined` some do pacote):
+      // o salvar comum de categoria não mexe nela.
+      is_pizza: typeof data.is_pizza === "boolean" ? data.is_pizza : undefined,
     };
   }
 
