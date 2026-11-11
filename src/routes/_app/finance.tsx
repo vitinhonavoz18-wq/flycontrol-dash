@@ -70,6 +70,13 @@ import {
   eachDayOfInterval,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import {
+  DIAS_DE_HISTORICO,
+  intervaloPersonalizado,
+  paraCampoDeData,
+  resumoDosCancelados,
+  separarCancelados,
+} from "@/lib/finance/metricas";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Table,
@@ -82,7 +89,7 @@ import {
 
 export const Route = createFileRoute("/_app/finance")({ component: Finance });
 
-type Period = "today" | "yesterday" | "7days" | "30days" | "month" | "last_month";
+type Period = "today" | "yesterday" | "7days" | "30days" | "month" | "last_month" | "custom";
 
 type Pizzeria = { id: string; name: string; owner_id: string | null; status: string };
 
@@ -120,13 +127,25 @@ const periodLabel = (p: Period) =>
     "30days": "Últimos 30 dias",
     month: "Este mês",
     last_month: "Mês passado",
+    custom: "Período personalizado",
   })[p];
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
-function getRange(p: Period): { start: Date; end: Date } {
+function getRange(
+  p: Period,
+  personalizado?: { de: string; ate: string },
+): { start: Date; end: Date } {
   const now = new Date();
+  if (p === "custom") {
+    // Datas inválidas (campo apagado pela metade) caem em "hoje" em vez de
+    // deixar a tela sem intervalo nenhum.
+    const r = personalizado
+      ? intervaloPersonalizado(personalizado.de, personalizado.ate, now)
+      : null;
+    return r ?? { start: startOfDay(now), end: endOfDay(now) };
+  }
   if (p === "today") return { start: startOfDay(now), end: endOfDay(now) };
   if (p === "yesterday")
     return { start: startOfDay(subDays(now, 1)), end: endOfDay(subDays(now, 1)) };
@@ -164,6 +183,10 @@ function Finance() {
 
   const [mounted, setMounted] = useState(false);
   const [period, setPeriod] = useState<Period>("month");
+  // Período personalizado: começa nos últimos 7 dias, para a pessoa já ver
+  // algo ao escolher a opção, antes de mexer nas datas.
+  const [customDe, setCustomDe] = useState(() => paraCampoDeData(subDays(new Date(), 6)));
+  const [customAte, setCustomAte] = useState(() => paraCampoDeData(new Date()));
   const [pizzerias, setPizzerias] = useState<Pizzeria[]>([]);
   const [selectedPizzeriaId, setSelectedPizzeriaId] = useState<string>("all");
   const [orders, setOrders] = useState<OrderRow[]>([]);
@@ -214,7 +237,7 @@ function Finance() {
     setLoading(true);
     try {
       // Pull last 90 days to cover comparison with "Mês passado"
-      const from = startOfDay(subDays(new Date(), 90)).toISOString();
+      const from = startOfDay(subDays(new Date(), DIAS_DE_HISTORICO)).toISOString();
       let q = supabase
         .from("orders")
         .select(
@@ -270,7 +293,10 @@ function Finance() {
   }, [mounted, authLoading, user, loadOrders, isSuperAdmin, pizzerias.length]);
 
   // ============ Derived metrics ============
-  const range = useMemo(() => getRange(period), [period]);
+  const range = useMemo(
+    () => getRange(period, { de: customDe, ate: customAte }),
+    [period, customDe, customAte],
+  );
 
   // O faturamento do balcão mora em outra tabela (pos_sales) e em centavos.
   // Sem isto, quem vende no balcão via o Financeiro mostrando menos do que
@@ -329,13 +355,31 @@ function Finance() {
     });
   }, [orders, paymentFilter, statusFilter, typeFilter]);
 
-  const ordersInPeriod = useMemo(
+  // ── PEDIDO CANCELADO NÃO É VENDA ─────────────────────────────────────────
+  //
+  // `todosNoPeriodo` é a lista de conferência: tudo o que aconteceu, inclusive
+  // o que foi cancelado. `ordersInPeriod` é a CONTA: só o que vale como venda.
+  // Faturamento, ticket médio, gráficos e rankings leem `ordersInPeriod`; a
+  // tabela de pedidos lê `todosNoPeriodo`. As regras estão em
+  // `lib/finance/metricas.ts`.
+  const todosNoPeriodo = useMemo(
     () => filteredOrders.filter((o) => inRange(o, range)),
     [filteredOrders, range],
   );
+  const { validos: ordersInPeriod, cancelados: canceladosNoPeriodo } = useMemo(
+    () => separarCancelados(todosNoPeriodo, statusFilter),
+    [todosNoPeriodo, statusFilter],
+  );
+  const cancelados = useMemo(() => resumoDosCancelados(canceladosNoPeriodo), [canceladosNoPeriodo]);
+  // O período anterior segue a mesma regra, senão a comparação seria entre
+  // "vendas de agora" e "vendas + cancelados de antes".
   const ordersPrev = useMemo(
-    () => filteredOrders.filter((o) => inRange(o, prevRange)),
-    [filteredOrders, prevRange],
+    () =>
+      separarCancelados(
+        filteredOrders.filter((o) => inRange(o, prevRange)),
+        statusFilter,
+      ).validos,
+    [filteredOrders, prevRange, statusFilter],
   );
 
   const calculateMetrics = (arr: OrderRow[]) => {
@@ -505,7 +549,7 @@ function Finance() {
               </div>
               <div>
                 <h1 className="text-2xl md:text-3xl font-black tracking-tight">
-                  Gestão Financeira
+                  Relatórios e finanças
                 </h1>
                 <p className="text-sm text-muted-foreground max-w-xl">
                   Controle total do seu delivery. Acompanhe faturamento, ticket médio e desempenho
@@ -670,8 +714,45 @@ function Finance() {
                 <DropdownMenuItem onClick={() => setPeriod("last_month")}>
                   Mês passado
                 </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setPeriod("custom")}>
+                  Período personalizado
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* As duas datas só aparecem quando a pessoa escolhe "Período
+                personalizado". O limite de 90 dias é o quanto de histórico
+                esta tela carrega — pedir além disso mostraria um número
+                incompleto como se fosse o total. */}
+            {period === "custom" && (
+              <div className="flex items-center gap-2">
+                <label className="sr-only" htmlFor="periodo-de">
+                  Data inicial
+                </label>
+                <input
+                  id="periodo-de"
+                  type="date"
+                  value={customDe}
+                  min={paraCampoDeData(subDays(new Date(), DIAS_DE_HISTORICO))}
+                  max={paraCampoDeData(new Date())}
+                  onChange={(e) => setCustomDe(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                />
+                <span className="text-sm text-muted-foreground">até</span>
+                <label className="sr-only" htmlFor="periodo-ate">
+                  Data final
+                </label>
+                <input
+                  id="periodo-ate"
+                  type="date"
+                  value={customAte}
+                  min={paraCampoDeData(subDays(new Date(), DIAS_DE_HISTORICO))}
+                  max={paraCampoDeData(new Date())}
+                  onChange={(e) => setCustomAte(e.target.value)}
+                  className="h-9 rounded-md border border-input bg-background px-2 text-sm"
+                />
+              </div>
+            )}
 
             <Button
               size="sm"
@@ -701,7 +782,9 @@ function Finance() {
               description={
                 balcao.total > 0
                   ? `Pedidos ${fmtBRL(currentMetrics.revenue)} + balcão ${fmtBRL(balcao.total)}`
-                  : `Comparado a: ${periodLabel(period === "month" ? "last_month" : period)}`
+                  : period === "custom"
+                    ? "Comparado ao período anterior de mesma duração"
+                    : `Comparado a: ${periodLabel(period === "month" ? "last_month" : period)}`
               }
               highlight
             />
@@ -710,7 +793,7 @@ function Finance() {
               value={String(currentMetrics.count)}
               trend={ordersGrowth}
               icon={Package}
-              description="Volume total no período"
+              description="Pedidos que contam como venda no período"
             />
             <KpiCard
               title="Ticket Médio"
@@ -726,6 +809,24 @@ function Finance() {
               description="Total arrecadado em fretes"
             />
           </section>
+
+          {/* Cancelado não entra em nenhum número acima. Para o dono não achar
+              que o sistema "perdeu" pedidos, o aviso diz quantos ficaram de
+              fora e quanto valiam. Só aparece quando houve cancelamento. */}
+          {cancelados.quantidade > 0 && (
+            <p
+              role="note"
+              className="rounded-lg border border-border/60 bg-muted/40 px-4 py-3 text-sm text-muted-foreground"
+            >
+              <strong className="font-semibold text-foreground">
+                {cancelados.quantidade}{" "}
+                {cancelados.quantidade === 1 ? "pedido cancelado" : "pedidos cancelados"}
+              </strong>{" "}
+              no período ({fmtBRL(cancelados.valor)}){" "}
+              {cancelados.quantidade === 1 ? "ficou" : "ficaram"} fora do faturamento, do ticket
+              médio e dos gráficos. Eles continuam na lista de pedidos abaixo.
+            </p>
+          )}
 
           {/* Só aparece para quem usa o balcão. Card vazio em loja que só faz
               delivery seria ruído tomando espaço na tela. */}
@@ -1079,12 +1180,12 @@ function Finance() {
               <h2 className="text-xl font-black flex items-center gap-2">
                 <Receipt className="h-5 w-5 text-primary" /> Últimos Pedidos no Período
               </h2>
-              <Badge variant="outline">{ordersInPeriod.length} resultados</Badge>
+              <Badge variant="outline">{todosNoPeriodo.length} resultados</Badge>
             </div>
 
             <Card className="border-border/60 shadow-sm overflow-hidden">
               <div className="divide-y md:hidden">
-                {ordersInPeriod.slice(0, 10).map((order) => (
+                {todosNoPeriodo.slice(0, 10).map((order) => (
                   <div key={order.id} className="space-y-1 p-4">
                     <div className="flex items-center justify-between gap-2">
                       <span className="font-bold text-primary">#{order.order_number}</span>
@@ -1108,7 +1209,7 @@ function Finance() {
                     </div>
                   </div>
                 ))}
-                {ordersInPeriod.length === 0 && (
+                {todosNoPeriodo.length === 0 && (
                   <div className="h-24 grid place-items-center text-center text-sm text-muted-foreground">
                     Nenhum pedido encontrado com os filtros atuais.
                   </div>
@@ -1127,7 +1228,7 @@ function Finance() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {ordersInPeriod.slice(0, 10).map((order) => (
+                  {todosNoPeriodo.slice(0, 10).map((order) => (
                     <TableRow key={order.id} className="hover:bg-muted/20 transition-colors">
                       <TableCell className="font-bold text-primary">
                         #{order.order_number}
@@ -1161,7 +1262,7 @@ function Finance() {
                       <TableCell className="text-right font-black">{fmtBRL(order.total)}</TableCell>
                     </TableRow>
                   ))}
-                  {ordersInPeriod.length === 0 && (
+                  {todosNoPeriodo.length === 0 && (
                     <TableRow>
                       <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
                         Nenhum pedido encontrado com os filtros atuais.
@@ -1170,10 +1271,10 @@ function Finance() {
                   )}
                 </TableBody>
               </Table>
-              {ordersInPeriod.length > 10 && (
+              {todosNoPeriodo.length > 10 && (
                 <div className="p-4 text-center border-t border-border/60">
                   <p className="text-xs text-muted-foreground">
-                    Exibindo os 10 pedidos mais recentes de um total de {ordersInPeriod.length}.
+                    Exibindo os 10 pedidos mais recentes de um total de {todosNoPeriodo.length}.
                   </p>
                 </div>
               )}
