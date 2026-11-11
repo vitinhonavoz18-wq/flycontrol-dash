@@ -46,31 +46,31 @@ export type Pose = {
 export const POSES: Readonly<Record<EmocaoDoGuia, Pose>> = {
   "boas-vindas": {
     src: boasVindas,
-    descricao: "Atendente do FlyControl sorrindo, dando boas-vindas",
+    descricao: "Atendente do FlyDelivery sorrindo, dando boas-vindas",
   },
   orientando: {
     src: orientando,
-    descricao: "Atendente do FlyControl com a mão aberta, indicando o caminho",
+    descricao: "Atendente do FlyDelivery com a mão aberta, indicando o caminho",
   },
   trabalhando: {
     src: trabalhando,
-    descricao: "Atendente do FlyControl concentrado no computador",
+    descricao: "Atendente do FlyDelivery concentrado no computador",
   },
   sucesso: {
     src: sucesso,
-    descricao: "Atendente do FlyControl fazendo sinal de positivo",
+    descricao: "Atendente do FlyDelivery fazendo sinal de positivo",
   },
   atencao: {
     src: atencao,
-    descricao: "Atendente do FlyControl com expressão de atenção",
+    descricao: "Atendente do FlyDelivery com expressão de atenção",
   },
   comemorando: {
     src: comemorando,
-    descricao: "Atendente do FlyControl comemorando",
+    descricao: "Atendente do FlyDelivery comemorando",
   },
   neutro: {
     src: neutro,
-    descricao: "Atendente do FlyControl pensativo",
+    descricao: "Atendente do FlyDelivery pensativo",
   },
 };
 

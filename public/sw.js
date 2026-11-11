@@ -1,5 +1,5 @@
 /**
- * Service worker do FlyControl.
+ * Service worker do FlyDelivery.
  *
  * O que ele guarda: só a "casca" do app — o JavaScript, o CSS e os ícones.
  * Isso é o que faz o app abrir na hora numa próxima visita, mesmo com
@@ -14,9 +14,18 @@
  * Versão do cache: subir CACHE_VERSION na próxima mudança relevante invalida
  * o cache antigo automaticamente na ativação — não precisa apagar nada à
  * mão em produção.
+ *
+ * v2 — troca de marca (FlyControl → FlyDelivery). Os ícones novos têm o MESMO
+ * endereço dos antigos (/icons/icon-192.png), e ícone é guardado "para
+ * sempre". Sem subir a versão, quem já tinha o app instalado continuaria
+ * vendo a logo velha — é a foto antiga do cardápio que o freguês guardou na
+ * carteira.
+ *
+ * O prefixo "flycontrol-" FICA, de propósito: é por ele que a ativação acha
+ * e apaga os caches antigos. É nome técnico, ninguém vê.
  */
 
-const CACHE_VERSION = "flycontrol-v1";
+const CACHE_VERSION = "flycontrol-v2";
 const STATIC_CACHE = `${CACHE_VERSION}-static`;
 const OFFLINE_URL = "/offline.html";
 

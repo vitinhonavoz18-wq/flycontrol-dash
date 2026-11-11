@@ -398,10 +398,10 @@ describe("a conclusão do guia", () => {
     "pedido_teste",
   ];
 
-  it("a última palavra é do lojista, no botão 'Entrar no FlyControl'", () => {
+  it("a última palavra é do lojista, no botão 'Entrar no FlyDelivery'", () => {
     expect(proximaEtapaDoGuia(tudoMenosFim)?.id).toBe("conclusao");
     const etapa = ETAPAS_DO_GUIA.find((e) => e.id === "conclusao")!;
-    expect(etapa.escolha?.configurar).toBe("Entrar no FlyControl");
+    expect(etapa.escolha?.configurar).toBe("Entrar no FlyDelivery");
   });
 
   it("o guia só acaba com TODAS as nove etapas fechadas", () => {

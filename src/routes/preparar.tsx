@@ -214,7 +214,7 @@ function PrepararPage() {
         <div className="mx-auto max-w-2xl">
           <div className="mb-2 flex items-baseline justify-between gap-3">
             <p className="text-xs font-bold uppercase tracking-widest text-primary">
-              Preparando seu FlyControl
+              Preparando seu FlyDelivery
             </p>
             <span className="text-xs font-semibold tabular-nums text-muted-foreground">
               {porcentagem}%
@@ -343,7 +343,7 @@ function PrepararPage() {
               {salvando ? (
                 <Loader2 className="h-5 w-5 animate-spin" aria-hidden="true" />
               ) : (estado?.produtos ?? 0) > 0 ? (
-                "Ir para meu FlyControl"
+                "Ir para meu FlyDelivery"
               ) : (
                 "Configurar meu cardápio"
               )}
@@ -385,7 +385,7 @@ function Conclusao({
         <Check className="h-7 w-7 text-primary" aria-hidden="true" />
       </div>
       <h1 className="text-2xl font-black leading-tight sm:text-3xl">
-        Seu FlyControl está quase pronto!
+        Seu FlyDelivery está quase pronto!
       </h1>
       <p className="mt-2 text-sm text-muted-foreground">
         Já entendemos como {nome ? <strong className="text-foreground">{nome}</strong> : "sua loja"}{" "}

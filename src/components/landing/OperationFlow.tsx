@@ -37,7 +37,7 @@ export function OperationFlow() {
           <div className="h-full px-6 py-8" style={{ background: "var(--fly-background)" }}>
             <span
               className="font-mono text-[12px] tabular-nums"
-              style={{ color: "var(--fly-primary)" }}
+              style={{ color: "var(--fly-primary-ink)" }}
             >
               {String(indice + 1).padStart(2, "0")}
             </span>

@@ -58,7 +58,7 @@ export async function createRecurringCharge(invoiceId: string): Promise<Recurrin
   const link = await createInfinityPayCheckoutLink({
     orderNsu: `invoice:${paymentTransactionId}`,
     amountCents: invoice.total_cents,
-    description: `FlyControl - fatura ${invoice.invoice_number} (${companyName})`,
+    description: `FlyDelivery - fatura ${invoice.invoice_number} (${companyName})`,
     redirectUrl: `${publicUrl}/billing`,
     webhookUrl: `${publicUrl}/api/webhooks/infinitypay`,
   });

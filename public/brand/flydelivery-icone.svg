@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="FlyDelivery">
+  <title>FlyDelivery — ícone simplificado</title>
+  <defs>
+    <linearGradient id="fd-icone" x1="2" y1="18" x2="62" y2="46" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#FF4D0D"/>
+      <stop offset=".5" stop-color="#FF7A1A"/>
+      <stop offset="1" stop-color="#FFB627"/>
+    </linearGradient>
+  </defs>
+  <g fill="none" stroke="url(#fd-icone)" stroke-linecap="round" stroke-linejoin="round">
+    <path stroke-width="6.5" d="M38.500 32c-4-6.800-7.800-10.500-12.500-10.500-5.200 0-9 4.300-9 10.500s3.800 10.500 9 10.500c4.700 0 8.500-3.700 12.500-10.500s7.800-10.500 12.500-10.500c5.200 0 9 4.300 9 10.500s-3.800 10.500-9 10.500c-4.700 0-8.500-3.700-12.500-10.500z"/>
+    <path stroke-width="4" d="M4 24h6.500M2.500 32h5.500M4 40h6.500"/>
+  </g>
+</svg>

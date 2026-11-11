@@ -42,7 +42,7 @@ function AfiliadosAdmin() {
           Afiliados
         </h1>
         <p className="mt-1 text-sm text-muted-foreground">
-          Parceiros que indicam o FlyControl: aprovação, comissões, repasses e auditoria.
+          Parceiros que indicam o FlyDelivery: aprovação, comissões, repasses e auditoria.
         </p>
       </div>
 

@@ -26,11 +26,11 @@ export function FloatingNotification({ titulo, detalhe, className = "", atraso =
   return (
     <div
       aria-hidden="true"
-      className={`fly-float pointer-events-none absolute hidden select-none items-center gap-3 rounded-2xl px-4 py-3 backdrop-blur-md sm:flex ${className}`}
+      className={`fly-float pointer-events-none absolute hidden select-none items-center gap-3 rounded-2xl px-4 py-3 sm:flex ${className}`}
       style={{
-        background: "rgba(10,10,10,.82)",
-        border: "1px solid rgba(255,255,255,.10)",
-        boxShadow: "0 20px 60px rgba(0,0,0,.6)",
+        background: "var(--fly-surface-01)",
+        border: "1px solid var(--fly-border-subtle)",
+        boxShadow: "var(--fly-shadow-card)",
         animationDuration: "26s",
         animationDelay: `${atraso}s`,
       }}
@@ -40,7 +40,10 @@ export function FloatingNotification({ titulo, detalhe, className = "", atraso =
         style={{ background: "var(--fly-primary)", boxShadow: "0 0 12px var(--fly-primary)" }}
       />
       <span className="whitespace-nowrap">
-        <span className="block text-[13px]" style={{ color: "var(--fly-text-primary)" }}>
+        <span
+          className="block text-[13px] font-semibold"
+          style={{ color: "var(--fly-text-primary)" }}
+        >
           {titulo}
         </span>
         <span className="block text-[12px]" style={{ color: "var(--fly-text-muted)" }}>

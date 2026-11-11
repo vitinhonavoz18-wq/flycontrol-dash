@@ -68,7 +68,7 @@ export const Route = createFileRoute("/api/pizzerias/fiqon-test")({
             delivery_fee: 5.0,
             total: 55.0,
             payment_method: "Cartão",
-            notes: "Pedido de teste manual via painel FlyControl",
+            notes: "Pedido de teste manual via painel FlyDelivery",
             status: "novo",
             created_at: new Date().toISOString()
           }

@@ -75,7 +75,7 @@ export function Reveal({
 /** A etiqueta pequena em maiúsculas que abre cada seção. */
 export function SectionLabel({ children }: { children: ReactNode }) {
   return (
-    <p className="fly-label font-medium" style={{ color: "var(--fly-primary)" }}>
+    <p className="fly-label font-bold" style={{ color: "var(--fly-primary-ink)" }}>
       {children}
     </p>
   );

@@ -1,7 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AmbientParticles } from "@/components/landing/AmbientParticles";
 import { BotaoWhatsApp } from "@/components/landing/BotaoWhatsApp";
-import { DashboardShowcase } from "@/components/landing/DashboardShowcase";
 import { FloatingNotification } from "@/components/landing/FloatingNotification";
 import { Navbar } from "@/components/landing/Navbar";
 import { OperationFlow } from "@/components/landing/OperationFlow";
@@ -10,13 +9,15 @@ import { ProductShowcase } from "@/components/landing/ProductShowcase";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { StepFlow } from "@/components/landing/StepFlow";
 import { Reveal, SectionHeading, SectionLabel, SectionText } from "@/components/landing/primitivos";
+import heroArte from "@/assets/brand/hero-hamburguer.webp";
+import { BRAND } from "@/lib/brand";
 import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial";
 
 export const Route = createFileRoute("/")({
   component: Landing,
   head: () => ({
     meta: [
-      { title: "FlyControl — o centro de operações do seu estabelecimento" },
+      { title: `${BRAND.name} — ${BRAND.tagline}` },
       {
         name: "description",
         content:
@@ -28,27 +29,29 @@ export const Route = createFileRoute("/")({
 });
 
 /**
- * A página que o visitante vê antes de entrar no FlyControl.
+ * A página que o visitante vê antes de entrar no FlyDelivery.
  *
- * A IDEIA: CENTRO DE OPERAÇÕES
+ * A IDEIA: "SEU DELIVERY COMEÇA NO DESEJO"
  *
- * A pessoa que abre esta página está com um problema concreto — pedido
- * perdido, planilha que ninguém preenche, três sistemas que não conversam. A
- * página não tenta emocioná-la; ela mostra o painel funcionando e diz o que
- * ele faz.
+ * A primeira tela fala a língua de quem vende comida: um hambúrguer que dá
+ * fome, uma frase curta e dois botões. É a vitrine da lanchonete — antes de
+ * explicar o cardápio, ela mostra o prato.
  *
- * POR QUE O PRINT É O PROTAGONISTA
+ * Logo abaixo, a conversa muda de tom e mostra o sistema funcionando: o
+ * quadro de pedidos, o cardápio, o financeiro. Quem chegou pela fome fica
+ * pela organização.
  *
- * Foto de gente sorrindo com tablet não vende sistema — qualquer software do
- * mundo usa a mesma foto. O que convence é ver a tela. Por isso o Hero tem
- * pouca coisa: um título, duas frases, dois botões e o painel de verdade,
- * flutuando devagar.
+ * O VISUAL: BRANCO E LARANJA
+ *
+ * Fundo branco, texto azul-noturno e o laranja da marca. Só a chamada final e
+ * o rodapé são escuros, para fechar a página com peso. As telas do sistema
+ * aparecem no tema escuro de propósito: sobre o branco, elas viram o
+ * destaque.
  *
  * O QUE A PÁGINA NÃO FAZ
  *
  * Não inventa recurso. Cada frase daqui corresponde a uma tela que existe no
  * sistema hoje. Não usa contagem regressiva, vaga limitada nem preço riscado.
- * E não muda a cor da marca: o laranja é o mesmo da logo.
  */
 function Landing() {
   return (
@@ -80,8 +83,8 @@ function Landing() {
             "Delivery, retirada e mesa no mesmo quadro",
           ]}
           imagem={{
-            src: "/images/flycontrol-dashboard.webp",
-            alt: "Quadro de pedidos do FlyControl, com as colunas Novo pedido, Em preparo e Saiu para entrega",
+            src: "/images/painel-pedidos.webp",
+            alt: "Quadro de pedidos do FlyDelivery, com as colunas Novo pedido, Em preparo e Saiu para entrega",
             largura: 1920,
             altura: 1500,
           }}
@@ -100,8 +103,8 @@ function Landing() {
           ]}
           espelhado
           imagem={{
-            src: "/images/flycontrol-cardapio.webp",
-            alt: "Tela de cardápio do FlyControl, com a lista de categorias do estabelecimento",
+            src: "/images/painel-cardapio.webp",
+            alt: "Tela de cardápio do FlyDelivery, com a lista de categorias do estabelecimento",
             largura: 1600,
             altura: 1250,
           }}
@@ -187,8 +190,8 @@ function Landing() {
             "Distribuição por forma de pagamento",
           ]}
           imagem={{
-            src: "/images/flycontrol-financeiro.webp",
-            alt: "Tela de gestão financeira do FlyControl, com faturamento, ticket médio e vendas por canal",
+            src: "/images/painel-financeiro.webp",
+            alt: "Tela de gestão financeira do FlyDelivery, com faturamento, ticket médio e vendas por canal",
             largura: 1600,
             altura: 1250,
           }}
@@ -211,67 +214,73 @@ function Landing() {
 /**
  * O Hero.
  *
- * Poucas coisas na primeira tela, de propósito: rótulo, título, duas frases,
- * dois botões e o painel. Cada item a mais aqui rouba atenção do único que
- * importa — o produto funcionando.
+ * Poucas coisas na primeira tela, de propósito: rótulo, título, uma frase,
+ * dois botões e a arte. Cada item a mais aqui rouba atenção do único que
+ * importa — a vontade de começar.
  */
 function Hero() {
   return (
     <section
       aria-labelledby="hero-titulo"
-      className="relative overflow-hidden px-5 pb-24 pt-28 sm:px-8 sm:pt-36 lg:pb-32 lg:pt-44"
+      className="relative overflow-hidden px-5 pb-20 pt-28 sm:px-8 sm:pt-36 lg:pb-28 lg:pt-40"
+      style={{
+        // O calor por trás da arte: um laranja bem leve no lado direito, onde
+        // está o hambúrguer. É gradiente, não desfoque — desenhado uma vez,
+        // sem custo a cada quadro da rolagem.
+        background:
+          "radial-gradient(900px 620px at 82% 34%, rgb(var(--fly-primary-rgb) / .13), transparent 68%), linear-gradient(180deg, #fff 0%, #fff7f2 100%)",
+      }}
     >
-      {/* Sentinela invisível: quando ela sai da tela, a barra do topo escurece.
-          Existe só para o observador ter o que observar. */}
+      {/* Sentinela invisível: quando ela sai da tela, a barra do topo ganha
+          fundo. Existe só para o observador ter o que observar. */}
       <span id="fly-topo" aria-hidden="true" className="absolute left-0 top-0 h-1 w-1" />
 
       <AmbientParticles />
 
-      <div className="relative mx-auto grid max-w-[1240px] items-center gap-14 lg:grid-cols-[minmax(0,1.12fr)_minmax(0,1fr)] lg:gap-16">
+      <div className="relative mx-auto grid max-w-[1240px] items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)] lg:gap-8">
         <div>
-          <SectionLabel>Centro de operações</SectionLabel>
+          <SectionLabel>Para restaurantes e deliveries</SectionLabel>
 
           <h1
             id="hero-titulo"
-            className="fly-display mt-6"
+            className="fly-display mt-5"
             style={{ color: "var(--fly-text-primary)" }}
           >
-            Sua operação.
-            <br />
-            Sob controle.
+            Seu delivery começa no <span style={{ color: "var(--fly-primary)" }}>desejo.</span>
           </h1>
 
-          <p className="fly-body-lg mt-8 max-w-lg" style={{ color: "var(--fly-text-secondary)" }}>
-            Pedidos, clientes, cardápio, operação, financeiro e crescimento conectados em uma única
-            plataforma.
+          <p className="fly-body-lg mt-7 max-w-lg" style={{ color: "var(--fly-text-secondary)" }}>
+            Do apetite ao pedido, tudo conectado em uma experiência única.
           </p>
           <p className="fly-body mt-3 max-w-lg" style={{ color: "var(--fly-text-muted)" }}>
-            Do primeiro pedido à gestão completa.
+            Pedidos, cardápio, clientes e financeiro no mesmo lugar.
           </p>
 
-          <div className="mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
             <Link
               to="/signup"
               search={{ plan: undefined, google: undefined }}
-              className="rounded-full px-7 py-3.5 text-center text-[15px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="rounded-full px-8 py-4 text-center text-[16px] font-semibold transition-[filter,transform] hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 active:translate-y-px"
               style={{
-                background: "var(--fly-primary)",
-                color: "#000",
+                background: "linear-gradient(135deg, #f4581c 0%, #ff6b35 55%, #ff8a3d 100%)",
+                color: "var(--fly-on-primary)",
                 outlineColor: "var(--fly-primary)",
+                boxShadow: "0 12px 28px -10px rgb(var(--fly-primary-rgb) / .65)",
               }}
             >
               Começar grátis
             </Link>
             <a
               href="#produto"
-              className="rounded-full border px-7 py-3.5 text-center text-[15px] transition-colors hover:border-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+              className="rounded-full border-2 px-8 py-[14px] text-center text-[16px] font-semibold transition-colors hover:bg-[rgb(var(--fly-primary-rgb)/.06)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
               style={{
-                borderColor: "var(--fly-border-strong)",
+                borderColor: "var(--fly-primary)",
                 color: "var(--fly-text-primary)",
                 outlineColor: "var(--fly-primary)",
+                background: "var(--fly-surface-01)",
               }}
             >
-              Conhecer o FlyControl
+              Conhecer plataforma
             </a>
           </div>
 
@@ -280,13 +289,20 @@ function Hero() {
           </p>
         </div>
 
-        <div className="relative">
-          <DashboardShowcase
-            src="/images/flycontrol-dashboard.webp"
-            alt="Painel do FlyControl mostrando os pedidos em andamento, separados por etapa"
-            largura={1920}
-            altura={1500}
-            prioridade
+        <div className="relative mx-auto w-full max-w-[640px] lg:max-w-none">
+          {/* A arte é decoração: quem usa leitor de tela não perde nada sem
+              ela, então o texto alternativo fica vazio. `fetchPriority` alto
+              porque ela é a maior imagem da primeira tela. */}
+          <img
+            src={heroArte}
+            alt=""
+            width={972}
+            height={804}
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            className="fly-hero-arte fly-float block h-auto w-full select-none"
+            draggable={false}
           />
 
           {/* Dois avisos, não seis. Eles sugerem que o sistema está vivo; se
@@ -294,12 +310,12 @@ function Hero() {
           <FloatingNotification
             titulo="Novo pedido recebido"
             detalhe="Pedido #1842 · 3 itens"
-            className="-left-8 top-2 xl:-left-16"
+            className="left-0 top-4 xl:-left-6"
           />
           <FloatingNotification
             titulo="Pedido confirmado"
             detalhe="Saiu para entrega"
-            className="-right-4 bottom-6 xl:-right-10"
+            className="bottom-10 right-0 xl:-right-4"
             atraso={4}
           />
         </div>
@@ -322,7 +338,7 @@ function UmaPlataforma() {
             <SectionLabel>Uma plataforma. Toda a operação.</SectionLabel>
             <SectionHeading id="plataforma-titulo">
               Você vende.
-              <br />O FlyControl organiza.
+              <br />O FlyDelivery organiza.
             </SectionHeading>
           </Reveal>
 
@@ -340,12 +356,12 @@ function UmaPlataforma() {
   );
 }
 
-/** A última tela: uma frase, um botão, e o preto de novo. */
+/** A última tela: uma frase e um botão, sobre o azul-noturno da marca. */
 function ChamadaFinal() {
   return (
     <section
       aria-labelledby="final-titulo"
-      className="border-t px-5 py-28 sm:px-8 md:py-40"
+      className="fly-escuro border-t px-5 py-28 sm:px-8 md:py-36"
       style={{ borderColor: "var(--fly-border-subtle)", background: "var(--fly-background)" }}
     >
       <Reveal className="mx-auto max-w-[1240px] text-center">
@@ -354,9 +370,9 @@ function ChamadaFinal() {
           className="fly-headline mx-auto max-w-3xl"
           style={{ color: "var(--fly-text-primary)" }}
         >
-          Sua operação pode
+          Seu delivery pode
           <br />
-          funcionar melhor.
+          vender <span style={{ color: "var(--fly-primary)" }}>mais.</span>
         </h2>
 
         <p
@@ -371,10 +387,10 @@ function ChamadaFinal() {
           <Link
             to="/signup"
             search={{ plan: undefined, google: undefined }}
-            className="inline-flex rounded-full px-8 py-4 text-[15px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+            className="inline-flex rounded-full px-8 py-4 text-[16px] font-semibold transition-[filter] hover:brightness-105 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
             style={{
               background: "var(--fly-primary)",
-              color: "#000",
+              color: "var(--fly-on-primary)",
               outlineColor: "var(--fly-primary)",
             }}
           >

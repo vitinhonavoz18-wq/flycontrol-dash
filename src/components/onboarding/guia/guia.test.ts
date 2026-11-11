@@ -181,7 +181,7 @@ describe("o guia bloqueia sem trancar", () => {
 // FASES 4, 5 E 6 — o que o servidor vai olhar
 // ═══════════════════════════════════════════════════════════════════════════
 
-describe("as fases novas leem o dado REAL do FlyControl", () => {
+describe("as fases novas leem o dado REAL do FlyDelivery", () => {
   it("pagamento vem de `payment_methods`, a mesma lista da tela", () => {
     // A tela Minha Loja grava uma lista de textos ("Pix", "Dinheiro"...).
     // Inventar uma tabela nova de pagamentos deixaria a loja com duas
@@ -368,7 +368,7 @@ describe("a tela final", () => {
   it("comemora, lista tudo e entrega o painel", () => {
     expect(guia).toContain('etapa.id === "prontidao" || etapa.id === "conclusao"');
     const etapas = readFileSync("src/lib/onboarding/guia/etapas.ts", "utf8");
-    expect(etapas).toContain("Entrar no FlyControl");
+    expect(etapas).toContain("Entrar no FlyDelivery");
     expect(etapas).toMatch(/id: "conclusao"[\s\S]*?emocao: "comemorando"/);
   });
 

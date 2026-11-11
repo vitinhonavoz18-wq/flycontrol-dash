@@ -78,7 +78,7 @@ export function OrderCardContent({
                 variant="outline"
                 className="h-5 border-orange-200 bg-orange-100 py-0 text-[9px] font-black text-orange-700"
               >
-                FLYDELIVERY
+                APP FLYDELIVERY
               </Badge>
             )}
             {isRecentNew && (

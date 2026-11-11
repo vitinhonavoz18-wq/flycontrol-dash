@@ -34,7 +34,7 @@ export function separarItensDaFatura(itens: ItemDaFatura[], totalCents: number):
   // Fatura antiga, sem itens gravados: o plano é o total inteiro.
   if (itens.length === 0) {
     assinatura = [
-      { itemType: "monthly_fee", description: "Plano FlyControl", quantity: 1, totalCents },
+      { itemType: "monthly_fee", description: "Plano FlyDelivery", quantity: 1, totalCents },
     ];
   }
 

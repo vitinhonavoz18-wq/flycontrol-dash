@@ -516,7 +516,7 @@ function Entrada({
         {modeloAberto === "ia" && (
           <p className="text-xs text-muted-foreground">
             Copie este texto e use no ChatGPT, Claude ou outra IA para transformar fotos ou listas
-            de produtos no padrão aceito pelo FlyControl.
+            de produtos no padrão aceito pelo FlyDelivery.
           </p>
         )}
 

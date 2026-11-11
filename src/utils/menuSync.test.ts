@@ -36,7 +36,7 @@ describe("syncToExternal — restaurant (loja)", () => {
     expect(init?.method).toBe("PUT");
   });
 
-  it("traduz opening_hours do FlyControl para hours, que é o nome usado no SiteCreatorFly", async () => {
+  it("traduz opening_hours do FlyDelivery para hours, que é o nome usado no SiteCreatorFly", async () => {
     await syncToExternal({
       type: "restaurant",
       action: "update",

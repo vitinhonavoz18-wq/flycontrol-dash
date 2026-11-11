@@ -41,7 +41,7 @@ function VisaoGeral() {
     <div className="space-y-6 sm:space-y-8">
       <TituloDaPagina
         titulo={`Olá, ${primeiroNome}`}
-        texto="Seu desempenho como parceiro FlyControl."
+        texto="Seu desempenho como parceiro FlyDelivery."
       />
 
       <CartaoDoLink codigo={perfil.codigo} />

@@ -196,8 +196,8 @@ export function ImpulsionarProdutos({
                 <Rocket className="h-5 w-5 text-primary" /> Impulsione seus produtos
               </CardTitle>
               <CardDescription>
-                Seus produtos em destaque, com o selo “Patrocinado”, para clientes do FlyDelivery.
-                Ao tocar, o cliente cai direto no produto.
+                Seus produtos em destaque, com o selo “Patrocinado”, para clientes do app
+                FlyDelivery. Ao tocar, o cliente cai direto no produto.
               </CardDescription>
             </div>
             <Badge variant={cheia ? "default" : "secondary"} className="shrink-0 text-sm">

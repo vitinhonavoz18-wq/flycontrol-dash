@@ -191,7 +191,7 @@ export function VitrineManager({ pizzeriaId, storeName }: Props) {
                 Produtos em Vitrine
               </CardTitle>
               <CardDescription>
-                Escolha até 3 produtos promocionais para ganhar destaque no FlyDelivery.
+                Escolha até 3 produtos promocionais para ganhar destaque no app FlyDelivery.
               </CardDescription>
             </div>
             <Badge variant={cheia ? "default" : "secondary"} className="shrink-0 text-sm">
@@ -227,8 +227,8 @@ export function VitrineManager({ pizzeriaId, storeName }: Props) {
           )}
           <p className="text-xs text-muted-foreground">
             Esses produtos poderão aparecer como ofertas para clientes próximos ao seu
-            estabelecimento. O preço promocional vale só no FlyDelivery — no site de pedidos e no
-            balcão continua o preço normal.
+            estabelecimento. O preço promocional vale só no app FlyDelivery — no site de pedidos e
+            no balcão continua o preço normal.
           </p>
         </CardContent>
       </Card>
@@ -369,7 +369,7 @@ function SelecionadoCard({
 
         {bloqueado ? (
           <p className="rounded-md bg-destructive/10 p-2 text-xs text-destructive">
-            Vitrine bloqueada pela administração do FlyControl. Fale com o suporte.
+            Vitrine bloqueada pela administração do FlyDelivery. Fale com o suporte.
           </p>
         ) : pausado ? (
           <div className="space-y-2 rounded-md bg-amber-500/10 p-2">

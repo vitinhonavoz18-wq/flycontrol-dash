@@ -68,7 +68,7 @@ export function ReceitaPorPedidoCard() {
       <CardHeader className="pb-2">
         <CardTitle className="flex items-center gap-1.5 text-sm font-medium">
           <Coins className="h-4 w-4 text-primary" aria-hidden="true" />
-          Receita FlyControl (por pedido)
+          Receita FlyDelivery (por pedido)
         </CardTitle>
       </CardHeader>
       <CardContent>

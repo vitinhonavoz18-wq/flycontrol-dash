@@ -278,7 +278,7 @@ export const Route = createFileRoute("/api/orders")({
             return new Response(
               JSON.stringify({
                 success: true,
-                message: "FlyControl recebeu teste",
+                message: "FlyDelivery recebeu teste",
                 received_at: new Date().toISOString(),
                 pizzeria: pz.name,
               }),
@@ -737,7 +737,7 @@ export const Route = createFileRoute("/api/orders")({
               JSON.stringify({
                 success: false,
                 error: "save_error",
-                message: "Erro ao salvar pedido no FlyControl",
+                message: "Erro ao salvar pedido no FlyDelivery",
               }),
               { status: 500, headers: cors },
             );
@@ -1021,7 +1021,7 @@ export const Route = createFileRoute("/api/orders")({
             JSON.stringify({
               success: false,
               error: "internal_error",
-              message: "Erro interno ao processar pedido no FlyControl",
+              message: "Erro interno ao processar pedido no FlyDelivery",
             }),
             { status: 500, headers: cors },
           );

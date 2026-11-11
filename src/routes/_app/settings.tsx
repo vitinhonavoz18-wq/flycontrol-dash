@@ -489,7 +489,7 @@ function Settings() {
               <p className="text-sm text-muted-foreground">
                 Utilize os campos abaixo para configurar a integração no painel do seu site público:
               </p>
-              <CopyField label="URL base do FLYCONTROL" value={baseUrl} />
+              <CopyField label="URL base do FlyDelivery" value={baseUrl} />
               <CopyField label="Endpoint de Criação Automática" value={createEndpoint} />
               <CopyField label="Endpoint de Envio de Pedidos" value={ordersEndpoint} />
             </div>
@@ -499,7 +499,7 @@ function Settings() {
               </div>
               1. No seu site público, copie a <strong>API Key</strong> da pizzaria.
               <br />
-              2. Aqui no FlyControl, clique no botão <strong>
+              2. Aqui no FlyDelivery, clique no botão <strong>
                 "Adicionar Pizzaria Existente"
               </strong>{" "}
               acima.

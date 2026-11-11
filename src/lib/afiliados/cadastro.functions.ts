@@ -145,7 +145,7 @@ export const cadastrarAfiliado = createServerFn({ method: "POST" })
           ok: false,
           motivo: "email_existente",
           mensagem:
-            "Este e-mail já tem conta no FlyControl. Entre com ela para ativar seu cadastro de parceiro.",
+            "Este e-mail já tem conta no FlyDelivery. Entre com ela para ativar seu cadastro de parceiro.",
         };
       }
       console.error("[afiliados] falha ao criar login:", erroLogin);

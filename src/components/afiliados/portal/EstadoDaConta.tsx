@@ -20,7 +20,7 @@ const TEXTOS: Record<
     icone: <Clock3 className="size-6" />,
     titulo: "Seu cadastro está em análise.",
     texto:
-      "A equipe FlyControl confere cada parceiro antes de liberar o link. Assim que for aprovado, seu link e seu painel aparecem aqui. Enquanto isso, você já pode deixar sua chave Pix cadastrada.",
+      "A equipe FlyDelivery confere cada parceiro antes de liberar o link. Assim que for aprovado, seu link e seu painel aparecem aqui. Enquanto isso, você já pode deixar sua chave Pix cadastrada.",
     podeAjustar: true,
   },
   suspended: {
@@ -34,14 +34,14 @@ const TEXTOS: Record<
     icone: <Ban className="size-6" />,
     titulo: "Sua conta de parceiro está bloqueada.",
     texto:
-      "O acesso ao painel de parceiro foi encerrado. Se acha que é um engano, fale com a equipe FlyControl.",
+      "O acesso ao painel de parceiro foi encerrado. Se acha que é um engano, fale com a equipe FlyDelivery.",
     podeAjustar: false,
   },
   sem_cadastro: {
     icone: <UserPlus className="size-6" />,
     titulo: "Esta conta ainda não é parceira.",
     texto:
-      "Você entrou com uma conta do FlyControl que não tem cadastro de parceiro. Leva um minuto para criar.",
+      "Você entrou com uma conta do FlyDelivery que não tem cadastro de parceiro. Leva um minuto para criar.",
     podeAjustar: false,
   },
 };

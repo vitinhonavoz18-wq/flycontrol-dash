@@ -20,7 +20,7 @@ function TermsPage() {
       version={TERMS_VERSION}
       lastUpdated={TERMS_LAST_UPDATED}
       pendingIntro={
-        "As condições comerciais abaixo descrevem com precisão como a cobrança da FlyControl " +
+        "As condições comerciais abaixo descrevem com precisão como a cobrança da FlyDelivery " +
         "funciona hoje. As cláusulas jurídicas ainda estão em redação e serão publicadas em uma " +
         "próxima versão deste documento:"
       }
@@ -40,7 +40,7 @@ function TermsPage() {
     >
       <LegalSection id="objeto" title="1. Objeto">
         <p>
-          A FlyControl é uma plataforma de gestão de pedidos, cardápio, mesas e operação de
+          A FlyDelivery é uma plataforma de gestão de pedidos, cardápio, mesas e operação de
           delivery, oferecida na modalidade de assinatura. Estes termos regem o uso da plataforma
           pelo estabelecimento contratante e pelos usuários por ele autorizados.
         </p>
@@ -48,7 +48,7 @@ function TermsPage() {
 
       <LegalSection id="planos" title="2. Planos e preços">
         <p>
-          A FlyControl é oferecida nos planos abaixo. Os valores vigentes na contratação ficam
+          A FlyDelivery é oferecida nos planos abaixo. Os valores vigentes na contratação ficam
           registrados na assinatura e não são alterados retroativamente por mudanças futuras de
           tabela.
         </p>
@@ -155,7 +155,7 @@ function TermsPage() {
         <p>
           A conta criada permanece com a assinatura pendente até a confirmação do pagamento. A
           cobrança automática por PIX está em implantação; até a sua disponibilização, a ativação é
-          realizada pela equipe da FlyControl após a confirmação do pagamento.
+          realizada pela equipe da FlyDelivery após a confirmação do pagamento.
         </p>
         <p>
           O acesso às funcionalidades restritas de cada plano é aplicado desde a criação da conta,
@@ -186,7 +186,7 @@ function TermsPage() {
       <LegalSection id="dados" title="9. Dados do estabelecimento">
         <p>
           Os dados cadastrados, os pedidos e o histórico de operação pertencem ao estabelecimento
-          contratante. A FlyControl os processa para prestar o serviço contratado.
+          contratante. A FlyDelivery os processa para prestar o serviço contratado.
         </p>
         <p>
           O tratamento de dados pessoais — o que é coletado, com quem é compartilhado, por quanto
@@ -208,7 +208,7 @@ function TermsPage() {
       <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
         <p className="font-semibold text-foreground">Dúvidas sobre estas condições?</p>
         <p className="text-muted-foreground">
-          Fale com a equipe da FlyControl antes de concluir a contratação.
+          Fale com a equipe da FlyDelivery antes de concluir a contratação.
         </p>
       </div>
     </LegalDocument>

@@ -203,7 +203,7 @@ export const startPremiumCheckout = createServerFn({ method: "POST" })
 
     if (!gatewayReady()) {
       throw new Error(
-        "O pagamento online ainda não está configurado. Fale com a equipe da FlyControl.",
+        "O pagamento online ainda não está configurado. Fale com a equipe da FlyDelivery.",
       );
     }
 
@@ -300,8 +300,8 @@ export const startPremiumCheckout = createServerFn({ method: "POST" })
       amountCents,
       description:
         target === "premium_anual"
-          ? `FlyControl - Premium Anual (12 meses) - ${company.name}`
-          : `FlyControl - Premium Mensal - ${company.name}`,
+          ? `FlyDelivery - Premium Anual (12 meses) - ${company.name}`
+          : `FlyDelivery - Premium Mensal - ${company.name}`,
       redirectUrl: checkoutReturnUrl(publicUrl, target),
       webhookUrl: infinityPayWebhookUrl(publicUrl),
     });

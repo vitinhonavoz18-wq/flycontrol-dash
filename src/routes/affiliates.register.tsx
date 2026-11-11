@@ -136,7 +136,7 @@ function CadastroDeParceiro() {
     <>
       <TopoPublico />
       <CaixaDeFormulario
-        titulo="Seja parceiro FlyControl"
+        titulo="Seja parceiro FlyDelivery"
         texto={
           logado ? (
             <>

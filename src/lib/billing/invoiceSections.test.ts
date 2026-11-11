@@ -3,7 +3,7 @@ import { separarItensDaFatura } from "./invoiceSections";
 
 const plano = {
   itemType: "monthly_fee",
-  description: "Plano FlyControl",
+  description: "Plano FlyDelivery",
   quantity: 1,
   totalCents: 13990,
 };
@@ -50,7 +50,7 @@ describe("separarItensDaFatura", () => {
   it("fatura antiga sem itens mostra o total como plano", () => {
     const s = separarItensDaFatura([], 13990);
     expect(s.assinatura).toEqual([
-      { itemType: "monthly_fee", description: "Plano FlyControl", quantity: 1, totalCents: 13990 },
+      { itemType: "monthly_fee", description: "Plano FlyDelivery", quantity: 1, totalCents: 13990 },
     ]);
     expect(s.adicionais).toHaveLength(0);
   });

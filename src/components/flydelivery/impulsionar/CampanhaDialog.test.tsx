@@ -87,7 +87,7 @@ describe("janela de impulsionar (pós-pago)", () => {
     ).toBeInTheDocument();
     expect(screen.getByText("Sem pagamento agora.")).toBeInTheDocument();
     expect(
-      screen.getByText("Este valor será adicionado à sua próxima fatura do FlyControl."),
+      screen.getByText("Este valor será adicionado à sua próxima fatura do FlyDelivery."),
     ).toBeInTheDocument();
     expect(screen.getByText("Você não precisa pagar agora.")).toBeInTheDocument();
     // Nada de pagamento na hora.

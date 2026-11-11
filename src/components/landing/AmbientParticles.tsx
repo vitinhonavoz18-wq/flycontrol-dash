@@ -93,7 +93,7 @@ export function AmbientParticles({ className = "" }: { className?: string }) {
           const dist = Math.hypot(dx, dy);
           if (dist > DISTANCIA_DA_LINHA) continue;
           const forca = 1 - dist / DISTANCIA_DA_LINHA;
-          ctx.strokeStyle = `rgba(255,255,255,${(forca * 0.055).toFixed(4)})`;
+          ctx.strokeStyle = `rgba(255,107,53,${(forca * 0.09).toFixed(4)})`;
           ctx.lineWidth = 1;
           ctx.beginPath();
           ctx.moveTo(pontos[i].x, pontos[i].y);
@@ -106,7 +106,7 @@ export function AmbientParticles({ className = "" }: { className?: string }) {
         // Um em cada seis pontos acende no laranja da marca. É o pedido que
         // entrou no meio dos dados que só passam.
         const laranja = indice % 6 === 0;
-        ctx.fillStyle = laranja ? "rgba(255,90,0,.42)" : "rgba(255,255,255,.20)";
+        ctx.fillStyle = laranja ? "rgba(255,107,53,.45)" : "rgba(16,24,40,.10)";
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
         ctx.fill();

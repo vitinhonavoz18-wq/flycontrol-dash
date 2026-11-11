@@ -122,7 +122,7 @@ export async function deactivatePizzeria(
     return {
       success: true,
       warning:
-        "Loja descadastrada no FlyControl, mas não foi possível confirmar a atualização no site público agora. Ele deve refletir em instantes.",
+        "Loja descadastrada no FlyDelivery, mas não foi possível confirmar a atualização no site público agora. Ele deve refletir em instantes.",
     };
   }
   return { success: true };
@@ -167,7 +167,7 @@ export async function reactivatePizzeria(
     return {
       success: true,
       warning:
-        "Loja reativada no FlyControl, mas não foi possível confirmar a atualização no site público agora. Ele deve refletir em instantes.",
+        "Loja reativada no FlyDelivery, mas não foi possível confirmar a atualização no site público agora. Ele deve refletir em instantes.",
     };
   }
   return { success: true };

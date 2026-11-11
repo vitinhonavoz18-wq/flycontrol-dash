@@ -1,5 +1,5 @@
 /**
- * Painel Admin › Pagamentos FlyDelivery
+ * Painel Admin › Pagamentos do app FlyDelivery
  *
  * Só para administradores da plataforma. A tela esconde o menu de quem não é
  * admin, mas a TRAVA de verdade está no banco: as leituras passam pelas regras
@@ -69,7 +69,7 @@ export function PagamentosAdmin() {
       <div>
         <h1 className="flex items-center gap-2 text-2xl font-bold">
           <Wallet className="h-6 w-6 text-primary" />
-          Pagamentos FlyDelivery
+          Pagamentos do app FlyDelivery
         </h1>
         <p className="text-sm text-muted-foreground">
           Pix pago no aplicativo com divisão automática (split) pela SyncPay: comissões, contas

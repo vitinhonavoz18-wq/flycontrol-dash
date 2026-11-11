@@ -196,7 +196,7 @@ async function createCheckoutIntent(
     const link = await createInfinityPayCheckoutLink({
       orderNsu: intentId,
       amountCents,
-      description: `FlyControl - plano ${PLAN_PRICING[planCode].name}`,
+      description: `FlyDelivery - plano ${PLAN_PRICING[planCode].name}`,
       redirectUrl: checkoutReturnUrl(publicUrl, planCode),
       webhookUrl: infinityPayWebhookUrl(publicUrl),
     });

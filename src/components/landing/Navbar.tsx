@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Link } from "@tanstack/react-router";
 import { Menu, X } from "lucide-react";
-import logo from "@/assets/flycontrol-logo-hero.webp";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 /**
  * A barra do topo da página pública.
  *
- * Ela começa invisível sobre o Hero — só a logo e os links flutuando sobre o
- * preto. Assim que a pessoa rola, o fundo escurece e uma linha finíssima
+ * Ela começa invisível sobre o Hero — só a logo e os links flutuando sobre a
+ * página. Assim que a pessoa rola, o fundo se fecha e uma linha finíssima
  * aparece embaixo, para o texto da página não passar por trás dos links e
  * virar sopa de letras.
  *
@@ -63,22 +63,22 @@ export function Navbar() {
               // por 17 pontos percentuais dos quadros perdidos no computador
               // — de longe o item mais caro da página inteira.
               //
-              // E o que ele entregava em troca era quase nada: o fundo da
-              // página é preto, então não há cor nem forma para embaçar. É
-              // como colocar vidro jateado numa janela que dá para um muro
-              // preto: ninguém percebe o vidro, e ele custa caro.
-              //
-              // O preto quase fechado faz o mesmo serviço — separar a barra
+              // O branco quase fechado faz o mesmo serviço — separar a barra
               // do conteúdo — sem cobrar nada por quadro.
-              background: "rgba(0,0,0,.92)",
-              borderBottom: "1px solid rgba(255,255,255,.06)",
+              background: "var(--fly-nav-bg)",
+              borderBottom: "1px solid var(--fly-border-subtle)",
             }
           : { background: "transparent", borderBottom: "1px solid transparent" }
       }
     >
       <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-6 px-5 sm:h-20 sm:px-8">
-        <a href="#topo" className="flex shrink-0 items-center" aria-label="FlyControl, ir ao topo">
-          <img src={logo} alt="FlyControl" className="h-11 w-auto sm:h-12" />
+        <a
+          href="#topo"
+          className="flex shrink-0 items-center"
+          style={{ color: "var(--fly-text-primary)" }}
+          aria-label="FlyDelivery, ir ao topo"
+        >
+          <BrandLogo eager className="h-9 sm:h-11" />
         </a>
 
         <nav aria-label="Seções da página" className="hidden items-center gap-9 lg:flex">
@@ -86,7 +86,7 @@ export function Navbar() {
             <a
               key={link.href}
               href={link.href}
-              className="text-[15px] transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
+              className="text-[15px] transition-colors hover:text-[color:var(--fly-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4"
               style={{ color: "var(--fly-text-secondary)", outlineColor: "var(--fly-primary)" }}
             >
               {link.rotulo}
@@ -97,7 +97,7 @@ export function Navbar() {
         <div className="flex items-center gap-2 sm:gap-3">
           <Link
             to="/login"
-            className="hidden rounded-full px-4 py-2 text-[15px] transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:block"
+            className="hidden rounded-full px-4 py-2 text-[15px] transition-colors hover:text-[color:var(--fly-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 sm:block"
             style={{ color: "var(--fly-text-secondary)", outlineColor: "var(--fly-primary)" }}
           >
             Entrar
@@ -106,7 +106,7 @@ export function Navbar() {
             to="/signup"
             search={{ plan: undefined, google: undefined }}
             className="rounded-full px-4 py-2 text-[13px] font-medium tracking-[0.04em] transition-colors sm:px-5 sm:py-2.5 sm:text-[14px]"
-            style={{ background: "var(--fly-primary)", color: "#000" }}
+            style={{ background: "var(--fly-primary)", color: "var(--fly-on-primary)" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--fly-primary-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "var(--fly-primary)")}
           >
@@ -132,10 +132,9 @@ export function Navbar() {
           id="fly-menu-mobile"
           className="lg:hidden"
           style={{
-            background: "rgba(0,0,0,.94)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            borderTop: "1px solid rgba(255,255,255,.06)",
+            background: "var(--fly-background)",
+            borderTop: "1px solid var(--fly-border-subtle)",
+            borderBottom: "1px solid var(--fly-border-subtle)",
           }}
         >
           <nav aria-label="Seções da página" className="flex flex-col px-5 py-3 sm:px-8">

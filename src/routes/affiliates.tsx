@@ -10,11 +10,11 @@ import { CascaDoPortal } from "@/components/afiliados/portal/Casca";
 export const Route = createFileRoute("/affiliates")({
   head: () => ({
     meta: [
-      { title: "FlyControl Parceiros — indique e ganhe todo mês" },
+      { title: "FlyDelivery Parceiros — indique e ganhe todo mês" },
       {
         name: "description",
         content:
-          "Programa de parceiros do FlyControl: indique restaurantes e receba comissão recorrente sobre o que eles pagam.",
+          "Programa de parceiros do FlyDelivery: indique restaurantes e receba comissão recorrente sobre o que eles pagam.",
       },
     ],
   }),

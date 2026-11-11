@@ -117,7 +117,7 @@ export function InstallBanner() {
       className="fixed left-3 right-3 z-[var(--z-dropdown)] flex items-center gap-3 rounded-2xl border border-primary/30 bg-card p-3 shadow-lg md:hidden"
       style={{ bottom: "calc(var(--bottom-nav-offset) + 0.75rem)" }}
       role="dialog"
-      aria-label="Instalar FlyControl"
+      aria-label="Instalar FlyDelivery"
     >
       <div className="h-11 w-11 rounded-xl bg-primary/15 grid place-items-center shrink-0">
         {showIOS ? <Share className="h-5 w-5 text-primary" /> : <Download className="h-5 w-5 text-primary" />}

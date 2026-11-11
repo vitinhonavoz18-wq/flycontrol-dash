@@ -72,7 +72,7 @@ export function AvisoIntegracao({
         <a
           className="font-bold underline decoration-2 underline-offset-2"
           href={linkWhatsAppSuporte(
-            "Olá! Meu Chat do Fly Control está contratado mas a conexão com o WhatsApp ainda não foi ligada.",
+            "Olá! Meu Chat do FlyDelivery está contratado mas a conexão com o WhatsApp ainda não foi ligada.",
           )}
           target="_blank"
           rel="noopener noreferrer"

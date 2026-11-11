@@ -66,7 +66,7 @@ function itemOficial(quantidade = 2) {
 
 const bebida = { type: "beverage", name: "Coca", quantity: 1, unit_price: 12, total_price: 12 };
 
-describe("FlyControl confere a fotografia da pizza ao receber o pedido", () => {
+describe("FlyDelivery confere a fotografia da pizza ao receber o pedido", () => {
   it("21. pedido com pizza certa é aceito (média 65 + bacon 2x5 = 75, x2)", () => {
     const p = itemOficial();
     expect(p.unit_price).toBe(75);

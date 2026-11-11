@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
  * nenhum link apontando para o endereço antigo.
  */
 
-const menu = readFileSync("src/routes/_app.tsx", "utf8");
+const navegacao = readFileSync("src/lib/navegacao.ts", "utf8");
 const lojas = readFileSync("src/components/admin/dashboards/PizzeriasDashboard.tsx", "utf8");
 const usuarios = readFileSync("src/routes/_app/admin/users.tsx", "utf8");
 const insights = readFileSync("src/routes/_app/admin/analytics.tsx", "utf8");
@@ -45,7 +45,9 @@ describe("nenhum botão leva para o endereço antigo", () => {
 });
 
 describe("o menu do Painel Admin", () => {
-  const bloco = menu.slice(menu.indexOf("const adminItems"), menu.indexOf("const NavItems"));
+  // O menu saiu de dentro do layout e foi para `lib/navegacao.ts`. O bloco da
+  // administração da plataforma é o `GRUPO_DA_PLATAFORMA`.
+  const bloco = navegacao.slice(navegacao.indexOf("export const GRUPO_DA_PLATAFORMA"));
 
   it("não tem mais FlyPizzarias nem Financeiro Global", () => {
     expect(bloco).not.toContain("FlyPizzarias");

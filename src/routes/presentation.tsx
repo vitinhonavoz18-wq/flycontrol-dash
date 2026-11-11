@@ -12,7 +12,7 @@ import {
   Home,
   ArrowRight,
 } from "lucide-react";
-import logo from "@/assets/flycontrol-logo-hero.webp";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export const Route = createFileRoute("/presentation")({
   component: PresentationPage,
@@ -20,10 +20,10 @@ export const Route = createFileRoute("/presentation")({
 
 const slides = [
   {
-    title: "FlyControl",
+    title: "FlyDelivery",
     subtitle: "A revolução na gestão do seu delivery",
     content: "O sistema centralizado que conecta seus sites de vendas diretamente à sua operação.",
-    icon: <img src={logo} alt="Logo" className="w-64 md:w-80 mx-auto mb-8 drop-shadow-2xl" />,
+    icon: <BrandLogo variant="stacked" tone="onDark" className="mx-auto mb-8 h-40 md:h-48" />,
     color: "from-orange-500 to-red-600",
   },
   {
@@ -70,10 +70,10 @@ const slides = [
   {
     title: "Como Funciona?",
     subtitle: "Fluxo simplificado",
-    content: "O ciclo de vida de um pedido no ecossistema FlyControl.",
+    content: "O ciclo de vida de um pedido no ecossistema FlyDelivery.",
     steps: [
       "1. Cliente faz o pedido no seu site",
-      "2. FlyControl recebe via Webhook/API",
+      "2. FlyDelivery recebe via Webhook/API",
       "3. Notificação sonora e visual no painel",
       "4. Impressão e despacho para entrega",
     ],
@@ -83,7 +83,7 @@ const slides = [
   {
     title: "Pronto para decolar?",
     subtitle: "Comece hoje mesmo a transformar seu delivery",
-    content: "O FlyControl é a ferramenta definitiva para quem quer crescer com organização.",
+    content: "O FlyDelivery é a ferramenta definitiva para quem quer crescer com organização.",
     icon: <CheckCircle2 className="w-24 h-24 text-primary mb-6 animate-bounce" />,
     color: "from-primary to-orange-700",
     isLast: true,
@@ -123,7 +123,7 @@ function PresentationPage() {
       {/* Navigation Header */}
       <header className="flex items-center justify-between p-6 backdrop-blur-sm">
         <div className="flex items-center gap-2">
-          <img src={logo} alt="Logo" className="h-8 w-auto" />
+          <BrandLogo tone="onDark" className="h-8" eager />
           <span className="text-sm font-medium opacity-60">Apresentação Oficial</span>
         </div>
         <div className="flex items-center gap-4">

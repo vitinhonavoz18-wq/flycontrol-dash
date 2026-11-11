@@ -20,7 +20,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CHECKOUT_TOKEN_STORAGE_KEY } from "@/lib/billing/checkout";
 import { confirmCheckoutReturn, type ConfirmReturnResult } from "@/lib/billing/checkout.functions";
 import { PLAN_PRICING, isKnownPlanCode, type PlanCode } from "@/lib/billing/plans";
-import logo from "@/assets/flycontrol-logo.webp";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export const Route = createFileRoute("/pagamento/$plano")({ component: CheckoutReturnPage });
 
@@ -91,7 +91,7 @@ function CheckoutReturnPage() {
           result: {
             recognized: false,
             code: "unavailable",
-            message: "Não foi possível confirmar agora. Fale com a equipe da FlyControl.",
+            message: "Não foi possível confirmar agora. Fale com a equipe da FlyDelivery.",
           },
         });
       });
@@ -105,7 +105,9 @@ function CheckoutReturnPage() {
     <div className="grid min-h-dvh place-items-center bg-background px-4 py-8">
       <Card className="w-full max-w-lg">
         <CardContent className="space-y-5 p-6 text-center">
-          <img src={logo} alt="FlyControl" className="mx-auto h-9 w-auto" />
+          <div className="flex justify-center text-foreground">
+            <BrandLogo className="h-9" eager />
+          </div>
 
           {state.phase === "loading" && <LoadingState />}
           {state.phase === "invalid_plan" && <InvalidPlanState />}
@@ -159,7 +161,7 @@ function ResultState({ result }: { result: ConfirmReturnResult }) {
 
         <p className="rounded-lg border border-border bg-muted/30 p-3 text-left text-sm text-muted-foreground">
           Se você concluiu o pagamento, ele não se perdeu. Isso acontece quando o retorno chega em
-          outro navegador ou depois do prazo. Fale com a equipe da FlyControl com o comprovante que
+          outro navegador ou depois do prazo. Fale com a equipe da FlyDelivery com o comprovante que
           a ativação é feita manualmente.
         </p>
 

@@ -36,27 +36,27 @@ function PrivacyPage() {
     >
       <LegalSection id="papeis" title="1. Quem trata os dados">
         <p>
-          A FlyControl é usada por estabelecimentos — restaurantes, pizzarias, hamburguerias — para
+          A FlyDelivery é usada por estabelecimentos — restaurantes, pizzarias, hamburguerias — para
           operar pedidos. Isso cria duas situações diferentes, que esta política trata
           separadamente:
         </p>
         <ul className="list-inside list-disc">
           <li>
             <strong className="text-foreground">Dados do estabelecimento e da equipe.</strong> São
-            os dados de quem contrata e usa a plataforma. A FlyControl decide como tratá-los para
+            os dados de quem contrata e usa a plataforma. A FlyDelivery decide como tratá-los para
             prestar o serviço, cobrar e dar suporte.
           </li>
           <li>
             <strong className="text-foreground">Dados dos clientes do estabelecimento.</strong> São
             os dados de quem faz um pedido. Quem os coleta e decide o que fazer com eles é o
-            estabelecimento. A FlyControl apenas os armazena e processa para que o pedido chegue à
+            estabelecimento. A FlyDelivery apenas os armazena e processa para que o pedido chegue à
             cozinha e seja entregue.
           </li>
         </ul>
         <p>
-          Na prática: se você é cliente de um restaurante que usa a FlyControl e quer excluir ou
+          Na prática: se você é cliente de um restaurante que usa a FlyDelivery e quer excluir ou
           corrigir seus dados, o pedido deve ser feito ao restaurante. É ele quem tem essa decisão,
-          e a FlyControl atende ao que ele determinar.
+          e a FlyDelivery atende ao que ele determinar.
         </p>
       </LegalSection>
 
@@ -125,8 +125,8 @@ function PrivacyPage() {
           <li>manter a segurança da plataforma e apurar uso indevido.</li>
         </ul>
         <p className="font-medium text-foreground">
-          A FlyControl não vende dados, não os cede para uso comercial de terceiros e não os utiliza
-          para publicidade.
+          A FlyDelivery não vende dados, não os cede para uso comercial de terceiros e não os
+          utiliza para publicidade.
         </p>
       </LegalSection>
 
@@ -143,7 +143,7 @@ function PrivacyPage() {
 
       <LegalSection id="compartilhamento" title="5. Com quem os dados são compartilhados">
         <p>
-          A FlyControl se apoia em fornecedores de infraestrutura para funcionar. Eles tratam os
+          A FlyDelivery se apoia em fornecedores de infraestrutura para funcionar. Eles tratam os
           dados apenas para prestar esse serviço:
         </p>
         <ul className="list-inside list-disc">
@@ -164,7 +164,7 @@ function PrivacyPage() {
             <strong className="text-foreground">InfinityPay</strong> — processamento do pagamento da
             assinatura. Ao contratar um plano, o responsável é levado ao ambiente de pagamento da
             InfinityPay e fornece ali os seus dados de pagamento, que são tratados por ela. A
-            FlyControl não recebe nem armazena números de cartão.
+            FlyDelivery não recebe nem armazena números de cartão.
           </li>
         </ul>
         <p>
@@ -218,7 +218,7 @@ function PrivacyPage() {
             enviada ao navegador;
           </li>
           <li>
-            as comunicações automáticas entre a FlyControl e o canal de pedidos são assinadas
+            as comunicações automáticas entre a FlyDelivery e o canal de pedidos são assinadas
             criptograficamente, para que uma mensagem forjada seja recusada.
           </li>
         </ul>
@@ -236,8 +236,8 @@ function PrivacyPage() {
           solicitar a portabilidade e revogar consentimento.
         </p>
         <p>
-          Esses pedidos são atendidos pelo contato da FlyControl. Ainda não existe uma ferramenta de
-          autoatendimento no painel para exclusão ou exportação: cada solicitação é tratada
+          Esses pedidos são atendidos pelo contato da FlyDelivery. Ainda não existe uma ferramenta
+          de autoatendimento no painel para exclusão ou exportação: cada solicitação é tratada
           manualmente pela equipe.
         </p>
         <p>
@@ -265,7 +265,7 @@ function PrivacyPage() {
       <div className="rounded-lg border border-border bg-muted/30 p-4 text-sm">
         <p className="font-semibold text-foreground">Dúvidas sobre o tratamento dos seus dados?</p>
         <p className="text-muted-foreground">
-          Fale com a equipe da FlyControl. Enquanto o encarregado não é formalmente nomeado, as
+          Fale com a equipe da FlyDelivery. Enquanto o encarregado não é formalmente nomeado, as
           solicitações são recebidas e tratadas pelo canal de atendimento.
         </p>
       </div>

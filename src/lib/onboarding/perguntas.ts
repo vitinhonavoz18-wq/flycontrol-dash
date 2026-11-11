@@ -160,7 +160,7 @@ export const ETAPAS: readonly Etapa[] = [
   },
   {
     id: "quem_vai_usar",
-    pergunta: "Quem deverá utilizar o FlyControl no dia a dia?",
+    pergunta: "Quem deverá utilizar o FlyDelivery no dia a dia?",
     explicacao: "Pode marcar mais de um. Ninguém é cadastrado agora — isso é só para entendermos.",
     multipla: true,
     opcoes: [
@@ -189,7 +189,7 @@ export const ETAPAS: readonly Etapa[] = [
   },
   {
     id: "como_trazer_o_cardapio",
-    pergunta: "Como você gostaria de trazer seu cardápio para o FlyControl?",
+    pergunta: "Como você gostaria de trazer seu cardápio para o FlyDelivery?",
     multipla: false,
     // Só faz sentido para quem TEM cardápio. Quem não tem vai direto para o
     // cadastro, sem uma pergunta que não tem resposta boa para ele.
@@ -199,7 +199,7 @@ export const ETAPAS: readonly Etapa[] = [
       { valor: "manual", rotulo: "Quero cadastrar manualmente", icone: "✍️" },
       { valor: "importar", rotulo: "Quero importar meu cardápio", icone: "📥" },
       { valor: "referencia", rotulo: "Quero usar meu cardápio atual como referência", icone: "👀" },
-      { valor: "ajuda_equipe", rotulo: "Quero ajuda da equipe FlyControl", icone: "🤝" },
+      { valor: "ajuda_equipe", rotulo: "Quero ajuda da equipe FlyDelivery", icone: "🤝" },
     ],
   },
   {
@@ -237,7 +237,7 @@ export const ETAPAS: readonly Etapa[] = [
   },
   {
     id: "objetivo",
-    pergunta: "O que você mais quer conquistar usando o FlyControl?",
+    pergunta: "O que você mais quer conquistar usando o FlyDelivery?",
     multipla: false,
     opcoes: [
       { valor: "organizar", rotulo: "Organizar melhor minha operação", icone: "🗂️" },

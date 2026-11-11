@@ -49,7 +49,7 @@ export const LAYOUTS: readonly LayoutDeCardapio[] = [
   {
     id: "generic",
     nome: "Padrão",
-    descricao: "A organização clássica do FlyControl. Serve para qualquer negócio.",
+    descricao: "A organização clássica do FlyDelivery. Serve para qualquer negócio.",
     ordem: ["capa", "pizzas", "combos", "cardapio", "bebidas"],
     colunas: 2,
     buscaEmDestaque: false,

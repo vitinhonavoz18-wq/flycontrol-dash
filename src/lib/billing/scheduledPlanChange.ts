@@ -127,7 +127,7 @@ export function scheduledChangeSentence(input: {
   if (input.status === "awaiting_team") {
     return (
       `Sua escolha está registrada: passar para o ${plano} por ${preco}. ` +
-      "Sua cobrança está pausada pela equipe da FlyControl; a troca vale quando a equipe retomar a cobrança — nada é cobrado antes disso."
+      "Sua cobrança está pausada pela equipe da FlyDelivery; a troca vale quando a equipe retomar a cobrança — nada é cobrado antes disso."
     );
   }
   const quando = effectiveDateLabel(input.cycleEnd);

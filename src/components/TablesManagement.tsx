@@ -243,7 +243,7 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
             <h1>MESA ${table.table_number}</h1>
             <p>${table.table_name || "Escaneie para fazer seu pedido"}</p>
             <div id="qrcode"></div>
-            <div class="footer">FlyControl</div>
+            <div class="footer">FlyDelivery</div>
           </div>
           <button class="no-print" style="margin-top: 20px; padding: 10px 20px; cursor: pointer;" onclick="window.print()">Imprimir</button>
           <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
