@@ -51,3 +51,7 @@ schema.sql
 data.sql
 *.dump
 *.7z
+
+# Arquivos temporários do Python (scripts/vitrine-hero)
+__pycache__/
+*.pyc
