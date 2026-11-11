@@ -16,40 +16,61 @@
 type Props = {
   titulo: string;
   detalhe: string;
-  /** Onde ele fica em relação ao print. Só posicionamento. */
+  /** Onde ele fica em relação à vitrine. Só posicionamento. */
   className?: string;
   /** Segundos de atraso, para os avisos não subirem todos juntos. */
   atraso?: number;
+  /** Quanto ele acompanha o mouse (profundidade). 0 = parado. */
+  profundidade?: number;
+  /** Duração de uma subida da flutuação, em segundos. */
+  duracao?: number;
 };
 
-export function FloatingNotification({ titulo, detalhe, className = "", atraso = 0 }: Props) {
+/**
+ * Duas camadas de propósito: a de fora acompanha o mouse (profundidade), a
+ * de dentro flutua. Juntar as duas numa transformação só faria uma apagar a
+ * outra.
+ */
+export function FloatingNotification({
+  titulo,
+  detalhe,
+  className = "",
+  atraso = 0,
+  profundidade = 0,
+  duracao = 6,
+}: Props) {
   return (
     <div
       aria-hidden="true"
-      className={`fly-float pointer-events-none absolute hidden select-none items-center gap-3 rounded-2xl px-4 py-3 sm:flex ${className}`}
-      style={{
-        background: "var(--fly-surface-01)",
-        border: "1px solid var(--fly-border-subtle)",
-        boxShadow: "var(--fly-shadow-card)",
-        animationDuration: "26s",
-        animationDelay: `${atraso}s`,
-      }}
+      className={`pointer-events-none absolute hidden select-none sm:block ${className}`}
+      style={{ "--prof": profundidade } as React.CSSProperties}
     >
-      <span
-        className="h-2 w-2 shrink-0 rounded-full"
-        style={{ background: "var(--fly-primary)", boxShadow: "0 0 12px var(--fly-primary)" }}
-      />
-      <span className="whitespace-nowrap">
+      <div
+        className="vitrine-boia flex items-center gap-3 rounded-2xl px-4 py-3"
+        style={{
+          background: "var(--fly-surface-01)",
+          border: "1px solid var(--fly-border-subtle)",
+          boxShadow: "var(--fly-shadow-card)",
+          animationDuration: `${duracao}s`,
+          animationDelay: `${-atraso}s`,
+        }}
+      >
         <span
-          className="block text-[13px] font-semibold"
-          style={{ color: "var(--fly-text-primary)" }}
-        >
-          {titulo}
+          className="vitrine-pulso h-2 w-2 shrink-0 rounded-full"
+          style={{ background: "var(--fly-primary)", boxShadow: "0 0 12px var(--fly-primary)" }}
+        />
+        <span className="whitespace-nowrap">
+          <span
+            className="block text-[13px] font-semibold"
+            style={{ color: "var(--fly-text-primary)" }}
+          >
+            {titulo}
+          </span>
+          <span className="block text-[12px]" style={{ color: "var(--fly-text-muted)" }}>
+            {detalhe}
+          </span>
         </span>
-        <span className="block text-[12px]" style={{ color: "var(--fly-text-muted)" }}>
-          {detalhe}
-        </span>
-      </span>
+      </div>
     </div>
   );
 }

@@ -1,0 +1,94 @@
+# Vitrine do site — preparar fotos
+#
+# O QUE FAZ
+#
+# Recorta as fotos dos produtos escolhidos para a vitrine do topo da página
+# inicial: tira o fundo, limpa as bordas, confere a qualidade e guarda o
+# recorte no Supabase (depósito "hero-showcase"). A foto original do
+# cardápio não é tocada.
+#
+# QUANDO RODA
+#
+# De hora em hora, sozinho. Primeiro ele só PERGUNTA ao banco se há foto
+# esperando; se não houver, termina em segundos. Também dá para rodar na
+# hora: Actions → "Vitrine do site — preparar fotos" → Run workflow.
+#
+# O QUE PRECISA ESTAR CONFIGURADO (uma vez só)
+#
+# Settings → Secrets and variables → Actions:
+#   • SUPABASE_URL              (já existe, usado na publicação)
+#   • SUPABASE_SERVICE_ROLE_KEY (Supabase → Project Settings → API → service_role)
+# Sem eles, o processo avisa e termina sem erro — não fica vermelho de hora
+# em hora.
+#
+# CUSTO: zero. Roda nas máquinas gratuitas do GitHub, com modelo aberto.
+name: Vitrine do site — preparar fotos
+
+on:
+  schedule:
+    - cron: "23 * * * *"
+  workflow_dispatch:
+    inputs:
+      limite:
+        description: "Máximo de fotos nesta execução"
+        default: "8"
+
+concurrency:
+  group: vitrine-hero
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  preparar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+    steps:
+      - name: Há fotos esperando recorte?
+        id: fila
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_SERVICE_ROLE_KEY" ]; then
+            echo "::notice::SUPABASE_URL ou SUPABASE_SERVICE_ROLE_KEY não configurados nos segredos — nada a fazer."
+            echo "pendentes=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          resposta=$(curl -sS -X POST "${SUPABASE_URL%/}/rest/v1/rpc/hero_showcase_pending_count" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Content-Type: application/json" -d '{}' || echo "erro")
+          if ! [[ "$resposta" =~ ^[0-9]+$ ]]; then
+            echo "::warning::Não consegui consultar a fila (a migração da vitrine já foi aplicada?): $resposta"
+            echo "pendentes=0" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "Fotos esperando: $resposta"
+          echo "pendentes=$resposta" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.fila.outputs.pendentes != '0'
+
+      - uses: actions/setup-python@v5
+        if: steps.fila.outputs.pendentes != '0'
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: scripts/vitrine-hero/requirements.txt
+
+      # O modelo de recorte (~220 MB) é baixado uma vez e guardado entre execuções.
+      - uses: actions/cache@v4
+        if: steps.fila.outputs.pendentes != '0'
+        with:
+          path: ~/.u2net
+          key: modelo-recorte-birefnet-general-lite-v1
+
+      - name: Instalar o recorte
+        if: steps.fila.outputs.pendentes != '0'
+        run: pip install -r scripts/vitrine-hero/requirements.txt
+
+      - name: Recortar as fotos
+        if: steps.fila.outputs.pendentes != '0'
+        run: python scripts/vitrine-hero/preparar_vitrine.py --pendentes --limite "${{ github.event.inputs.limite || '8' }}"

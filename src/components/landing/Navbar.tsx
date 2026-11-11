@@ -71,14 +71,14 @@ export function Navbar() {
           : { background: "transparent", borderBottom: "1px solid transparent" }
       }
     >
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-6 px-5 sm:h-20 sm:px-8">
+      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-2 px-4 sm:h-20 sm:gap-6 sm:px-8">
         <a
           href="#topo"
           className="flex shrink-0 items-center"
           style={{ color: "var(--fly-text-primary)" }}
           aria-label="FlyDelivery, ir ao topo"
         >
-          <BrandLogo eager className="h-9 sm:h-11" />
+          <BrandLogo eager className="h-5 min-[380px]:h-6 min-[420px]:h-7 sm:h-10 lg:h-11" />
         </a>
 
         <nav aria-label="Seções da página" className="hidden items-center gap-9 lg:flex">
@@ -105,7 +105,7 @@ export function Navbar() {
           <Link
             to="/signup"
             search={{ plan: undefined, google: undefined }}
-            className="rounded-full px-4 py-2 text-[13px] font-medium tracking-[0.04em] transition-colors sm:px-5 sm:py-2.5 sm:text-[14px]"
+            className="whitespace-nowrap rounded-full px-3 py-2 text-[12px] font-medium min-[380px]:px-3.5 min-[380px]:text-[13px] tracking-[0.04em] transition-colors sm:px-5 sm:py-2.5 sm:text-[14px]"
             style={{ background: "var(--fly-primary)", color: "var(--fly-on-primary)" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--fly-primary-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "var(--fly-primary)")}

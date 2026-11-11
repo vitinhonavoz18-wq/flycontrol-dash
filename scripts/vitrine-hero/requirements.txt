@@ -1,0 +1,3 @@
+# Recorte das fotos da vitrine do site. Tudo gratuito e de código aberto:
+# rembg (MIT) + modelo BiRefNet (MIT), pymatting (MIT) para limpar bordas.
+rembg[cpu]==2.0.67

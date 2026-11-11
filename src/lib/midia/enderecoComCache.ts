@@ -39,11 +39,12 @@ export const PREFIXO_DA_ROTA = "/api/public/midia/";
 export const PROJETOS_PERMITIDOS = new Set(["knhenchgntttraaeewlj", "laufyadcizmruejafcpi"]);
 
 /**
- * Só as gavetas de arquivos públicos por natureza: fotos do cardápio e artes
- * de status. As fotos e áudios das conversas do chat (crm-chat-media) ficam
- * DE FORA de propósito — são particulares dos clientes da loja.
+ * Só as gavetas de arquivos públicos por natureza: fotos do cardápio, artes
+ * de status e os recortes da vitrine do site (hero-showcase). As fotos e
+ * áudios das conversas do chat (crm-chat-media) ficam DE FORA de propósito —
+ * são particulares dos clientes da loja.
  */
-export const GAVETAS_PERMITIDAS = new Set(["menu-images", "status-arts"]);
+export const GAVETAS_PERMITIDAS = new Set(["menu-images", "status-arts", "hero-showcase"]);
 
 const TIPOS_DE_ACESSO = new Set(["sign", "public"]);
 
