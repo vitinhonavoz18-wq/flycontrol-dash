@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { ChartColumnIncreasing, MapPin, Scooter, Store, type LucideIcon } from "lucide-react";
 import { FloatingNotification } from "@/components/landing/FloatingNotification";
 import { useMenosAnimacao } from "@/components/landing/useMenosAnimacao";
@@ -63,6 +63,12 @@ export function HeroFoodShowcase() {
   const visivel = useVitrineVisivel(raiz);
   const { itens } = useHeroProducts();
   const [quebrados, setQuebrados] = useState<ReadonlySet<string>>(() => new Set());
+  // Foto que não carregou sai da roda — de preferência ANTES de chegar a vez
+  // dela (no pré-carregamento), para a vitrine nunca ficar um instante vazia.
+  const marcarQuebrado = useCallback(
+    (id: string) => setQuebrados((antes) => (antes.has(id) ? antes : new Set(antes).add(id))),
+    [],
+  );
 
   const sequencia = useMemo(() => montarSequencia(itens, quebrados), [itens, quebrados]);
   const ativo = visivel && !menosAnimacao;
@@ -107,13 +113,16 @@ export function HeroFoodShowcase() {
       if (!proximo || proximo.id === atual.id) continue;
       const img = new Image();
       img.decoding = "async";
+      img.onerror = () => marcarQuebrado(proximo.id);
       img.src = window.innerWidth < 768 ? proximo.imagemPequena : proximo.imagem;
       imagens.push(img);
     }
+    // O download continua (fica no cache para a hora da troca); só deixamos
+    // de escutar o resultado.
     return () => {
-      for (const img of imagens) img.src = "";
+      for (const img of imagens) img.onerror = null;
     };
-  }, [sequencia, indice, atual.id]);
+  }, [sequencia, indice, atual.id, marcarQuebrado]);
 
   // ── Mouse: um leve deslocamento em profundidade (só computador) ─────────
   useEffect(() => {
@@ -218,9 +227,7 @@ export function HeroFoodShowcase() {
                 item={c.item}
                 saindo={c.saindo}
                 prioridade={c.item.id === sequencia[0]?.id}
-                aoQuebrar={(id) =>
-                  setQuebrados((antes) => (antes.has(id) ? antes : new Set(antes).add(id)))
-                }
+                aoQuebrar={marcarQuebrado}
               />
             ))}
           </div>

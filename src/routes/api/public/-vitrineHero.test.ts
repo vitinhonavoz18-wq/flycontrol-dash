@@ -1,5 +1,5 @@
 import { readFileSync } from "node:fs";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 
 /**
  * O endereço público da vitrine (/api/public/vitrine-hero).
@@ -24,8 +24,15 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
+// O arquivo do endereço carrega o roteador e o cliente do Supabase: a primeira
+// importação demora. Ela é feita uma vez, antes dos testes, com prazo folgado —
+// senão o primeiro teste estoura o tempo quando a máquina está ocupada.
+let listarVitrine: () => Promise<Response>;
+beforeAll(async () => {
+  ({ listarVitrine } = await import("./vitrine-hero"));
+}, 60_000);
+
 async function chamar() {
-  const { listarVitrine } = await import("./vitrine-hero");
   const resposta = await listarVitrine();
   return { resposta, corpo: (await resposta.json()) as { itens: Record<string, unknown>[] } };
 }

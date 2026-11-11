@@ -1,0 +1,411 @@
+[
+  {
+    "slug": "jc-burguer",
+    "nome": "JC BURGUER",
+    "categoria": "Hamburgueria",
+    "cidade": "Salvador · BA",
+    "url": "https://conectfly.com.br/jc-burguer",
+    "cor": "hsl(39.18, 100%, 48.04%)",
+    "logo": "/vitrine/jc-burguer/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/jc-burguer/demo.mp4",
+      "webm": "/vitrine/jc-burguer/demo.webm",
+      "poster": "/vitrine/jc-burguer/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 15.6,
+      "tamanhoKB": 2354,
+      "gravadoEm": "2026-11-11T22:46:26.647Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 34.2
+      },
+      "etapas": [
+        "capa",
+        "cardápio",
+        "produto adicionado",
+        "resumo do pedido"
+      ],
+      "lojaFechadaNaGravacao": false
+    }
+  },
+  {
+    "slug": "paixao-acai",
+    "nome": "PAIXÃO AÇAI",
+    "categoria": "Açaí",
+    "cidade": "Salvador · BA",
+    "url": "https://conectfly.com.br/paixao-acai",
+    "cor": "hsl(297.75, 100%, 51.75%)",
+    "logo": "/vitrine/paixao-acai/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/paixao-acai/demo.mp4",
+      "webm": "/vitrine/paixao-acai/demo.webm",
+      "poster": "/vitrine/paixao-acai/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 16.6,
+      "tamanhoKB": 1751,
+      "gravadoEm": "2026-11-11T22:47:14.070Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 31.1
+      },
+      "etapas": [
+        "capa",
+        "cardápio",
+        "produto adicionado",
+        "resumo do pedido",
+        "entrega e pagamento"
+      ],
+      "lojaFechadaNaGravacao": false
+    }
+  },
+  {
+    "slug": "tempero-da-dona",
+    "nome": "TEMPERO DA DONA",
+    "categoria": "Restaurante",
+    "cidade": "Salvador · BA",
+    "url": "https://conectfly.com.br/tempero-da-dona",
+    "cor": "hsl(0.0, 68.5%, 49.8%)",
+    "logo": "/vitrine/tempero-da-dona/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/tempero-da-dona/demo.mp4",
+      "webm": "/vitrine/tempero-da-dona/demo.webm",
+      "poster": "/vitrine/tempero-da-dona/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 15.5,
+      "tamanhoKB": 2862,
+      "gravadoEm": "2026-11-11T22:48:04.617Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 36
+      },
+      "etapas": [
+        "capa",
+        "cardápio",
+        "produto adicionado",
+        "resumo do pedido"
+      ],
+      "lojaFechadaNaGravacao": false
+    }
+  },
+  {
+    "slug": "alpha-pastelaria",
+    "nome": "ALPHA PASTELARIA",
+    "categoria": "Lanchonete",
+    "cidade": "Salvador · BA",
+    "url": "https://conectfly.com.br/alpha-pastelaria",
+    "cor": "hsl(37.69, 92.13%, 50.2%)",
+    "logo": "/vitrine/alpha-pastelaria/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/alpha-pastelaria/demo.mp4",
+      "webm": "/vitrine/alpha-pastelaria/demo.webm",
+      "poster": "/vitrine/alpha-pastelaria/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 17.1,
+      "tamanhoKB": 2154,
+      "gravadoEm": "2026-11-11T22:48:55.117Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 32
+      },
+      "etapas": [
+        "capa",
+        "cardápio",
+        "categoria",
+        "produto adicionado",
+        "resumo do pedido"
+      ],
+      "lojaFechadaNaGravacao": false
+    }
+  },
+  {
+    "slug": "d-lua-doces",
+    "nome": "D’LUA DOCES",
+    "categoria": "Doces",
+    "cidade": "São Paulo",
+    "url": "https://conectfly.com.br/d-lua-doces",
+    "cor": "hsl(7.41, 42.86%, 62.94%)",
+    "logo": "/vitrine/d-lua-doces/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/d-lua-doces/demo.mp4",
+      "webm": "/vitrine/d-lua-doces/demo.webm",
+      "poster": "/vitrine/d-lua-doces/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 14.6,
+      "tamanhoKB": 2104,
+      "gravadoEm": "2026-11-11T22:49:40.063Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 36.8
+      },
+      "etapas": [
+        "capa",
+        "cardápio"
+      ],
+      "lojaFechadaNaGravacao": true
+    }
+  },
+  {
+    "slug": "brasa-do-joao",
+    "nome": "Brasa do João",
+    "categoria": "Restaurante",
+    "cidade": "Olinda · PE",
+    "url": "https://conectfly.com.br/brasa-do-joao",
+    "cor": "hsl(33.04, 89.72%, 50.39%)",
+    "logo": "/vitrine/brasa-do-joao/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/brasa-do-joao/demo.mp4",
+      "webm": "/vitrine/brasa-do-joao/demo.webm",
+      "poster": "/vitrine/brasa-do-joao/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 15.5,
+      "tamanhoKB": 1792,
+      "gravadoEm": "2026-11-11T22:50:25.909Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 34.7
+      },
+      "etapas": [
+        "capa",
+        "cardápio",
+        "produto adicionado",
+        "resumo do pedido"
+      ],
+      "lojaFechadaNaGravacao": false
+    }
+  },
+  {
+    "slug": "acai-deus-provera",
+    "nome": "Açai Deus provera",
+    "categoria": "Lanchonete",
+    "cidade": "Salvador · BA",
+    "url": "https://conectfly.com.br/acai-deus-provera",
+    "cor": "hsl(42.86, 91.8%, 52.16%)",
+    "logo": "/vitrine/acai-deus-provera/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/acai-deus-provera/demo.mp4",
+      "webm": "/vitrine/acai-deus-provera/demo.webm",
+      "poster": "/vitrine/acai-deus-provera/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 15.5,
+      "tamanhoKB": 2049,
+      "gravadoEm": "2026-11-11T22:51:14.040Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 33
+      },
+      "etapas": [
+        "capa",
+        "cardápio",
+        "produto adicionado",
+        "resumo do pedido"
+      ],
+      "lojaFechadaNaGravacao": false
+    }
+  },
+  {
+    "slug": "sandwitch",
+    "nome": "Sandwitch",
+    "categoria": "Restaurante",
+    "cidade": "Caxias do Sul",
+    "url": "https://conectfly.com.br/sandwitch",
+    "cor": "hsl(0.0, 95.18%, 26.63%)",
+    "logo": "/vitrine/sandwitch/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/sandwitch/demo.mp4",
+      "webm": "/vitrine/sandwitch/demo.webm",
+      "poster": "/vitrine/sandwitch/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 16.6,
+      "tamanhoKB": 1761,
+      "gravadoEm": "2026-11-11T22:52:00.961Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 31.8
+      },
+      "etapas": [
+        "capa",
+        "cardápio",
+        "produto adicionado",
+        "resumo do pedido",
+        "entrega e pagamento"
+      ],
+      "lojaFechadaNaGravacao": false
+    }
+  },
+  {
+    "slug": "xerife-pasteis-penha",
+    "nome": "Xerife Pastéis Penha",
+    "categoria": "Lanchonete",
+    "cidade": "Penha",
+    "url": "https://conectfly.com.br/xerife-pasteis-penha",
+    "cor": "hsl(358.0, 92%, 25.3%)",
+    "logo": "/vitrine/xerife-pasteis-penha/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/xerife-pasteis-penha/demo.mp4",
+      "webm": "/vitrine/xerife-pasteis-penha/demo.webm",
+      "poster": "/vitrine/xerife-pasteis-penha/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 15.5,
+      "tamanhoKB": 1295,
+      "gravadoEm": "2026-11-11T22:52:41.988Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 28.6
+      },
+      "etapas": [
+        "capa",
+        "cardápio",
+        "produto adicionado",
+        "resumo do pedido"
+      ],
+      "lojaFechadaNaGravacao": false
+    }
+  },
+  {
+    "slug": "deposito-araujo-xivy",
+    "nome": "DEPOSITO ARAÚJO",
+    "categoria": "Restaurante",
+    "cidade": "Salvador",
+    "url": "https://conectfly.com.br/deposito-araujo-xivy",
+    "cor": "hsl(35.0, 100%, 43%)",
+    "logo": "/vitrine/deposito-araujo-xivy/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/deposito-araujo-xivy/demo.mp4",
+      "webm": "/vitrine/deposito-araujo-xivy/demo.webm",
+      "poster": "/vitrine/deposito-araujo-xivy/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 17.1,
+      "tamanhoKB": 1414,
+      "gravadoEm": "2026-11-11T22:53:26.795Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 32.1
+      },
+      "etapas": [
+        "capa",
+        "cardápio",
+        "categoria",
+        "produto adicionado",
+        "resumo do pedido"
+      ],
+      "lojaFechadaNaGravacao": false
+    }
+  },
+  {
+    "slug": "emilyburguer",
+    "nome": "EMILY BURGUER",
+    "categoria": "Hamburgueria",
+    "cidade": "Salvador",
+    "url": "https://conectfly.com.br/emilyburguer",
+    "cor": "hsl(38.0, 92%, 50%)",
+    "logo": "/vitrine/emilyburguer/logo.webp",
+    "publicar": false,
+    "observacao": "Aguardando conferência: o logo do site mostra 'Pizza Favela' e o cardápio tem preços que parecem de teste (R$ 500,00).",
+    "video": {
+      "mp4": "/vitrine/emilyburguer/demo.mp4",
+      "webm": "/vitrine/emilyburguer/demo.webm",
+      "poster": "/vitrine/emilyburguer/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 17,
+      "tamanhoKB": 1506,
+      "gravadoEm": "2026-11-11T22:54:10.634Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 26.7
+      },
+      "etapas": [
+        "capa",
+        "cardápio",
+        "categoria",
+        "produto adicionado",
+        "resumo do pedido"
+      ],
+      "lojaFechadaNaGravacao": false
+    }
+  },
+  {
+    "slug": "acaielove",
+    "nome": "AÇAI E LOVE",
+    "categoria": "Açaí",
+    "cidade": "Salvador",
+    "url": "https://conectfly.com.br/acaielove",
+    "cor": "hsl(319.83, 52.04%, 43.33%)",
+    "logo": "/vitrine/acaielove/logo.webp",
+    "publicar": true,
+    "observacao": null,
+    "video": {
+      "mp4": "/vitrine/acaielove/demo.mp4",
+      "webm": "/vitrine/acaielove/demo.webm",
+      "poster": "/vitrine/acaielove/poster.webp",
+      "largura": 720,
+      "altura": 1280,
+      "duracao": 14.5,
+      "tamanhoKB": 2752,
+      "gravadoEm": "2026-11-11T22:54:57.142Z",
+      "versaoRoteiro": 3,
+      "captura": {
+        "largura": 1080,
+        "altura": 1920,
+        "quadrosPorSegundo": 37.6
+      },
+      "etapas": [
+        "capa",
+        "cardápio"
+      ],
+      "lojaFechadaNaGravacao": true
+    }
+  }
+]

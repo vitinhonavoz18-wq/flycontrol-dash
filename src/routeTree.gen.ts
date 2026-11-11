@@ -19,6 +19,7 @@ import { Route as PresentationRouteImport } from './routes/presentation'
 import { Route as PrivacyRouteImport } from './routes/privacy'
 import { Route as SignupRouteImport } from './routes/signup'
 import { Route as TermsRouteImport } from './routes/terms'
+import { Route as VitrineRouteImport } from './routes/vitrine'
 import { Route as WaiterLoginRouteImport } from './routes/waiter-login'
 import { Route as WaiterPortalRouteImport } from './routes/waiter-portal'
 import { Route as AppAdminRouteImport } from './routes/_app/admin'
@@ -171,6 +172,11 @@ const SignupRoute = SignupRouteImport.update({
 const TermsRoute = TermsRouteImport.update({
   id: '/terms',
   path: '/terms',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const VitrineRoute = VitrineRouteImport.update({
+  id: '/vitrine',
+  path: '/vitrine',
   getParentRoute: () => rootRouteImport,
 } as any)
 const WaiterLoginRoute = WaiterLoginRouteImport.update({
@@ -728,6 +734,7 @@ export interface FileRoutesByFullPath {
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/vitrine': typeof VitrineRoute
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
   '/admin': typeof AppAdminRouteWithChildren
@@ -842,6 +849,7 @@ export interface FileRoutesByTo {
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/vitrine': typeof VitrineRoute
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
   '/billing': typeof AppBillingRoute
@@ -955,6 +963,7 @@ export interface FileRoutesById {
   '/privacy': typeof PrivacyRoute
   '/signup': typeof SignupRoute
   '/terms': typeof TermsRoute
+  '/vitrine': typeof VitrineRoute
   '/waiter-login': typeof WaiterLoginRoute
   '/waiter-portal': typeof WaiterPortalRoute
   '/_app/admin': typeof AppAdminRouteWithChildren
@@ -1072,6 +1081,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/signup'
     | '/terms'
+    | '/vitrine'
     | '/waiter-login'
     | '/waiter-portal'
     | '/admin'
@@ -1186,6 +1196,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/signup'
     | '/terms'
+    | '/vitrine'
     | '/waiter-login'
     | '/waiter-portal'
     | '/billing'
@@ -1298,6 +1309,7 @@ export interface FileRouteTypes {
     | '/privacy'
     | '/signup'
     | '/terms'
+    | '/vitrine'
     | '/waiter-login'
     | '/waiter-portal'
     | '/_app/admin'
@@ -1415,6 +1427,7 @@ export interface RootRouteChildren {
   PrivacyRoute: typeof PrivacyRoute
   SignupRoute: typeof SignupRoute
   TermsRoute: typeof TermsRoute
+  VitrineRoute: typeof VitrineRoute
   WaiterLoginRoute: typeof WaiterLoginRoute
   WaiterPortalRoute: typeof WaiterPortalRoute
   ApiHealthRoute: typeof ApiHealthRoute
@@ -1531,6 +1544,13 @@ declare module '@tanstack/react-router' {
       path: '/terms'
       fullPath: '/terms'
       preLoaderRoute: typeof TermsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/vitrine': {
+      id: '/vitrine'
+      path: '/vitrine'
+      fullPath: '/vitrine'
+      preLoaderRoute: typeof VitrineRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/waiter-login': {
@@ -2483,6 +2503,7 @@ const rootRouteChildren: RootRouteChildren = {
   PrivacyRoute: PrivacyRoute,
   SignupRoute: SignupRoute,
   TermsRoute: TermsRoute,
+  VitrineRoute: VitrineRoute,
   WaiterLoginRoute: WaiterLoginRoute,
   WaiterPortalRoute: WaiterPortalRoute,
   ApiHealthRoute: ApiHealthRoute,

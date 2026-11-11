@@ -18,10 +18,13 @@ import { BrandLogo } from "@/components/brand/BrandLogo";
  * já saiu do pátio.
  */
 
+// Endereços com "/" na frente: a mesma barra aparece na Vitrine de Cardápios,
+// e de lá "#produto" sozinho não levaria a lugar nenhum.
 const LINKS = [
-  { href: "#produto", rotulo: "Produto" },
-  { href: "#recursos", rotulo: "Recursos" },
-  { href: "#planos", rotulo: "Planos" },
+  { href: "/#produto", rotulo: "Produto" },
+  { href: "/#recursos", rotulo: "Recursos" },
+  { href: "/vitrine", rotulo: "Vitrine de Cardápios" },
+  { href: "/#planos", rotulo: "Planos" },
 ] as const;
 
 export function Navbar() {
@@ -73,12 +76,16 @@ export function Navbar() {
     >
       <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-2 px-4 sm:h-20 sm:gap-6 sm:px-8">
         <a
-          href="#topo"
+          href="/#topo"
           className="flex shrink-0 items-center"
           style={{ color: "var(--fly-text-primary)" }}
           aria-label="FlyDelivery, ir ao topo"
         >
-          <BrandLogo eager className="h-5 min-[380px]:h-6 min-[420px]:h-7 sm:h-10 lg:h-11" />
+          {/* No celular, só o símbolo: o logo completo tinha 273 px e empurrava
+              "Começar grátis" e o botão do menu para fora da tela — quem
+              estava no celular não conseguia abrir o menu. */}
+          <BrandLogo variant="symbol" eager className="h-9 sm:hidden" />
+          <BrandLogo eager className="hidden h-11 sm:inline-flex" />
         </a>
 
         <nav aria-label="Seções da página" className="hidden items-center gap-9 lg:flex">
@@ -105,7 +112,7 @@ export function Navbar() {
           <Link
             to="/signup"
             search={{ plan: undefined, google: undefined }}
-            className="whitespace-nowrap rounded-full px-3 py-2 text-[12px] font-medium min-[380px]:px-3.5 min-[380px]:text-[13px] tracking-[0.04em] transition-colors sm:px-5 sm:py-2.5 sm:text-[14px]"
+            className="whitespace-nowrap rounded-full px-4 py-2 text-[13px] font-medium tracking-[0.04em] transition-colors sm:px-5 sm:py-2.5 sm:text-[14px]"
             style={{ background: "var(--fly-primary)", color: "var(--fly-on-primary)" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "var(--fly-primary-hover)")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "var(--fly-primary)")}

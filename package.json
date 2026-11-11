@@ -11,7 +11,9 @@
     "lint": "eslint .",
     "format": "prettier --write .",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "vitrine:gerar": "node scripts/vitrine/gerar-demonstracoes.mjs",
+    "vitrine:validar": "node scripts/vitrine/validar-vitrine.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
