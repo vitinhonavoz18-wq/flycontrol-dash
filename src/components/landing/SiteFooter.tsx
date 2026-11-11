@@ -19,9 +19,10 @@ const COLUNAS = [
   {
     titulo: "Produto",
     itens: [
-      { rotulo: "Produto", href: "#produto" },
-      { rotulo: "Recursos", href: "#recursos" },
-      { rotulo: "Planos", href: "#planos" },
+      { rotulo: "Produto", href: "/#produto" },
+      { rotulo: "Recursos", href: "/#recursos" },
+      { rotulo: "Vitrine de Cardápios", href: "/vitrine" },
+      { rotulo: "Planos", href: "/#planos" },
     ],
   },
 ] as const;

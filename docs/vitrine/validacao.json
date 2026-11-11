@@ -1,0 +1,206 @@
+{
+  "aparelhos": [
+    {
+      "nome": "iphone",
+      "primeiroPlayMs": null,
+      "lcpMs": 356,
+      "cls": 0,
+      "topo": {
+        "cards": 11,
+        "tocando": 0,
+        "comEndereco": 1,
+        "postersOk": true,
+        "rolagemLateral": false
+      },
+      "meio": {
+        "cards": 11,
+        "tocando": 0,
+        "comEndereco": 11,
+        "postersOk": true,
+        "rolagemLateral": false,
+        "tocandoPorParada": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          0
+        ]
+      },
+      "trocouAoRolar": false,
+      "mbDeVideoBaixados": 4.26,
+      "erros": []
+    },
+    {
+      "nome": "android",
+      "primeiroPlayMs": null,
+      "lcpMs": 408,
+      "cls": 0,
+      "topo": {
+        "cards": 11,
+        "tocando": 0,
+        "comEndereco": 1,
+        "postersOk": true,
+        "rolagemLateral": false
+      },
+      "meio": {
+        "cards": 11,
+        "tocando": 1,
+        "comEndereco": 11,
+        "postersOk": true,
+        "rolagemLateral": false,
+        "tocandoPorParada": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1
+        ]
+      },
+      "trocouAoRolar": true,
+      "mbDeVideoBaixados": 5.43,
+      "erros": []
+    },
+    {
+      "nome": "tablet",
+      "primeiroPlayMs": 602,
+      "lcpMs": 404,
+      "cls": 0,
+      "topo": {
+        "cards": 11,
+        "tocando": 1,
+        "comEndereco": 2,
+        "postersOk": true,
+        "rolagemLateral": false
+      },
+      "meio": {
+        "cards": 11,
+        "tocando": 0,
+        "comEndereco": 11,
+        "postersOk": true,
+        "rolagemLateral": false,
+        "tocandoPorParada": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          0
+        ]
+      },
+      "trocouAoRolar": true,
+      "mbDeVideoBaixados": 7.56,
+      "erros": []
+    },
+    {
+      "nome": "computador",
+      "primeiroPlayMs": 611,
+      "lcpMs": 396,
+      "cls": 0,
+      "topo": {
+        "cards": 11,
+        "tocando": 1,
+        "comEndereco": 4,
+        "postersOk": true,
+        "rolagemLateral": false
+      },
+      "meio": {
+        "cards": 11,
+        "tocando": 0,
+        "comEndereco": 11,
+        "postersOk": true,
+        "rolagemLateral": false,
+        "tocandoPorParada": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          0
+        ]
+      },
+      "trocouAoRolar": true,
+      "mbDeVideoBaixados": 4.69,
+      "erros": []
+    }
+  ],
+  "links": [
+    {
+      "loja": "JC BURGUER",
+      "url": "https://conectfly.com.br/jc-burguer",
+      "status": 200
+    },
+    {
+      "loja": "PAIXÃO AÇAI",
+      "url": "https://conectfly.com.br/paixao-acai",
+      "status": 200
+    },
+    {
+      "loja": "TEMPERO DA DONA",
+      "url": "https://conectfly.com.br/tempero-da-dona",
+      "status": 200
+    },
+    {
+      "loja": "ALPHA PASTELARIA",
+      "url": "https://conectfly.com.br/alpha-pastelaria",
+      "status": 200
+    },
+    {
+      "loja": "D’LUA DOCES",
+      "url": "https://conectfly.com.br/d-lua-doces",
+      "status": 200
+    },
+    {
+      "loja": "Brasa do João",
+      "url": "https://conectfly.com.br/brasa-do-joao",
+      "status": 200
+    },
+    {
+      "loja": "Açai Deus provera",
+      "url": "https://conectfly.com.br/acai-deus-provera",
+      "status": 200
+    },
+    {
+      "loja": "Sandwitch",
+      "url": "https://conectfly.com.br/sandwitch",
+      "status": 200
+    },
+    {
+      "loja": "Xerife Pastéis Penha",
+      "url": "https://conectfly.com.br/xerife-pasteis-penha",
+      "status": 200
+    },
+    {
+      "loja": "DEPOSITO ARAÚJO",
+      "url": "https://conectfly.com.br/deposito-araujo-xivy",
+      "status": 200
+    },
+    {
+      "loja": "AÇAI E LOVE",
+      "url": "https://conectfly.com.br/acaielove",
+      "status": 200
+    }
+  ],
+  "extras": {
+    "filtros": 6,
+    "filtrado": {
+      "botao": "Restaurante 4",
+      "cards": 4
+    },
+    "ampliada": {
+      "abriu": true,
+      "tocandoNaJanela": true,
+      "cardsTocando": 0
+    },
+    "ctaFinal": "/signup",
+    "linkNoCabecalho": "/vitrine",
+    "reduzirMovimento": {
+      "cards": 11,
+      "tocando": 0,
+      "comEndereco": 4,
+      "postersOk": true,
+      "rolagemLateral": false
+    }
+  }
+}

@@ -870,6 +870,34 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   }
 }
 
+/* ══════════════════════════════════════════════════════════════════════════
+   VITRINE DE CARDÁPIOS (/vitrine)
+   Card discreto: borda fina, sombra só ao passar o mouse. O vídeo é o
+   protagonista — a moldura não disputa atenção com ele.
+   ══════════════════════════════════════════════════════════════════════════ */
+.fly-vitrine-card {
+  height: 100%;
+  background: var(--fly-surface-01);
+  border: 1px solid var(--fly-border-subtle);
+  border-radius: var(--fly-radius-md);
+  transition: transform 260ms cubic-bezier(.2,.7,.2,1), box-shadow 260ms ease, border-color 260ms ease;
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .fly-vitrine-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--fly-border-strong);
+    box-shadow: var(--fly-shadow-card);
+  }
+}
+@keyframes fly-vitrine-carregando {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(300%); }
+}
+.fly-vitrine-carregando { animation: fly-vitrine-carregando 1.1s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .fly-vitrine-carregando { animation: none; width: 100%; opacity: .6; }
+}
+
 /* ─────────────────────────────────────────────────────────────────────────
    O PAINEL "MAIS" DO CELULAR
 
@@ -952,3 +980,4 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
    animação do sistema, e o painel entra nela. Não é "sem animação e sem
    funcionar": ele abre, fecha e continua clicável igual — só não desliza.
    Conferido no navegador com a preferência ligada. */
+
