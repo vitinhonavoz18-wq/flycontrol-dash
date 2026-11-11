@@ -219,6 +219,10 @@ export function ProductList({
 
     try {
       let externalId = editingProduct?.external_id;
+      if (productType === "beverage" && (!pizzeriaSlug || !pizzeriaApiKey || !syncEndpoint)) {
+        toast.error("O site da loja precisa estar conectado para publicar bebidas.");
+        return;
+      }
 
       if (pizzeriaSlug && pizzeriaApiKey) {
         // Find external category ID
@@ -248,10 +252,10 @@ export function ProductList({
 
         const syncResult = await syncToExternal({
           type: productType,
-          action: editingProduct ? "update" : "create",
+          action: editingProduct && (productType !== "beverage" || externalId) ? "update" : "create",
           id: editingProduct?.id,
           externalId: editingProduct?.external_id,
-          data: { ...payload, external_category_id: normalizedExternalCategoryId },
+          data: { ...payload, active: productType === "beverage" ? payload.active && payload.available : payload.active, external_category_id: normalizedExternalCategoryId },
           pizzeriaSlug,
           pizzeriaApiKey,
           syncEndpoint,
@@ -322,14 +326,22 @@ export function ProductList({
   async function toggleStatus(prod: any, field: "active" | "available") {
     const newValue = !prod[field];
 
-    if (pizzeriaSlug && pizzeriaApiKey && prod.external_id) {
-      // Standardize to 'active' as requested, using 'is_active' for the external field reference if needed
-      // but syncToExternal already maps body.active = data.value for status action
+    const isDrink = prod.product_type === "beverage";
+    const visible = newValue && (field === "active" ? prod.available !== false : prod.active !== false);
+    const publishDrink = isDrink && !prod.external_id && visible;
+    let externalId = prod.external_id;
+    if (isDrink && (externalId || publishDrink) && (!pizzeriaSlug || !pizzeriaApiKey || !syncEndpoint)) {
+      toast.error("Conecte o site da loja para atualizar a bebida.");
+      return;
+    }
+
+    if (pizzeriaSlug && pizzeriaApiKey && (externalId || publishDrink)) {
       const syncResult = await syncToExternal({
         type: prod.product_type,
-        action: "status",
-        externalId: prod.external_id,
-        data: { value: newValue },
+        action: publishDrink ? "create" : "status",
+        id: prod.id,
+        externalId,
+        data: publishDrink ? { ...prod, active: true } : { value: isDrink ? visible : newValue },
         pizzeriaSlug,
         pizzeriaApiKey,
         syncEndpoint,
@@ -355,10 +367,19 @@ export function ProductList({
         toast.error(errorMsg);
         return;
       }
+      if (publishDrink) externalId = syncResult.externalId;
     }
 
     const updateData: any = {};
     updateData[field] = newValue;
+    if (publishDrink) {
+      if (!externalId) {
+        toast.error("O site não confirmou o cadastro da bebida.");
+        return;
+      }
+      updateData.external_id = externalId;
+      updateData.external_source = "sitecreatorfly";
+    }
 
     const { error } = await supabase
       .from("menu_products")

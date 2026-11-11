@@ -25,7 +25,8 @@ export function MenuTemplatePicker({ pizzeriaId, onApplied, onSkip }: MenuTempla
     setApplying(null);
 
     if (!result.ok) {
-      toast.error("Não deu para aplicar o modelo: " + result.error);
+      toast.error(result.error);
+      onApplied();
       return;
     }
     toast.success(`Cardápio de ${MENU_TEMPLATES[key].label} criado! Agora é só editar.`);

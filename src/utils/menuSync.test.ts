@@ -463,3 +463,20 @@ describe("syncToExternal — código de bebida vindo do site (sf_drink_)", () =>
     );
   });
 });
+
+describe("publicação de bebidas do modelo", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("envia o identificador local para que repetir o cadastro mantenha uma bebida", async () => {
+    const id = "b7367598-d365-444b-b71f-b47139522300";
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ success: true, data: { id } })));
+    const result = await syncToExternal({
+      type: "beverage", action: "create", id, data: { name: "Suco", price: 8 },
+      pizzeriaSlug: "loja", pizzeriaApiKey: "teste", syncEndpoint: REST_ENDPOINT,
+    });
+    const [url, request] = vi.mocked(fetch).mock.calls[0];
+    expect(url).toBe("https://conectfly.com.br/api/menu-sync/beverage");
+    expect(JSON.parse(String(request?.body))).toMatchObject({ source_product_id: id, name: "Suco", price: 8 });
+    expect(result.externalId).toBe(id);
+  });
+});

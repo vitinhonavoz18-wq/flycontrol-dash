@@ -221,6 +221,7 @@ export async function syncToExternal(
         url = `${base}/${resourcePath}`;
         method = "POST";
         bodyObj = prepareDataForExternal(externalType, data);
+        if (externalType === "beverage" && params.id) bodyObj.source_product_id = params.id;
       } else if (action === "update") {
         if (externalType === "restaurant") {
           // SiteCreatorFly resolve o restaurante pela própria API key da

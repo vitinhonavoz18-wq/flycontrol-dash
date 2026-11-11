@@ -12,6 +12,7 @@
  * manualmente.
  */
 
+import { syncToExternal } from "@/utils/menuSync";
 import { supabase } from "@/integrations/supabase/client";
 
 export type MenuTemplateKey = "hamburgueria" | "pizzaria" | "pastelaria";
@@ -235,6 +236,11 @@ export async function applyMenuTemplate(
   templateKey: MenuTemplateKey,
 ): Promise<ApplyTemplateResult> {
   const template = MENU_TEMPLATES[templateKey];
+  const { data: store, error: storeError } = await supabase.from("pizzerias")
+    .select("slug,api_key,sync_endpoint").eq("id", pizzeriaId).single();
+  if (storeError || !store?.sync_endpoint || !store.api_key) {
+    return { ok: false, error: "Conecte o site da loja antes de aplicar o modelo." };
+  }
 
   const { data: insertedCategories, error: categoriesError } = await supabase
     .from("menu_categories")
@@ -276,9 +282,9 @@ export async function applyMenuTemplate(
     available: true,
   }));
 
-  const [{ error: productsError }, { error: beveragesError }] = await Promise.all([
+  const [{ error: productsError }, { data: drinks, error: beveragesError }] = await Promise.all([
     supabase.from("menu_products").insert(productRows),
-    supabase.from("menu_products").insert(beverageRows),
+    supabase.from("menu_products").insert(beverageRows).select("id,name,price"),
   ]);
 
   if (productsError || beveragesError) {
@@ -286,6 +292,22 @@ export async function applyMenuTemplate(
       ok: false,
       error: (productsError ?? beveragesError)?.message ?? "Falha ao criar produtos",
     };
+  }
+
+  const pendingDrinks: string[] = [];
+  for (const drink of drinks ?? []) {
+    const result = await syncToExternal({
+      type: "beverage", action: "create", id: drink.id, data: drink,
+      pizzeriaSlug: store.slug, pizzeriaApiKey: store.api_key, syncEndpoint: store.sync_endpoint,
+    });
+    if (!result.success || !result.externalId) {
+      pendingDrinks.push(drink.name);
+      continue;
+    }
+    const { error } = await supabase.from("menu_products")
+      .update({ external_id: result.externalId, external_source: "sitecreatorfly" })
+      .eq("pizzeria_id", pizzeriaId).eq("id", drink.id);
+    if (error) pendingDrinks.push(drink.name);
   }
 
   const { error: extrasError } = await supabase.from("menu_extras").insert(
@@ -333,5 +355,8 @@ export async function applyMenuTemplate(
     }
   }
 
+  if (pendingDrinks.length > 0) {
+    return { ok: false, error: "Modelo aplicado. Abra a aba Bebidas e salve novamente: " + pendingDrinks.join(", ") };
+  }
   return { ok: true };
 }
