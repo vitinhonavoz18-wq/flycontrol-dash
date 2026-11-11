@@ -123,7 +123,7 @@ export function InstallBanner() {
         {showIOS ? <Share className="h-5 w-5 text-primary" /> : <Download className="h-5 w-5 text-primary" />}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="text-sm font-semibold leading-tight">Instalar FL Mobile App</div>
+        <div className="text-sm font-semibold leading-tight">Instalar o FlyDelivery</div>
         <div className="text-xs text-muted-foreground leading-tight mt-0.5">
           {showIOS ? "Toque em Compartilhar → Adicionar à Tela de Início" : "Acesso rápido direto da tela inicial"}
         </div>

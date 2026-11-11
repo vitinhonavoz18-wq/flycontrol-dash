@@ -201,7 +201,10 @@ function AppLayoutInner() {
   const NavItems = ({ compacto = false }: { compacto?: boolean }) => (
     <nav
       aria-label="Menu principal"
-      className={`flex-1 space-y-5 px-3 py-4 landscape-compact:space-y-2 landscape-compact:p-1.5 ${compacto ? "md:space-y-2 md:px-2" : ""}`}
+      // `min-h-0` + rolagem própria: a lista rola no MEIO, e o topo (logo) e a
+      // base (tema, conta, sair) ficam sempre à vista. Sem isso, em tela baixa
+      // o botão de sair ia parar fora da tela.
+      className={`min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4 landscape-compact:space-y-2 landscape-compact:p-1.5 ${compacto ? "md:space-y-2 md:px-2" : ""}`}
     >
       {grupos.map((grupo, indice) => (
         <div key={grupo.id} role="group" aria-label={grupo.titulo}>
@@ -277,7 +280,7 @@ function AppLayoutInner() {
           computador. */}
       <aside
         data-recolhido={menuRecolhido ? "sim" : undefined}
-        className={`sticky top-0 z-20 hidden h-screen w-72 shrink-0 flex-col overflow-y-auto border-r border-sidebar-border bg-sidebar transition-[width] duration-200 md:flex landscape-compact:w-[var(--landscape-rail-width)] ${menuRecolhido ? "md:w-[var(--landscape-rail-width)]" : ""}`}
+        className={`sticky top-0 z-20 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar transition-[width] duration-200 md:flex landscape-compact:w-[var(--landscape-rail-width)] ${menuRecolhido ? "md:w-[var(--landscape-rail-width)]" : ""}`}
       >
         <div
           className={`flex h-16 shrink-0 items-center border-b border-sidebar-border px-4 landscape-compact:h-12 landscape-compact:justify-center landscape-compact:px-2 ${menuRecolhido ? "md:justify-center md:px-2" : "justify-between"}`}
@@ -292,9 +295,11 @@ function AppLayoutInner() {
               eager
               className={`h-7 landscape-compact:block ${menuRecolhido ? "md:block" : "hidden"}`}
             />
+            {/* 26px de altura é o que cabe: o conjunto fica com ~200px e o
+                menu tem 216px livres ao lado do botão de recolher. */}
             <BrandLogo
               eager
-              className={`h-9 landscape-compact:hidden ${menuRecolhido ? "md:hidden" : ""}`}
+              className={`h-[26px] landscape-compact:hidden ${menuRecolhido ? "md:hidden" : ""}`}
             />
           </Link>
           <button
@@ -404,9 +409,10 @@ function AppLayoutInner() {
               </Button>
             </SheetTrigger>
             <SheetContent side="left" className="w-[288px] border-sidebar-border bg-sidebar p-0">
-              <div className="flex h-full flex-col overflow-y-auto">
-                <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border px-4 text-foreground">
-                  <BrandLogo className="h-8" />
+              <div className="flex h-full flex-col overflow-hidden">
+                {/* `pr-14` deixa livre o canto onde fica o X de fechar. */}
+                <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border pl-4 pr-14 text-foreground">
+                  <BrandLogo className="h-7" />
                 </div>
                 <NavItems />
                 <div className="mt-auto shrink-0 space-y-2 border-t border-sidebar-border p-3">
@@ -428,8 +434,12 @@ function AppLayoutInner() {
                       )}
                       Modo escuro
                     </label>
+                    {/* `no-touch-min`: sem isso a regra de "todo botão tem 44px
+                        de altura no celular" esticava a chave e ela virava
+                        um ovo. A linha inteira já tem 44px para o dedo. */}
                     <Switch
                       id="theme-toggle-mobile"
+                      className="no-touch-min"
                       checked={temaEscuro}
                       onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
                     />

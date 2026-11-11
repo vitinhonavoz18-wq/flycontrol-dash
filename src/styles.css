@@ -110,7 +110,9 @@
   --warning: #f79009;
 
   --border: #e4e7ec;
-  --input: #ffffff;
+  /* Cor da BORDA dos campos de formulário (é assim que as telas a usam).
+     Era branca sobre branco: o campo não tinha contorno e parecia texto solto. */
+  --input: #d0d5dd;
   --ring: #ff6b35;
 
   --chart-1: #ff6b35;
@@ -239,7 +241,7 @@
   --accent-foreground: #f9fafb;
 
   --border: rgba(152, 162, 179, 0.2);
-  --input: #161e2e;
+  --input: #344054;
 
   /* Menu lateral — escuro */
   --sidebar: #101828;
@@ -767,8 +769,17 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
      dissolvem no branco da página em vez de terminarem num retângulo — a
      imagem parece pousada na página, não colada nela. */
   .fly-hero-arte {
-    -webkit-mask-image: radial-gradient(ellipse 72% 70% at 52% 48%, #000 62%, transparent 100%);
-    mask-image: radial-gradient(ellipse 72% 70% at 52% 48%, #000 62%, transparent 100%);
+    /* Duas máscaras cruzadas: uma apaga as laterais, outra apaga o topo e a
+       base. Só a faixa fina da beirada some — os ícones perto das bordas
+       continuam inteiros. */
+    -webkit-mask-image:
+      linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%),
+      linear-gradient(180deg, transparent 0, #000 6%, #000 80%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%),
+      linear-gradient(180deg, transparent 0, #000 6%, #000 80%, transparent 100%);
+    mask-composite: intersect;
   }
 
   .fly-surface {
