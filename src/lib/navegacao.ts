@@ -14,6 +14,7 @@ import {
   Search,
   Settings,
   Smartphone,
+  Sparkles,
   Store,
   Trophy,
   Users,
@@ -154,6 +155,8 @@ export const GRUPO_DA_PLATAFORMA: GrupoDeMenu = {
       icon: Wallet,
       comFilhas: true,
     },
+    // Os alimentos que flutuam no topo da página inicial do site.
+    { to: "/admin/vitrine-site", label: "Vitrine do site", icon: Sparkles },
   ],
 };
 

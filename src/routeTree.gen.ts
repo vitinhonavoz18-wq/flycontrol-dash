@@ -59,6 +59,7 @@ import { Route as AppAdminFlydeliveryPagamentosRouteImport } from './routes/_app
 import { Route as AppAdminPizzeriasRouteImport } from './routes/_app/admin/pizzerias'
 import { Route as AppAdminSubscriptionsRouteImport } from './routes/_app/admin/subscriptions'
 import { Route as AppAdminUsersRouteImport } from './routes/_app/admin/users'
+import { Route as AppAdminVitrineSiteRouteImport } from './routes/_app/admin/vitrine-site'
 import { Route as AppAssinarPlanoRouteImport } from './routes/_app/assinar.$plano'
 import { Route as AppFinanceiroRecebimentosRouteImport } from './routes/_app/financeiro.recebimentos'
 import { Route as AppInventoryIndexRouteImport } from './routes/_app/inventory.index'
@@ -100,6 +101,7 @@ import { Route as ApiPublicCreatePizzeriaRouteImport } from './routes/api/public
 import { Route as ApiPublicOpenTableSessionRouteImport } from './routes/api/public/open-table-session'
 import { Route as ApiPublicRequestCloseTableRouteImport } from './routes/api/public/request-close-table'
 import { Route as ApiPublicTableSessionStatusRouteImport } from './routes/api/public/table-session-status'
+import { Route as ApiPublicVitrineHeroRouteImport } from './routes/api/public/vitrine-hero'
 import { Route as ApiWebhooksInfinitypayRouteImport } from './routes/api/webhooks.infinitypay'
 import { Route as ApiWebhooksSyncpayRouteImport } from './routes/api/webhooks.syncpay'
 import { Route as ApiWebhooksWhatsappStatusRouteImport } from './routes/api/webhooks.whatsapp-status'
@@ -373,6 +375,11 @@ const AppAdminUsersRoute = AppAdminUsersRouteImport.update({
   path: '/users',
   getParentRoute: () => AppAdminRoute,
 } as any)
+const AppAdminVitrineSiteRoute = AppAdminVitrineSiteRouteImport.update({
+  id: '/vitrine-site',
+  path: '/vitrine-site',
+  getParentRoute: () => AppAdminRoute,
+} as any)
 const AppAssinarPlanoRoute = AppAssinarPlanoRouteImport.update({
   id: '/assinar/$plano',
   path: '/assinar/$plano',
@@ -589,6 +596,11 @@ const ApiPublicTableSessionStatusRoute =
     path: '/api/public/table-session-status',
     getParentRoute: () => rootRouteImport,
   } as any)
+const ApiPublicVitrineHeroRoute = ApiPublicVitrineHeroRouteImport.update({
+  id: '/api/public/vitrine-hero',
+  path: '/api/public/vitrine-hero',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiWebhooksInfinitypayRoute = ApiWebhooksInfinitypayRouteImport.update({
   id: '/api/webhooks/infinitypay',
   path: '/api/webhooks/infinitypay',
@@ -761,6 +773,7 @@ export interface FileRoutesByFullPath {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/admin/vitrine-site': typeof AppAdminVitrineSiteRoute
   '/assinar/$plano': typeof AppAssinarPlanoRoute
   '/financeiro/recebimentos': typeof AppFinanceiroRecebimentosRoute
   '/inventory/count': typeof AppInventoryCountRoute
@@ -800,6 +813,7 @@ export interface FileRoutesByFullPath {
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
+  '/api/public/vitrine-hero': typeof ApiPublicVitrineHeroRoute
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/api/webhooks/syncpay': typeof ApiWebhooksSyncpayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
@@ -870,6 +884,7 @@ export interface FileRoutesByTo {
   '/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/admin/users': typeof AppAdminUsersRoute
+  '/admin/vitrine-site': typeof AppAdminVitrineSiteRoute
   '/assinar/$plano': typeof AppAssinarPlanoRoute
   '/financeiro/recebimentos': typeof AppFinanceiroRecebimentosRoute
   '/inventory/count': typeof AppInventoryCountRoute
@@ -909,6 +924,7 @@ export interface FileRoutesByTo {
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
+  '/api/public/vitrine-hero': typeof ApiPublicVitrineHeroRoute
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/api/webhooks/syncpay': typeof ApiWebhooksSyncpayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
@@ -986,6 +1002,7 @@ export interface FileRoutesById {
   '/_app/admin/pizzerias': typeof AppAdminPizzeriasRoute
   '/_app/admin/subscriptions': typeof AppAdminSubscriptionsRoute
   '/_app/admin/users': typeof AppAdminUsersRoute
+  '/_app/admin/vitrine-site': typeof AppAdminVitrineSiteRoute
   '/_app/assinar/$plano': typeof AppAssinarPlanoRoute
   '/_app/financeiro/recebimentos': typeof AppFinanceiroRecebimentosRoute
   '/_app/inventory/count': typeof AppInventoryCountRoute
@@ -1025,6 +1042,7 @@ export interface FileRoutesById {
   '/api/public/open-table-session': typeof ApiPublicOpenTableSessionRoute
   '/api/public/request-close-table': typeof ApiPublicRequestCloseTableRoute
   '/api/public/table-session-status': typeof ApiPublicTableSessionStatusRoute
+  '/api/public/vitrine-hero': typeof ApiPublicVitrineHeroRoute
   '/api/webhooks/infinitypay': typeof ApiWebhooksInfinitypayRoute
   '/api/webhooks/syncpay': typeof ApiWebhooksSyncpayRoute
   '/api/webhooks/whatsapp-status': typeof ApiWebhooksWhatsappStatusRoute
@@ -1102,6 +1120,7 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/admin/vitrine-site'
     | '/assinar/$plano'
     | '/financeiro/recebimentos'
     | '/inventory/count'
@@ -1141,6 +1160,7 @@ export interface FileRouteTypes {
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
+    | '/api/public/vitrine-hero'
     | '/api/webhooks/infinitypay'
     | '/api/webhooks/syncpay'
     | '/api/webhooks/whatsapp-status'
@@ -1211,6 +1231,7 @@ export interface FileRouteTypes {
     | '/admin/pizzerias'
     | '/admin/subscriptions'
     | '/admin/users'
+    | '/admin/vitrine-site'
     | '/assinar/$plano'
     | '/financeiro/recebimentos'
     | '/inventory/count'
@@ -1250,6 +1271,7 @@ export interface FileRouteTypes {
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
+    | '/api/public/vitrine-hero'
     | '/api/webhooks/infinitypay'
     | '/api/webhooks/syncpay'
     | '/api/webhooks/whatsapp-status'
@@ -1326,6 +1348,7 @@ export interface FileRouteTypes {
     | '/_app/admin/pizzerias'
     | '/_app/admin/subscriptions'
     | '/_app/admin/users'
+    | '/_app/admin/vitrine-site'
     | '/_app/assinar/$plano'
     | '/_app/financeiro/recebimentos'
     | '/_app/inventory/count'
@@ -1365,6 +1388,7 @@ export interface FileRouteTypes {
     | '/api/public/open-table-session'
     | '/api/public/request-close-table'
     | '/api/public/table-session-status'
+    | '/api/public/vitrine-hero'
     | '/api/webhooks/infinitypay'
     | '/api/webhooks/syncpay'
     | '/api/webhooks/whatsapp-status'
@@ -1436,6 +1460,7 @@ export interface RootRouteChildren {
   ApiPublicOpenTableSessionRoute: typeof ApiPublicOpenTableSessionRoute
   ApiPublicRequestCloseTableRoute: typeof ApiPublicRequestCloseTableRoute
   ApiPublicTableSessionStatusRoute: typeof ApiPublicTableSessionStatusRoute
+  ApiPublicVitrineHeroRoute: typeof ApiPublicVitrineHeroRoute
   ApiWebhooksInfinitypayRoute: typeof ApiWebhooksInfinitypayRoute
   ApiWebhooksSyncpayRoute: typeof ApiWebhooksSyncpayRoute
   ApiWebhooksWhatsappStatusRoute: typeof ApiWebhooksWhatsappStatusRoute
@@ -1801,6 +1826,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AppAdminUsersRouteImport
       parentRoute: typeof AppAdminRoute
     }
+    '/_app/admin/vitrine-site': {
+      id: '/_app/admin/vitrine-site'
+      path: '/vitrine-site'
+      fullPath: '/admin/vitrine-site'
+      preLoaderRoute: typeof AppAdminVitrineSiteRouteImport
+      parentRoute: typeof AppAdminRoute
+    }
     '/_app/assinar/$plano': {
       id: '/_app/assinar/$plano'
       path: '/assinar/$plano'
@@ -2088,6 +2120,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ApiPublicTableSessionStatusRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/api/public/vitrine-hero': {
+      id: '/api/public/vitrine-hero'
+      path: '/api/public/vitrine-hero'
+      fullPath: '/api/public/vitrine-hero'
+      preLoaderRoute: typeof ApiPublicVitrineHeroRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/webhooks/infinitypay': {
       id: '/api/webhooks/infinitypay'
       path: '/api/webhooks/infinitypay'
@@ -2280,6 +2319,7 @@ interface AppAdminRouteChildren {
   AppAdminPizzeriasRoute: typeof AppAdminPizzeriasRoute
   AppAdminSubscriptionsRoute: typeof AppAdminSubscriptionsRoute
   AppAdminUsersRoute: typeof AppAdminUsersRoute
+  AppAdminVitrineSiteRoute: typeof AppAdminVitrineSiteRoute
   AppAdminIndexRoute: typeof AppAdminIndexRoute
 }
 
@@ -2292,6 +2332,7 @@ const AppAdminRouteChildren: AppAdminRouteChildren = {
   AppAdminPizzeriasRoute: AppAdminPizzeriasRoute,
   AppAdminSubscriptionsRoute: AppAdminSubscriptionsRoute,
   AppAdminUsersRoute: AppAdminUsersRoute,
+  AppAdminVitrineSiteRoute: AppAdminVitrineSiteRoute,
   AppAdminIndexRoute: AppAdminIndexRoute,
 }
 
@@ -2495,6 +2536,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiPublicOpenTableSessionRoute: ApiPublicOpenTableSessionRoute,
   ApiPublicRequestCloseTableRoute: ApiPublicRequestCloseTableRoute,
   ApiPublicTableSessionStatusRoute: ApiPublicTableSessionStatusRoute,
+  ApiPublicVitrineHeroRoute: ApiPublicVitrineHeroRoute,
   ApiWebhooksInfinitypayRoute: ApiWebhooksInfinitypayRoute,
   ApiWebhooksSyncpayRoute: ApiWebhooksSyncpayRoute,
   ApiWebhooksWhatsappStatusRoute: ApiWebhooksWhatsappStatusRoute,

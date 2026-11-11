@@ -649,7 +649,10 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   /* O portal de parceiros (/affiliates) também fica de fora: cada título de
      lá já diz o próprio tamanho no celular, e esta regra transformava o
      rótulo pequeno do gráfico em manchete e encolhia o título de abertura. */
-  h1:not(.font-display):not(.portal-afiliado *) { font-size: 1.625rem; line-height: 1.2; letter-spacing: -0.01em; }
+  /* `.fly-display` também fica de fora: é o título da página inicial, que
+     tem tamanho próprio para celular. Sem isso, "Seu delivery começa no
+     desejo." encolhia para 26px — menor que o texto de apoio. */
+  h1:not(.font-display):not(.fly-display):not(.portal-afiliado *) { font-size: 1.625rem; line-height: 1.2; letter-spacing: -0.01em; }
   h2:not(.font-display):not(.portal-afiliado *) { font-size: 1.25rem;  line-height: 1.25; }
   h3:not(.font-display):not(.portal-afiliado *) { font-size: 1.125rem; line-height: 1.3; }
 
@@ -765,23 +768,6 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     overflow: hidden;
   }
 
-  /* A arte do Hero (o hambúrguer com os ícones em órbita). As bordas se
-     dissolvem no branco da página em vez de terminarem num retângulo — a
-     imagem parece pousada na página, não colada nela. */
-  .fly-hero-arte {
-    /* Duas máscaras cruzadas: uma apaga as laterais, outra apaga o topo e a
-       base. Só a faixa fina da beirada some — os ícones perto das bordas
-       continuam inteiros. */
-    -webkit-mask-image:
-      linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%),
-      linear-gradient(180deg, transparent 0, #000 6%, #000 80%, transparent 100%);
-    -webkit-mask-composite: source-in;
-    mask-image:
-      linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%),
-      linear-gradient(180deg, transparent 0, #000 6%, #000 80%, transparent 100%);
-    mask-composite: intersect;
-  }
-
   .fly-surface {
     background: var(--fly-surface-01);
     border: 1px solid var(--fly-border-subtle);
@@ -868,6 +854,179 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
   .fly-float {
     animation-name: fly-dashboard-float-mobile;
   }
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
+   VITRINE DO TOPO DO SITE (components/landing/vitrine/HeroFoodShowcase.tsx)
+
+   Tudo aqui anima só posição, giro, escala e transparência — o que a placa
+   de vídeo resolve sozinha, sem pesar na rolagem. O desfoque aparece só nos
+   600 ms da troca de produto.
+   ══════════════════════════════════════════════════════════════════════════ */
+
+/* Profundidade pelo mouse: o componente escreve --px/--py (-1 a 1) e cada
+   camada se desloca na proporção da sua --prof (em pixels). */
+.vitrine-p {
+  translate: calc(var(--px, 0) * var(--prof, 0) * 1px) calc(var(--py, 0) * var(--prof, 0) * 1px);
+}
+
+.vitrine-brilho {
+  border-radius: 50%;
+  background: radial-gradient(
+    closest-side,
+    rgb(var(--fly-primary-rgb) / 0.26),
+    rgb(var(--fly-primary-rgb) / 0.1) 55%,
+    transparent 80%
+  );
+  animation: vitrine-respira 6s ease-in-out infinite alternate;
+}
+
+.vitrine-flutua {
+  animation: vitrine-flutua 4.4s ease-in-out infinite alternate;
+  will-change: transform;
+}
+.vitrine-gira {
+  animation: vitrine-gira 7.4s ease-in-out infinite alternate;
+}
+.vitrine-sombra {
+  border-radius: 50%;
+  background: radial-gradient(closest-side, rgba(120, 45, 10, 0.32), rgba(120, 45, 10, 0.1) 60%, transparent);
+  animation: vitrine-sombra 4.4s ease-in-out infinite alternate;
+}
+
+/* Comida com cor natural: nenhum filtro de cor. Só uma sombra de contato
+   bem leve, para o recorte não parecer "colado" no fundo. */
+.vitrine-alimento {
+  filter: drop-shadow(0 18px 22px rgba(120, 45, 10, 0.18));
+}
+.vitrine-entra {
+  animation: vitrine-entra 600ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.vitrine-sai {
+  animation: vitrine-sai 450ms ease-in both;
+}
+
+.vitrine-cometa {
+  animation: vitrine-cometa 11s linear infinite;
+}
+
+.vitrine-boia {
+  animation-name: vitrine-boia;
+  animation-duration: 6s;
+  animation-timing-function: ease-in-out;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+.vitrine-icone {
+  display: grid;
+  place-items: center;
+  width: clamp(52px, 8.5vw, 92px);
+  aspect-ratio: 1;
+  border-radius: 24%;
+  color: #ff6b35;
+  background: rgba(255, 255, 255, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 18px 40px -18px rgb(var(--fly-primary-rgb) / 0.55),
+    0 4px 12px rgba(16, 24, 40, 0.06);
+}
+.vitrine-icone svg {
+  width: 46%;
+  height: 46%;
+}
+
+.vitrine-faisca {
+  width: 7px;
+  height: 7px;
+  background: #ff8a3d;
+  box-shadow: 0 0 12px 2px rgb(var(--fly-primary-rgb) / 0.6);
+  animation: vitrine-pisca 3.6s ease-in-out infinite;
+}
+.vitrine-pulso {
+  animation: vitrine-pisca 2.4s ease-in-out infinite;
+}
+
+/* Fora da tela ou com a aba escondida: tudo para onde está. */
+.vitrine[data-pausado="sim"],
+.vitrine[data-pausado="sim"] * {
+  animation-play-state: paused !important;
+}
+
+@keyframes vitrine-flutua {
+  from { transform: translate3d(0, 6px, 0); }
+  to { transform: translate3d(0, -7px, 0); }
+}
+@keyframes vitrine-gira {
+  from { transform: rotate(-2.4deg); }
+  to { transform: rotate(2.4deg); }
+}
+@keyframes vitrine-sombra {
+  from { transform: scale(1); opacity: 0.8; }
+  to { transform: scale(0.84); opacity: 0.5; }
+}
+@keyframes vitrine-respira {
+  from { transform: scale(0.96); opacity: 0.75; }
+  to { transform: scale(1.04); opacity: 1; }
+}
+@keyframes vitrine-entra {
+  0% { opacity: 0; transform: scale(0.9) rotate(-6deg); filter: blur(6px) drop-shadow(0 18px 22px rgba(120, 45, 10, 0)); }
+  60% { opacity: 1; filter: blur(0) drop-shadow(0 18px 22px rgba(120, 45, 10, 0.18)); }
+  100% { opacity: 1; transform: scale(1) rotate(0); filter: blur(0) drop-shadow(0 18px 22px rgba(120, 45, 10, 0.18)); }
+}
+@keyframes vitrine-sai {
+  from { opacity: 1; transform: scale(1) rotate(0); filter: blur(0) drop-shadow(0 18px 22px rgba(120, 45, 10, 0.18)); }
+  to { opacity: 0; transform: scale(1.06) rotate(4deg); filter: blur(5px) drop-shadow(0 18px 22px rgba(120, 45, 10, 0)); }
+}
+@keyframes vitrine-cometa {
+  from { stroke-dashoffset: 0; }
+  to { stroke-dashoffset: -1000; }
+}
+@keyframes vitrine-boia {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(0, -7px, 0) scale(1.02); }
+}
+@keyframes vitrine-pisca {
+  0%, 100% { opacity: 0.25; }
+  50% { opacity: 0.95; }
+}
+
+/* Celular: menos camadas animadas ao mesmo tempo. */
+@media (max-width: 640px) {
+  .vitrine-faisca:nth-child(odd) { display: none; }
+  .vitrine-alimento { filter: none; }
+  .vitrine-entra { animation-name: vitrine-entra-leve; }
+  .vitrine-sai { animation-name: vitrine-sai-leve; }
+}
+@keyframes vitrine-entra-leve {
+  from { opacity: 0; transform: scale(0.92) rotate(-5deg); }
+  to { opacity: 1; transform: scale(1) rotate(0); }
+}
+@keyframes vitrine-sai-leve {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(1.05) rotate(3deg); }
+}
+
+/* "Menos movimento" no aparelho: alimento parado, sem órbita correndo nem
+   flutuação. A troca automática também é desligada (no componente). */
+@media (prefers-reduced-motion: reduce) {
+  .vitrine-flutua,
+  .vitrine-gira,
+  .vitrine-sombra,
+  .vitrine-brilho,
+  .vitrine-cometa,
+  .vitrine-boia,
+  .vitrine-faisca,
+  .vitrine-pulso {
+    animation: none !important;
+  }
+  .vitrine-p { translate: none; }
+}
+
+/* Topo da página inicial no celular: o texto de apoio um pouco menor, para
+   o botão "Começar grátis" caber na primeira tela junto com o alimento. */
+@media (max-width: 639px) {
+  .hero-apoio { font-size: 1.0625rem; line-height: 1.5; }
 }
 
 /* ══════════════════════════════════════════════════════════════════════════

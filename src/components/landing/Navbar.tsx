@@ -74,7 +74,7 @@ export function Navbar() {
           : { background: "transparent", borderBottom: "1px solid transparent" }
       }
     >
-      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-6 px-5 sm:h-20 sm:px-8">
+      <div className="mx-auto flex h-16 max-w-[1240px] items-center justify-between gap-2 px-4 sm:h-20 sm:gap-6 sm:px-8">
         <a
           href="/#topo"
           className="flex shrink-0 items-center"

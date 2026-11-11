@@ -1,15 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { AmbientParticles } from "@/components/landing/AmbientParticles";
 import { BotaoWhatsApp } from "@/components/landing/BotaoWhatsApp";
-import { FloatingNotification } from "@/components/landing/FloatingNotification";
 import { Navbar } from "@/components/landing/Navbar";
 import { OperationFlow } from "@/components/landing/OperationFlow";
 import { PricingSection } from "@/components/landing/PricingSection";
 import { ProductShowcase } from "@/components/landing/ProductShowcase";
 import { SiteFooter } from "@/components/landing/SiteFooter";
 import { StepFlow } from "@/components/landing/StepFlow";
+import { HeroFoodShowcase } from "@/components/landing/vitrine/HeroFoodShowcase";
 import { Reveal, SectionHeading, SectionLabel, SectionText } from "@/components/landing/primitivos";
-import heroArte from "@/assets/brand/hero-hamburguer.webp";
 import { BRAND } from "@/lib/brand";
 import { TRIAL_DURATION_DAYS } from "@/lib/billing/trial";
 
@@ -222,7 +221,7 @@ function Hero() {
   return (
     <section
       aria-labelledby="hero-titulo"
-      className="relative overflow-hidden px-5 pb-20 pt-28 sm:px-8 sm:pt-36 lg:pb-28 lg:pt-40"
+      className="relative overflow-hidden px-5 pb-16 pt-20 sm:px-8 sm:pb-20 sm:pt-36 lg:pb-28 lg:pt-40"
       style={{
         // O calor por trás da arte: um laranja bem leve no lado direito, onde
         // está o hambúrguer. É gradiente, não desfoque — desenhado uma vez,
@@ -237,8 +236,14 @@ function Hero() {
 
       <AmbientParticles />
 
-      <div className="relative mx-auto grid max-w-[1240px] items-center gap-10 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)] lg:gap-8">
-        <div>
+      {/* Três blocos: título, vitrine e texto com botões.
+
+          No computador: título e texto à esquerda, vitrine à direita (a
+          composição da arte aprovada). No celular, a vitrine entra ENTRE o
+          título e o texto — o alimento aparece logo na primeira tela, sem a
+          pessoa precisar rolar, e os botões continuam logo abaixo. */}
+      <div className="relative mx-auto grid max-w-[1240px] items-center gap-x-8 gap-y-2 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.08fr)] lg:gap-y-0">
+        <div className="lg:col-start-1 lg:row-start-1 lg:self-end">
           <SectionLabel>Para restaurantes e deliveries</SectionLabel>
 
           <h1
@@ -248,15 +253,30 @@ function Hero() {
           >
             Seu delivery começa no <span style={{ color: "var(--fly-primary)" }}>desejo.</span>
           </h1>
+        </div>
 
-          <p className="fly-body-lg mt-7 max-w-lg" style={{ color: "var(--fly-text-secondary)" }}>
+        {/* A vitrine: produtos reais dos cardápios do FlyDelivery, um de cada
+            vez, flutuando entre os ícones da plataforma. Detalhes em
+            components/landing/vitrine/HeroFoodShowcase.tsx. */}
+        <div className="-my-3 w-full max-w-[290px] justify-self-center sm:my-0 sm:max-w-[560px] lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:max-w-none">
+          <HeroFoodShowcase />
+        </div>
+
+        <div className="lg:col-start-1 lg:row-start-2 lg:self-start">
+          <p
+            className="fly-body-lg hero-apoio max-w-lg lg:mt-7"
+            style={{ color: "var(--fly-text-secondary)" }}
+          >
             Do apetite ao pedido, tudo conectado em uma experiência única.
           </p>
-          <p className="fly-body mt-3 max-w-lg" style={{ color: "var(--fly-text-muted)" }}>
+          <p
+            className="fly-body mt-3 hidden max-w-lg sm:block"
+            style={{ color: "var(--fly-text-muted)" }}
+          >
             Pedidos, cardápio, clientes e financeiro no mesmo lugar.
           </p>
 
-          <div className="mt-9 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-6 flex flex-col gap-3 sm:mt-9 sm:flex-row sm:items-center">
             <Link
               to="/signup"
               search={{ plan: undefined, google: undefined }}
@@ -287,37 +307,6 @@ function Hero() {
           <p className="mt-6 text-[13px]" style={{ color: "var(--fly-text-muted)" }}>
             {TRIAL_DURATION_DAYS} dias grátis • Implementação gratuita
           </p>
-        </div>
-
-        <div className="relative mx-auto w-full max-w-[640px] lg:max-w-none">
-          {/* A arte é decoração: quem usa leitor de tela não perde nada sem
-              ela, então o texto alternativo fica vazio. `fetchPriority` alto
-              porque ela é a maior imagem da primeira tela. */}
-          <img
-            src={heroArte}
-            alt=""
-            width={972}
-            height={804}
-            loading="eager"
-            decoding="async"
-            fetchPriority="high"
-            className="fly-hero-arte fly-float block h-auto w-full select-none"
-            draggable={false}
-          />
-
-          {/* Dois avisos, não seis. Eles sugerem que o sistema está vivo; se
-              virarem enxame, viram enfeite. */}
-          <FloatingNotification
-            titulo="Novo pedido recebido"
-            detalhe="Pedido #1842 · 3 itens"
-            className="left-0 top-4 xl:-left-6"
-          />
-          <FloatingNotification
-            titulo="Pedido confirmado"
-            detalhe="Saiu para entrega"
-            className="bottom-10 right-0 xl:-right-4"
-            atraso={4}
-          />
         </div>
       </div>
     </section>

@@ -2017,6 +2017,92 @@ export type Database = {
           },
         ];
       };
+      hero_showcase_items: {
+        Row: {
+          approved: boolean;
+          attempts: number;
+          created_at: string;
+          created_by: string | null;
+          cutout_height: number | null;
+          cutout_path: string | null;
+          cutout_path_small: string | null;
+          cutout_width: number | null;
+          display_name: string | null;
+          enabled: boolean;
+          fill_ratio: number | null;
+          food_kind: string | null;
+          id: string;
+          origin: string;
+          position: number;
+          processed_at: string | null;
+          product_id: string;
+          quality: Json | null;
+          source_hash: string | null;
+          source_url: string | null;
+          status: string;
+          status_detail: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          approved?: boolean;
+          attempts?: number;
+          created_at?: string;
+          created_by?: string | null;
+          cutout_height?: number | null;
+          cutout_path?: string | null;
+          cutout_path_small?: string | null;
+          cutout_width?: number | null;
+          display_name?: string | null;
+          enabled?: boolean;
+          fill_ratio?: number | null;
+          food_kind?: string | null;
+          id?: string;
+          origin?: string;
+          position?: number;
+          processed_at?: string | null;
+          product_id: string;
+          quality?: Json | null;
+          source_hash?: string | null;
+          source_url?: string | null;
+          status?: string;
+          status_detail?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          approved?: boolean;
+          attempts?: number;
+          created_at?: string;
+          created_by?: string | null;
+          cutout_height?: number | null;
+          cutout_path?: string | null;
+          cutout_path_small?: string | null;
+          cutout_width?: number | null;
+          display_name?: string | null;
+          enabled?: boolean;
+          fill_ratio?: number | null;
+          food_kind?: string | null;
+          id?: string;
+          origin?: string;
+          position?: number;
+          processed_at?: string | null;
+          product_id?: string;
+          quality?: Json | null;
+          source_hash?: string | null;
+          source_url?: string | null;
+          status?: string;
+          status_detail?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "hero_showcase_items_product_id_fkey";
+            columns: ["product_id"];
+            isOneToOne: true;
+            referencedRelation: "menu_products";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       inventory_categories: {
         Row: {
           id: string;
@@ -5506,6 +5592,29 @@ export type Database = {
           _user_id: string;
         };
         Returns: boolean;
+      };
+      hero_showcase_candidates: {
+        Args: { p_limit?: number };
+        Returns: {
+          categoria: string;
+          imagem: string;
+          loja: string;
+          nome: string;
+          product_id: string;
+        }[];
+      };
+      hero_showcase_public: {
+        Args: never;
+        Returns: {
+          altura: number | null;
+          id: string;
+          imagem: string | null;
+          imagem_pequena: string | null;
+          largura: number | null;
+          nome: string;
+          preenchimento: number | null;
+          tipo: string | null;
+        }[];
       };
       inventory_apply_movement: {
         Args: {
