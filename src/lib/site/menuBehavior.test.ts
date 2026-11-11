@@ -28,7 +28,7 @@ describe("o contrato dos modos de navegação", () => {
     expect([...MODOS_DE_NAVEGACAO]).toEqual(["navigation", "direct", "cards"]);
   });
 
-  it("guarda a escolha na chave que o FlyControl grava", () => {
+  it("guarda a escolha na chave que o FlyDelivery grava", () => {
     expect(CHAVE_DO_MODO).toBe("entry_mode");
   });
 

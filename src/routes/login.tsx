@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { GoogleIcon } from "@/components/GoogleIcon";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
-import logo from "@/assets/flycontrol-logo.webp";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export const Route = createFileRoute("/login")({ component: Login });
 
@@ -73,17 +73,13 @@ function Login() {
   return (
     <div className="grid min-h-screen place-items-center bg-background px-4">
       <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-[var(--shadow-glow)]">
-        <div className="mb-12 flex justify-center">
-          <Link to="/">
-            <img
-              src={logo}
-              alt="FlyControl"
-              className="h-48 w-auto object-contain drop-shadow-[0_0_30px_rgba(255,122,0,0.75)]"
-            />
+        <div className="mb-8 flex justify-center">
+          <Link to="/" className="text-foreground">
+            <BrandLogo variant="stacked" className="h-28" eager />
           </Link>
         </div>
         <h1 className="text-2xl font-bold">Entrar</h1>
-        <p className="mt-1 text-sm text-muted-foreground">Acesse o painel da sua pizzaria.</p>
+        <p className="mt-1 text-sm text-muted-foreground">Acesse o painel da sua loja.</p>
         <form onSubmit={onSubmit} className="mt-6 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>

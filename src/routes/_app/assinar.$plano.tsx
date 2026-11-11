@@ -72,7 +72,7 @@ function AssinarPage() {
       <Shell>
         <Aviso
           titulo="Não encontramos seu estabelecimento"
-          texto="Entre com o login do dono da loja ou fale com a equipe da FlyControl."
+          texto="Entre com o login do dono da loja ou fale com a equipe da FlyDelivery."
         />
       </Shell>
     );
@@ -182,7 +182,7 @@ function AssinarPage() {
       ) : !offer.gatewayReady ? (
         <Aviso
           titulo="Pagamento online indisponível"
-          texto="O pagamento online ainda não está configurado. Fale com a equipe da FlyControl para contratar."
+          texto="O pagamento online ainda não está configurado. Fale com a equipe da FlyDelivery para contratar."
         />
       ) : (
         <Card>
@@ -221,7 +221,7 @@ function AssinarPage() {
 
             <p className="flex items-start gap-2 text-xs text-muted-foreground">
               <ShieldCheck className="mt-0.5 h-4 w-4 shrink-0" aria-hidden="true" />O pagamento é
-              feito no ambiente da InfinityPay. A FlyControl não recebe nem guarda dados do seu
+              feito no ambiente da InfinityPay. A FlyDelivery não recebe nem guarda dados do seu
               cartão. O plano é liberado assim que a InfinityPay confirmar o pagamento — pagamento
               pendente ou recusado não libera.
             </p>

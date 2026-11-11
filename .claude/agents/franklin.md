@@ -34,7 +34,7 @@ Você pode ler e alterar **todos os repositórios do dono no GitHub** (conta
 |---|---|
 | `conectfly` | SiteCreatorFly — site de pedidos que o cliente final acessa |
 | `conectfly.` | ConectFly — plataforma principal (checkout, admin, servidor, worker) |
-| `flycontrol-dash` | FlyControl — painel que o restaurante usa |
+| `flycontrol-dash` | FlyDelivery (antigo FlyControl) — painel que o restaurante usa |
 | `Flydelivery` | FlyDelivery — marketplace de delivery |
 | `ROBO-DA-LOTERIA` | Robô da Loteria |
 | `BARBER-CONNECTION` | Barber Connection |

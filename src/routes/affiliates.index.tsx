@@ -46,12 +46,12 @@ function Apresentacao() {
         <section className="pt-8 sm:pt-16">
           <span className="fly-label text-[#ff8a3d]">Programa de parceiros</span>
           <h1 className="fly-headline mt-4 max-w-4xl">
-            Indique o FlyControl.
+            Indique o FlyDelivery.
             <br />
             <span className="text-white/45">Ganhe todo mês.</span>
           </h1>
           <p className="fly-body mt-6 max-w-xl text-white/60">
-            Você indica restaurantes, eles usam o FlyControl, e você recebe{" "}
+            Você indica restaurantes, eles usam o FlyDelivery, e você recebe{" "}
             {comissao ? (
               <strong className="font-semibold text-white">{comissao} recorrente</strong>
             ) : (
@@ -126,7 +126,7 @@ function Apresentacao() {
           <ul className="mt-5 space-y-3 text-sm leading-relaxed text-white/65">
             <li>
               • A comissão é calculada sobre o que o cliente indicado{" "}
-              <strong className="text-white">de fato paga</strong> ao FlyControl. Cobrança não paga
+              <strong className="text-white">de fato paga</strong> ao FlyDelivery. Cobrança não paga
               não gera comissão.
             </li>
             <li>

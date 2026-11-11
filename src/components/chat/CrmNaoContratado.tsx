@@ -14,7 +14,7 @@ import { linkWhatsAppSuporte, WHATSAPP_VISIVEL } from "@/lib/landing/contato";
  * é você?" logo na primeira mensagem.
  */
 
-const MENSAGEM_PRONTA = "Olá! Tenho o plano premium e quero contratar o CRM/Chat do Fly Control.";
+const MENSAGEM_PRONTA = "Olá! Tenho o plano premium e quero contratar o CRM/Chat do FlyDelivery.";
 
 const O_QUE_VEM_JUNTO = [
   "Todas as conversas do WhatsApp da loja em uma tela só",

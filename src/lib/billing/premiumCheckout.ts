@@ -128,7 +128,7 @@ export function decidePremiumPurchase(
     ok: false,
     code: "internal_plan",
     message:
-      "Seu plano atual é gerenciado pela equipe da FlyControl. Fale com a gente para trocar.",
+      "Seu plano atual é gerenciado pela equipe da FlyDelivery. Fale com a gente para trocar.",
   };
 }
 
@@ -136,7 +136,7 @@ function unknownStatus(): PurchaseDecision {
   return {
     ok: false,
     code: "unknown_status",
-    message: "Não foi possível contratar agora. Fale com a equipe da FlyControl.",
+    message: "Não foi possível contratar agora. Fale com a equipe da FlyDelivery.",
   };
 }
 
@@ -205,7 +205,7 @@ export function buildCheckoutSummary(target: PremiumPlanCode): CheckoutSummary {
         `para pagar.`,
       cancel:
         "Para não renovar, basta não pagar a nova cobrança — ou pedir o cancelamento à equipe da " +
-        `FlyControl antes do fim do período. Atenção: se a cobrança da renovação não for paga, ` +
+        `FlyDelivery antes do fim do período. Atenção: se a cobrança da renovação não for paga, ` +
         `depois do vencimento e de ${OVERDUE_GRACE_DAYS} dias de tolerância o acesso ao painel é suspenso até o pagamento ` +
         "ou o cancelamento.",
       notMonthly: annual

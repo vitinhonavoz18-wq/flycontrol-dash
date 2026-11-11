@@ -291,10 +291,15 @@ describe("telas da gestão", () => {
   const layoutAdmin = readFileSync("src/routes/_app/admin.tsx", "utf8");
 
   it("Afiliados aparece só no bloco do Painel Admin", () => {
-    const blocoAdmin = menu.slice(menu.indexOf("const adminItems"), menu.indexOf("const NavItems"));
-    expect(blocoAdmin).toContain('"/admin/affiliates"');
-    const antes = menu.slice(0, menu.indexOf("const adminItems"));
-    expect(antes).not.toContain("/admin/affiliates");
+    // O menu saiu de dentro do layout e foi para `lib/navegacao.ts`: os
+    // grupos de todo lojista vêm antes, o bloco da plataforma vem depois.
+    const navegacao = readFileSync("src/lib/navegacao.ts", "utf8");
+    const corte = navegacao.indexOf("export const GRUPO_DA_PLATAFORMA");
+    expect(corte).toBeGreaterThan(0);
+    expect(navegacao.slice(corte)).toContain('"/admin/affiliates"');
+    expect(navegacao.slice(0, corte)).not.toContain("/admin/affiliates");
+    // E o layout continua sendo quem decide mostrar o bloco só a administradores.
+    expect(menu).toContain("ehAdminDaPlataforma: showAdmin");
   });
 
   it("as telas moram debaixo de /admin, que já barra quem não é administrador", () => {

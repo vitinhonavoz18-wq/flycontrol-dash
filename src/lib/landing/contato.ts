@@ -23,7 +23,7 @@ export const WHATSAPP_VISIVEL = "(71) 99937-3863";
  * só aperta enviar. E do seu lado chega escrito de onde a pessoa veio, o que
  * evita a pergunta "quem é você?" logo na primeira mensagem.
  */
-const PRIMEIRA_MENSAGEM = "Olá! Vim pelo site do FlyControl e gostaria de tirar uma dúvida.";
+const PRIMEIRA_MENSAGEM = "Olá! Vim pelo site do FlyDelivery e gostaria de tirar uma dúvida.";
 
 export const WHATSAPP_LINK = `https://wa.me/${NUMERO_LIMPO}?text=${encodeURIComponent(
   PRIMEIRA_MENSAGEM,

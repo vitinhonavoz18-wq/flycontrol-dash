@@ -240,14 +240,14 @@ export function motivoParaNaoContratar(
   switch (resumo.subscription_status) {
     case "past_due":
     case "suspended":
-      return "Há uma fatura do FlyControl em aberto. Regularize para voltar a impulsionar.";
+      return "Há uma fatura do FlyDelivery em aberto. Regularize para voltar a impulsionar.";
     case "free_trial":
       return "Impulsionar fica disponível depois do período grátis.";
     case "pending_activation":
     case "pending_payment":
-      return "Ative seu plano FlyControl para impulsionar produtos.";
+      return "Ative seu plano FlyDelivery para impulsionar produtos.";
     default:
-      return "Para impulsionar, sua loja precisa de um plano FlyControl ativo.";
+      return "Para impulsionar, sua loja precisa de um plano FlyDelivery ativo.";
   }
 }
 

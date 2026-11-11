@@ -117,7 +117,7 @@ export function RecebimentosDaLoja() {
           </nav>
           <h1 className="flex items-center gap-2 text-2xl font-bold">
             <Banknote className="h-6 w-6 text-primary" />
-            Recebimentos pelo FlyDelivery
+            Recebimentos pelo app FlyDelivery
           </h1>
           <p className="text-sm text-muted-foreground">
             Pix pago pelo cliente no aplicativo, com a sua parte enviada direto para a sua conta

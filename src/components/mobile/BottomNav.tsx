@@ -6,27 +6,21 @@ import {
   Menu as MenuIcon,
   LayoutGrid,
   MoreHorizontal,
-  Package,
-  BarChart3,
-  Settings,
   Search,
-  Store,
-  PieChart,
-  UtensilsCrossed,
-  Wallet,
-  BookOpen,
   LogOut,
-  Users,
-  CreditCard,
-  MessageSquare,
   X,
-  Handshake,
 } from "lucide-react";
 import { BottomSheet } from "@/components/mobile/BottomSheet";
 import { useAuth } from "@/lib/auth";
 import { usePlan } from "@/lib/plan-context";
 import type { Feature } from "@/lib/planPermissions";
 import { useNavigate } from "@tanstack/react-router";
+import {
+  GRUPO_DA_PLATAFORMA,
+  GRUPOS_DO_MENU,
+  itemEstaAtivo,
+  type ItemDeMenu,
+} from "@/lib/navegacao";
 
 type Item = {
   to: string;
@@ -44,56 +38,32 @@ const PRIMARY: Item[] = [
   { to: "/tables", label: "Mesas", icon: LayoutGrid },
 ];
 
-const MORE_OWNER: Item[] = [
-  { to: "/my-store", label: "Minha Loja", icon: Store },
-  { to: "/chat", label: "Chat", icon: MessageSquare, feature: "chat" },
-  { to: "/combos", label: "Combos / Produtos", icon: Package },
-  { to: "/finance", label: "Relatórios", icon: BarChart3 },
-  { to: "/commissions", label: "Comissões", icon: Wallet },
-  { to: "/waiters", label: "Garçons", icon: UtensilsCrossed },
-  { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
-  { to: "/settings", label: "Configurações", icon: Settings },
-  { to: "/docs", label: "Documentação", icon: BookOpen },
-];
+/**
+ * O painel "Mais" lê o MESMO mapa do menu do computador (`lib/navegacao`).
+ *
+ * Antes havia duas listas escritas à mão, e elas se desencontraram: no
+ * celular, "Mais" não mostrava Marketing, Estoque nem o App FlyDelivery, e o
+ * bloco de administração ainda apontava para duas telas aposentadas. É o
+ * cardápio da parede dizendo uma coisa e o do balcão dizendo outra.
+ *
+ * Agora só existe uma lista. O que entra no menu do computador entra aqui —
+ * menos o que já está na barra de baixo, que não precisa aparecer duas vezes.
+ */
+const NA_BARRA = new Set(PRIMARY.map((it) => it.to));
 
-const MORE_ADMIN: Item[] = [
-  {
-    to: "/admin/pizzerias",
-    label: "FlyPizzarias",
-    icon: Store,
-    match: (p) => p.startsWith("/admin/pizzerias"),
-  },
-  {
-    to: "/admin/analytics",
-    label: "Insights Globais",
-    icon: PieChart,
-    match: (p) => p.startsWith("/admin/analytics"),
-  },
-  {
-    to: "/admin/finance",
-    label: "Financeiro Global",
-    icon: BarChart3,
-    match: (p) => p.startsWith("/admin/finance"),
-  },
-  {
-    to: "/admin/users",
-    label: "Usuários",
-    icon: Users,
-    match: (p) => p.startsWith("/admin/users"),
-  },
-  {
-    to: "/admin/subscriptions",
-    label: "Planos",
-    icon: CreditCard,
-    match: (p) => p.startsWith("/admin/subscriptions"),
-  },
-  {
-    to: "/admin/affiliates",
-    label: "Afiliados",
-    icon: Handshake,
-    match: (p) => p.startsWith("/admin/affiliates"),
-  },
-];
+const paraOPainel = (it: ItemDeMenu): Item => ({
+  to: it.to,
+  label: it.label,
+  icon: it.icon,
+  feature: it.feature,
+  match: it.comFilhas ? (p) => itemEstaAtivo(it, p) : undefined,
+});
+
+const MORE_OWNER: Item[] = GRUPOS_DO_MENU.flatMap((grupo) => grupo.itens)
+  .filter((it) => !NA_BARRA.has(it.to))
+  .map(paraOPainel);
+
+const MORE_ADMIN: Item[] = GRUPO_DA_PLATAFORMA.itens.map(paraOPainel);
 
 export function BottomNav() {
   const path = useRouterState({ select: (s) => s.location.pathname });

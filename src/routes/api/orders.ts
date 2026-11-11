@@ -1,6 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { normalizePhone } from "@/lib/marketing/phone";
+import {
+  chaveDoPedidoExterno,
+  ehRecusaPorPedidoRepetido,
+  respostaDePedidoRepetido,
+} from "@/lib/orders/pedidoRepetido";
 
 // Função auxiliar para gerar headers CORS robustos
 const getCorsHeaders = (request?: Request) => {
@@ -278,7 +283,7 @@ export const Route = createFileRoute("/api/orders")({
             return new Response(
               JSON.stringify({
                 success: true,
-                message: "FlyControl recebeu teste",
+                message: "FlyDelivery recebeu teste",
                 received_at: new Date().toISOString(),
                 pizzeria: pz.name,
               }),
@@ -290,6 +295,62 @@ export const Route = createFileRoute("/api/orders")({
           const orderData = body.order || body || {};
           const customer = body.customer || body || {};
           const items = orderData.items || body.items || [];
+
+          // ── O MESMO PEDIDO NÃO ENTRA DUAS VEZES ────────────────────────────
+          //
+          // O site reenvia o pedido quando não recebe a resposta. Se o pedido
+          // já tinha sido gravado e só a resposta se perdeu, o reenvio criava
+          // um segundo pedido igual: duas comandas na cozinha e dois pedidos
+          // na conta de quem paga por pedido.
+          //
+          // Cada pedido sai do site com um número de série único. Se a loja
+          // já tem um pedido com esse número, a resposta é "já recebi" — com
+          // os mesmos campos de um pedido novo, para o site parar de insistir.
+          //
+          // Fica AQUI, antes de tudo: mais abaixo o código abre comanda de
+          // mesa e mexe em totais, e nada disso pode acontecer duas vezes.
+          //
+          // A explicação completa está em `lib/orders/pedidoRepetido.ts`.
+          const chaveExterna = chaveDoPedidoExterno({
+            idDoPedido: orderData.id,
+            orderIdDoCorpo: body.order_id,
+            idDoCorpo: body.id,
+            cabecalho: request.headers.get("x-idempotency-key"),
+          });
+
+          const buscarPedidoJaGravado = async () => {
+            if (!chaveExterna) return null;
+            const { data, error } = await (supabaseAdmin.from("orders") as any)
+              .select("id, order_number, delivery_type, order_type, table_number")
+              // O filtro de loja não é detalhe: sem ele, o número de série de
+              // uma loja poderia encontrar o pedido de outra.
+              .eq("tenant_id", pz.id)
+              .eq("external_order_id", chaveExterna)
+              .order("created_at", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+            // Se a consulta falhar, segue o fluxo normal: é melhor correr o
+            // risco raro de duplicar do que recusar um pedido de verdade.
+            if (error) {
+              console.error("PEDIDO_REPETIDO_CONSULTA_FALHOU:", error.message);
+              return null;
+            }
+            return data ?? null;
+          };
+
+          const pedidoJaGravado = await buscarPedidoJaGravado();
+          if (pedidoJaGravado) {
+            console.log(
+              "PEDIDO_REPETIDO_IGNORADO:",
+              JSON.stringify({ loja: pz.id, pedido: pedidoJaGravado.id }),
+            );
+            await logExternalOrder(apiKey, body, 200, "Reenvio de pedido já recebido (ignorado)");
+            console.log("ORDER_RESPONSE_SENT: success (duplicate)");
+            return new Response(JSON.stringify(respostaDePedidoRepetido(pedidoJaGravado)), {
+              status: 200,
+              headers: cors,
+            });
+          }
 
           const parseMoney = (val: any) => {
             if (typeof val === "number") return val;
@@ -640,7 +701,8 @@ export const Route = createFileRoute("/api/orders")({
           // 50% para um zero digitado a mais não zerar a venda.
           const percentConfigurado = (() => {
             const bruto = (pz as any)?.site_settings?.marketing_opt_in_discount_percent;
-            const n = typeof bruto === "number" ? bruto : Number(String(bruto ?? "").replace(",", "."));
+            const n =
+              typeof bruto === "number" ? bruto : Number(String(bruto ?? "").replace(",", "."));
             if (!Number.isFinite(n) || n <= 0) return 0;
             return Math.min(Math.round(n * 2) / 2, 50);
           })();
@@ -653,9 +715,7 @@ export const Route = createFileRoute("/api/orders")({
               ? Math.floor(subtotalValor * percentConfigurado) / 100
               : 0;
 
-          const descontoQueVeio = parseMoney(
-            orderData.discount || body.discount || 0,
-          );
+          const descontoQueVeio = parseMoney(orderData.discount || body.discount || 0);
           if (Math.abs(descontoQueVeio - descontoConferido) > 0.01) {
             console.warn(
               `ORDER_DISCOUNT_MISMATCH: site enviou ${descontoQueVeio}, conferido ${descontoConferido} (percentual da loja: ${percentConfigurado}%)`,
@@ -675,9 +735,9 @@ export const Route = createFileRoute("/api/orders")({
           const orderToInsert: any = {
             tenant_id: pz.id,
             discount: descontoConferido > 0 ? descontoConferido : null,
-            external_order_id: String(
-              orderData.id || body.order_id || body.id || `ext_${Date.now()}`,
-            ),
+            // Sem número de série (integração antiga), nasce um provisório
+            // só para o campo não ficar vazio — e esse pedido entra sem trava.
+            external_order_id: chaveExterna ?? `ext_${Date.now()}`,
             customer_name:
               customer.name || customer.customer_name || body.customer_name || "Cliente Site",
             customer_phone: customer.phone || customer.customer_phone || body.customer_phone || "",
@@ -728,6 +788,25 @@ export const Route = createFileRoute("/api/orders")({
             .select("id, order_number")
             .single();
 
+          // Dois reenvios no MESMO instante: os dois consultaram, nenhum achou,
+          // os dois tentaram gravar. A trava do banco deixou passar só um; este
+          // aqui é o outro, e a resposta certa é "já recebi", não "deu erro".
+          if (orderError && ehRecusaPorPedidoRepetido(orderError)) {
+            const gravadoPeloOutro = await buscarPedidoJaGravado();
+            if (gravadoPeloOutro) {
+              console.log(
+                "PEDIDO_REPETIDO_IGNORADO:",
+                JSON.stringify({ loja: pz.id, pedido: gravadoPeloOutro.id, simultaneo: true }),
+              );
+              await logExternalOrder(apiKey, body, 200, "Reenvio simultâneo de pedido (ignorado)");
+              console.log("ORDER_RESPONSE_SENT: success (duplicate)");
+              return new Response(JSON.stringify(respostaDePedidoRepetido(gravadoPeloOutro)), {
+                status: 200,
+                headers: cors,
+              });
+            }
+          }
+
           if (orderError) {
             console.error("ORDER_INSERT_ERROR:", orderError.message);
             console.log("ORDER_SAVE_ERROR:", orderError.message);
@@ -737,7 +816,7 @@ export const Route = createFileRoute("/api/orders")({
               JSON.stringify({
                 success: false,
                 error: "save_error",
-                message: "Erro ao salvar pedido no FlyControl",
+                message: "Erro ao salvar pedido no FlyDelivery",
               }),
               { status: 500, headers: cors },
             );
@@ -1021,7 +1100,7 @@ export const Route = createFileRoute("/api/orders")({
             JSON.stringify({
               success: false,
               error: "internal_error",
-              message: "Erro interno ao processar pedido no FlyControl",
+              message: "Erro interno ao processar pedido no FlyDelivery",
             }),
             { status: 500, headers: cors },
           );

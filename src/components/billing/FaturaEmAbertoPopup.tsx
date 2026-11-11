@@ -106,7 +106,9 @@ export function FaturaEmAbertoPopup({
             <Receipt className="h-7 w-7 text-primary" aria-hidden="true" />
           </div>
           <DialogTitle className="text-center">
-            {vencida ? "Sua fatura do FlyControl está vencida" : "Sua fatura do FlyControl chegou"}
+            {vencida
+              ? "Sua fatura do FlyDelivery está vencida"
+              : "Sua fatura do FlyDelivery chegou"}
           </DialogTitle>
           <DialogDescription className="text-center">
             {vencida

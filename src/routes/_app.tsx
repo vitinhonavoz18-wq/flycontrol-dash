@@ -3,41 +3,21 @@ import { useEffect, useState } from "react";
 import { useAuth } from "@/lib/auth";
 import { useTheme } from "@/components/theme-provider";
 import { Button } from "@/components/ui/button";
-import {
-  Smartphone,
-  LayoutDashboard,
-  Store,
-  BarChart3,
-  Users,
-  LogOut,
-  Settings,
-  BookOpen,
-  Menu,
-  X,
-  PieChart,
-  Sun,
-  Moon,
-  CreditCard,
-  LayoutGrid,
-  Search,
-  UtensilsCrossed,
-  Wallet,
-  Trophy,
-  Megaphone,
-  MessageSquare,
-  Package,
-  Handshake,
-} from "lucide-react";
-import logo from "@/assets/flycontrol-logo.webp";
+import { LogOut, Menu, Moon, PanelLeftClose, PanelLeftOpen, Sun, X } from "lucide-react";
+import { BrandLogo, BrandSymbol } from "@/components/brand/BrandLogo";
+import { BrandLoader } from "@/components/brand/BrandLoader";
+import { BrandTransitionNotice } from "@/components/brand/BrandTransitionNotice";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Switch } from "@/components/ui/switch";
-import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/mobile/BottomNav";
 import { GuiaDeConfiguracao } from "@/components/onboarding/guia/GuiaDeConfiguracao";
 import { FaturaEmAbertoPopup } from "@/components/billing/FaturaEmAbertoPopup";
 import { PlanProvider, usePlan } from "@/lib/plan-context";
-import type { Feature } from "@/lib/planPermissions";
+import { itemEstaAtivo, montarMenu } from "@/lib/navegacao";
+
+/** Chave no navegador que lembra se o menu lateral está recolhido. */
+const CHAVE_MENU_RECOLHIDO = "flydelivery.menu-recolhido";
 
 export const Route = createFileRoute("/_app")({ component: AppLayout });
 
@@ -56,6 +36,39 @@ function AppLayoutInner() {
   const nav = useNavigate();
   const path = useRouterState({ select: (s) => s.location.pathname });
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+  // Menu lateral recolhido (só ícones) — vale para o computador. Quem trabalha
+  // com o quadro de pedidos aberto o dia inteiro ganha a largura de uma
+  // coluna a mais. A escolha fica guardada no aparelho.
+  const [menuRecolhido, setMenuRecolhido] = useState(false);
+  useEffect(() => {
+    try {
+      setMenuRecolhido(localStorage.getItem(CHAVE_MENU_RECOLHIDO) === "1");
+    } catch {
+      // Sem armazenamento: o menu simplesmente começa aberto.
+    }
+  }, []);
+  useEffect(() => {
+    // A faixa fixa de "Finalizar pedido" precisa saber onde o menu termina.
+    // Este atributo troca o token `--sidebar-width` no CSS (ver styles.css).
+    const raiz = document.documentElement;
+    if (menuRecolhido) raiz.dataset.menu = "recolhido";
+    else delete raiz.dataset.menu;
+    return () => {
+      delete raiz.dataset.menu;
+    };
+  }, [menuRecolhido]);
+  function alternarMenu() {
+    setMenuRecolhido((atual) => {
+      const novo = !atual;
+      try {
+        localStorage.setItem(CHAVE_MENU_RECOLHIDO, novo ? "1" : "0");
+      } catch {
+        // Sem armazenamento: vale só até recarregar a página.
+      }
+      return novo;
+    });
+  }
   const [pizzeriaStatus, setPizzeriaStatus] = useState<{
     // O `id` entrou junto porque o guia de configuração precisa saber QUAL
     // loja é, para montar o pedido de treino com um produto do cardápio dela.
@@ -127,11 +140,7 @@ function AppLayoutInner() {
   // pendente. E as respostas de quem já respondeu continuam guardadas.
 
   if (loading || !user) {
-    return (
-      <div className="grid min-h-screen place-items-center text-muted-foreground">
-        Carregando...
-      </div>
-    );
+    return <BrandLoader />;
   }
 
   // Block access if inactive and not super admin
@@ -176,188 +185,204 @@ function AppLayoutInner() {
   }
 
   if (loading || !user) {
-    return (
-      <div className="grid min-h-screen place-items-center text-muted-foreground">
-        Carregando...
-      </div>
-    );
+    return <BrandLoader />;
   }
 
-  type NavItem = { to: string; label: string; icon: typeof LayoutDashboard; feature?: Feature };
-  const allItems: NavItem[] = [
-    { to: "/dashboard", label: "Pedidos", icon: LayoutDashboard },
-    { to: "/tables", label: "Mesas", icon: LayoutGrid, feature: "tables" },
-    { to: "/search-orders", label: "Buscar Pedidos", icon: Search },
-    { to: "/my-store", label: "Minha Loja", icon: Store },
-    { to: "/menu", label: "Cardápio", icon: Menu },
-    { to: "/inventory", label: "Estoque & PDV", icon: Package, feature: "inventory" },
-    { to: "/flydelivery", label: "FlyDelivery", icon: Smartphone },
-    { to: "/combos", label: "Combos", icon: PieChart },
-    { to: "/marketing", label: "Marketing", icon: Megaphone },
-    // A aba do Chat APARECE para todo premium, inclusive para quem ainda não
-    // contratou — é assim que ele descobre que o recurso existe e pede para
-    // ativar. Quem não pode nem ver é o CENTS, e disso cuida o `feature`.
-    // Dentro da tela, a contratação decide o que ele encontra.
-    { to: "/chat", label: "Chat", icon: MessageSquare, feature: "chat" },
-    { to: "/finance", label: "Gestão Financeira", icon: BarChart3 },
-    { to: "/billing", label: "Plano e cobrança", icon: CreditCard },
-    { to: "/settings", label: "Configurações", icon: Settings },
-    { to: "/waiters", label: "Garçons", icon: UtensilsCrossed, feature: "waiters" },
-    { to: "/commissions", label: "Comissões", icon: Wallet, feature: "commissions" },
-    { to: "/docs", label: "Documentação", icon: BookOpen },
-  ];
-  // "Plano e cobrança" mostra a assinatura do DONO da loja — administradores
-  // não assinam a própria plataforma, então o item some para eles. Quem
-  // administra assinaturas de todo mundo usa "Clientes e Planos", no Painel
-  // Admin.
   const showAdmin = isSuperAdmin || isHardcodedAdmin;
-  const items = allItems.filter(
-    (it) => (!it.feature || hasFeature(it.feature)) && !(it.to === "/billing" && showAdmin),
-  );
+  // O desenho do menu (grupos, itens, quem vê o quê) mora em `lib/navegacao`.
+  const grupos = montarMenu({ temRecurso: hasFeature, ehAdminDaPlataforma: showAdmin });
 
-  // O Painel Admin tinha seis itens, e dois deles eram metades de outros:
-  // "FlyPizzarias" listava as lojas das mesmas contas que "Usuários" já
-  // listava, e "Financeiro Global" respondia a outra metade da pergunta que
-  // "Insights Globais" respondia. Viraram abas dentro deles.
-  //
-  // Menu grande não é menu completo: é menu onde ninguém acha nada. Os
-  // endereços antigos continuam existindo e redirecionam, então link salvo
-  // nos favoritos não quebra.
-  const adminItems = [
-    { to: "/admin/analytics", label: "Insights Globais", icon: PieChart },
-    { to: "/admin/users", label: "Usuários", icon: Users },
-    { to: "/admin/subscriptions", label: "Clientes e Planos", icon: CreditCard },
-    { to: "/admin/cents", label: "Clube CENTS", icon: Trophy },
-    // Programa de afiliados: aprovação de parceiros, comissões, saques e
-    // auditoria. Só aparece aqui, no bloco do Painel Admin.
-    { to: "/admin/affiliates", label: "Afiliados", icon: Handshake },
-    // Pix pago no aplicativo FlyDelivery com split SyncPay: comissões,
-    // contas recebedoras das lojas, conciliação e auditoria.
-    { to: "/admin/flydelivery-pagamentos", label: "Pagamentos FlyDelivery", icon: Wallet },
-  ];
-
-  const NavItems = ({ className = "" }: { className?: string }) => (
-    <nav className={`flex-1 space-y-1 p-3 landscape-compact:p-1.5 ${className}`}>
-      <div className="px-3 pb-1 pt-2 text-xs font-semibold uppercase text-muted-foreground/70 landscape-compact:hidden">
-        Menu Principal
-      </div>
-      {items.map((it) => (
-        <Link
-          key={it.to}
-          to={it.to}
-          onClick={() => setIsMobileMenuOpen(false)}
-          // `title` e `aria-label` mantêm o item identificável quando o rótulo
-          // some no trilho — um ícone sozinho não diz nada a um leitor de tela.
-          title={it.label}
-          aria-label={it.label}
-          className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 landscape-compact:h-11 landscape-compact:justify-center landscape-compact:px-0 ${
-            path === it.to
-              ? "bg-primary/20 text-primary shadow-sm"
-              : "text-sidebar-foreground hover:bg-sidebar-accent"
-          }`}
-        >
-          <it.icon
-            className={`h-4 w-4 shrink-0 landscape-compact:h-5 landscape-compact:w-5 ${path === it.to ? "text-primary" : "text-muted-foreground"}`}
-          />
-          <span className="landscape-compact:hidden">{it.label}</span>
-        </Link>
-      ))}
-
-      {showAdmin && (
-        <>
-          <div className="px-3 pb-1 pt-6 text-xs font-semibold uppercase text-muted-foreground/70 border-t border-sidebar-border mt-4">
-            Painel Admin
+  /**
+   * A lista de itens. `compacto` é o menu recolhido do computador: só ícones.
+   *
+   * No celular deitado o menu já vira um trilho de ícones por conta própria
+   * (as classes `landscape-compact:`), com ou sem `compacto`.
+   */
+  const NavItems = ({ compacto = false }: { compacto?: boolean }) => (
+    <nav
+      aria-label="Menu principal"
+      // `min-h-0` + rolagem própria: a lista rola no MEIO, e o topo (logo) e a
+      // base (tema, conta, sair) ficam sempre à vista. Sem isso, em tela baixa
+      // o botão de sair ia parar fora da tela.
+      className={`min-h-0 flex-1 space-y-5 overflow-y-auto px-3 py-4 landscape-compact:space-y-2 landscape-compact:p-1.5 ${compacto ? "md:space-y-2 md:px-2" : ""}`}
+    >
+      {grupos.map((grupo, indice) => (
+        <div key={grupo.id} role="group" aria-label={grupo.titulo}>
+          <div
+            className={`px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-[0.08em] text-muted-foreground landscape-compact:hidden ${compacto ? "md:hidden" : ""}`}
+          >
+            {grupo.titulo}
           </div>
-          {adminItems.map((it) => (
-            <Link
-              key={it.to}
-              to={it.to}
-              onClick={() => setIsMobileMenuOpen(false)}
-              title={it.label}
-              aria-label={it.label}
-              className={`flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors duration-200 landscape-compact:h-11 landscape-compact:justify-center landscape-compact:px-0 ${
-                path.startsWith(it.to)
-                  ? "bg-primary/20 text-primary shadow-sm"
-                  : "text-sidebar-foreground hover:bg-sidebar-accent"
-              }`}
-            >
-              <it.icon
-                className={`h-4 w-4 shrink-0 landscape-compact:h-5 landscape-compact:w-5 ${path.startsWith(it.to) ? "text-primary" : "text-muted-foreground"}`}
-              />
-              <span className="landscape-compact:hidden">{it.label}</span>
-            </Link>
-          ))}
-        </>
-      )}
+          {/* Sem o título (menu recolhido), um risco fino separa os grupos. */}
+          {indice > 0 && (
+            <div
+              aria-hidden="true"
+              className={`mx-2 mb-2 hidden border-t border-sidebar-border landscape-compact:block ${compacto ? "md:block" : ""}`}
+            />
+          )}
+          <ul className="space-y-0.5">
+            {grupo.itens.map((it) => {
+              const ativo = itemEstaAtivo(it, path);
+              return (
+                <li key={it.to}>
+                  <Link
+                    to={it.to}
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    // `title` e `aria-label` mantêm o item identificável quando
+                    // o rótulo some — um ícone sozinho não diz nada a um leitor
+                    // de tela.
+                    title={it.label}
+                    aria-label={it.label}
+                    aria-current={ativo ? "page" : undefined}
+                    className={`group relative flex h-10 items-center gap-3 rounded-lg px-3 text-sm transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary landscape-compact:h-11 landscape-compact:justify-center landscape-compact:px-0 ${compacto ? "md:h-11 md:justify-center md:px-0" : ""} ${
+                      ativo
+                        ? "bg-primary/10 font-semibold text-primary-ink"
+                        : "font-medium text-sidebar-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
+                    }`}
+                  >
+                    {/* A barrinha laranja à esquerda marca "você está aqui"
+                        sem depender só da cor do fundo. */}
+                    {ativo && (
+                      <span
+                        aria-hidden="true"
+                        className="absolute inset-y-2 left-0 w-[3px] rounded-full bg-primary"
+                      />
+                    )}
+                    <it.icon
+                      aria-hidden="true"
+                      className={`h-[18px] w-[18px] shrink-0 landscape-compact:h-5 landscape-compact:w-5 ${compacto ? "md:h-5 md:w-5" : ""} ${ativo ? "text-primary" : "text-muted-foreground group-hover:text-sidebar-accent-foreground"}`}
+                    />
+                    <span
+                      className={`truncate landscape-compact:hidden ${compacto ? "md:hidden" : ""}`}
+                    >
+                      {it.label}
+                    </span>
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
+      ))}
     </nav>
   );
 
+  const temaEscuro = theme === "dark";
+  const nomeDoUsuario = user.email?.split("@")[0] ?? "";
+
   return (
     <div className="flex min-h-screen bg-background">
-      {/* Sidebar Desktop */}
-      {/* Em paisagem de celular a sidebar vira um trilho de ícones: 288px de
-          largura e um logo de 192px de altura consumiam metade de uma tela de
-          360px. `overflow-y-auto` garante que os itens continuem alcançáveis
-          quando a altura é mínima. */}
-      <aside className="z-20 hidden w-72 shrink-0 flex-col overflow-y-auto border-r border-border bg-sidebar shadow-xl md:flex landscape-compact:w-[var(--landscape-rail-width)]">
-        <Link
-          to="/dashboard"
-          className="flex items-center justify-center border-b border-sidebar-border px-8 py-6 landscape-compact:px-2 landscape-compact:py-3"
+      {/* Menu lateral — computador */}
+      {/* Em paisagem de celular o menu vira um trilho de ícones: 288px de
+          largura consumiam metade de uma tela de 360px. `overflow-y-auto`
+          garante que os itens continuem alcançáveis quando a altura é
+          mínima. O mesmo trilho é usado quando o lojista recolhe o menu no
+          computador. */}
+      <aside
+        data-recolhido={menuRecolhido ? "sim" : undefined}
+        className={`sticky top-0 z-20 hidden h-screen w-72 shrink-0 flex-col overflow-hidden border-r border-sidebar-border bg-sidebar transition-[width] duration-200 md:flex landscape-compact:w-[var(--landscape-rail-width)] ${menuRecolhido ? "md:w-[var(--landscape-rail-width)]" : ""}`}
+      >
+        <div
+          className={`flex h-16 shrink-0 items-center border-b border-sidebar-border px-4 landscape-compact:h-12 landscape-compact:justify-center landscape-compact:px-2 ${menuRecolhido ? "md:justify-center md:px-2" : "justify-between"}`}
         >
-          <img
-            src={logo}
-            alt="FlyControl"
-            className="h-48 w-auto object-contain drop-shadow-[0_0_20px_rgba(0,0,0,0.6)] dark:drop-shadow-[0_0_20px_rgba(255,122,0,0.6)] landscape-compact:h-8"
-          />
-        </Link>
-
-        {/* O seletor de tema não cabe no trilho — continua acessível em
-            Configurações e no menu do cabeçalho. */}
-        <div className="flex items-center justify-between border-b border-sidebar-border p-4 landscape-compact:hidden">
-          <div className="flex items-center gap-2">
-            {theme === "dark" ? (
-              <Moon className="h-4 w-4 text-primary" />
-            ) : (
-              <Sun className="h-4 w-4 text-orange-500" />
-            )}
-            <Label htmlFor="theme-toggle" className="text-xs font-medium cursor-pointer">
-              {theme === "dark" ? "Modo Escuro" : "Modo Claro"}
-            </Label>
-          </div>
-          <Switch
-            id="theme-toggle"
-            checked={theme === "dark"}
-            onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
-          />
+          <Link
+            to="/dashboard"
+            aria-label="FlyDelivery — ir para os pedidos"
+            className="flex items-center text-foreground"
+          >
+            {/* Recolhido ou deitado: só o símbolo. Aberto: símbolo e letreiro. */}
+            <BrandSymbol
+              eager
+              className={`h-7 landscape-compact:block ${menuRecolhido ? "md:block" : "hidden"}`}
+            />
+            {/* 26px de altura é o que cabe: o conjunto fica com ~200px e o
+                menu tem 216px livres ao lado do botão de recolher. */}
+            <BrandLogo
+              eager
+              className={`h-[26px] landscape-compact:hidden ${menuRecolhido ? "md:hidden" : ""}`}
+            />
+          </Link>
+          <button
+            type="button"
+            onClick={alternarMenu}
+            aria-label="Recolher o menu"
+            title="Recolher o menu"
+            className={`grid h-8 w-8 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary landscape-compact:hidden ${menuRecolhido ? "md:hidden" : ""}`}
+          >
+            <PanelLeftClose className="h-4 w-4" aria-hidden="true" />
+          </button>
         </div>
 
-        <NavItems />
-
-        <div className="mt-auto border-t border-border bg-sidebar-accent/30 p-4 landscape-compact:p-1.5">
-          <div className="mb-3 flex flex-col px-2 landscape-compact:hidden">
-            <span className="truncate text-xs font-bold text-foreground">
-              {user.email?.split("@")[0]}
-            </span>
-            <span className="truncate text-[10px] text-muted-foreground">{user.email}</span>
-          </div>
-          <Button
-            variant="ghost"
-            size="sm"
-            title="Sair"
-            aria-label="Sair da conta"
-            className="w-full justify-start text-red-500 transition-colors hover:bg-red-500/10 hover:text-red-600 landscape-compact:h-11 landscape-compact:justify-center landscape-compact:px-0"
-            onClick={async () => {
-              await signOut();
-              nav({ to: "/" });
-            }}
+        {menuRecolhido && (
+          <button
+            type="button"
+            onClick={alternarMenu}
+            aria-label="Abrir o menu"
+            title="Abrir o menu"
+            className="mx-auto mt-2 hidden h-9 w-9 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary md:grid landscape-compact:hidden"
           >
-            <LogOut className="h-4 w-4 landscape-compact:mr-0 mr-2" />
-            <span className="landscape-compact:hidden">Sair</span>
-          </Button>
+            <PanelLeftOpen className="h-4 w-4" aria-hidden="true" />
+          </button>
+        )}
+
+        <NavItems compacto={menuRecolhido} />
+
+        <div className="mt-auto shrink-0 space-y-1 border-t border-sidebar-border p-3 landscape-compact:p-1.5">
+          {/* O seletor de tema não cabe no trilho — continua acessível no
+              menu aberto e no menu do celular. */}
+          <div
+            className={`flex h-10 items-center justify-between rounded-lg px-3 landscape-compact:hidden ${menuRecolhido ? "md:hidden" : ""}`}
+          >
+            <label
+              htmlFor="theme-toggle"
+              className="flex cursor-pointer items-center gap-3 text-sm font-medium text-sidebar-foreground"
+            >
+              {temaEscuro ? (
+                <Moon className="h-[18px] w-[18px] text-muted-foreground" aria-hidden="true" />
+              ) : (
+                <Sun className="h-[18px] w-[18px] text-muted-foreground" aria-hidden="true" />
+              )}
+              Modo escuro
+            </label>
+            <Switch
+              id="theme-toggle"
+              checked={temaEscuro}
+              onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
+            />
+          </div>
+
+          <div
+            className={`flex items-center gap-3 rounded-lg px-2 py-2 landscape-compact:justify-center landscape-compact:px-0 ${menuRecolhido ? "md:justify-center md:px-0" : ""}`}
+          >
+            <span
+              aria-hidden="true"
+              className={`grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-sm font-semibold uppercase text-primary-ink landscape-compact:hidden ${menuRecolhido ? "md:hidden" : ""}`}
+            >
+              {nomeDoUsuario.charAt(0) || "?"}
+            </span>
+            <div
+              className={`min-w-0 flex-1 landscape-compact:hidden ${menuRecolhido ? "md:hidden" : ""}`}
+            >
+              <div className="truncate text-sm font-semibold text-foreground">{nomeDoUsuario}</div>
+              <div className="truncate text-xs text-muted-foreground">{user.email}</div>
+            </div>
+            <button
+              type="button"
+              title="Sair"
+              aria-label="Sair da conta"
+              className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive focus-visible:outline focus-visible:outline-2 focus-visible:outline-destructive landscape-compact:h-11 landscape-compact:w-11"
+              onClick={async () => {
+                await signOut();
+                nav({ to: "/" });
+              }}
+            >
+              <LogOut className="h-4 w-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
       </aside>
 
-      {/* Mobile Header & Sidebar */}
+      {/* Cabeçalho e menu do celular */}
       {/* `min-w-0` não é enfeite: sem ele, esta coluna cresce junto com o
           conteúdo mais largo da tela e empurra a página inteira para o lado.
           Era isso que fazia o painel deslizar na horizontal no celular — o
@@ -368,45 +393,66 @@ function AppLayoutInner() {
         {/* Cabeçalho mais baixo com o aparelho deitado: 64px de altura em uma
             tela de 360px é 18% do espaço vertical. `safe-x` afasta o conteúdo
             de recortes laterais, que só existem em paisagem. */}
-        <header className="safe-x sticky top-0 z-[var(--z-bottom-nav)] flex h-16 items-center justify-between border-b border-border bg-background px-4 shadow-sm md:hidden landscape-compact:h-[var(--landscape-header-height)]">
-          <Link to="/dashboard" className="flex items-center gap-2">
-            <img src={logo} alt="FlyControl" className="h-9 w-auto" />
-            <span className="font-bold text-base tracking-tight text-primary">FlyControl</span>
+        <header className="safe-x sticky top-0 z-[var(--z-bottom-nav)] flex h-14 items-center justify-between border-b border-border bg-background px-4 md:hidden landscape-compact:h-[var(--landscape-header-height)]">
+          <Link
+            to="/dashboard"
+            aria-label="FlyDelivery — ir para os pedidos"
+            className="flex items-center text-foreground"
+          >
+            <BrandLogo eager className="h-8" />
           </Link>
 
           <Sheet open={isMobileMenuOpen} onOpenChange={setIsMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="md:hidden">
-                <Menu className="h-6 w-6" />
+              <Button variant="ghost" size="icon" className="md:hidden" aria-label="Abrir o menu">
+                <Menu className="h-6 w-6" aria-hidden="true" />
               </Button>
             </SheetTrigger>
-            <SheetContent side="left" className="w-[280px] p-0 border-r-primary/20 bg-sidebar">
-              <div className="flex flex-col h-full">
-                <div className="h-16 flex items-center justify-between px-6 border-b border-sidebar-border bg-primary/5">
-                  <span className="font-bold text-lg text-primary">FlyControl</span>
-                  <div className="flex items-center gap-2">
-                    {theme === "dark" ? (
-                      <Moon className="h-4 w-4 text-primary" />
-                    ) : (
-                      <Sun className="h-4 w-4 text-orange-500" />
-                    )}
+            <SheetContent side="left" className="w-[288px] border-sidebar-border bg-sidebar p-0">
+              <div className="flex h-full flex-col overflow-hidden">
+                {/* `pr-14` deixa livre o canto onde fica o X de fechar. */}
+                <div className="flex h-14 shrink-0 items-center border-b border-sidebar-border pl-4 pr-14 text-foreground">
+                  <BrandLogo className="h-7" />
+                </div>
+                <NavItems />
+                <div className="mt-auto shrink-0 space-y-2 border-t border-sidebar-border p-3">
+                  <div className="flex h-11 items-center justify-between rounded-lg px-3">
+                    <label
+                      htmlFor="theme-toggle-mobile"
+                      className="flex items-center gap-3 text-sm font-medium text-sidebar-foreground"
+                    >
+                      {temaEscuro ? (
+                        <Moon
+                          className="h-[18px] w-[18px] text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      ) : (
+                        <Sun
+                          className="h-[18px] w-[18px] text-muted-foreground"
+                          aria-hidden="true"
+                        />
+                      )}
+                      Modo escuro
+                    </label>
+                    {/* `no-touch-min`: sem isso a regra de "todo botão tem 44px
+                        de altura no celular" esticava a chave e ela virava
+                        um ovo. A linha inteira já tem 44px para o dedo. */}
                     <Switch
-                      checked={theme === "dark"}
+                      id="theme-toggle-mobile"
+                      className="no-touch-min"
+                      checked={temaEscuro}
                       onCheckedChange={(checked) => setTheme(checked ? "dark" : "light")}
                     />
                   </div>
-                </div>
-                <NavItems className="py-4" />
-                <div className="mt-auto border-t border-sidebar-border p-4">
                   <Button
                     variant="outline"
-                    className="w-full justify-start border-primary/20 text-primary"
+                    className="w-full justify-start"
                     onClick={async () => {
                       await signOut();
                       nav({ to: "/" });
                     }}
                   >
-                    <LogOut className="h-4 w-4 mr-2" /> Sair
+                    <LogOut className="mr-2 h-4 w-4" aria-hidden="true" /> Sair
                   </Button>
                 </div>
               </div>
@@ -418,6 +464,10 @@ function AppLayoutInner() {
             partir do token global. Este é o ÚNICO lugar que aplica esse
             padding — telas filhas não devem repeti-lo. */}
         <main className="pb-bottom-nav relative flex-1 overflow-x-hidden">
+          {/* "O FlyControl evoluiu. Agora somos FlyDelivery." — só para quem
+              já era cliente, dispensável, e some sozinho depois do período de
+              transição. */}
+          <BrandTransitionNotice userCreatedAt={user.created_at} />
           <Outlet />
         </main>
         <BottomNav />

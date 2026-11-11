@@ -366,7 +366,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         toast.success("Cardápio sincronizado com sucesso!", { id: toastId });
         if (onSyncSuccess) onSyncSuccess();
       } else {
-        throw new Error(syncResult.error || "Erro no processamento interno do FlyControl");
+        throw new Error(syncResult.error || "Erro no processamento interno do FlyDelivery");
       }
     } catch (error: any) {
       console.error("MENU_SYNC_ERROR", error.message);
@@ -471,7 +471,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
           <div className="space-y-3">
             <div className="p-3 rounded-md border border-primary/30 bg-primary/10 text-sm flex items-start gap-2">
               <CheckCircle2 className="h-4 w-4 text-primary mt-0.5 shrink-0" />
-              <span>Este restaurante é sincronizado automaticamente pelo FlyControl.</span>
+              <span>Este restaurante é sincronizado automaticamente pelo FlyDelivery.</span>
             </div>
             {pizzeria?.public_url && (
               <div className="text-xs">

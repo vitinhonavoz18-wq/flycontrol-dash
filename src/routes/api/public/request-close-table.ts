@@ -68,7 +68,7 @@ export const Route = createFileRoute("/api/public/request-close-table")({
                 success: false,
                 error: "missing_dining_session",
                 message:
-                  "Informe dining_session_id (ou customer_token) emitido pelo FlyControl. Chame /api/public/open-table-session primeiro.",
+                  "Informe dining_session_id (ou customer_token) emitido pelo FlyDelivery. Chame /api/public/open-table-session primeiro.",
               }),
               { status: 400, headers },
             );

@@ -153,7 +153,7 @@ function Configuracoes() {
         <div className="space-y-4">
           <Painel>
             <h2 className="flex items-center gap-2 text-sm font-medium text-white">
-              <Lock className="size-4 text-white/45" /> Definidos pelo FlyControl
+              <Lock className="size-4 text-white/45" /> Definidos pelo FlyDelivery
             </h2>
             <dl className="mt-4 space-y-3 text-sm">
               <div className="flex items-center justify-between gap-3">

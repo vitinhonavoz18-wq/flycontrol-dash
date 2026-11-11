@@ -57,11 +57,11 @@ export function checklist(
       motivo: tem("promo_not_lower")
         ? "A promoção precisa ser menor que o preço normal."
         : tem("no_promo")
-          ? "Cadastre o preço promocional no FlyDelivery."
+          ? "Cadastre o preço promocional do app FlyDelivery."
           : undefined,
     },
     {
-      rotulo: "Loja aparecendo no FlyDelivery",
+      rotulo: "Loja aparecendo no app FlyDelivery",
       ok: !tem("store_not_listed"),
       motivo: tem("store_not_listed")
         ? "Ligue “Aparecer no aplicativo” na aba Presença."

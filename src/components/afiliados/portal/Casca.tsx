@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { Eye, EyeOff } from "lucide-react";
-import logo from "@/assets/flycontrol-logo-hero.webp";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { cn } from "@/lib/utils";
 import { classeDoCampo } from "./Pecas";
 
@@ -41,8 +41,8 @@ export function CascaDoPortal({ children }: { children: ReactNode }) {
 
 export function LogoDoPortal({ para = "/affiliates" }: { para?: string }) {
   return (
-    <Link to={para} className="flex items-center gap-2.5" aria-label="FlyControl Parceiros">
-      <img src={logo} alt="FlyControl" className="h-8 w-auto object-contain" />
+    <Link to={para} className="flex items-center gap-2.5" aria-label="FlyDelivery Parceiros">
+      <BrandLogo tone="onDark" className="h-8" eager />
       <span className="hidden rounded-full border border-[#ff5a00]/30 bg-[#ff5a00]/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.18em] text-[#ff8a3d] min-[380px]:inline">
         Parceiros
       </span>

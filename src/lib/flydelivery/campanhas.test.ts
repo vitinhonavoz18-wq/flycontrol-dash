@@ -158,9 +158,9 @@ describe("quem pode contratar", () => {
   it("fatura atrasada, sem plano e plano pendente explicam o porquê", () => {
     expect(
       motivoParaNaoContratar({ can_contract: false, subscription_status: "past_due" }),
-    ).toMatch(/fatura do FlyControl em aberto/);
+    ).toMatch(/fatura do FlyDelivery em aberto/);
     expect(motivoParaNaoContratar({ can_contract: false, subscription_status: null })).toMatch(
-      /plano FlyControl ativo/,
+      /plano FlyDelivery ativo/,
     );
     expect(
       motivoParaNaoContratar({ can_contract: false, subscription_status: "pending_activation" }),
@@ -186,9 +186,9 @@ describe("contratação", () => {
     ).toMatch(/já está impulsionado/);
     expect(
       mensagemDoContrato({
-        message: "Para impulsionar, sua loja precisa de um plano FlyControl ativo.",
+        message: "Para impulsionar, sua loja precisa de um plano FlyDelivery ativo.",
       }),
-    ).toBe("Para impulsionar, sua loja precisa de um plano FlyControl ativo.");
+    ).toBe("Para impulsionar, sua loja precisa de um plano FlyDelivery ativo.");
     expect(mensagemDoContrato({})).toMatch(/Tente de novo/);
   });
 });

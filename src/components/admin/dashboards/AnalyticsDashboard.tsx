@@ -80,7 +80,7 @@ export const AnalyticsDashboard = () => {
               })}
             </div>
             <p className="mt-0.5 text-[11px] text-muted-foreground">
-              O que os restaurantes venderam, não o que a FlyControl recebe.
+              O que os restaurantes venderam, não o que a FlyDelivery recebe.
             </p>
           </CardContent>
         </Card>

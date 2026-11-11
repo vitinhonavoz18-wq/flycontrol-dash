@@ -51,7 +51,7 @@ import {
   type FieldErrors,
   type OwnerData,
 } from "@/lib/signup/validation";
-import logo from "@/assets/flycontrol-logo.webp";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 type SignupSearch = { plan: PlanCode | undefined; google?: "1" };
 
@@ -346,7 +346,7 @@ function SignupWizard() {
             </div>
 
             <div className="space-y-1">
-              <h1 className="text-xl font-black sm:text-2xl">Seu FlyControl está ativo 🎉</h1>
+              <h1 className="text-xl font-black sm:text-2xl">Seu FlyDelivery está ativo 🎉</h1>
               <p className="text-sm font-semibold text-primary">
                 Seus próximos {TRIAL_DURATION_DAYS} dias são por nossa conta.
               </p>
@@ -390,7 +390,7 @@ function SignupWizard() {
             </p>
 
             <Button asChild className="h-12 w-full text-base font-bold">
-              <Link to={result.signedIn ? "/dashboard" : "/login"}>Entrar no FlyControl</Link>
+              <Link to={result.signedIn ? "/dashboard" : "/login"}>Entrar no FlyDelivery</Link>
             </Button>
           </CardContent>
         </Card>
@@ -474,7 +474,7 @@ function SignupWizard() {
 
             <Button asChild className="h-12 w-full">
               <Link to={result.active && result.signedIn ? "/dashboard" : "/login"}>
-                {result.active ? "Entrar no FlyControl" : "Voltar ao login"}
+                {result.active ? "Entrar no FlyDelivery" : "Voltar ao login"}
               </Link>
             </Button>
           </CardContent>
@@ -487,8 +487,8 @@ function SignupWizard() {
     <div className="min-h-dvh bg-background">
       <header className="safe-x border-b border-border">
         <div className="mx-auto flex max-w-2xl items-center justify-between gap-3 px-4 py-4">
-          <Link to="/">
-            <img src={logo} alt="FlyControl" className="h-8 w-auto" />
+          <Link to="/" className="text-foreground">
+            <BrandLogo className="h-8" eager />
           </Link>
           <Button asChild variant="ghost" size="sm" className="h-11">
             <Link to="/login">Já tenho conta</Link>

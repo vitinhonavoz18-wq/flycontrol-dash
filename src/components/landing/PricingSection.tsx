@@ -81,11 +81,11 @@ export function PricingSection() {
                 }}
               >
                 Ao passar de{" "}
-                <strong style={{ color: "var(--fly-primary)" }}>
+                <strong style={{ color: "var(--fly-primary-ink)" }}>
                   {cents.promotionThresholdOrders} pedidos
                 </strong>{" "}
                 válidos no mês, cada pedido cai para{" "}
-                <strong style={{ color: "var(--fly-primary)" }}>
+                <strong style={{ color: "var(--fly-primary-ink)" }}>
                   {formatCents(cents.promotionalOrderUnitPriceCents)}
                 </strong>{" "}
                 no mês seguinte.
@@ -118,7 +118,7 @@ export function PricingSection() {
                   className="inline-flex rounded-full px-6 py-3 text-[14px] font-medium transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   style={{
                     background: "var(--fly-primary)",
-                    color: "#000",
+                    color: "var(--fly-on-primary)",
                     outlineColor: "var(--fly-primary)",
                   }}
                 >
@@ -173,7 +173,7 @@ export function PricingSection() {
                   "Pedidos sem cobrança por unidade",
                   "Mesas, garçons e comissões",
                   "Cardápio, clientes e marketing",
-                  "A estrutura completa do FlyControl",
+                  "A estrutura completa do FlyDelivery",
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-3">
                     <span
@@ -191,7 +191,7 @@ export function PricingSection() {
               <div className="mt-10 pt-2">
                 <Link
                   to="/plans"
-                  className="inline-flex rounded-full border px-6 py-3 text-[14px] font-medium transition-colors hover:border-white/30 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="inline-flex rounded-full border px-6 py-3 text-[14px] font-medium transition-colors hover:border-[color:var(--fly-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   style={{
                     borderColor: "var(--fly-border-strong)",
                     color: "var(--fly-text-primary)",
@@ -224,7 +224,7 @@ export function PricingSection() {
                 {TRIAL_DURATION_DAYS} dias grátis
               </h3>
               <p className="mt-2 text-[15px]" style={{ color: "var(--fly-text-secondary)" }}>
-                Você usa o FlyControl inteiro antes de pagar qualquer coisa. Terminado o período,
+                Você usa o FlyDelivery inteiro antes de pagar qualquer coisa. Terminado o período,
                 começa a cobrança do modelo que você escolher.
               </p>
             </div>
@@ -237,7 +237,7 @@ export function PricingSection() {
               </h3>
               <p className="mt-2 text-[15px]" style={{ color: "var(--fly-text-secondary)" }}>
                 Sua operação não precisa começar sozinha. Nossa equipe ajuda a configurar o
-                FlyControl e a colocar o cardápio no ar.
+                FlyDelivery e a colocar o cardápio no ar.
               </p>
             </div>
           </div>

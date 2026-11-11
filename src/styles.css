@@ -25,6 +25,7 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-primary-glow: var(--primary-glow);
+  --color-primary-ink: var(--primary-ink);
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
@@ -56,95 +57,128 @@
 :root {
   --radius: 0.85rem;
 
-  /* === LIGHT THEME (White Mode) === */
-  --background: oklch(0.98 0.005 80); /* #F8F9FB */
-  --foreground: oklch(0.12 0.01 40); /* #111827 */
+  /* ══════════════════════════════════════════════════════════════════════
+     AS CORES DO FLYDELIVERY
 
-  --card: oklch(1 0 0); /* #FFFFFF */
-  --card-foreground: oklch(0.12 0.01 40);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.12 0.01 40);
+     A paleta oficial tem sete cores, e cada uma tem um serviço:
 
-  /* Fire orange primary */
-  --primary: oklch(0.72 0.21 45); /* #ff5a00 */
-  --primary-foreground: oklch(1 0 0);
-  --primary-glow: oklch(0.85 0.18 80);
+       laranja        #FF6B35  a cor da marca: botão principal, item ativo
+       laranja claro  #FF8A3D  destaque e brilho
+       azul-noturno   #101828  texto no claro, fundo no escuro
+       grafite        #1D2939  cartões e superfícies no escuro
+       branco         #FFFFFF  fundo e cartões no claro
+       verde          #12B76A  deu certo / pago / loja aberta
+       vermelho       #F04438  erro / atrasado / cancelar
 
-  --secondary: oklch(0.96 0.01 80); /* #F3F4F6 */
-  --secondary-foreground: oklch(0.12 0.01 40);
-  --muted: oklch(0.95 0.01 80);
-  --muted-foreground: oklch(0.45 0.02 60);
+     As telas NÃO escrevem essas cores na mão: usam os nomes de função
+     abaixo (`bg-primary`, `text-success`...). É o que faz o painel inteiro
+     mudar junto quando o tema troca — cada tela pede "a cor de sucesso", e
+     quem decide qual verde é este arquivo. Como o garçom que pede "o prato
+     do dia": a cozinha é que sabe qual é hoje.
+     ══════════════════════════════════════════════════════════════════════ */
 
-  --accent: oklch(0.7 0.21 240);
-  --accent-foreground: oklch(1 0 0);
+  /* === TEMA CLARO === */
+  --background: #f9fafb;
+  --foreground: #101828;
 
-  --destructive: oklch(0.6 0.2 25);
-  --destructive-foreground: oklch(1 0 0);
-  --success: oklch(0.7 0.15 145);
-  --warning: oklch(0.85 0.15 85);
+  --card: #ffffff;
+  --card-foreground: #101828;
+  --popover: #ffffff;
+  --popover-foreground: #101828;
 
-  --border: oklch(0.9 0.01 80); /* #E5E7EB */
-  --input: oklch(1 0 0);
-  --ring: oklch(0.72 0.21 45);
+  --primary: #ff6b35;
+  --primary-foreground: #ffffff;
+  --primary-glow: #ff8a3d;
+  /* O laranja "de escrever". O laranja da marca é claro demais para letra
+     pequena sobre branco (some no sol da cozinha); este é o mesmo tom, mais
+     fechado, para texto e ícone. */
+  --primary-ink: #c2410c;
 
-  --chart-1: oklch(0.72 0.21 45);
-  --chart-2: oklch(0.85 0.18 80);
-  --chart-3: oklch(0.7 0.21 240);
-  --chart-4: oklch(0.62 0.24 25);
-  --chart-5: oklch(0.78 0.16 60);
+  --secondary: #f2f4f7;
+  --secondary-foreground: #101828;
+  --muted: #f2f4f7;
+  --muted-foreground: #475467;
 
-  /* Sidebar Light */
-  --sidebar: oklch(1 0 0);
-  --sidebar-foreground: oklch(0.12 0.01 40);
-  --sidebar-primary: oklch(0.72 0.21 45);
-  --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.96 0.01 80);
-  --sidebar-accent-foreground: oklch(0.12 0.01 40);
-  --sidebar-border: oklch(0.9 0.01 80);
-  --sidebar-ring: oklch(0.72 0.21 45);
+  /* "accent" é a cor de quando o mouse passa por cima de um item de menu.
+     Era azul vivo — numa marca laranja, parecia outro sistema. */
+  --accent: #fff1ea;
+  --accent-foreground: #101828;
 
-  /* Brand gradients */
-  --gradient-primary: linear-gradient(135deg, #ff5a00 0%, #ff7a00 35%, #ffc247 100%);
-  --gradient-fire: linear-gradient(135deg, #b91c1c 0%, #ff5a00 45%, #ffc247 100%);
-  --gradient-ember: radial-gradient(circle at 30% 20%, rgba(255, 122, 0, 0.15), transparent 55%),
-                    radial-gradient(circle at 80% 90%, rgba(0, 140, 255, 0.08), transparent 60%);
-  --gradient-blue: linear-gradient(135deg, #008cff 0%, #00b7ff 100%);
-  --gradient-surface: linear-gradient(160deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.4));
+  --destructive: #f04438;
+  --destructive-foreground: #ffffff;
+  --success: #12b76a;
+  --warning: #f79009;
 
-  /* Shadows */
-  --shadow-glow: 0 10px 40px -10px rgba(255, 90, 0, 0.3);
-  --shadow-elegant: 0 10px 30px -15px rgba(0, 0, 0, 0.1);
+  --border: #e4e7ec;
+  /* Cor da BORDA dos campos de formulário (é assim que as telas a usam).
+     Era branca sobre branco: o campo não tinha contorno e parecia texto solto. */
+  --input: #d0d5dd;
+  --ring: #ff6b35;
+
+  --chart-1: #ff6b35;
+  --chart-2: #fdb022;
+  --chart-3: #2e90fa;
+  --chart-4: #f04438;
+  --chart-5: #12b76a;
+
+  /* Menu lateral — claro */
+  --sidebar: #ffffff;
+  --sidebar-foreground: #344054;
+  --sidebar-primary: #ff6b35;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #f2f4f7;
+  --sidebar-accent-foreground: #101828;
+  --sidebar-border: #eaecf0;
+  --sidebar-ring: #ff6b35;
+
+  /* Degradês da marca */
+  --gradient-primary: linear-gradient(135deg, #f4581c 0%, #ff6b35 50%, #ff8a3d 100%);
+  --gradient-fire: linear-gradient(135deg, #d9480f 0%, #ff6b35 50%, #ffb020 100%);
+  --gradient-ember: radial-gradient(circle at 12% -10%, rgba(255, 107, 53, 0.07), transparent 45%);
+  --gradient-blue: linear-gradient(135deg, #1570ef 0%, #2e90fa 100%);
+  --gradient-surface: none;
+
+  /* Sombras */
+  --shadow-glow: 0 12px 32px -12px rgba(255, 107, 53, 0.28);
+  --shadow-glow-blue: 0 12px 32px -12px rgba(46, 144, 250, 0.28);
+  --shadow-elegant: 0 1px 2px rgba(16, 24, 40, 0.05), 0 1px 3px rgba(16, 24, 40, 0.06);
 
   /* ══════════════════════════════════════════════════════════════════════
-     PÁGINA PÚBLICA — a "central de controle"
+     PÁGINA PÚBLICA — "branco premium e laranja"
 
      Estes tokens valem SÓ para a página que o visitante vê antes de entrar
-     no sistema. O painel por dentro continua com as cores de cima, que
-     acompanham o tema claro/escuro. Separar os dois é o que permite a
-     página institucional ser sempre preta sem obrigar o painel a ser.
+     no sistema. O painel por dentro usa as cores de cima, que acompanham o
+     tema claro/escuro.
 
-     O laranja NÃO é novo: é o mesmo #FF5A00 da logo e do sistema inteiro,
-     escrito aqui em RGB para poder virar transparência. Trocar a cor da
-     marca por causa de uma referência visual seria repintar a fachada da
-     loja porque o vizinho pintou a dele.
+     A página pública é sempre clara: fundo branco, texto azul-noturno e o
+     laranja da marca. Os trechos que precisam ser escuros (a chamada final
+     e o rodapé) usam a classe `.fly-escuro`, que troca só estes tokens ali
+     dentro — a mesma mobília, com a luz apagada.
      ══════════════════════════════════════════════════════════════════════ */
-  --fly-primary-rgb: 255 90 0;
+  --fly-primary-rgb: 255 107 53;
 
-  --fly-background: #000000;
-  --fly-surface-01: #080808;
-  --fly-surface-02: #0d0d0d;
+  --fly-background: #ffffff;
+  --fly-surface-01: #ffffff;
+  --fly-surface-02: #f9fafb;
 
-  --fly-text-primary: #ffffff;
-  --fly-text-secondary: #9a9a9a;
-  --fly-text-muted: #686868;
+  --fly-text-primary: #101828;
+  --fly-text-secondary: #475467;
+  --fly-text-muted: #667085;
 
   --fly-primary: rgb(var(--fly-primary-rgb));
-  --fly-primary-hover: #ff7a2b;
-  --fly-primary-soft: rgb(var(--fly-primary-rgb) / 0.12);
-  --fly-primary-glow: rgb(var(--fly-primary-rgb) / 0.18);
+  --fly-primary-hover: #f4581c;
+  /* Laranja para LETRA sobre branco (rótulos pequenos). */
+  --fly-primary-ink: #c2410c;
+  --fly-primary-soft: rgb(var(--fly-primary-rgb) / 0.1);
+  --fly-primary-glow: rgb(var(--fly-primary-rgb) / 0.16);
+  /* Texto em cima do botão laranja. */
+  --fly-on-primary: #ffffff;
 
-  --fly-border-subtle: rgba(255, 255, 255, 0.08);
-  --fly-border-strong: rgba(255, 255, 255, 0.14);
+  --fly-border-subtle: rgba(16, 24, 40, 0.08);
+  --fly-border-strong: rgba(16, 24, 40, 0.18);
+  /* Fundo da barra do topo depois que a pessoa rola a página. */
+  --fly-nav-bg: rgba(255, 255, 255, 0.94);
+  --fly-shadow-card: 0 24px 60px -20px rgba(16, 24, 40, 0.18);
 
   --fly-radius-sm: 12px;
   --fly-radius-md: 18px;
@@ -152,37 +186,73 @@
   --fly-radius-full: 9999px;
 }
 
+/* O portal de afiliados (/affiliates) é sempre preto e usa as mesmas peças
+   da página pública. Aqui ele recebe de volta os tons que já tinha, para a
+   mudança da página pública para o branco não o alcançar. */
+.portal-afiliado {
+  --fly-background: #000000;
+  --fly-surface-01: #080808;
+  --fly-surface-02: #0d0d0d;
+  --fly-text-primary: #ffffff;
+  --fly-text-secondary: #9a9a9a;
+  --fly-text-muted: #686868;
+  --fly-primary-ink: #ff8a3d;
+  --fly-on-primary: #000000;
+  --fly-border-subtle: rgba(255, 255, 255, 0.08);
+  --fly-border-strong: rgba(255, 255, 255, 0.14);
+  --fly-nav-bg: rgba(0, 0, 0, 0.92);
+  --fly-shadow-card: 0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+/* Trecho escuro dentro da página pública (chamada final, rodapé). */
+.fly-escuro {
+  --fly-background: #101828;
+  --fly-surface-01: #1d2939;
+  --fly-surface-02: #182230;
+  --fly-text-primary: #ffffff;
+  --fly-text-secondary: #d0d5dd;
+  --fly-text-muted: #98a2b3;
+  --fly-primary-ink: #ff8a3d;
+  --fly-border-subtle: rgba(255, 255, 255, 0.08);
+  --fly-border-strong: rgba(255, 255, 255, 0.18);
+  --fly-nav-bg: rgba(16, 24, 40, 0.94);
+  --fly-shadow-card: 0 24px 60px -20px rgba(0, 0, 0, 0.6);
+}
+
 .dark {
-  /* === DARK THEME (Premium Black) === */
-  --background: oklch(0.13 0.012 35);
-  --foreground: oklch(0.98 0.005 80);
+  /* === TEMA ESCURO (azul-noturno e grafite) === */
+  --background: #0c111d;
+  --foreground: #f9fafb;
 
-  --card: oklch(0.18 0.018 40);
-  --card-foreground: oklch(0.98 0.005 80);
-  --popover: oklch(0.17 0.018 40);
-  --popover-foreground: oklch(0.98 0.005 80);
+  --card: #161e2e;
+  --card-foreground: #f9fafb;
+  --popover: #1d2939;
+  --popover-foreground: #f9fafb;
 
-  --secondary: oklch(0.24 0.025 40);
-  --secondary-foreground: oklch(0.98 0.005 80);
-  --muted: oklch(0.22 0.018 40);
-  --muted-foreground: oklch(0.72 0.015 70);
+  /* No escuro o laranja da marca já tem contraste de sobra para letra. */
+  --primary-ink: #ff8a3d;
 
-  --border: oklch(0.28 0.025 45 / 0.7);
-  --input: oklch(0.22 0.02 40);
+  --secondary: #1d2939;
+  --secondary-foreground: #f9fafb;
+  --muted: #1d2939;
+  --muted-foreground: #98a2b3;
 
-  /* Sidebar Dark */
-  --sidebar: oklch(0.11 0.012 35);
-  --sidebar-foreground: oklch(0.95 0.008 80);
-  --sidebar-accent: oklch(0.2 0.025 40);
-  --sidebar-accent-foreground: oklch(0.98 0.005 80);
-  --sidebar-border: oklch(0.25 0.025 45 / 0.6);
+  --accent: #263245;
+  --accent-foreground: #f9fafb;
 
-  /* Dark specific gradients */
-  --gradient-surface: linear-gradient(160deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
-  --shadow-elegant: 0 20px 60px -25px rgba(0, 0, 0, 0.7);
-  --gradient-ember: radial-gradient(circle at 30% 20%, rgba(255, 122, 0, 0.35), transparent 55%),
-                    radial-gradient(circle at 80% 90%, rgba(0, 140, 255, 0.18), transparent 60%);
+  --border: rgba(152, 162, 179, 0.2);
+  --input: #344054;
 
+  /* Menu lateral — escuro */
+  --sidebar: #101828;
+  --sidebar-foreground: #d0d5dd;
+  --sidebar-accent: #1d2939;
+  --sidebar-accent-foreground: #ffffff;
+  --sidebar-border: rgba(152, 162, 179, 0.16);
+
+  --gradient-surface: linear-gradient(160deg, rgba(255, 255, 255, 0.035), rgba(255, 255, 255, 0.01));
+  --shadow-elegant: 0 16px 40px -24px rgba(0, 0, 0, 0.7);
+  --gradient-ember: radial-gradient(circle at 12% -10%, rgba(255, 107, 53, 0.12), transparent 45%);
 }
 
 @layer base {
@@ -195,7 +265,9 @@
     background-image: var(--gradient-ember);
     background-attachment: fixed;
     color: var(--color-foreground);
-    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    /* Inter já era baixada para a página pública; agora é a letra do painel
+       também. Se ela não chegar (internet ruim), a letra do aparelho assume. */
+    font-family: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
 }
@@ -237,9 +309,9 @@
   }
   .ring-fire {
     box-shadow:
-      inset 0 1px 0 rgba(255, 194, 71, 0.15),
-      0 0 0 1px rgba(255, 122, 0, 0.25),
-      0 8px 30px -12px rgba(255, 90, 0, 0.5);
+      inset 0 1px 0 rgba(255, 138, 61, 0.15),
+      0 0 0 1px rgba(255, 107, 53, 0.25),
+      0 8px 30px -12px rgba(255, 107, 53, 0.5);
   }
 
   /* ── Mosaico de cardápios da página inicial ───────────────────────────
@@ -301,19 +373,19 @@
 /* Enhance shadcn primitives globally without touching components */
 .bg-card {
   background-image: var(--gradient-surface);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), var(--shadow-elegant);
+  box-shadow: var(--shadow-elegant);
 }
 
 button.bg-primary,
 .bg-primary:not(.bg-primary\/10):not(.bg-primary\/15):not(.bg-primary\/20):not(.bg-primary\/30) {
   background-image: var(--gradient-primary);
   background-color: transparent;
-  box-shadow: 0 6px 20px -8px rgba(255, 90, 0, 0.6), inset 0 1px 0 rgba(255, 224, 102, 0.35);
+  box-shadow: 0 6px 16px -8px rgba(255, 107, 53, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.22);
   transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
 }
 button.bg-primary:hover {
-  filter: brightness(1.05) saturate(1.1);
-  box-shadow: 0 10px 30px -8px rgba(255, 90, 0, 0.75), inset 0 1px 0 rgba(255, 224, 102, 0.5);
+  filter: brightness(1.04);
+  box-shadow: 0 10px 24px -8px rgba(255, 107, 53, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.3);
   transform: translateY(-1px);
 }
 
@@ -322,7 +394,7 @@ input, select, textarea {
 }
 input:focus, select:focus, textarea:focus,
 input:focus-visible, select:focus-visible, textarea:focus-visible {
-  box-shadow: 0 0 0 3px rgba(255, 122, 0, 0.18);
+  box-shadow: 0 0 0 3px rgba(255, 107, 53, 0.2);
 }
 
 @media print {
@@ -387,6 +459,11 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
 @media (min-width: 768px) {
   :root { --faixa-finalizar-altura: 8rem; } /* 128px */
 }
+
+/* Menu lateral recolhido no computador (só ícones). O layout marca o <html>
+   com `data-menu="recolhido"`, e tudo o que se alinha ao menu — hoje, a faixa
+   de "Finalizar pedido" — acompanha sozinho. */
+:root[data-menu="recolhido"] { --sidebar-width: var(--landscape-rail-width); }
 
 /* Em paisagem de celular a sidebar vira um trilho, então o conteúdo não
    precisa reservar altura para a barra inferior — ela não existe ali. */
@@ -637,34 +714,34 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
     font-variant-ligatures: contextual;
   }
 
-  /* Os títulos trabalham por TAMANHO e ESPAÇO, não por peso. Um título 400
-     grande e bem espaçado tem mais presença do que um 800 apertado — é a
-     diferença entre uma placa grande e uma placa gritada. */
-  /* O teto de 6,25rem (100px) não é enfeite: acima disso "Sua operação."
-     deixa de caber em uma linha na coluna do Hero e o título vira três
-     linhas, empurrando os botões para fora da primeira tela. Título grande
-     que esconde o botão de "começar" não é design, é obstáculo. */
+  /* Títulos pesados e apertados, como na arte da marca: "Seu delivery começa
+     no desejo." é uma frase curta dita com firmeza. O peso 800 da Inter vem
+     na mesma requisição de fontes que a página já fazia. */
+  /* O teto de 5.5rem (88px) não é enfeite: acima disso "Seu delivery" deixa
+     de caber em uma linha na coluna do Hero e o título vira quatro linhas,
+     empurrando os botões para fora da primeira tela. Título grande que
+     esconde o botão de "começar" não é design, é obstáculo. */
   .fly-display {
-    font-size: clamp(2.5rem, 6.2vw, 6.25rem);
-    font-weight: 400;
-    line-height: 0.92;
-    letter-spacing: -0.04em;
+    font-size: clamp(2.75rem, 6vw, 5.5rem);
+    font-weight: 800;
+    line-height: 0.98;
+    letter-spacing: -0.045em;
   }
   .fly-headline {
-    font-size: clamp(2.25rem, 6vw, 5.25rem);
-    font-weight: 400;
-    line-height: 0.94;
-    letter-spacing: -0.04em;
-  }
-  .fly-section-title {
-    font-size: clamp(2rem, 4vw, 4rem);
-    font-weight: 400;
+    font-size: clamp(2.25rem, 5.4vw, 4.5rem);
+    font-weight: 800;
     line-height: 1;
     letter-spacing: -0.04em;
   }
+  .fly-section-title {
+    font-size: clamp(2rem, 3.8vw, 3.5rem);
+    font-weight: 700;
+    line-height: 1.04;
+    letter-spacing: -0.035em;
+  }
   .fly-subheading {
     font-size: 1.5rem;
-    font-weight: 400;
+    font-weight: 600;
     line-height: 1.3;
     letter-spacing: -0.02em;
   }
@@ -680,12 +757,29 @@ input:focus-visible, select:focus-visible, textarea:focus-visible {
      dela, não ela. */
   .fly-showcase {
     border-radius: var(--fly-radius-lg);
-    background: rgba(255, 255, 255, 0.025);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    background: #0c111d;
+    border: 1px solid var(--fly-border-strong);
     box-shadow:
-      0 40px 100px rgba(0, 0, 0, 0.65),
+      var(--fly-shadow-card),
       0 0 80px var(--fly-primary-glow);
     overflow: hidden;
+  }
+
+  /* A arte do Hero (o hambúrguer com os ícones em órbita). As bordas se
+     dissolvem no branco da página em vez de terminarem num retângulo — a
+     imagem parece pousada na página, não colada nela. */
+  .fly-hero-arte {
+    /* Duas máscaras cruzadas: uma apaga as laterais, outra apaga o topo e a
+       base. Só a faixa fina da beirada some — os ícones perto das bordas
+       continuam inteiros. */
+    -webkit-mask-image:
+      linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%),
+      linear-gradient(180deg, transparent 0, #000 6%, #000 80%, transparent 100%);
+    -webkit-mask-composite: source-in;
+    mask-image:
+      linear-gradient(90deg, transparent 0, #000 6%, #000 94%, transparent 100%),
+      linear-gradient(180deg, transparent 0, #000 6%, #000 80%, transparent 100%);
+    mask-composite: intersect;
   }
 
   .fly-surface {

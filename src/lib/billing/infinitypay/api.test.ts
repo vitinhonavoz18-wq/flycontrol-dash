@@ -61,7 +61,7 @@ describe("createInfinityPayCheckoutLink", () => {
     await createInfinityPayCheckoutLink({
       orderNsu: "intent-1",
       amountCents: 37_500,
-      description: "FlyControl - plano PREMIUM",
+      description: "FlyDelivery - plano PREMIUM",
       redirectUrl: "https://app.exemplo/pagamento/premium",
       webhookUrl: "https://app.exemplo/api/webhooks/infinitypay",
     });
@@ -74,7 +74,7 @@ describe("createInfinityPayCheckoutLink", () => {
     expect(body.redirect_url).toBe("https://app.exemplo/pagamento/premium");
     expect(body.webhook_url).toBe("https://app.exemplo/api/webhooks/infinitypay");
     expect(body.items).toEqual([
-      { quantity: 1, price: 37_500, description: "FlyControl - plano PREMIUM" },
+      { quantity: 1, price: 37_500, description: "FlyDelivery - plano PREMIUM" },
     ]);
   });
 

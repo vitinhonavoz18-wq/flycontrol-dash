@@ -27,7 +27,7 @@ serve((req) => {
   return new Response(
     JSON.stringify({
       success: false,
-      error: 'Endpoint antigo desativado. Use /api/orders do FlyControl.',
+      error: 'Endpoint antigo desativado. Use /api/orders do FlyDelivery.',
       new_endpoint: '/api/orders',
     }),
     { status: 410, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },

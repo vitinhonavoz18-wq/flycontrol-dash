@@ -513,12 +513,12 @@ function StoreEditor({
                     />
                   </div>
                   <p className="text-[10px] text-muted-foreground">
-                    Só do FlyControl — não aparece no cardápio online.
+                    Só do FlyDelivery — não aparece no cardápio online.
                   </p>
                 </div>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="short-message">Mensagem Curta (uso interno do FlyControl)</Label>
+                <Label htmlFor="short-message">Mensagem Curta (uso interno do FlyDelivery)</Label>
                 <Input
                   id="short-message"
                   placeholder="Ex: A melhor pizza da região!"
@@ -614,7 +614,7 @@ function StoreEditor({
                     onBlur={(e) => handleUpdate("neighborhood", e.target.value)}
                   />
                   <p className="text-[10px] text-muted-foreground">
-                    Só do FlyControl — não aparece no cardápio online.
+                    Só do FlyDelivery — não aparece no cardápio online.
                   </p>
                 </div>
               </div>

@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import logo from "@/assets/flycontrol-logo-hero.webp";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 import { IconeInstagram, IconeWhatsApp } from "./iconesSociais";
 import {
   INSTAGRAM_LINK,
@@ -31,14 +31,14 @@ export function SiteFooter() {
 
   return (
     <footer
-      className="border-t px-5 py-14 sm:px-8"
+      className="fly-escuro border-t px-5 py-14 sm:px-8"
       style={{ borderColor: "var(--fly-border-subtle)", background: "var(--fly-background)" }}
     >
       <div className="mx-auto flex max-w-[1240px] flex-col gap-10 md:flex-row md:items-start md:justify-between">
         <div>
-          <img src={logo} alt="FlyControl" className="h-14 w-auto" />
+          <BrandLogo tone="onDark" className="h-11" />
           <p className="mt-4 max-w-xs text-[14px]" style={{ color: "var(--fly-text-muted)" }}>
-            O centro de operações do seu estabelecimento.
+            Do apetite ao pedido, tudo conectado em uma experiência única.
           </p>
         </div>
 
@@ -56,7 +56,7 @@ export function SiteFooter() {
                   <li key={item.rotulo}>
                     <a
                       href={item.href}
-                      className="text-[15px] transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                      className="text-[15px] transition-colors hover:text-[color:var(--fly-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                       style={{
                         color: "var(--fly-text-secondary)",
                         outlineColor: "var(--fly-primary)",
@@ -78,7 +78,7 @@ export function SiteFooter() {
               <li>
                 <Link
                   to="/login"
-                  className="text-[15px] transition-colors hover:text-white"
+                  className="text-[15px] transition-colors hover:text-[color:var(--fly-text-primary)]"
                   style={{ color: "var(--fly-text-secondary)" }}
                 >
                   Entrar
@@ -88,7 +88,7 @@ export function SiteFooter() {
                 <Link
                   to="/signup"
                   search={{ plan: undefined, google: undefined }}
-                  className="text-[15px] transition-colors hover:text-white"
+                  className="text-[15px] transition-colors hover:text-[color:var(--fly-text-primary)]"
                   style={{ color: "var(--fly-text-secondary)" }}
                 >
                   Criar conta
@@ -111,7 +111,7 @@ export function SiteFooter() {
                   href={WHATSAPP_LINK}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-[15px] transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="inline-flex items-center gap-2 text-[15px] transition-colors hover:text-[color:var(--fly-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   style={{
                     color: "var(--fly-text-secondary)",
                     outlineColor: "var(--fly-primary)",
@@ -126,7 +126,7 @@ export function SiteFooter() {
                   href={INSTAGRAM_LINK}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="inline-flex items-center gap-2 text-[15px] transition-colors hover:text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="inline-flex items-center gap-2 text-[15px] transition-colors hover:text-[color:var(--fly-text-primary)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2"
                   style={{
                     color: "var(--fly-text-secondary)",
                     outlineColor: "var(--fly-primary)",
@@ -147,7 +147,7 @@ export function SiteFooter() {
               <li>
                 <Link
                   to="/terms"
-                  className="text-[15px] transition-colors hover:text-white"
+                  className="text-[15px] transition-colors hover:text-[color:var(--fly-text-primary)]"
                   style={{ color: "var(--fly-text-secondary)" }}
                 >
                   Termos
@@ -156,7 +156,7 @@ export function SiteFooter() {
               <li>
                 <Link
                   to="/privacy"
-                  className="text-[15px] transition-colors hover:text-white"
+                  className="text-[15px] transition-colors hover:text-[color:var(--fly-text-primary)]"
                   style={{ color: "var(--fly-text-secondary)" }}
                 >
                   Privacidade
@@ -171,7 +171,7 @@ export function SiteFooter() {
         className="mx-auto mt-12 max-w-[1240px] border-t pt-8 text-[13px]"
         style={{ borderColor: "var(--fly-border-subtle)", color: "var(--fly-text-muted)" }}
       >
-        © {ano} FlyControl
+        © {ano} FlyDelivery · um produto ConnectFly
       </p>
     </footer>
   );

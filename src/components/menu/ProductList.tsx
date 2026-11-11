@@ -658,7 +658,7 @@ export function ProductList({
                 />
               </div>
               <p id="prod-promo-ajuda" className="col-span-2 -mt-2 text-xs text-muted-foreground">
-                Preço promocional que vale <strong>só no FlyDelivery</strong>. Precisa ser menor que
+                Preço promocional que vale <strong>só no app FlyDelivery</strong>. Precisa ser menor que
                 o preço normal. No site de pedidos e no balcão continua o preço normal. Deixe vazio
                 para não ter promoção.
               </p>

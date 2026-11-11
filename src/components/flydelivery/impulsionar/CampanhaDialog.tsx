@@ -171,7 +171,7 @@ export function CampanhaDialog({
           </DialogTitle>
           <DialogDescription className="sr-only">
             Escolha por quanto tempo impulsionar. Você não paga agora: o valor entra na próxima
-            fatura do FlyControl.
+            fatura do FlyDelivery.
           </DialogDescription>
           <div className="flex items-start gap-2 rounded-lg bg-primary/10 p-3 text-primary">
             <Zap className="mt-0.5 h-4 w-4 shrink-0" />
@@ -202,7 +202,7 @@ export function CampanhaDialog({
                   </span>
                   {promo ? (
                     <span className="ml-2 font-semibold text-primary">
-                      {brl(promo)} <span className="text-xs font-normal">no FlyDelivery</span>
+                      {brl(promo)} <span className="text-xs font-normal">no app FlyDelivery</span>
                     </span>
                   ) : null}
                 </p>
@@ -309,11 +309,11 @@ export function CampanhaDialog({
               <p className="flex items-center gap-1.5 font-semibold">
                 <ReceiptText className="h-4 w-4" /> Cobrança
               </p>
-              <p>Este valor será adicionado à sua próxima fatura do FlyControl.</p>
+              <p>Este valor será adicionado à sua próxima fatura do FlyDelivery.</p>
               <p className="font-semibold text-success">Você não precisa pagar agora.</p>
               {pacote && pacote.price_cents > 0 ? (
                 <p>
-                  <strong>{valor}</strong> será adicionado à sua próxima fatura do FlyControl
+                  <strong>{valor}</strong> será adicionado à sua próxima fatura do FlyDelivery
                   <span className="text-muted-foreground"> ({quando})</span>.
                 </p>
               ) : null}

@@ -469,7 +469,7 @@ function BillingPage() {
               </p>
               <p className="text-muted-foreground">
                 {unavailable === "missing_tables"
-                  ? "Fale com o suporte da FlyControl para concluir a configuração."
+                  ? "Fale com o suporte da FlyDelivery para concluir a configuração."
                   : "Nossa equipe conclui a configuração do seu plano em breve. Sua operação continua normal."}
               </p>
             </div>
@@ -853,7 +853,7 @@ function BillingPage() {
         <section className="space-y-4" aria-labelledby="upgrade-premium">
           <div>
             <h2 id="upgrade-premium" className="text-lg font-black">
-              Conheça o FlyControl Premium
+              Conheça o FlyDelivery Premium
             </h2>
             <p className="text-sm text-muted-foreground">
               Valor fixo, sem cobrança por pedido — o valor não muda em mês de movimento alto.
@@ -1168,7 +1168,7 @@ function HistoricoDeContratacoes() {
                 )}
                 {h.note?.startsWith("conferir") && (
                   <p className="mt-1 text-xs text-amber-700 dark:text-amber-400">
-                    Pagamento recebido e em conferência pela equipe da FlyControl.
+                    Pagamento recebido e em conferência pela equipe da FlyDelivery.
                   </p>
                 )}
               </li>

@@ -44,11 +44,37 @@ Regras:
 
 ## Sobre o projeto
 
-- **FlyControl** (`flycontrol-dash`) — o painel que o restaurante usa:
-  pedidos, cardápio, mesas, equipe, cobrança.
+- **FlyDelivery** (`flycontrol-dash`) — o painel que o restaurante usa:
+  pedidos, cardápio, mesas, equipe, cobrança. Chamava-se **FlyControl** até
+  novembro de 2026.
 - **SiteCreatorFly** (`conectfly`) — o site de pedidos que o cliente final
   acessa. São dois sistemas separados, com bancos de dados separados, que
   conversam por internet.
 
 Dinheiro é sempre tratado em centavos inteiros — nunca com casas decimais —
 para não acontecer erro de arredondamento na cobrança.
+
+## A marca: FlyDelivery (antes FlyControl)
+
+O produto mudou de nome. Três regras para não quebrar nada nem confundir
+ninguém:
+
+1. **Na tela, sempre FlyDelivery.** Texto novo que o lojista lê usa o nome
+   novo — de preferência lendo de `src/lib/brand.ts` (`BRAND.name`) em vez de
+   escrever à mão. Logotipo, só pelo componente
+   `src/components/brand/BrandLogo.tsx`.
+
+2. **Nome técnico não se renomeia.** Tabelas (`flycontrol_fiqon_logs`),
+   colunas (`flycontrol_id`), variáveis do servidor (`FLYCONTROL_PUBLIC_URL`),
+   endereços (`/api/public/flycontrol-table-closed`, o domínio
+   `flycontrol.conectfly.com.br`) e chaves guardadas no navegador
+   (`flycontrol-theme`...) continuam como estão. Outros sistemas batem nessas
+   portas pelo nome antigo. O mapa completo, com o motivo de cada um, está em
+   `docs/FLYDELIVERY-MIGRACAO.md`. Há teste segurando isso
+   (`src/lib/brand.test.ts`).
+
+3. **Existem dois "FlyDelivery".** O painel do restaurante (este repositório)
+   e o aplicativo onde o cliente final pede (repositório `Flydelivery`).
+   Quando um texto fala do aplicativo, escreva **"app FlyDelivery"**. Nos
+   comentários antigos do código, "FlyControl" continua significando este
+   painel — não foram reescritos para o histórico não virar um diff gigante.

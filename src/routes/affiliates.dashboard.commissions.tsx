@@ -83,7 +83,7 @@ function Comissoes() {
         ) : (
           <Vazio
             titulo="Nenhuma comissão ainda"
-            texto="A comissão aparece aqui quando um restaurante indicado paga a fatura do FlyControl."
+            texto="A comissão aparece aqui quando um restaurante indicado paga a fatura do FlyDelivery."
           />
         )
       ) : (

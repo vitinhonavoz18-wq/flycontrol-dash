@@ -190,7 +190,7 @@ function FlyDeliveryPage() {
         <div>
           <h1 className="flex items-center gap-2 text-2xl font-bold">
             <Smartphone className="h-6 w-6 text-primary" />
-            FlyDelivery
+            App FlyDelivery
           </h1>
           <p className="text-sm text-muted-foreground">
             Como a sua loja aparece no aplicativo. O cardápio é o mesmo que você já mantém em
@@ -222,19 +222,19 @@ function FlyDeliveryPage() {
             <CardHeader>
               <CardTitle>Aparecer no aplicativo</CardTitle>
               <CardDescription>
-                Desligado, sua loja simplesmente não existe para quem usa o FlyDelivery.
+                Desligado, sua loja simplesmente não existe para quem usa o app FlyDelivery.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-5">
               <ToggleRow
-                label="Exibir meu estabelecimento no FlyDelivery"
+                label="Exibir meu estabelecimento no app FlyDelivery"
                 hint="É a chave geral da vitrine."
                 checked={active.flydelivery_enabled}
                 onChange={(v) => update({ flydelivery_enabled: v })}
                 disabled={saving}
               />
               <ToggleRow
-                label="Aceitar pedidos pelo FlyDelivery"
+                label="Aceitar pedidos pelo app FlyDelivery"
                 hint="Desligado, a loja aparece e o cardápio pode ser visto, mas ninguém consegue pedir."
                 checked={active.flydelivery_accept_orders}
                 onChange={(v) => update({ flydelivery_accept_orders: v })}
@@ -779,7 +779,7 @@ function AnalyticsPanel({ storeId }: { storeId: string }) {
             <CardContent>
               {top.length === 0 ? (
                 <p className="text-sm text-muted-foreground">
-                  Nenhum pedido pelo FlyDelivery neste período.
+                  Nenhum pedido pelo app FlyDelivery neste período.
                 </p>
               ) : (
                 <div className="divide-y">

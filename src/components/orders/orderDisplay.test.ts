@@ -93,7 +93,7 @@ describe("rótulos de pagamento e origem", () => {
   });
 
   it("traduz a origem do pedido", () => {
-    expect(formatSource("flydelivery")).toBe("FlyDelivery");
+    expect(formatSource("flydelivery")).toBe("App FlyDelivery");
     expect(formatSource("sitecreatorfly")).toBe("Site");
     expect(formatSource("ifood")).toBe("iFood");
     expect(formatSource("whatsapp")).toBe("WhatsApp");

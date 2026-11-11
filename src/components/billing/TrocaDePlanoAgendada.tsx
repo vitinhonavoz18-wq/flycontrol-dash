@@ -119,7 +119,7 @@ export function TrocaDePlanoAgendada({ onChanged }: { onChanged?: () => void }) 
           <ul className="list-disc space-y-1 pl-5 text-muted-foreground">
             <li>
               {offer.billingPaused
-                ? "Sua cobrança está pausada pela equipe da FlyControl. A escolha fica registrada e vale quando a equipe retomar a cobrança — nada é cobrado nem reativado agora."
+                ? "Sua cobrança está pausada pela equipe da FlyDelivery. A escolha fica registrada e vale quando a equipe retomar a cobrança — nada é cobrado nem reativado agora."
                 : `Vale a partir da próxima renovação${quando ? ` (${quando})` : ""}. Até lá, nada muda e nada é cobrado.`}
             </li>
             <li>

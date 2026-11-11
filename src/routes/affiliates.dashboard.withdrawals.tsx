@@ -164,7 +164,7 @@ function Repasses() {
             </ul>
             <p className="mt-4 flex gap-2 text-xs leading-relaxed text-white/45">
               <CircleAlert className="mt-0.5 size-3.5 shrink-0" />
-              {`${capitalizar(nosDias(dias))}, todo o seu saldo disponível é separado de uma vez. A equipe FlyControl confere, envia o Pix para a chave cadastrada e fala com você pelo celular. Saldo abaixo de ${reais(minimo)} fica guardado e soma no repasse seguinte.`}
+              {`${capitalizar(nosDias(dias))}, todo o seu saldo disponível é separado de uma vez. A equipe FlyDelivery confere, envia o Pix para a chave cadastrada e fala com você pelo celular. Saldo abaixo de ${reais(minimo)} fica guardado e soma no repasse seguinte.`}
             </p>
           </Painel>
         </div>

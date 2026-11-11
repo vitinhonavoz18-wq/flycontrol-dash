@@ -21,11 +21,12 @@ import { ServiceWorkerRegistration } from "@/components/pwa/ServiceWorkerRegistr
 import { NotificationsProvider } from "@/components/notifications/NotificationsProvider";
 import { CapturaDeIndicacao } from "@/components/afiliados/CapturaDeIndicacao";
 import { LembreteDeRepasses } from "@/components/afiliados/admin/LembreteDeRepasses";
+import { BRAND } from "@/lib/brand";
 
 /**
  * O endereço oficial do site e a imagem que aparece na prévia do link.
  *
- * Quando alguém cola o endereço do FlyControl no WhatsApp, o WhatsApp não
+ * Quando alguém cola o endereço do FlyDelivery no WhatsApp, o WhatsApp não
  * abre o site: ele manda um robô buscar só o cabeçalho da página e lê estas
  * linhas para montar o cartãozinho da prévia. Por isso o endereço da imagem
  * precisa ser COMPLETO (começando com https://) — o robô não está "dentro"
@@ -34,16 +35,20 @@ import { LembreteDeRepasses } from "@/components/afiliados/admin/LembreteDeRepas
  * É como o endereço no envelope: dentro do prédio basta dizer "apartamento
  * 42", mas o carteiro que vem de fora precisa da rua, do número e da cidade.
  *
- * O `-v2` no nome do arquivo é de propósito. WhatsApp e Facebook guardam a
- * imagem antiga por semanas; trocando o nome do arquivo eles são obrigados a
- * buscar a nova — é o mesmo motivo de trocar a placa da vitrine em vez de
- * repintar por cima.
+ * O nome do arquivo da imagem mudou junto com a marca, e isso é de
+ * propósito. WhatsApp e Facebook guardam a imagem antiga por semanas;
+ * trocando o nome do arquivo eles são obrigados a buscar a nova — é o mesmo
+ * motivo de trocar a placa da vitrine em vez de repintar por cima.
+ *
+ * O ENDEREÇO CONTINUA O ANTIGO, de propósito: a marca mudou, o domínio ainda
+ * não. Trocar o domínio é uma decisão separada (DNS, redirecionamentos,
+ * links já impressos) — ver `docs/FLYDELIVERY-MIGRACAO.md`.
  */
 const SITE_URL = "https://flycontrol.conectfly.com.br/";
-const IMAGEM_DA_PREVIA = "https://flycontrol.conectfly.com.br/flycontrol-social-preview-v2.jpg";
-const TITULO = "FlyControl — o centro de operações do seu estabelecimento";
-const DESCRICAO =
-  "Pedidos, clientes, cardápio, operação e financeiro em uma plataforma só. 30 dias grátis e implementação gratuita.";
+const IMAGEM_DA_PREVIA = "https://flycontrol.conectfly.com.br/flydelivery-social-preview.jpg";
+const TITULO = `${BRAND.name} — ${BRAND.tagline}`;
+const DESCRICAO = `${BRAND.description} 30 dias grátis e implementação gratuita.`;
+const TEXTO_DA_IMAGEM = "FlyDelivery: seu delivery começa no desejo";
 
 function NotFoundComponent() {
   return (
@@ -87,10 +92,10 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1, viewport-fit=cover" },
-      { name: "theme-color", content: "#ff7a00" },
+      { name: "theme-color", content: BRAND.themeColor },
       { name: "apple-mobile-web-app-capable", content: "yes" },
       { name: "apple-mobile-web-app-status-bar-style", content: "black-translucent" },
-      { name: "apple-mobile-web-app-title", content: "FlyControl" },
+      { name: "apple-mobile-web-app-title", content: BRAND.name },
       { name: "mobile-web-app-capable", content: "yes" },
       { title: TITULO },
       { name: "description", content: DESCRICAO },
@@ -98,7 +103,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // A prévia do link. Uma configuração só, para o WhatsApp não ter duas
       // imagens para escolher e acabar pegando a errada.
       { property: "og:type", content: "website" },
-      { property: "og:site_name", content: "FlyControl" },
+      { property: "og:site_name", content: BRAND.name },
       { property: "og:locale", content: "pt_BR" },
       { property: "og:url", content: SITE_URL },
       { property: "og:title", content: TITULO },
@@ -111,19 +116,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       // e às vezes desiste no meio e mostra só o texto.
       { property: "og:image:width", content: "1200" },
       { property: "og:image:height", content: "630" },
-      {
-        property: "og:image:alt",
-        content: "Painel do FlyControl com os pedidos em andamento",
-      },
+      { property: "og:image:alt", content: TEXTO_DA_IMAGEM },
 
       { name: "twitter:card", content: "summary_large_image" },
       { name: "twitter:title", content: TITULO },
       { name: "twitter:description", content: DESCRICAO },
       { name: "twitter:image", content: IMAGEM_DA_PREVIA },
-      {
-        name: "twitter:image:alt",
-        content: "Painel do FlyControl com os pedidos em andamento",
-      },
+      { name: "twitter:image:alt", content: TEXTO_DA_IMAGEM },
     ],
     links: [
       { rel: "stylesheet", href: appCss },
@@ -135,12 +134,17 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         rel: "stylesheet",
         // Inter entra na MESMA requisição das outras três — mesmo endereço,
-        // mesma conexão já aberta. É a voz da página pública, onde o título
-        // pesa pelo tamanho e não pelo negrito.
-        href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600;12..96,75..100,800&family=Instrument+Sans:wght@400;500;600&family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600&display=swap",
+        // mesma conexão já aberta. É a voz do painel e da página pública; os
+        // pesos 700 e 800 são os dos títulos da marca.
+        href: "https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wdth,wght@12..96,75..100,600;12..96,75..100,800&family=Instrument+Sans:wght@400;500;600&family=Courier+Prime:wght@400;700&family=Inter:wght@400;500;600;700;800&display=swap",
       },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "apple-touch-icon", href: "/icons/icon-apple-touch.png" },
+      // Três ícones, do mais nítido ao mais compatível: o desenho vetorial
+      // (aba do navegador moderno), o .ico (navegador antigo) e o PNG grande
+      // (atalho na tela do celular).
+      { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/x-icon", sizes: "48x48", href: "/favicon.ico" },
       { rel: "icon", type: "image/png", sizes: "192x192", href: "/icons/icon-192.png" },
     ],
   }),
@@ -179,7 +183,7 @@ function RootComponent() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="dark">
+      <ThemeProvider defaultTheme="light">
         <AuthProvider>
           <Outlet />
           {/* Global mount: self-gates via useAuth() — Waiter Portal has no

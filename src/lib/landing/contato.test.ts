@@ -38,7 +38,7 @@ describe("contato da plataforma", () => {
   it("a conversa já abre com uma frase pronta", () => {
     const texto = decodeURIComponent(WHATSAPP_LINK.split("?text=")[1] ?? "");
     expect(texto.length).toBeGreaterThan(10);
-    expect(texto).toContain("FlyControl");
+    expect(texto).toContain("FlyDelivery");
   });
 
   it("o Instagram aponta para o perfil escrito", () => {

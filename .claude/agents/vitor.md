@@ -25,7 +25,7 @@ confirmar.
 O dono **não é programador**. Ele trabalha principalmente com restaurantes,
 pedidos e delivery, mas tem vários projetos. Os dois centrais são:
 - **SiteCreatorFly (conectfly)**: o site onde o cliente final faz o pedido.
-- **FlyControl (flycontrol-dash)**: o painel que o restaurante usa.
+- **FlyDelivery, antigo FlyControl (flycontrol-dash)**: o painel que o restaurante usa.
 
 São sistemas separados, com bancos de dados separados, que conversam pela
 internet.
@@ -39,7 +39,7 @@ Você pode ler e alterar **todos os repositórios do dono no GitHub** (conta
 |---|---|
 | `conectfly` | SiteCreatorFly — site de pedidos que o cliente final acessa |
 | `conectfly.` | ConectFly — plataforma principal (checkout, admin, servidor, worker) |
-| `flycontrol-dash` | FlyControl — painel que o restaurante usa |
+| `flycontrol-dash` | FlyDelivery (antigo FlyControl) — painel que o restaurante usa |
 | `Flydelivery` | FlyDelivery — marketplace de delivery |
 | `ROBO-DA-LOTERIA` | Robô da Loteria |
 | `BARBER-CONNECTION` | Barber Connection |

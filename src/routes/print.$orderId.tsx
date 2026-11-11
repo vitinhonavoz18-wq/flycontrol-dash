@@ -7,7 +7,7 @@ import { extrairAdicionaisDoItem, notaDoItemSemAdicionais } from "@/components/o
 // "FlyControl" escrito dentro da imagem, e a comanda também escreve o nome
 // embaixo — usar o arquivo inteiro repetiria o nome duas vezes (uma ilegível,
 // pequena demais na imagem; outra no texto).
-import flycontrolLogo from "@/assets/flycontrol-mark.png";
+import { BrandPrintLogo } from "@/components/brand/BrandLogo";
 import {
   PAPEIS,
   esperarConteudoCarregar,
@@ -303,14 +303,13 @@ function Print() {
         </div>
 
         <div className="print-footer mt-6 border-t border-gray-200 pt-2 text-center text-[10px] text-gray-400">
-          <img
-            src={flycontrolLogo}
-            alt="FlyControl"
-            className="flycontrol-footer-logo mx-auto mb-1 max-h-6 object-contain opacity-80"
-          />
-          {/* "Delivery" em vez de "Pizzarias": o FlyControl atende vários tipos
-            de negócio, não só pizzaria — a logo acima já diz "FlyControl",
-            então aqui só precisa da linha que serve pra qualquer nicho. */}
+          {/* Marca em UMA cor só, em traço: impressora térmica não imprime
+            degradê — ela pontilha, e a logo colorida sairia como um borrão
+            cinza. É o carimbo da marca, não a foto dela. */}
+          <BrandPrintLogo className="marca-no-rodape mx-auto mb-1 h-4 text-gray-500" />
+          {/* "Delivery" em vez de "Pizzarias": o sistema atende vários tipos
+            de negócio, não só pizzaria — a marca acima já diz o nome, então
+            aqui só precisa da linha que serve pra qualquer nicho. */}
           <div>Sistema de Gestão para Delivery</div>
           <div>Impressão em {new Date().toLocaleString("pt-BR")}</div>
         </div>
@@ -409,8 +408,9 @@ function Print() {
             margin: 0 auto 2mm auto !important;
           }
 
-          .flycontrol-footer-logo {
-            max-height: 6mm !important;
+          .marca-no-rodape {
+            height: 4mm !important;
+            color: #000 !important;
             margin: 0 auto 1mm auto !important;
           }
 

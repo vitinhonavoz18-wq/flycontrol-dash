@@ -8,7 +8,7 @@ function DocsPage() {
   return (
     <div className="p-6 md:p-8 max-w-4xl mx-auto space-y-8 pb-20">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Como o FlyControl funciona</h1>
+        <h1 className="text-3xl font-bold tracking-tight">Como o FlyDelivery funciona</h1>
         <p className="mt-2 text-muted-foreground">
           Um resumo simples de como o painel e o cardápio digital trabalham juntos para atender o
           seu cliente — sem precisar entender de programação.
@@ -23,7 +23,7 @@ function DocsPage() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm leading-relaxed">
           <p>
-            <strong>FlyControl</strong> é o painel que você usa no dia a dia: pedidos, cardápio,
+            <strong>FlyDelivery</strong> é o painel que você usa no dia a dia: pedidos, cardápio,
             mesas, equipe e financeiro.
           </p>
           <p>
@@ -46,7 +46,7 @@ function DocsPage() {
         </CardHeader>
         <CardContent className="space-y-3 text-sm leading-relaxed">
           <p>
-            Quando você assina o FlyControl e o pagamento é confirmado, o seu cardápio digital é
+            Quando você assina o FlyDelivery e o pagamento é confirmado, o seu cardápio digital é
             criado sozinho, na hora — você não precisa copiar nenhuma chave nem configurar nada
             manualmente.
           </p>
@@ -57,7 +57,7 @@ function DocsPage() {
           <p>
             A partir daí, tudo que você cadastra em <strong>Cardápio</strong> — categorias,
             produtos, preços, fotos — aparece sozinho no site do cliente. E todo pedido feito lá cai
-            direto na tela de <strong>Pedidos</strong> do FlyControl, com o alerta sonoro avisando
+            direto na tela de <strong>Pedidos</strong> do FlyDelivery, com o alerta sonoro avisando
             que chegou.
           </p>
         </CardContent>
@@ -87,7 +87,7 @@ function DocsPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <LayoutGrid className="h-5 w-5 text-primary" /> O que mais o FlyControl faz
+            <LayoutGrid className="h-5 w-5 text-primary" /> O que mais o FlyDelivery faz
           </CardTitle>
         </CardHeader>
         <CardContent className="text-sm leading-relaxed">
@@ -108,7 +108,7 @@ function DocsPage() {
               <strong>Financeiro:</strong> mostra quanto a sua loja faturou, por período.
             </li>
             <li>
-              <strong>Plano e cobrança:</strong> onde você acompanha a sua assinatura do FlyControl
+              <strong>Plano e cobrança:</strong> onde você acompanha a sua assinatura do FlyDelivery
               e os pagamentos dela.
             </li>
           </ul>

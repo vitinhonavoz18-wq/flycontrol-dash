@@ -351,14 +351,14 @@ export const ETAPAS_DO_GUIA: readonly EtapaDoGuia[] = [
     rotulo: "Tudo pronto",
     rota: "/dashboard",
     emocao: "comemorando",
-    titulo: "Pronto! Seu FlyControl está preparado para receber pedidos.",
+    titulo: "Pronto! Seu FlyDelivery está preparado para receber pedidos.",
     descricao:
       "Configuração terminada. A partir de agora o painel é todo seu — e o que faltar dá para ajustar quando quiser.",
-    comoConcluir: "Entre no FlyControl.",
+    comoConcluir: "Entre no FlyDelivery.",
     concluida: (_s, d) => d.concluido === "visto",
     escolha: {
       pergunta: "",
-      configurar: "Entrar no FlyControl",
+      configurar: "Entrar no FlyDelivery",
       dispensar: "",
       chave: "concluido",
       valor: "visto",

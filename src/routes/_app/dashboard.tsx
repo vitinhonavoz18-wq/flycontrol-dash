@@ -162,12 +162,12 @@ function Dashboard() {
 
   useEffect(() => {
     if (newOrdersCount > 0) {
-      document.title = `(${newOrdersCount}) Novo pedido - FlyControl`;
+      document.title = `(${newOrdersCount}) Novo pedido - FlyDelivery`;
     } else {
-      document.title = "FlyControl - Painel de Pedidos";
+      document.title = "FlyDelivery - Painel de Pedidos";
     }
     return () => {
-      document.title = "FlyControl";
+      document.title = "FlyDelivery";
     };
   }, [newOrdersCount]);
 
@@ -599,7 +599,7 @@ function Dashboard() {
         );
       } else if (isConnect) {
         toast.info(
-          "Pizzaria conectada. Nenhum item encontrado no cardápio desta pizzaria. Você pode cadastrar novos itens pelo FlyControl.",
+          "Pizzaria conectada. Nenhum item encontrado no cardápio desta pizzaria. Você pode cadastrar novos itens pelo FlyDelivery.",
         );
       } else {
         toast.success("Pizzaria criada com sucesso!");
@@ -621,7 +621,7 @@ function Dashboard() {
     return (
       <div className="p-8">
         <Header
-          title="Bem-vindo ao FlyControl"
+          title="Bem-vindo ao FlyDelivery"
           subtitle="Conecte ou cadastre sua primeira pizzaria para começar."
         />
         <div className="grid gap-6 md:grid-cols-2">

@@ -7,7 +7,7 @@ import { formatCents } from "@/lib/billing/money";
 import { PLAN_PRICING, type PremiumPlanCode } from "@/lib/billing/plans";
 import { PremiumPlanCards } from "@/components/billing/PremiumPlanCards";
 import { useAuth } from "@/lib/auth";
-import logo from "@/assets/flycontrol-logo.webp";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export const Route = createFileRoute("/plans")({ component: PlansPage });
 
@@ -102,8 +102,8 @@ function PlansPage() {
     <div className="min-h-dvh bg-background">
       <header className="safe-x border-b border-border">
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <Link to="/" className="flex items-center gap-2">
-            <img src={logo} alt="FlyControl" className="h-8 w-auto" />
+          <Link to="/" className="flex items-center gap-2 text-foreground">
+            <BrandLogo className="h-8" eager />
           </Link>
           <Button asChild variant="ghost" size="sm" className="h-11">
             <Link to="/login">

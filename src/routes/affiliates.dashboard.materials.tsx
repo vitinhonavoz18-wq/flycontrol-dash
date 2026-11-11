@@ -42,7 +42,7 @@ function Materiais() {
     <div className="space-y-6">
       <TituloDaPagina
         titulo="Materiais"
-        texto="Artes, textos e links prontos para divulgar o FlyControl."
+        texto="Artes, textos e links prontos para divulgar o FlyDelivery."
       />
 
       <CartaoDoLink codigo={perfil.codigo} />
@@ -78,7 +78,7 @@ function Materiais() {
       ) : lista.length === 0 ? (
         <Vazio
           titulo={materiais.data?.length ? "Nada nesta categoria ainda" : "Materiais em preparação"}
-          texto="A equipe FlyControl vai publicar aqui banners, stories, posts, logos, vídeos e textos prontos. Enquanto isso, use o seu link acima."
+          texto="A equipe FlyDelivery vai publicar aqui banners, stories, posts, logos, vídeos e textos prontos. Enquanto isso, use o seu link acima."
         />
       ) : (
         <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">

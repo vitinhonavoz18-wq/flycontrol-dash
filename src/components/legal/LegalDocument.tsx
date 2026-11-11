@@ -11,7 +11,7 @@ import { Link } from "@tanstack/react-router";
 import { ArrowLeft, FileWarning } from "lucide-react";
 import type { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
-import logo from "@/assets/flycontrol-logo.webp";
+import { BrandLogo } from "@/components/brand/BrandLogo";
 
 export function LegalSection({
   id,
@@ -71,8 +71,8 @@ export function LegalDocument({
     <div className="min-h-dvh bg-background">
       <header className="safe-x sticky top-0 z-[var(--z-sticky-header)] border-b border-border bg-background">
         <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-4">
-          <Link to="/">
-            <img src={logo} alt="FlyControl" className="h-8 w-auto" />
+          <Link to="/" className="text-foreground">
+            <BrandLogo className="h-8" eager />
           </Link>
           <Button asChild variant="ghost" size="sm" className="h-11">
             <Link to="/plans">

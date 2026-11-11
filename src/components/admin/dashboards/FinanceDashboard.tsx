@@ -214,7 +214,7 @@ export const FinanceDashboard = () => {
         <div>
           <h2 className="text-xl font-bold">Financeiro Global</h2>
           <p className="mt-1 text-sm text-muted-foreground">
-            O que a FlyControl fatura com a assinatura das lojas — não o que as lojas vendem.
+            O que a FlyDelivery fatura com a assinatura das lojas — não o que as lojas vendem.
           </p>
         </div>
         <Button variant="outline" className="gap-2" onClick={() => void load()}>
