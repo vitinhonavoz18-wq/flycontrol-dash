@@ -159,8 +159,19 @@ clientes, produtos ou lojas**.
 | `20261111120000_marca_flydelivery_nos_textos.sql` | Troca "FlyControl" por "FlyDelivery" em 3 descrições do Clube CENTS e na frase de 3 regras do banco. Mantém dono, permissões e travas de segurança de cada função. | Baixo. Só palavras. |
 | `20261111130000_pedido_externo_unico.sql` | Cria a trava que impede dois pedidos do site com o mesmo número de série na mesma loja. **Se já existirem repetidos antigos, não cria a trava, avisa e termina sem erro.** | Baixo. Bloqueia a escrita na tabela de pedidos por um instante enquanto cria o índice. |
 
-Elas são aplicadas sozinhas pelo `migrations.yml` quando este trabalho entrar
-na `main`.
+**Atenção: elas NÃO entram sozinhas.** A atualização automática do banco
+(`migrations.yml`) falha desde outubro de 2026 na etapa de login: a chave
+`SUPABASE_ACCESS_TOKEN` guardada no GitHub não tem permissão no projeto. A
+falha acontece antes de tocar no banco, então não estraga nada — mas também
+não aplica nada.
+
+Enquanto isso não for consertado, cole
+`docs/APLICAR-NO-SUPABASE-marca-flydelivery.sql` no SQL Editor do Supabase
+(as duas migrações juntas, prontas para colar).
+
+O painel funciona normalmente sem elas: a proteção contra pedido repetido
+vive no código; o banco só fecha o caso raro de dois reenvios no mesmo
+instante. O que fica faltando sem elas são as 8 frases antigas do banco.
 
 **Como conferir depois se a trava do banco foi criada** (Supabase → SQL Editor):
 
