@@ -31,7 +31,7 @@ import { describe, expect, it } from "vitest";
  */
 
 const RAIZ = process.cwd();
-const RAIZ_DO_SITE = "https://flycontrol.conectfly.com.br";
+const RAIZ_DO_SITE = "https://flydelivery.app";
 
 const cabecalho = readFileSync(join(RAIZ, "src", "routes", "__root.tsx"), "utf8");
 

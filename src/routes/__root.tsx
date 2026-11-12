@@ -40,12 +40,12 @@ import { BRAND } from "@/lib/brand";
  * trocando o nome do arquivo eles são obrigados a buscar a nova — é o mesmo
  * motivo de trocar a placa da vitrine em vez de repintar por cima.
  *
- * O ENDEREÇO CONTINUA O ANTIGO, de propósito: a marca mudou, o domínio ainda
- * não. Trocar o domínio é uma decisão separada (DNS, redirecionamentos,
- * links já impressos) — ver `docs/FLYDELIVERY-MIGRACAO.md`.
+ * O domínio público oficial é flydelivery.app. O domínio antigo continua
+ * atendendo integrações durante a transição; não renomear identificadores
+ * internos nem redirecionar webhooks automaticamente.
  */
-const SITE_URL = "https://flycontrol.conectfly.com.br/";
-const IMAGEM_DA_PREVIA = "https://flycontrol.conectfly.com.br/flydelivery-social-preview.jpg";
+const SITE_URL = "https://flydelivery.app/";
+const IMAGEM_DA_PREVIA = "https://flydelivery.app/flydelivery-social-preview.jpg";
 const TITULO = `${BRAND.name} — ${BRAND.tagline}`;
 const DESCRICAO = `${BRAND.description} 30 dias grátis e implementação gratuita.`;
 const TEXTO_DA_IMAGEM = "FlyDelivery: seu delivery começa no desejo";

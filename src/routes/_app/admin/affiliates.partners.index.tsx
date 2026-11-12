@@ -76,7 +76,7 @@ function ListaDeAfiliados() {
           texto={
             busca || status
               ? "Tente outra busca ou outro filtro."
-              : "Quem se cadastrar em flycontrol.conectfly.com.br/affiliates aparece aqui."
+              : "Quem se cadastrar em flydelivery.app/affiliates aparece aqui."
           }
         />
       ) : (

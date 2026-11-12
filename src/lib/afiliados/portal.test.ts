@@ -48,16 +48,14 @@ describe("números do portal", () => {
 
 describe("link do afiliado", () => {
   it("monta o link público com o código", () => {
-    expect(linkDoAfiliado("JOAO123")).toBe("https://flycontrol.conectfly.com.br/?ref=JOAO123");
-    expect(linkParaExibir("JOAO123")).toBe("flycontrol.conectfly.com.br/?ref=JOAO123");
-    expect(linkDoAfiliado("JOAO123", "/plans")).toBe(
-      "https://flycontrol.conectfly.com.br/plans?ref=JOAO123",
-    );
+    expect(linkDoAfiliado("JOAO123")).toBe("https://flydelivery.app/?ref=JOAO123");
+    expect(linkParaExibir("JOAO123")).toBe("flydelivery.app/?ref=JOAO123");
+    expect(linkDoAfiliado("JOAO123", "/plans")).toBe("https://flydelivery.app/plans?ref=JOAO123");
   });
 
   it("texto pronto sai com o link e o código de quem copia", () => {
     expect(preencherTexto("Use {CODIGO}: {LINK}", "ANA456")).toBe(
-      "Use ANA456: https://flycontrol.conectfly.com.br/?ref=ANA456",
+      "Use ANA456: https://flydelivery.app/?ref=ANA456",
     );
   });
 });
