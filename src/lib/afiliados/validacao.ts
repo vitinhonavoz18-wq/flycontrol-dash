@@ -225,7 +225,7 @@ export function dataDoDia(ymd: string | null | undefined): string {
 }
 
 /** Link público de divulgação do afiliado. */
-const SITE_PUBLICO = "https://flycontrol.conectfly.com.br";
+const SITE_PUBLICO = "https://flydelivery.app";
 
 export function linkDoAfiliado(codigo: string, caminho = "/"): string {
   const base = caminho.startsWith("/") ? caminho : `/${caminho}`;
@@ -242,7 +242,7 @@ export function preencherTexto(texto: string, codigo: string): string {
   return texto.replaceAll("{LINK}", linkDoAfiliado(codigo)).replaceAll("{CODIGO}", codigo);
 }
 
-/** "flycontrol.conectfly.com.br/?ref=JOAO123" — a forma curta para exibir. */
+/** "flydelivery.app/?ref=JOAO123" — a forma curta para exibir. */
 export function linkParaExibir(codigo: string): string {
   return linkDoAfiliado(codigo).replace(/^https:\/\//, "");
 }
