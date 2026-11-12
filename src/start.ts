@@ -1,5 +1,6 @@
 import { createStart, createMiddleware } from "@tanstack/react-start";
 
+import { canonicalRedirectUrl } from "./lib/canonicalHost";
 import { renderErrorPage } from "./lib/error-page";
 import { attachSupabaseAuth } from "@/integrations/supabase/auth-attacher";
 
@@ -18,7 +19,16 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   }
 });
 
+// www.flydelivery.app e http:// → https://flydelivery.app (ver canonicalHost.ts).
+const canonicalHostMiddleware = createMiddleware().server(async ({ next, request }) => {
+  const destino = canonicalRedirectUrl(request.url);
+  if (destino) {
+    return new Response(null, { status: 301, headers: { location: destino } });
+  }
+  return next();
+});
+
 export const startInstance = createStart(() => ({
   functionMiddleware: [attachSupabaseAuth],
-  requestMiddleware: [errorMiddleware],
+  requestMiddleware: [canonicalHostMiddleware, errorMiddleware],
 }));
