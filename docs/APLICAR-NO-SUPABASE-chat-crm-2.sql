@@ -2,7 +2,7 @@
 -- APLICAR NO SUPABASE (SQL Editor) — Chat CRM 2.0: Word, Excel e texto no Chat
 -- Projeto: knhenchgntttraaeewlj (FlyControl)
 --
--- É a migration supabase/migrations/20261022120000_chat_crm_2_tipos_de_documento.sql
+-- É a migration supabase/migrations/20261022150000_chat_crm_2_tipos_de_documento.sql
 -- numa transação única, com conferência no fim. OPCIONAL: o código novo
 -- funciona sem ela (documentos de Word/Excel só aparecem como "veja no
 -- celular"). Pode rodar de novo sem problema.
