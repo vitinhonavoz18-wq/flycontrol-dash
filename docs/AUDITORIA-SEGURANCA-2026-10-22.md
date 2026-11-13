@@ -126,7 +126,7 @@ isolando lojas; senhas de garçom com PBKDF2.
 
 | Arquivo | Por quê |
 | ------- | ------- |
-| `supabase/migrations/20261022120000_tranca_funcoes_e_visoes_expostas.sql` | SEC-01/02/03/05/06/12/13/14/18 |
+| `supabase/migrations/20261022160000_tranca_funcoes_e_visoes_expostas.sql` | SEC-01/02/03/05/06/12/13/14/18 |
 | `docs/REVERTER-NO-SUPABASE-tranca-funcoes-e-visoes.sql` | Desfazer a migração, se preciso |
 | `src/lib/notifyTableClosed.functions.ts` | SEC-04 |
 | `src/lib/waiterAuth.functions.ts`, `src/lib/signup/rateLimit.server.ts` | SEC-10/11 |
