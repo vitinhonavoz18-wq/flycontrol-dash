@@ -1,3 +1,4 @@
+import { ConnectflySignature } from "@/components/landing/ConnectflySignature";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Link2, Repeat, Wallet } from "lucide-react";
 import { TopoPublico } from "@/components/afiliados/portal/Casca";
@@ -157,6 +158,9 @@ function Apresentacao() {
           </ul>
         </section>
       </main>
+      <footer className="px-5 pb-8 text-center text-xs text-white/65">
+        <ConnectflySignature />
+      </footer>
     </>
   );
 }

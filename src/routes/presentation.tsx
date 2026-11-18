@@ -1,3 +1,4 @@
+import { ConnectflySignature } from "@/components/landing/ConnectflySignature";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
@@ -232,18 +233,23 @@ function PresentationPage() {
           <ChevronLeft className="h-6 w-6" />
         </Button>
 
-        <div className="hidden gap-2 md:flex">
-          {slides.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentSlide(i)}
-              className={`h-2 rounded-full transition-all duration-300 ${
-                currentSlide === i
-                  ? "w-8 bg-primary"
-                  : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
-              }`}
-            />
-          ))}
+        <div className="flex flex-col items-center gap-2">
+          <div className="hidden gap-2 md:flex">
+            {slides.map((_, i) => (
+              <button
+                key={i}
+                onClick={() => setCurrentSlide(i)}
+                className={`h-2 rounded-full transition-all duration-300 ${
+                  currentSlide === i
+                    ? "w-8 bg-primary"
+                    : "w-2 bg-muted-foreground/30 hover:bg-muted-foreground/50"
+                }`}
+              />
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            <ConnectflySignature />
+          </p>
         </div>
 
         <Button

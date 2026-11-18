@@ -1,3 +1,4 @@
+import { ConnectflySignature } from "@/components/landing/ConnectflySignature";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, Check, Minus } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -271,6 +272,9 @@ function PlansPage() {
           </Link>
         </p>
       </main>
+      <footer className="px-5 pb-8 text-center text-xs text-muted-foreground">
+        <ConnectflySignature />
+      </footer>
     </div>
   );
 }
