@@ -1,3 +1,4 @@
+import { ConnectflySignature } from "./ConnectflySignature";
 import { Link } from "@tanstack/react-router";
 import { BrandLogo } from "@/components/brand/BrandLogo";
 import { IconeInstagram, IconeWhatsApp } from "./iconesSociais";
@@ -172,7 +173,7 @@ export function SiteFooter() {
         className="mx-auto mt-12 max-w-[1240px] border-t pt-8 text-[13px]"
         style={{ borderColor: "var(--fly-border-subtle)", color: "var(--fly-text-muted)" }}
       >
-        © {ano} FlyDelivery · um produto ConnectFly
+        © {ano} FlyDelivery · <ConnectflySignature />
       </p>
     </footer>
   );
