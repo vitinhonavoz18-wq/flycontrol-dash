@@ -1,3 +1,4 @@
+import { ConnectflySignature } from "./ConnectflySignature";
 import { linkWhatsAppSuporte } from "@/lib/landing/contato";
 import { Logo } from "./Logo";
 import { LinkDoSistema } from "./LinkDoSistema";
@@ -79,6 +80,7 @@ export function FlyDeliveryFooter() {
         >
           <p>© {ano} FlyDelivery. Todos os direitos reservados.</p>
           <p>Feito para restaurantes e deliveries.</p>
+          <ConnectflySignature />
         </div>
       </div>
     </footer>
