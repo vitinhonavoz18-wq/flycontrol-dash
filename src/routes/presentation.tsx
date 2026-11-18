@@ -247,7 +247,9 @@ function PresentationPage() {
               />
             ))}
           </div>
-          <p className="text-xs text-muted-foreground"><ConnectflySignature /></p>
+          <p className="text-xs text-muted-foreground">
+            <ConnectflySignature />
+          </p>
         </div>
 
         <Button
