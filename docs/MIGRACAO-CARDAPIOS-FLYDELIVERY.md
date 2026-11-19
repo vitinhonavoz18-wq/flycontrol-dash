@@ -106,17 +106,26 @@ cada uma tem a sua porta.
 
 ---
 
-## 4. Como publicar
+## 4. Situação da publicação (19/11/2026, 04:58 UTC)
 
-As duas partes são **independentes**: qualquer ordem funciona. Ainda assim,
-a ordem abaixo é a de menor surpresa.
+**Já está no ar.** A Cloudflare está configurada para publicar em produção
+**qualquer ramo** enviado ao GitHub (gatilho "Deploy non-production branches"
+com `wrangler deploy`). Ao enviar o ramo `claude/wonderful-curie-9dppb6`, as
+duas partes foram publicadas:
 
-1. **Painel primeiro.** Pull request do ramo `claude/wonderful-curie-9dppb6`
-   para a `main` do `flycontrol-dash` → merge. Efeito: lojista passa a ver e
-   imprimir o endereço novo.
-2. **Cardápios depois.** Mesmo ramo no `conectfly` → merge. Efeito: endereço
-   antigo começa a redirecionar; lojas novas nascem no endereço novo.
-3. Acompanhe em GitHub → Actions e em Cloudflare → Workers → Deployments.
+| Worker | Versão no ar | Versão anterior (para voltar) |
+|---|---|---|
+| `conectfly` (cardápios) | `507cc520` | `a4c1333a` |
+| `flycontrol-dash` (painel) | `615fe741` | `f32d7b6f` |
+
+**O que falta, e é importante:** fazer o merge do ramo na `main` nos dois
+repositórios. Sem isso, a próxima publicação da `main` (qualquer outro ajuste)
+**volta o sistema para a versão antiga** — os cardápios param de redirecionar
+e o painel volta a mostrar `conectfly.com.br`. Nada quebra, mas a migração se
+desfaz.
+
+1. `flycontrol-dash`: pull request de `claude/wonderful-curie-9dppb6` → `main` → merge.
+2. `conectfly`: mesmo ramo → `main` → merge.
 
 ### Conferência depois de publicar (10 minutos)
 
@@ -136,6 +145,7 @@ a ordem abaixo é a de menor surpresa.
 | Situação | O que fazer | Perde dados? |
 |---|---|---|
 | Redirecionamento dando problema | No `conectfly`, trocar `"MENU_LEGACY_REDIRECT": "true"` por `"false"` em `wrangler.jsonc` e publicar. O endereço antigo volta a abrir o cardápio direto. | Não |
+| Voltar **na hora**, sem esperar compilação | Cloudflare → Workers → (`conectfly` ou `flycontrol-dash`) → Deployments → na versão anterior da tabela acima → **Rollback** | Não |
 | Qualquer problema no painel | GitHub → PR mesclado → **Revert** → merge | Não |
 | Qualquer problema nos cardápios | GitHub → PR mesclado → **Revert** → merge | Não |
 | Quer desligar o endereço novo (só se o PR dos cardápios **não** foi publicado) | Cloudflare → Workers → `conectfly` → Settings → Domains & Routes → remover `cardapio.flydelivery.app` | Não |
@@ -154,29 +164,35 @@ Em ordem de importância.
    sessão só enxerga um projeto que não é do FlyDelivery. Não houve mudança em
    banco, então não houve risco — mas também não conferi contagens, regras de
    acesso (RLS) nem backups dos dois bancos.
-2. **Publicação dupla.** Nos dois repositórios, cada merge na `main` publica
+2. **Ramos vão direto para produção.** O gatilho da Cloudflare para "ramos
+   que não são o principal" usa `wrangler deploy`, que publica para todo
+   mundo. É como cada rascunho da cozinha já ir para a mesa do cliente.
+   Recomendo trocar o comando desse gatilho para `npx wrangler versions upload`
+   (gera só uma prévia com endereço próprio) em Cloudflare → Workers →
+   `conectfly` e `flycontrol-dash` → Settings → Builds. **Não alterei.**
+3. **Publicação dupla.** Nos dois repositórios, cada merge na `main` publica
    **duas vezes**: pelo GitHub Actions e pela integração Git da Cloudflare
    (Workers Builds). Hoje as duas dão certo, mas é como dois entregadores
    levando o mesmo pedido: se um dia um falhar ou atrasar, pode ficar no ar a
    versão errada. Recomendo manter só o GitHub Actions (que roda os testes) e
    desligar o "Deploy default branch" em Cloudflare → Workers → `conectfly` e
    `flycontrol-dash` → Settings → Builds. **Não alterei** — é decisão sua.
-3. **App FlyDelivery abrindo direto pelo link.** O arquivo
+4. **App FlyDelivery abrindo direto pelo link.** O arquivo
    `flydelivery.app/.well-known/assetlinks.json` ainda não existe (dá 404).
    Sem ele, no Android o link abre no navegador (que agora mostra o cardápio)
    em vez do app. Precisa da impressão digital do certificado do app (ver
    `PUBLICACAO.md` no repositório `Flydelivery`).
-4. **Fase 2 — API no endereço novo.** As conversas servidor-com-servidor
+5. **Fase 2 — API no endereço novo.** As conversas servidor-com-servidor
    (`/api/*`) ainda usam `conectfly.com.br`. Funciona, e o cliente não vê. Para
    tirar de vez: trocar `API_ORIGIN` em `publicDomain.ts` (conectfly), o
    segredo `SITECREATORFLY_BASE_URL` do Worker `flycontrol-dash` e o endereço
    em `src/lib/notifyTableClosed.functions.ts` para
    `https://cardapio.flydelivery.app` — depois que os dois PRs estiverem no ar.
-5. **Painel aceita chamadas de qualquer site** nas rotas de pedido
+6. **Painel aceita chamadas de qualquer site** nas rotas de pedido
    (`/api/orders`, `/api/public/*`): devolve o "pode entrar" para qualquer
    origem. Já era assim; a proteção real é a chave de cada loja. Vale fechar
    para `cardapio.flydelivery.app` + endereços antigos num trabalho separado.
-6. **Mapa do site (`sitemap.xml`)** não existe em nenhum dos domínios. Para o
+7. **Mapa do site (`sitemap.xml`)** não existe em nenhum dos domínios. Para o
    Google achar os cardápios, o ideal é gerar a lista de lojas ativas.
-7. **Domínio do Instagram/Supabase/Google:** sem mudança necessária para os
+8. **Domínio do Instagram/Supabase/Google:** sem mudança necessária para os
    cardápios (o editor e o login continuam onde estavam).
