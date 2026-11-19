@@ -20,6 +20,18 @@ async function authHeader(): Promise<Record<string, string>> {
   return session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {};
 }
 
+function contarCategoriasDoMenu(menu: {
+  categories?: { name?: string }[];
+  normalized_products?: { category_name?: string }[];
+}) {
+  return new Set(
+    [
+      ...(menu.categories ?? []).map((categoria) => categoria.name),
+      ...(menu.normalized_products ?? []).map((item) => item.category_name),
+    ].filter(Boolean),
+  ).size;
+}
+
 export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionProps) {
   const [syncEndpoint, setSyncEndpoint] = useState("");
   const [loading, setLoading] = useState(true);
@@ -152,6 +164,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       const response = await fetch(testUrl, {
         method: "GET",
         headers: { Accept: "application/json", ...(await authHeader()) },
+        signal: AbortSignal.timeout(20_000),
       });
 
       const text = await response.text();
@@ -169,18 +182,11 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
             ? { ...jsonResponse, ...jsonResponse.menu }
             : jsonResponse;
 
-        const categoriesCount =
-          (menuRoot.categories?.length || 0) +
-          (menuRoot.normalized_products?.reduce(
-            (acc: any, p: any) => (p.category_name ? acc.add(p.category_name) : acc),
-            new Set(),
-          ).size || 0);
-
+        const categoriesCount = contarCategoriasDoMenu(menuRoot);
         const productsCount =
+          menuRoot.normalized_products?.length ||
           (menuRoot.products?.length || 0) +
-          (menuRoot.beverages?.length || 0) +
-          (menuRoot.drinks?.length || 0) +
-          (menuRoot.normalized_products?.length || 0);
+            (menuRoot.beverages?.length || menuRoot.drinks?.length || 0);
 
         const extrasCount = (menuRoot.borders?.length || 0) + (menuRoot.additionals?.length || 0);
 
@@ -245,15 +251,11 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
     const proxyUrl = `/api/pizzerias/sync-menu?sync_url=${encodeURIComponent(syncEndpoint)}`;
 
     try {
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 20000);
-
       const response = await fetch(proxyUrl, {
         method: "GET",
         headers: { Accept: "application/json", ...(await authHeader()) },
-        signal: controller.signal,
+        signal: AbortSignal.timeout(20_000),
       });
-      clearTimeout(timeoutId);
 
       const text = await response.text();
 
@@ -309,19 +311,12 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
           ? { ...externalMenu, ...externalMenu.menu }
           : externalMenu;
 
-      const categoriesCount =
-        (menuRoot.categories?.length || 0) +
-        (menuRoot.normalized_products?.reduce(
-          (acc: any, p: any) => (p.category_name ? acc.add(p.category_name) : acc),
-          new Set(),
-        ).size || 0);
-
+      const categoriesCount = contarCategoriasDoMenu(menuRoot);
       const productsCount =
+        menuRoot.normalized_products?.length ||
         (menuRoot.products?.length || 0) +
-        (menuRoot.beverages?.length || 0) +
-        (menuRoot.drinks?.length || 0) +
-        (menuRoot.combos?.length || 0) +
-        (menuRoot.normalized_products?.length || 0);
+          (menuRoot.beverages?.length || menuRoot.drinks?.length || 0) +
+          (menuRoot.combos?.length || 0);
 
       console.log("FL_SYNC_DETECTED", {
         categoriesCount,
@@ -335,6 +330,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
 
       const syncResponse = await fetch("/api/pizzerias/sync-menu", {
         method: "POST",
+        signal: AbortSignal.timeout(30_000),
         headers: {
           "Content-Type": "application/json",
           "x-api-key": pizzeria.api_key,
@@ -352,15 +348,23 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
         }),
       });
 
-      const syncResult = await syncResponse.json();
+      const syncResult = await syncResponse.json().catch((error: unknown) => {
+        if (error instanceof Error && error.name === "SyntaxError") {
+          throw new Error("O painel recebeu uma resposta inválida ao gravar o cardápio.");
+        }
+        throw error;
+      });
 
       if (syncResult.success) {
         setSyncStatus({
           lastSync: new Date().toLocaleString("pt-BR"),
           status: "success",
           counts: {
-            categories: syncResult.results.categories,
-            products: syncResult.results.products + syncResult.results.beverages,
+            categories: categoriesCount,
+            products:
+              syncResult.results.products +
+              syncResult.results.beverages +
+              (syncResult.results.products_updated ?? 0),
           },
         });
         toast.success("Cardápio sincronizado com sucesso!", { id: toastId });
@@ -370,7 +374,10 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
       }
     } catch (error: any) {
       console.error("MENU_SYNC_ERROR", error.message);
-      const errorMsg = error.message || "Erro desconhecido";
+      const errorMsg =
+        error.name === "TimeoutError"
+          ? "A sincronização demorou para responder. Tente novamente."
+          : error.message || "Erro desconhecido";
       setSyncStatus({
         lastSync: new Date().toLocaleString("pt-BR"),
         status: "error",
@@ -427,7 +434,7 @@ export function MenuSyncSection({ pizzeriaId, onSyncSuccess }: MenuSyncSectionPr
           Sincronização do Cardápio
         </CardTitle>
         <CardDescription>
-          Mantenha o cardápio do seu site público sempre atualizado.
+          Importe para o painel o cardápio que está no site público.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

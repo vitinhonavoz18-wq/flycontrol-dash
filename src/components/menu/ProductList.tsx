@@ -175,7 +175,7 @@ export function ProductList({
     );
     setCategoryId(prod.category_id || "");
     setImageUrl(prod.image_url || "");
-    setProductType(prod.product_type);
+    setProductType(prod.product_type === "product" ? "standard" : prod.product_type);
     setMaxExtras(prod.max_extras != null ? String(prod.max_extras) : "");
     setIsDialogOpen(true);
   }
@@ -210,7 +210,10 @@ export function ProductList({
       price: numericPrice,
       category_id: productType === "beverage" ? null : categoryId || null,
       image_url: imageUrl,
-      product_type: productType,
+      product_type:
+        productType === "standard" && editingProduct?.product_type === "product"
+          ? "product"
+          : productType,
       pizzeria_id: pizzeriaId,
       max_extras: maxExtrasValue,
       active: editingProduct ? editingProduct.active : true,
@@ -225,6 +228,21 @@ export function ProductList({
       }
 
       if (pizzeriaSlug && pizzeriaApiKey) {
+        if (editingProduct && !externalId) {
+          // O vínculo pode ter sido preenchido enquanto o item estava aberto.
+          const { data, error } = await supabase
+            .from("menu_products")
+            .select("external_id")
+            .eq("id", editingProduct.id)
+            .eq("pizzeria_id", pizzeriaId)
+            .maybeSingle();
+          if (error) {
+            toast.error("Não foi possível consultar o vínculo do item. Tente salvar novamente.");
+            return;
+          }
+          externalId = data?.external_id ?? undefined;
+        }
+
         // Find external category ID
         const cat = categories.find((c) => c.id === categoryId);
         const rawExternalCategoryId = cat?.external_id ?? null;
@@ -252,10 +270,16 @@ export function ProductList({
 
         const syncResult = await syncToExternal({
           type: productType,
-          action: editingProduct && (productType !== "beverage" || externalId) ? "update" : "create",
+          action:
+            editingProduct && (productType !== "beverage" || externalId) ? "update" : "create",
           id: editingProduct?.id,
-          externalId: editingProduct?.external_id,
-          data: { ...payload, active: productType === "beverage" ? payload.active && payload.available : payload.active, external_category_id: normalizedExternalCategoryId },
+          externalId,
+          data: {
+            ...payload,
+            active:
+              productType === "beverage" ? payload.active && payload.available : payload.active,
+            external_category_id: normalizedExternalCategoryId,
+          },
           pizzeriaSlug,
           pizzeriaApiKey,
           syncEndpoint,
@@ -267,6 +291,11 @@ export function ProductList({
 
           if (syncResult.error === "404") {
             errorMsg = "Endpoint de sincronização não encontrado (404).";
+          } else if (syncResult.error === "missing_external_id") {
+            errorMsg =
+              "Este item ainda não está vinculado ao site público. Sincronize o cardápio e tente salvar novamente.";
+          } else if (syncResult.error === "timeout") {
+            errorMsg = "O site público demorou para confirmar a alteração. Tente salvar novamente.";
           } else if (syncResult.error === "auth_error") {
             errorMsg = "Chave de autorização inválida ou sem permissão (401/403).";
           } else if (syncResult.error === "cors_error") {
