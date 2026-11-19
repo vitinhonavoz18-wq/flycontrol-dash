@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { supabaseAdmin } from "@/integrations/supabase/client.server";
 import { requireBearerCaller } from "@/integrations/supabase/adminGuard.server";
+import { planejarProdutosNormalizados } from "@/lib/menu/importarProdutosNormalizados";
 import { isUnsafeMenuSyncUrl } from "@/lib/server/urlSafety";
 
 const cors = {
@@ -49,10 +50,10 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
         }
 
         try {
-          console.log(`🌐 [Proxy Sync] Fazendo fetch server-side: ${syncUrl}`);
           const response = await fetch(syncUrl, {
             method: "GET",
             headers: { Accept: "application/json" },
+            signal: AbortSignal.timeout(12_000),
           });
 
           const text = await response.text();
@@ -62,12 +63,17 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
             status: response.status,
             headers: cors,
           });
-        } catch (error: any) {
-          console.error(`❌ [Proxy Sync] Erro no fetch:`, error);
+        } catch (error) {
+          const demorou = error instanceof Error && error.name === "TimeoutError";
+          console.error("[Proxy Sync] Falha ao consultar o cardápio.", { demorou });
           return new Response(
-            JSON.stringify({ error: `Erro ao buscar cardápio: ${error.message}` }),
+            JSON.stringify({
+              error: demorou
+                ? "O site público demorou para responder."
+                : "Falha ao consultar o site público.",
+            }),
             {
-              status: 500,
+              status: demorou ? 504 : 502,
               headers: cors,
             },
           );
@@ -252,60 +258,69 @@ export const Route = createFileRoute("/api/pizzerias/sync-menu")({
 
         if (normalizedProducts.length > 0) {
           console.log("🚀 [Sync] Usando normalized_products como fonte principal");
-          for (const item of normalizedProducts) {
-            const catName = item.category_name || "Geral";
-            const catExternalId = (item.category_external_id ?? item.category_id)?.toString();
-            const catId = await getOrCreateCategory(catName, catExternalId);
-
-            const externalId = item.external_id?.toString();
-            const productType = item.type === "drink" ? "beverage" : item.type || "standard";
-
-            let query = supabaseAdmin
-              .from("menu_products")
-              .select("id, external_id")
-              .eq("pizzeria_id", pizzeriaId)
-              .eq("product_type", productType);
-
-            if (externalId) {
-              query = query.or(`external_id.eq.${externalId},name.eq."${item.name}"`);
-            } else {
-              query = query.eq("name", item.name);
+          try {
+            const recebidos: Parameters<typeof planejarProdutosNormalizados>[1] = [];
+            for (const item of normalizedProducts) {
+              const catName = item.category_name || "Geral";
+              const catExternalId = (item.category_external_id ?? item.category_id)?.toString();
+              const categoria = await getOrCreateCategory(catName, catExternalId);
+              if (!categoria) throw new Error("Não foi possível vincular a categoria.");
+              recebidos.push({ item, categoria });
             }
 
-            if (catId) {
-              query = query.eq("category_id", catId);
-            }
-
-            const { data: existing } = await query.maybeSingle();
-
-            const payload = {
-              pizzeria_id: pizzeriaId,
-              name: item.name,
-              description: item.description || null,
-              price: item.price || 0,
-              image_url: item.image_url || null,
-              active: item.is_active !== undefined ? item.is_active : true,
-              available: item.is_active !== undefined ? item.is_active : true,
-              product_type: productType,
-              category_id: catId,
-              external_id: externalId,
-              external_source: "sitecreatorfly",
-              last_synced_at: new Date().toISOString(),
-            };
-
-            if (existing) {
-              await supabaseAdmin
+            const limite = AbortSignal.timeout(20_000);
+            // Busca os itens em páginas e grava em lote. Cada linha continua
+            // identificada pela loja e pelo ID local já vinculado.
+            const tamanhoDaPagina = 500;
+            const existentes: Parameters<typeof planejarProdutosNormalizados>[2] = [];
+            for (let offset = 0; ; offset += tamanhoDaPagina) {
+              const { data, error } = await supabaseAdmin
                 .from("menu_products")
-                .update(preserveExternalId(payload, existing, externalId))
-                .eq("id", existing.id);
-              results.products_updated++;
-            } else {
-              await supabaseAdmin.from("menu_products").insert(payload);
-              results.products_created++;
-              if (productType === "beverage") results.beverages++;
-              else results.products++;
+                .select("id, category_id, external_id, name, product_type")
+                .eq("pizzeria_id", pizzeriaId)
+                .order("id")
+                .range(offset, offset + tamanhoDaPagina - 1)
+                .abortSignal(limite);
+              if (error) throw error;
+              existentes.push(...data);
+              if (data.length < tamanhoDaPagina) break;
             }
-            results.imported_from_normalized++;
+
+            const linhas = await planejarProdutosNormalizados(
+              pizzeriaId,
+              recebidos,
+              existentes,
+              new Date().toISOString(),
+            );
+            const idsExistentes = new Set(existentes.map((item) => item.id));
+            const tamanhoDoLote = 200;
+            for (let offset = 0; offset < linhas.length; offset += tamanhoDoLote) {
+              const lote = linhas.slice(offset, offset + tamanhoDoLote);
+              const { error } = await supabaseAdmin
+                .from("menu_products")
+                .upsert(lote, { onConflict: "id", defaultToNull: false })
+                .abortSignal(limite);
+              if (error) throw error;
+
+              for (const item of lote) {
+                if (idsExistentes.has(item.id)) results.products_updated++;
+                else {
+                  results.products_created++;
+                  if (item.product_type === "beverage") results.beverages++;
+                  else results.products++;
+                }
+              }
+              results.imported_from_normalized += lote.length;
+            }
+          } catch (error) {
+            console.error("[Sync] Falha ao importar produtos normalizados", error);
+            return new Response(
+              JSON.stringify({
+                success: false,
+                error: "Não foi possível terminar a sincronização dos produtos. Tente novamente.",
+              }),
+              { status: 502, headers: cors },
+            );
           }
           console.log(`FL_SYNC_PRODUCTS_IMPORTED: ${results.imported_from_normalized}`);
           console.log(`FL_SYNC_CATEGORIES_IMPORTED: ${results.categories}`);

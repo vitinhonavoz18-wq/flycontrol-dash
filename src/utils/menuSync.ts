@@ -99,6 +99,7 @@ async function fetchComRetry(url: string, init: RequestInit): Promise<Response> 
   try {
     return await fetch(url, init);
   } catch (erroDeRede) {
+    if (init.signal?.aborted) throw erroDeRede;
     console.warn(
       "[SyncExternal] Falha de rede na primeira tentativa, tentando mais uma vez:",
       erroDeRede,
@@ -286,7 +287,7 @@ export async function syncToExternal(
     console.log("Método HTTP:", method);
     console.log("Payload enviado:", bodyObj ? JSON.stringify(bodyObj, null, 2) : "<no body>");
 
-    const init: RequestInit = { method, headers };
+    const init: RequestInit = { method, headers, signal: AbortSignal.timeout(20_000) };
     if (bodyObj !== undefined) init.body = JSON.stringify(bodyObj);
 
     const response = await fetchComRetry(url, init);
@@ -366,6 +367,7 @@ export async function syncToExternal(
     return { success: false, error: `api_error:HTTP ${response.status}` };
   } catch (error: any) {
     console.error("[SyncExternal] Erro na chamada:", error);
+    if (error?.name === "TimeoutError") return { success: false, error: "timeout" };
     if (error instanceof TypeError && error.message.includes("fetch")) {
       return { success: false, error: "cors_error" };
     }
