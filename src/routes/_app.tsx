@@ -12,6 +12,7 @@ import { Switch } from "@/components/ui/switch";
 import { supabase } from "@/integrations/supabase/client";
 import { BottomNav } from "@/components/mobile/BottomNav";
 import { GuiaDeConfiguracao } from "@/components/onboarding/guia/GuiaDeConfiguracao";
+import { PrimeiroPedidoPresente } from "@/components/onboarding/PrimeiroPedidoPresente";
 import { FaturaEmAbertoPopup } from "@/components/billing/FaturaEmAbertoPopup";
 import { PlanProvider, usePlan } from "@/lib/plan-context";
 import { itemEstaAtivo, montarMenu } from "@/lib/navegacao";
@@ -483,6 +484,9 @@ function AppLayoutInner() {
           loja de verdade. Administrador da plataforma não tem loja para
           configurar e nunca vê o guia. */}
       <GuiaDeConfiguracao habilitado={!isSuperAdmin} tenantId={pizzeriaStatus?.id ?? null} />
+      {!showAdmin && pizzeriaStatus && (
+        <PrimeiroPedidoPresente key={pizzeriaStatus.id} companyId={pizzeriaStatus.id} />
+      )}
 
       {/* Aviso de fatura do plano: aparece no dia em que o mês fecha e a
           fatura é emitida, em qualquer tela do painel — menos na de cobrança,
