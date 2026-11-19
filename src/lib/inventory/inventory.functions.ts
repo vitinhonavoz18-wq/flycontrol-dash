@@ -674,24 +674,39 @@ export const buscarProdutosParaVenda = createServerFn({ method: "POST" })
 
     const termo = (data.termo ?? "").trim();
     if (!termo) return [];
-    const escapado = termo.replace(/[%,()]/g, "");
 
-    const { data: linhas, error } = await context.supabase
-      .from("inventory_products")
-      .select(
-        "id, name, image_url, price_cents, base_unit, stock_base, min_stock_base, barcode, sku",
-      )
-      .eq("pizzeria_id", data.tenantId)
-      .eq("active", true)
-      .is("deleted_at", null)
-      .or(
-        `name.ilike.%${escapado}%,sku.ilike.%${escapado}%,internal_code.ilike.%${escapado}%,barcode.ilike.%${escapado}%`,
-      )
-      .order("name")
-      .limit(20);
+    const limite = 20;
+    const camposDeBusca = ["name", "sku", "internal_code", "barcode"];
+    const literal = termo.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    function pesquisar(padrao: string, quantidade: number) {
+      // Aspas e barras precisam ser escapadas também no filtro do PostgREST.
+      const valor = `"${padrao.replace(/["\\]/g, "\\$&")}"`;
+      return context.supabase
+        .from("inventory_products")
+        .select(
+          "id, name, image_url, price_cents, base_unit, stock_base, min_stock_base, barcode, sku, internal_code",
+        )
+        .eq("pizzeria_id", data.tenantId)
+        .eq("active", true)
+        .is("deleted_at", null)
+        .or(camposDeBusca.map((campo) => `${campo}.imatch.${valor}`).join(","))
+        .order("name")
+        .order("id")
+        .limit(quantidade);
+    }
 
+    const { data: linhas, error } = await pesquisar(literal, limite + 1);
     if (error) throw new Error(error.message);
-    return ((linhas ?? []) as Array<Record<string, unknown>>).map((p) => ({
+    let produtos = linhas ?? [];
+    if (produtos.length > limite) {
+      // Uma busca ampla pode encher a lista antes de aparecer o código exato.
+      const { data: exatos, error: erroExatos } = await pesquisar(`^${literal}$`, limite);
+      if (erroExatos) throw new Error(erroExatos.message);
+      const idsExatos = new Set(exatos?.map((p) => p.id));
+      produtos = [...(exatos ?? []), ...produtos.filter((p) => !idsExatos.has(p.id))];
+    }
+
+    return (produtos.slice(0, limite) as Array<Record<string, unknown>>).map((p) => ({
       id: p.id as string,
       name: p.name as string,
       image_url: (p.image_url as string) ?? null,
@@ -701,6 +716,7 @@ export const buscarProdutosParaVenda = createServerFn({ method: "POST" })
       min_stock_base: Number(p.min_stock_base),
       barcode: (p.barcode as string) ?? null,
       sku: (p.sku as string) ?? null,
+      internal_code: (p.internal_code as string) ?? null,
     }));
   });
 
