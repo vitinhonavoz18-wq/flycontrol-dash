@@ -1,6 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect } from "react";
+import { linkDoCardapio } from "@/lib/site/enderecoDaLoja";
 
 /**
  * O endereço público do cardápio da loja.
@@ -12,10 +13,7 @@ import { useEffect } from "react";
 function enderecoDoCardapio(
   ficha: { slug: string | null; public_url: string | null } | undefined,
 ): string | null {
-  const gravado = ficha?.public_url?.trim();
-  if (gravado) return gravado;
-  const slug = ficha?.slug?.trim();
-  return slug ? `https://conectfly.com.br/${slug}` : null;
+  return linkDoCardapio(ficha?.public_url, ficha?.slug);
 }
 
 export function useAdminPizzerias() {

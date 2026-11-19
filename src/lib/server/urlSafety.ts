@@ -11,7 +11,8 @@
  */
 
 const ALLOWED_HOST_SUFFIXES = [".conectfly.com.br", ".supabase.co"];
-const ALLOWED_HOSTS = ["conectfly.com.br"];
+// cardapio.flydelivery.app: endereço oficial dos cardápios (mesmo SiteCreatorFly).
+const ALLOWED_HOSTS = ["conectfly.com.br", "cardapio.flydelivery.app"];
 
 function isPrivateOrInternalHost(host: string): boolean {
   if (

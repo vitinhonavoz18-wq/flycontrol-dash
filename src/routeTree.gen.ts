@@ -48,6 +48,7 @@ import { Route as ApiHealthRouteImport } from './routes/api/health'
 import { Route as ApiOrdersRouteImport } from './routes/api/orders'
 import { Route as ApiSyncTableSessionsRouteImport } from './routes/api/sync-table-sessions'
 import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
+import { Route as LojaSlugRouteImport } from './routes/loja.$slug'
 import { Route as PagamentoPlanoRouteImport } from './routes/pagamento.$plano'
 import { Route as PrintOrderIdRouteImport } from './routes/print.$orderId'
 import { Route as AppAdminIndexRouteImport } from './routes/_app/admin/index'
@@ -317,6 +318,11 @@ const ApiSyncTableSessionsRoute = ApiSyncTableSessionsRouteImport.update({
 const AuthCallbackRoute = AuthCallbackRouteImport.update({
   id: '/auth/callback',
   path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LojaSlugRoute = LojaSlugRouteImport.update({
+  id: '/loja/$slug',
+  path: '/loja/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PagamentoPlanoRoute = PagamentoPlanoRouteImport.update({
@@ -762,6 +768,7 @@ export interface FileRoutesByFullPath {
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/loja/$slug': typeof LojaSlugRoute
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/affiliates/': typeof AffiliatesIndexRoute
@@ -874,6 +881,7 @@ export interface FileRoutesByTo {
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/loja/$slug': typeof LojaSlugRoute
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/affiliates': typeof AffiliatesIndexRoute
@@ -991,6 +999,7 @@ export interface FileRoutesById {
   '/api/orders': typeof ApiOrdersRoute
   '/api/sync-table-sessions': typeof ApiSyncTableSessionsRoute
   '/auth/callback': typeof AuthCallbackRoute
+  '/loja/$slug': typeof LojaSlugRoute
   '/pagamento/$plano': typeof PagamentoPlanoRoute
   '/print/$orderId': typeof PrintOrderIdRoute
   '/affiliates/': typeof AffiliatesIndexRoute
@@ -1109,6 +1118,7 @@ export interface FileRouteTypes {
     | '/api/orders'
     | '/api/sync-table-sessions'
     | '/auth/callback'
+    | '/loja/$slug'
     | '/pagamento/$plano'
     | '/print/$orderId'
     | '/affiliates/'
@@ -1221,6 +1231,7 @@ export interface FileRouteTypes {
     | '/api/orders'
     | '/api/sync-table-sessions'
     | '/auth/callback'
+    | '/loja/$slug'
     | '/pagamento/$plano'
     | '/print/$orderId'
     | '/affiliates'
@@ -1337,6 +1348,7 @@ export interface FileRouteTypes {
     | '/api/orders'
     | '/api/sync-table-sessions'
     | '/auth/callback'
+    | '/loja/$slug'
     | '/pagamento/$plano'
     | '/print/$orderId'
     | '/affiliates/'
@@ -1434,6 +1446,7 @@ export interface RootRouteChildren {
   ApiOrdersRoute: typeof ApiOrdersRoute
   ApiSyncTableSessionsRoute: typeof ApiSyncTableSessionsRoute
   AuthCallbackRoute: typeof AuthCallbackRoute
+  LojaSlugRoute: typeof LojaSlugRoute
   PagamentoPlanoRoute: typeof PagamentoPlanoRoute
   PrintOrderIdRoute: typeof PrintOrderIdRoute
   ApiBillingCloseCyclesRoute: typeof ApiBillingCloseCyclesRoute
@@ -1747,6 +1760,13 @@ declare module '@tanstack/react-router' {
       path: '/auth/callback'
       fullPath: '/auth/callback'
       preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/loja/$slug': {
+      id: '/loja/$slug'
+      path: '/loja/$slug'
+      fullPath: '/loja/$slug'
+      preLoaderRoute: typeof LojaSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pagamento/$plano': {
@@ -2510,6 +2530,7 @@ const rootRouteChildren: RootRouteChildren = {
   ApiOrdersRoute: ApiOrdersRoute,
   ApiSyncTableSessionsRoute: ApiSyncTableSessionsRoute,
   AuthCallbackRoute: AuthCallbackRoute,
+  LojaSlugRoute: LojaSlugRoute,
   PagamentoPlanoRoute: PagamentoPlanoRoute,
   PrintOrderIdRoute: PrintOrderIdRoute,
   ApiBillingCloseCyclesRoute: ApiBillingCloseCyclesRoute,

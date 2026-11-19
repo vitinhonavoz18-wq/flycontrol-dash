@@ -5,6 +5,7 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 import { Copy, ExternalLink, Download, FileText, Share2 } from "lucide-react";
 import { useRef, useState } from "react";
+import { linkDoCardapio } from "@/lib/site/enderecoDaLoja";
 
 interface PizzeriaPromotionProps {
   pizzeria: {
@@ -24,8 +25,8 @@ export function PizzeriaPromotion({ pizzeria }: PizzeriaPromotionProps) {
   // em Minha Loja. Montar pelo slug do painel mostrava o endereço de teste — e,
   // em lojas cujo slug daqui difere do de lá, o QR Code de OUTRA loja. O slug
   // só fica como reserva para lojas que ainda não têm link gravado.
-  const baseUrl = "https://conectfly.com.br";
-  const publicUrl = pizzeria.public_url?.trim() || `${baseUrl}/${pizzeria.slug}`;
+  // Endereço oficial (cardapio.flydelivery.app) — links antigos são convertidos.
+  const publicUrl = linkDoCardapio(pizzeria.public_url, pizzeria.slug) ?? "";
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(publicUrl);

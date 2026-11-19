@@ -50,6 +50,11 @@ Regras:
 - **SiteCreatorFly** (`conectfly`) — o site de pedidos que o cliente final
   acessa. São dois sistemas separados, com bancos de dados separados, que
   conversam por internet.
+- **Endereços oficiais:** painel em `https://flydelivery.app`; cardápios em
+  `https://cardapio.flydelivery.app/<loja>` (o antigo `conectfly.com.br/<loja>`
+  redireciona). Link de cardápio mostrado ao lojista sai sempre de
+  `linkDoCardapio` em `src/lib/site/enderecoDaLoja.ts`. Mapa completo em
+  `docs/MIGRACAO-CARDAPIOS-FLYDELIVERY.md`.
 
 Dinheiro é sempre tratado em centavos inteiros — nunca com casas decimais —
 para não acontecer erro de arredondamento na cobrança.

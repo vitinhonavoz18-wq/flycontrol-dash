@@ -43,6 +43,7 @@ import {
   ExternalLink,
   Phone,
 } from "lucide-react";
+import { linkDaMesa } from "@/lib/site/enderecoDaLoja";
 import { QRCodeSVG } from "qrcode.react";
 import { toast } from "sonner";
 
@@ -138,8 +139,9 @@ export function TablesManagement({ tenantId, restaurantSlug }: TablesManagementP
   }
 
   function getQRCodeUrl(table: RestaurantTable) {
-    const baseUrl = "https://conectfly.com.br";
-    return `${baseUrl}/${restaurantSlug}?mode=table&table_number=${table.table_number}&table_token=${table.public_token}`;
+    // QR Codes novos já saem com o endereço oficial; os antigos (conectfly.com.br)
+    // continuam funcionando por redirecionamento.
+    return linkDaMesa(restaurantSlug, table.table_number, table.public_token);
   }
 
   async function handleRename() {
