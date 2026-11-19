@@ -44,7 +44,6 @@ import {
 import { separarItensDaFatura, type ItemDaFatura } from "@/lib/billing/invoiceSections";
 import {
   SUBSCRIPTION_PHASE_LABELS,
-  TRIAL_DURATION_DAYS,
   calculateTrialProgress,
   deriveSubscriptionPhase,
   type SubscriptionPhase,
@@ -273,7 +272,7 @@ function BillingPage() {
       .from("invoices")
       .select(
         "id, invoice_number, status, total_cents, created_at, due_at, paid_at, payment_provider, " +
-          "billing_cycles(cycle_start, cycle_end), " +
+          "billing_cycles(cycle_start, cycle_type), " +
           "invoice_items!invoice_items_invoice_id_fkey(item_type, description, quantity, total_amount_cents, created_at)",
       )
       .eq("subscription_id", row.id);
@@ -295,7 +294,7 @@ function BillingPage() {
 
     const invoices = ((invoiceRows ?? []) as Array<Record<string, unknown>>)
       .map((i) => {
-        const ciclo = i.billing_cycles as { cycle_start?: string; cycle_end?: string } | null;
+        const ciclo = i.billing_cycles as { cycle_start?: string; cycle_type?: string } | null;
         const linhas = (i.invoice_items ?? []) as Array<{
           item_type: string;
           description: string;
@@ -311,7 +310,11 @@ function BillingPage() {
           createdAt: String(i.created_at),
           dueAt: i.due_at ? String(i.due_at) : null,
           paidAt: i.paid_at ? String(i.paid_at) : null,
-          competencia: formatCompetencia(ciclo?.cycle_start ?? null),
+          competencia: formatCompetencia(
+            ciclo?.cycle_type === "free_trial"
+              ? String(i.created_at)
+              : (ciclo?.cycle_start ?? null),
+          ),
           formaDePagamento: formatarFormaDePagamento(i.payment_provider),
           itens: [...linhas]
             .sort((a, b) => a.created_at.localeCompare(b.created_at))
@@ -350,7 +353,8 @@ function BillingPage() {
       activatedAt: row.activated_at,
       cycleStart: cycle?.cycle_start ?? null,
       cycleEnd: cycle?.cycle_end ?? null,
-      firstChargeAt: row.first_charge_at ?? cycle?.cycle_end ?? null,
+      firstChargeAt:
+        row.first_charge_at ?? (row.status === "free_trial" ? null : (cycle?.cycle_end ?? null)),
       trialEndsAt: row.trial_ends_at,
       trial:
         row.trial_started_at && row.trial_ends_at
@@ -646,10 +650,18 @@ function BillingPage() {
             </dl>
 
             <p className="rounded-lg bg-background/60 p-3 text-sm text-muted-foreground">
-              Nenhum valor é cobrado durante os {TRIAL_DURATION_DAYS} dias, e os pedidos deste
-              período não entram em conta nenhuma. Quando o período terminar, o sistema continua
-              funcionando normalmente — começa apenas um ciclo em que os pedidos passam a ser
-              contados, com a conta fechada só no fim dele.
+              Você tem {snapshot.trial.durationDays} dias grátis. Os pedidos feitos nesse período
+              ficam isentos.{" "}
+              {snapshot.firstChargeAt ? (
+                <>
+                  A primeira mensalidade será emitida em{" "}
+                  <strong>{formatDate(snapshot.firstChargeAt)}</strong>.
+                </>
+              ) : (
+                <>
+                  Depois do período grátis, a primeira fatura será emitida no fim do ciclo seguinte.
+                </>
+              )}
             </p>
           </CardContent>
         </Card>
