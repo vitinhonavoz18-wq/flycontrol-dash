@@ -102,7 +102,7 @@ cada uma tem a sua porta.
   o endereço oficial.
 - Nova página `flydelivery.app/loja/<loja>` (sem o app → cardápio da loja).
 - Trava de segurança de sincronização de cardápio aceita o endereço novo.
-- 1.957 testes passando; compilação de produção OK.
+- 1.953 testes passando; compilação de produção OK.
 
 ---
 
