@@ -47,7 +47,7 @@ async function chamar(pizzeriaId: string, action: "check" | "set", address: stri
 
 /**
  * Campo "Endereço da loja": o dono escolhe como fica o link do cardápio
- * (conectfly.com.br/<nome>) e vê na hora se o nome está livre.
+ * (cardapio.flydelivery.app/<nome>) e vê na hora se o nome está livre.
  *
  * A resposta "Disponível" é do SiteCreatorFly, que tem a lista de todas as
  * lojas. Mesmo assim, entre a resposta e o clique em salvar outra loja pode

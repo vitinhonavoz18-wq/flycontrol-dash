@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import {
   avisoDoEndereco,
+  ENDERECO_BASE,
+  destinoDoLinkDaLoja,
+  linkDaMesa,
+  linkDoCardapio,
   ENDERECO_MAX,
   enderecoAtualDoLink,
   normalizarEndereco,
@@ -78,5 +82,60 @@ describe("o que a tela mostra", () => {
     expect(enderecoAtualDoLink("https://conectfly.com.br/AcaieLove/")).toBe("acaielove");
     expect(enderecoAtualDoLink(null)).toBeNull();
     expect(enderecoAtualDoLink("lixo")).toBeNull();
+  });
+});
+
+describe("link oficial do cardápio (cardapio.flydelivery.app)", () => {
+  it("converte o link antigo gravado no banco, mantendo o caminho e a mesa", () => {
+    expect(linkDoCardapio("https://conectfly.com.br/pizzaria-do-joao")).toBe(
+      "https://cardapio.flydelivery.app/pizzaria-do-joao",
+    );
+    expect(linkDoCardapio("https://www.conectfly.com.br/joao?mesa=3")).toBe(
+      "https://cardapio.flydelivery.app/joao?mesa=3",
+    );
+  });
+
+  it("mantém link já novo e domínio próprio da loja como estão", () => {
+    expect(linkDoCardapio("https://cardapio.flydelivery.app/joao")).toBe(
+      "https://cardapio.flydelivery.app/joao",
+    );
+    expect(linkDoCardapio("https://pizzariadojoao.com.br")).toBe("https://pizzariadojoao.com.br");
+  });
+
+  it("sem link gravado, monta pelo slug; sem nada, devolve null", () => {
+    expect(linkDoCardapio(null, "joao")).toBe("https://cardapio.flydelivery.app/joao");
+    expect(linkDoCardapio("  ", "joao")).toBe("https://cardapio.flydelivery.app/joao");
+    expect(linkDoCardapio("não é link", "joao")).toBe("https://cardapio.flydelivery.app/joao");
+    expect(linkDoCardapio(null, null)).toBeNull();
+  });
+
+  it("QR Code da mesa sai no endereço oficial, no formato que o cardápio lê", () => {
+    const link = linkDaMesa("joao", "4", "tok-123");
+    expect(link).toBe(
+      "https://cardapio.flydelivery.app/joao?mode=table&table_number=4&table_token=tok-123",
+    );
+    const url = new URL(link);
+    expect(url.searchParams.get("table_token")).toBe("tok-123");
+  });
+
+  it("o endereço base mostrado ao lojista é o novo", () => {
+    expect(ENDERECO_BASE).toBe("cardapio.flydelivery.app");
+    expect(enderecoAtualDoLink("https://conectfly.com.br/joao")).toBe("joao");
+    expect(enderecoAtualDoLink("https://cardapio.flydelivery.app/joao")).toBe("joao");
+  });
+});
+
+describe("flydelivery.app/loja/<loja> sem o app", () => {
+  it("leva para o cardápio online da loja, mantendo a campanha", () => {
+    expect(destinoDoLinkDaLoja("pizzaria-gt")).toBe("https://cardapio.flydelivery.app/pizzaria-gt");
+    expect(destinoDoLinkDaLoja("Pizzaria-GT", "?utm_source=instagram")).toBe(
+      "https://cardapio.flydelivery.app/pizzaria-gt?utm_source=instagram",
+    );
+  });
+
+  it("apelido estranho vai para a página inicial, nunca para fora", () => {
+    for (const ruim of ["", "..", "a/b", "//golpe.com", "x?y", "-abc", "abc-", "çã"]) {
+      expect(destinoDoLinkDaLoja(ruim)).toBe("https://flydelivery.app/");
+    }
   });
 });

@@ -11,7 +11,16 @@
  * dois lados têm teste com os mesmos exemplos. Mudou lá, mude aqui.
  */
 
-export const ENDERECO_BASE = "conectfly.com.br";
+/** Endereço oficial dos cardápios (precisa bater com publicDomain.ts do SiteCreatorFly). */
+export const CARDAPIO_HOST = "cardapio.flydelivery.app";
+export const CARDAPIO_ORIGEM = `https://${CARDAPIO_HOST}`;
+/** Endereços antigos — ainda abrem, mas não devem mais ser mostrados ao lojista. */
+export const CARDAPIO_HOSTS_ANTIGOS: readonly string[] = [
+  "conectfly.com.br",
+  "www.conectfly.com.br",
+];
+
+export const ENDERECO_BASE = CARDAPIO_HOST;
 export const ENDERECO_MIN = 3;
 export const ENDERECO_MAX = 40;
 
@@ -114,4 +123,62 @@ export function enderecoAtualDoLink(publicUrl: string | null | undefined): strin
   } catch {
     return null;
   }
+}
+
+/**
+ * O link do cardápio para MOSTRAR ao lojista (copiar, abrir, QR Code, PDF).
+ *
+ * Lojas antigas têm gravado no banco `https://conectfly.com.br/<loja>`. Em vez
+ * de reescrever o banco (arriscado e desnecessário — o endereço antigo
+ * continua funcionando), a troca é feita aqui, na hora de mostrar: o
+ * lojista sempre vê e imprime o endereço oficial. Um link de outro domínio
+ * (domínio próprio da loja) é respeitado como está.
+ */
+export function linkDoCardapio(
+  publicUrl: string | null | undefined,
+  slug?: string | null,
+): string | null {
+  const gravado = (publicUrl ?? "").trim();
+  if (gravado) {
+    try {
+      const url = new URL(gravado);
+      if (CARDAPIO_HOSTS_ANTIGOS.includes(url.hostname.toLowerCase())) {
+        const caminho = url.pathname === "/" ? "" : url.pathname;
+        return `${CARDAPIO_ORIGEM}${caminho}${url.search}${url.hash}`;
+      }
+      return gravado;
+    } catch {
+      // link gravado quebrado: cai no endereço montado pelo slug
+    }
+  }
+  const s = (slug ?? "").trim();
+  return s ? `${CARDAPIO_ORIGEM}/${s}` : null;
+}
+
+/** Link impresso no QR Code da mesa. Mesmo formato que o SiteCreatorFly lê. */
+export function linkDaMesa(
+  slug: string,
+  numeroDaMesa: string | number,
+  tokenDaMesa: string,
+): string {
+  const q = new URLSearchParams({
+    mode: "table",
+    table_number: String(numeroDaMesa),
+    table_token: tokenDaMesa,
+  });
+  return `${CARDAPIO_ORIGEM}/${slug}?${q.toString()}`;
+}
+
+/**
+ * Para onde vai quem abre flydelivery.app/loja/<loja> sem o app. Só aceita um
+ * apelido de loja de verdade (letras, números e traço); qualquer outra coisa
+ * vai para a página inicial do FlyDelivery — nunca para um endereço de fora.
+ */
+export function destinoDoLinkDaLoja(slug: string, busca = ""): string {
+  const limpo = String(slug ?? "")
+    .trim()
+    .toLowerCase();
+  if (!/^[a-z0-9](?:[a-z0-9-]{0,78}[a-z0-9])?$/.test(limpo)) return "https://flydelivery.app/";
+  const q = busca && busca.startsWith("?") ? busca : "";
+  return `${CARDAPIO_ORIGEM}/${limpo}${q}`;
 }

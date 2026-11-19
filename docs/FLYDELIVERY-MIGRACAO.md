@@ -1,5 +1,10 @@
 # FlyControl → FlyDelivery: o que mudou, o que não mudou e como publicar
 
+> **Atualização (19/11/2026):** os cardápios ganharam endereço oficial
+> `cardapio.flydelivery.app/<loja>` e o painel responde em `flydelivery.app`.
+> Detalhes, publicação e como voltar atrás em
+> [`MIGRACAO-CARDAPIOS-FLYDELIVERY.md`](./MIGRACAO-CARDAPIOS-FLYDELIVERY.md).
+
 Este documento é o mapa da troca de marca. Ele responde a quatro perguntas:
 
 1. O que existe no sistema hoje (inventário real, conferido no código)?
