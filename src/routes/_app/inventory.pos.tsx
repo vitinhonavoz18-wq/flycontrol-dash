@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState, type KeyboardEvent } from "react";
 import { useServerFn } from "@tanstack/react-start";
 import { Check, Loader2, Minus, Package, Plus, Search, ShoppingCart, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -27,6 +27,11 @@ export const Route = createFileRoute("/_app/inventory/pos")({ component: VendaNo
 
 type Achado = Awaited<ReturnType<typeof buscarProdutosParaVenda>>[number];
 type ItemDoCarrinho = Achado & { quantidade: number };
+type BuscaPendente = {
+  termo: string;
+  timer: ReturnType<typeof setTimeout> | null;
+  adicionarAoReceber: boolean;
+};
 
 const PAGAMENTOS = [
   { valor: "pix", rotulo: "Pix" },
@@ -38,12 +43,30 @@ const PAGAMENTOS = [
 
 function VendaNoBalcao() {
   const { tenantId } = useLojaDoEstoque();
+  return <Caixa key={tenantId} tenantId={tenantId} />;
+}
+
+function produtoSugerido(produtos: Achado[], termo: string) {
+  const chave = termo.toLowerCase();
+  const codigo = produtos.filter(
+    (p) => p.sku?.toLowerCase() === chave || p.internal_code?.toLowerCase() === chave,
+  );
+  const barras = produtos.find((p) => p.barcode === termo);
+  if (barras) return barras;
+  if (codigo.length) return codigo.length === 1 ? codigo[0] : undefined;
+
+  const nomes = produtos.filter((p) => p.name.toLowerCase() === chave);
+  if (nomes.length === 1) return nomes[0];
+  return produtos.length === 1 ? produtos[0] : undefined;
+}
+
+function Caixa({ tenantId }: { tenantId: string }) {
   const buscar = useServerFn(buscarProdutosParaVenda);
   const finalizar = useServerFn(finalizarVendaNoBalcao);
 
   const [termo, setTermo] = useState("");
-  const [achados, setAchados] = useState<Achado[]>([]);
-  const [buscando, setBuscando] = useState(false);
+  const [resultado, setResultado] = useState<Achado[] | "erro" | null>(null);
+  const [indiceEscolhido, setIndiceEscolhido] = useState<number | null>(null);
   const [carrinho, setCarrinho] = useState<ItemDoCarrinho[]>([]);
   const [pagamento, setPagamento] = useState("dinheiro");
   const [desconto, setDesconto] = useState("");
@@ -53,30 +76,35 @@ function VendaNoBalcao() {
   const [ultimaVenda, setUltimaVenda] = useState<{ numero: number; total: number } | null>(null);
 
   const campoBusca = useRef<HTMLInputElement>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const buscaAtual = useRef<BuscaPendente | null>(null);
+  const vendaEmEnvio = useRef(false);
+  const listaId = useId();
+  const ajudaId = useId();
 
-  useEffect(() => {
-    if (timer.current) clearTimeout(timer.current);
-    if (!termo.trim() || !tenantId) {
-      setAchados([]);
-      return;
-    }
-    setBuscando(true);
-    timer.current = setTimeout(async () => {
-      try {
-        setAchados(await buscar({ data: { tenantId, termo } }));
-      } catch {
-        setAchados([]);
-      } finally {
-        setBuscando(false);
-      }
-    }, 250);
-    return () => {
-      if (timer.current) clearTimeout(timer.current);
-    };
-  }, [termo, tenantId, buscar]);
+  const textoBusca = termo.trim();
+  const achados = Array.isArray(resultado) ? resultado : [];
+  const buscando = !!textoBusca && !!tenantId && resultado === null;
+  const sugerido = produtoSugerido(achados, textoBusca);
+  const indiceAtivo = indiceEscolhido ?? achados.findIndex((p) => p.id === sugerido?.id);
+  const produtoAtivo = achados[indiceAtivo];
 
-  const adicionar = useCallback((p: Achado) => {
+  const cancelarBusca = useCallback(() => {
+    const timer = buscaAtual.current?.timer;
+    if (timer != null) clearTimeout(timer);
+    buscaAtual.current = null;
+  }, []);
+
+  useEffect(() => cancelarBusca, [cancelarBusca]);
+
+  function limparBusca() {
+    cancelarBusca();
+    setTermo("");
+    setResultado(null);
+    setIndiceEscolhido(null);
+  }
+
+  function adicionar(p: Achado, focarBusca = true) {
+    if (vendaEmEnvio.current) return;
     setCarrinho((atual) => {
       const existente = atual.find((i) => i.id === p.id);
       if (existente) {
@@ -84,28 +112,79 @@ function VendaNoBalcao() {
       }
       return [...atual, { ...p, quantidade: 1 }];
     });
-    setTermo("");
-    setAchados([]);
-    // O foco volta para a busca: no balcão, a mão vai direto para o próximo
-    // produto, e ter que clicar no campo a cada item trava a fila.
-    campoBusca.current?.focus();
-  }, []);
+    limparBusca();
+    if (focarBusca) campoBusca.current?.focus();
+  }
 
-  /**
-   * A pistola de código de barras digita rápido e termina com Enter.
-   *
-   * Quando a busca traz exatamente um produto e ele bate certo com o código
-   * lido, o Enter já joga no carrinho — que é como o caixa espera que funcione.
-   */
-  function handleEnter() {
-    if (achados.length === 1) {
-      adicionar(achados[0]);
+  async function executarBusca(busca: BuscaPendente) {
+    if (busca.timer !== null) clearTimeout(busca.timer);
+    busca.timer = null;
+    try {
+      const produtos = await buscar({ data: { tenantId, termo: busca.termo } });
+      if (buscaAtual.current !== busca) return;
+
+      const produto = busca.adicionarAoReceber && produtoSugerido(produtos, busca.termo);
+      if (produto && !vendaEmEnvio.current) adicionar(produto, false);
+      else setResultado(produtos);
+    } catch {
+      if (buscaAtual.current === busca) setResultado("erro");
+    }
+  }
+
+  function alterarTermo(valor: string) {
+    cancelarBusca();
+    setTermo(valor);
+    setResultado(null);
+    setIndiceEscolhido(null);
+
+    const termo = valor.trim();
+    if (!termo || !tenantId) return;
+    const busca: BuscaPendente = { termo, timer: null, adicionarAoReceber: false };
+    busca.timer = setTimeout(() => void executarBusca(busca), 250);
+    buscaAtual.current = busca;
+  }
+
+  function handleTeclaBusca(e: KeyboardEvent<HTMLInputElement>) {
+    if (e.nativeEvent.isComposing) return;
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (e.repeat || vendaEmEnvio.current) return;
+
+      if (!textoBusca) {
+        void handleFinalizar();
+      } else if (produtoAtivo) {
+        adicionar(produtoAtivo);
+      } else if (buscaAtual.current && (buscando || resultado === "erro")) {
+        const busca = buscaAtual.current;
+        busca.adicionarAoReceber = true;
+        if (busca.timer !== null || resultado === "erro") {
+          setResultado(null);
+          void executarBusca(busca);
+        }
+      }
       return;
     }
-    const exato = achados.find(
-      (p) => p.barcode === termo.trim() || p.sku?.toLowerCase() === termo.trim().toLowerCase(),
-    );
-    if (exato) adicionar(exato);
+
+    if (e.key === "Escape" && textoBusca && !vendaEmEnvio.current) {
+      e.preventDefault();
+      limparBusca();
+      return;
+    }
+
+    if (!achados.length || vendaEmEnvio.current) return;
+    if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+      e.preventDefault();
+      const proximo =
+        e.key === "ArrowDown"
+          ? Math.min(indiceAtivo + 1, achados.length - 1)
+          : indiceAtivo < 0
+            ? achados.length - 1
+            : Math.max(indiceAtivo - 1, 0);
+      setIndiceEscolhido(proximo);
+      document
+        .getElementById(`${listaId}-${achados[proximo].id}`)
+        ?.scrollIntoView?.({ block: "nearest" });
+    }
   }
 
   function mudarQuantidade(id: string, delta: number) {
@@ -122,7 +201,8 @@ function VendaNoBalcao() {
   const totalCents = Math.max(subtotalCents - descontoCents + acrescimoCents, 0);
 
   async function handleFinalizar() {
-    if (!carrinho.length) return;
+    if (!tenantId || !carrinho.length || vendaEmEnvio.current) return;
+    vendaEmEnvio.current = true;
     setFinalizando(true);
     try {
       // O preço NÃO vai daqui. O servidor busca na ficha de cada produto —
@@ -139,17 +219,35 @@ function VendaNoBalcao() {
         },
       });
       setUltimaVenda({ numero: r.sale_number, total: r.total_cents });
+      limparBusca();
       setCarrinho([]);
       setDesconto("");
       setAcrescimo("");
       setCliente("");
       toast.success(`Venda #${r.sale_number} concluída — ${formatCents(r.total_cents)}`);
-      campoBusca.current?.focus();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Não consegui finalizar a venda.");
     } finally {
+      vendaEmEnvio.current = false;
       setFinalizando(false);
+      campoBusca.current?.focus();
     }
+  }
+
+  let ajudaBusca = "Digite o nome ou o código do produto e pressione Enter para adicionar.";
+  if (!tenantId) ajudaBusca = "Selecione uma loja para iniciar a venda.";
+  else if (finalizando) ajudaBusca = "Finalizando a venda…";
+  else if (buscando) ajudaBusca = "Buscando produtos…";
+  else if (resultado === "erro")
+    ajudaBusca = "Falha na busca. Pressione Enter para tentar novamente.";
+  else if (resultado?.length === 0) ajudaBusca = "Nenhum produto encontrado.";
+  else if (achados.length > 0) {
+    ajudaBusca = produtoAtivo
+      ? "Pressione Enter para adicionar o produto selecionado."
+      : "Use ↑ e ↓ para escolher um produto e Enter para adicionar.";
+    if (produtoAtivo && achados.length > 1) ajudaBusca += " Use ↑ e ↓ para escolher outro.";
+  } else if (carrinho.length > 0 && !textoBusca) {
+    ajudaBusca = "Digite outro produto ou pressione Enter para finalizar a venda.";
   }
 
   return (
@@ -164,27 +262,57 @@ function VendaNoBalcao() {
           <Input
             ref={campoBusca}
             value={termo}
-            onChange={(e) => setTermo(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && handleEnter()}
+            onChange={(e) => alterarTermo(e.target.value)}
+            onKeyDown={handleTeclaBusca}
             placeholder="Buscar produto ou passar o código de barras"
-            className="h-14 pl-11 text-base"
+            className="h-14 pl-11 pr-9 text-base"
             aria-label="Buscar produto para vender"
+            role="combobox"
+            aria-autocomplete="list"
+            aria-expanded={achados.length > 0}
+            aria-controls={achados.length > 0 ? listaId : undefined}
+            aria-activedescendant={produtoAtivo ? `${listaId}-${produtoAtivo.id}` : undefined}
+            aria-describedby={ajudaId}
+            autoComplete="off"
+            disabled={!tenantId}
+            readOnly={finalizando}
             autoFocus
           />
           {buscando && (
-            <Loader2 className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground" />
+            <Loader2
+              className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 animate-spin text-muted-foreground"
+              aria-hidden="true"
+            />
           )}
         </div>
+        <p id={ajudaId} role="status" className="mt-2 text-sm text-muted-foreground">
+          {ajudaBusca}
+        </p>
 
         {achados.length > 0 && (
-          <div className="mt-2 grid gap-2 sm:grid-cols-2">
+          <div
+            id={listaId}
+            role="listbox"
+            aria-label="Produtos encontrados"
+            className="mt-2 grid gap-2 sm:grid-cols-2"
+          >
             {achados.map((p) => {
               const semEstoque = p.stock_base <= 0;
+              const selecionado = p.id === produtoAtivo?.id;
+              const codigo = p.sku || p.internal_code || p.barcode;
               return (
                 <button
                   key={p.id}
+                  id={`${listaId}-${p.id}`}
+                  type="button"
+                  role="option"
+                  aria-selected={selecionado}
+                  tabIndex={-1}
+                  disabled={finalizando}
                   onClick={() => adicionar(p)}
-                  className="flex items-center gap-3 rounded-xl border border-border bg-card p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5"
+                  className={`flex items-center gap-3 rounded-xl border p-3 text-left transition-colors hover:border-primary/50 hover:bg-primary/5 ${
+                    selecionado ? "border-primary bg-primary/5" : "border-border bg-card"
+                  }`}
                 >
                   {p.image_url ? (
                     <img
@@ -200,6 +328,7 @@ function VendaNoBalcao() {
                   )}
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-medium leading-tight">{p.name}</p>
+                    {codigo && <p className="truncate text-xs text-muted-foreground">{codigo}</p>}
                     <p className="text-sm text-muted-foreground">
                       {formatCents(p.price_cents)} ·{" "}
                       <span className={semEstoque ? "font-bold text-rose-600" : ""}>
@@ -213,19 +342,11 @@ function VendaNoBalcao() {
           </div>
         )}
 
-        {!achados.length && !termo && (
-          <div className="mt-4 rounded-xl border border-dashed border-border p-8 text-center">
-            <ShoppingCart className="mx-auto h-9 w-9 text-muted-foreground/40" aria-hidden="true" />
-            <p className="mt-3 font-medium">Comece buscando um produto</p>
-            <p className="mx-auto mt-1 max-w-sm text-sm text-muted-foreground">
-              Digite o nome, o SKU ou passe o leitor de código de barras. O Enter já joga o produto
-              no carrinho.
-            </p>
-          </div>
-        )}
-
         {ultimaVenda && !carrinho.length && (
-          <div className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-700 dark:text-emerald-400">
+          <div
+            role="status"
+            className="mt-4 flex items-center gap-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10 p-4 text-emerald-700 dark:text-emerald-400"
+          >
             <Check className="h-5 w-5 shrink-0" aria-hidden="true" />
             <p className="text-sm">
               Venda <strong>#{ultimaVenda.numero}</strong> concluída —{" "}
@@ -251,7 +372,7 @@ function VendaNoBalcao() {
           {carrinho.length === 0 ? (
             <p className="py-6 text-center text-sm text-muted-foreground">Nenhum item ainda.</p>
           ) : (
-            <>
+            <fieldset disabled={finalizando} className="min-w-0 space-y-3">
               <div className="max-h-[40dvh] space-y-2 overflow-y-auto">
                 {carrinho.map((i) => (
                   <div key={i.id} className="rounded-lg border border-border p-2">
@@ -337,7 +458,7 @@ function VendaNoBalcao() {
                 <Label htmlFor="v-pag" className="text-xs">
                   Forma de pagamento
                 </Label>
-                <Select value={pagamento} onValueChange={setPagamento}>
+                <Select value={pagamento} onValueChange={setPagamento} disabled={finalizando}>
                   <SelectTrigger id="v-pag" className="h-9">
                     <SelectValue />
                   </SelectTrigger>
@@ -380,16 +501,16 @@ function VendaNoBalcao() {
               <Button
                 className="h-12 w-full gap-2 text-base"
                 onClick={handleFinalizar}
-                disabled={finalizando}
+                aria-keyshortcuts={!textoBusca ? "Enter" : undefined}
               >
                 {finalizando ? (
                   <Loader2 className="h-5 w-5 animate-spin" />
                 ) : (
                   <Check className="h-5 w-5" />
                 )}
-                Finalizar venda
+                {finalizando ? "Finalizando…" : "Finalizar venda"}
               </Button>
-            </>
+            </fieldset>
           )}
         </CardContent>
       </Card>
